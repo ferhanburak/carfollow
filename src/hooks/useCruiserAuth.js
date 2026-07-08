@@ -4,6 +4,7 @@ import {
   createSignedUpUser,
   getQuickProfileByCredentials,
   listQuickProfiles,
+  saveFirebaseUserProfile,
 } from "../repositories/cruiserRepository";
 import { clearCruiserSession, loadCruiserSession, saveCruiserSession } from "../services/storage";
 import { createFuelForm, createSignUpState } from "../utils/garage";
@@ -39,9 +40,11 @@ export function useCruiserAuth() {
   }, [user]);
 
   const handleQuickLogin = (profile, options = {}) => {
-    setUser(createAuthenticatedUser(profile));
+    const authenticatedUser = createAuthenticatedUser(profile);
+    setUser(authenticatedUser);
     setAuthMode("authenticated");
     setFuelForm(createFuelForm(profile.odometer));
+    void saveFirebaseUserProfile(authenticatedUser);
     options.onAuthenticated?.();
   };
 
@@ -71,6 +74,7 @@ export function useCruiserAuth() {
     setSignUpForm(createSignUpState());
     setSignUpErrors({});
     setFuelForm(createFuelForm(createdUser.odometer));
+    void saveFirebaseUserProfile(createdUser);
     options.onAuthenticated?.();
     return createdUser;
   };

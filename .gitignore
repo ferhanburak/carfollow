@@ -2,4 +2,6 @@ node_modules/
 dist/
 work-dev.log
 work-dev.err.log
+.env
 .DS_Store
+firebase-debug.log

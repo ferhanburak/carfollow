@@ -93,7 +93,7 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(screen.getByRole("button", { name: "🧼" }));
+    await user.click(screen.getByRole("button", { name: /Foam District Self Wash \(wash\)/i }));
     const noteInput = screen.getByRole("textbox", { name: "Review Note" });
     await user.clear(noteInput);
     await user.type(noteInput, "Foam was dense and rinse quality stayed stable.");

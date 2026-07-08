@@ -15,3 +15,13 @@ export {
   syncActiveDriver,
   tickAmbientDrivers,
 } from "./mockCruiserRepository";
+
+export {
+  isFirebaseRepositoryEnabled,
+  loadFirebaseWorldState,
+  saveFirebaseActiveDriver,
+  saveFirebaseCruiseJoin,
+  saveFirebaseFuelLog,
+  saveFirebaseUserProfile,
+  saveFirebaseWashReview,
+} from "./firebaseCruiserRepository";

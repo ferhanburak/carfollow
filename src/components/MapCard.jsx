@@ -21,6 +21,7 @@ export function MapCard({ pins, selectedPinId, onSelect }) {
             key={pin.id}
             type="button"
             onClick={() => onSelect(pin.id)}
+            aria-label={`${pin.name} (${pin.type})`}
             className={`absolute flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl border text-lg transition ${
               selectedPinId === pin.id
                 ? "border-lime-400 bg-lime-400/20 shadow-[0_0_22px_rgba(163,230,53,0.4)]"

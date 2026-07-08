@@ -1,0 +1,20 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "directMessages": {
+      "$channelId": {
+        ".read": true,
+        ".write": "newData.hasChildren(['plate', 'vehicle', 'node', 'speed', 'updatedAt']) && newData.child('plate').isString() && newData.child('vehicle').isString() && newData.child('node').isString() && newData.child('speed').isNumber() && newData.child('speed').val() >= 0 && newData.child('speed').val() <= 400 && newData.child('updatedAt').isNumber()"
+      }
+    },
+    "directMessagesSeed": {
+      ".read": true,
+      ".write": false
+    },
+    "codexSeedProbe": {
+      ".read": true,
+      ".write": false
+    }
+  }
+}

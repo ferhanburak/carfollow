@@ -1,4 +1,4 @@
-import { resolveAppId } from "../services/firebasePaths";
+import { resolveAppId } from "../services/firebasePaths.js";
 
 export const appId = resolveAppId();
 

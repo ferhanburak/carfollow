@@ -8,12 +8,29 @@ import {
   incrementGalleryLike,
   incrementPinLike,
   incrementUserOdometer,
+  isFirebaseRepositoryEnabled,
   joinCruiseAttendee,
+  loadFirebaseWorldState,
+  saveFirebaseActiveDriver,
+  saveFirebaseCruiseJoin,
+  saveFirebaseFuelLog,
+  saveFirebaseUserProfile,
+  saveFirebaseWashReview,
   syncActiveDriver,
   tickAmbientDrivers,
 } from "../repositories/cruiserRepository";
 import { createFuelForm, createWashForm, computeFuelInsights } from "../utils/garage";
 import { validateFuelForm, validateWashForm } from "../utils/validation";
+
+function sortByReferenceOrder(items, referenceItems, keySelector) {
+  const referenceOrder = new Map(referenceItems.map((item, index) => [keySelector(item), index]));
+
+  return [...items].sort((left, right) => {
+    const leftIndex = referenceOrder.get(keySelector(left)) ?? Number.MAX_SAFE_INTEGER;
+    const rightIndex = referenceOrder.get(keySelector(right)) ?? Number.MAX_SAFE_INTEGER;
+    return leftIndex - rightIndex;
+  });
+}
 
 export function useCruiserWorld(user, setUser, setFuelForm) {
   const initialWorld = getInitialWorldState();
@@ -29,6 +46,42 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   const [clans, setClans] = useState(initialWorld.clans);
   const [drivers, setDrivers] = useState(initialWorld.drivers);
   const tickerRef = useRef(0);
+  const lastRemoteUserSyncRef = useRef(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateFromFirebase() {
+      if (!isFirebaseRepositoryEnabled()) {
+        return;
+      }
+
+      const remoteWorld = await loadFirebaseWorldState();
+      if (!remoteWorld || cancelled) {
+        return;
+      }
+
+      if (remoteWorld.mapPins?.length) {
+        const orderedMapPins = sortByReferenceOrder(remoteWorld.mapPins, initialWorld.mapPins, (pin) => pin.id);
+        setMapPins(orderedMapPins);
+        setSelectedPinId((current) =>
+          orderedMapPins.some((pin) => pin.id === current) ? current : orderedMapPins[0].id,
+        );
+      }
+      if (remoteWorld.clans?.length) {
+        setClans(sortByReferenceOrder(remoteWorld.clans, initialWorld.clans, (clan) => clan.id));
+      }
+      if (remoteWorld.drivers?.length) {
+        setDrivers(sortByReferenceOrder(remoteWorld.drivers, initialWorld.drivers, (driver) => driver.plate));
+      }
+    }
+
+    void hydrateFromFirebase();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const shuffleTimer = window.setInterval(() => {
@@ -66,6 +119,20 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     return () => window.clearInterval(driveTimer);
   }, [isDriving, setUser, user]);
 
+  useEffect(() => {
+    if (!user || !isFirebaseRepositoryEnabled()) {
+      return;
+    }
+
+    const now = Date.now();
+    if (now - lastRemoteUserSyncRef.current < 15000) {
+      return;
+    }
+
+    lastRemoteUserSyncRef.current = now;
+    void saveFirebaseUserProfile(user);
+  }, [user]);
+
   const selectedPin = mapPins.find((pin) => pin.id === selectedPinId) ?? mapPins[0];
   const fuelInsights = user ? computeFuelInsights(user.fuelLogs) : { average: 0, costPerFill: 0, totalSpend: 0 };
 
@@ -102,6 +169,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setWashForm(createWashForm());
     setWashErrors({});
     setWashFeedback("Review added successfully.");
+    void saveFirebaseWashReview(selectedPin.id, review);
   };
 
   const joinCruise = () => {
@@ -110,6 +178,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     }
 
     setMapPins((current) => joinCruiseAttendee(current, selectedPin.id, user.plate));
+    void saveFirebaseCruiseJoin(selectedPin.id, user.plate);
   };
 
   const submitFuelLog = (event, fuelForm) => {
@@ -134,11 +203,20 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setUser((current) => appendFuelLog(current, nextLog));
     setFuelForm(createFuelForm(Number(fuelForm.currentKm)));
     setFuelErrors({});
+    void saveFirebaseFuelLog(user.id, nextLog);
   };
 
   const toggleDrive = () => {
     setIsDriving((current) => !current);
     setActiveTab("drive");
+    if (user) {
+      void saveFirebaseActiveDriver({
+        plate: user.plate,
+        vehicle: user.model,
+        node: driveHud.etaNode,
+        speed: driveHud.speed,
+      });
+    }
   };
 
   const resetSessionView = () => {

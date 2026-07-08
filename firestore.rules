@@ -1,0 +1,94 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isKnownApp(appId) {
+      return appId == 'cruiser-app-prod';
+    }
+
+    function isPublicReadCollection(collectionName) {
+      return collectionName in ['mapPins', 'clans', 'drivers', 'washReviews', 'cruiseAttendees'];
+    }
+
+    function isPublicWriteCollection(collectionName) {
+      return collectionName in ['washReviews', 'cruiseAttendees'];
+    }
+
+    function isValidReview() {
+      return request.resource.data.keys().hasOnly([
+        'pinId',
+        'author',
+        'foam',
+        'water',
+        'allowsBuckets',
+        'shadowDrying',
+        'note'
+      ]) &&
+      request.resource.data.pinId is string &&
+      request.resource.data.author is string &&
+      request.resource.data.foam is int &&
+      request.resource.data.foam >= 1 &&
+      request.resource.data.foam <= 5 &&
+      request.resource.data.water is int &&
+      request.resource.data.water >= 1 &&
+      request.resource.data.water <= 5 &&
+      request.resource.data.allowsBuckets is bool &&
+      request.resource.data.shadowDrying is bool &&
+      request.resource.data.note is string &&
+      request.resource.data.note.size() >= 5 &&
+      request.resource.data.note.size() <= 280;
+    }
+
+    function isValidCruiseJoin() {
+      return request.resource.data.keys().hasOnly(['pinId', 'plate', 'joinedAt']) &&
+      request.resource.data.pinId is string &&
+      request.resource.data.plate is string &&
+      request.resource.data.joinedAt is int;
+    }
+
+    function isValidProfile(userId) {
+      return request.resource.data.id == userId &&
+      request.resource.data.plate is string &&
+      request.resource.data.fullName is string &&
+      request.resource.data.model is string &&
+      request.resource.data.tuningStage is string &&
+      request.resource.data.horsepower is int &&
+      request.resource.data.garage is string &&
+      request.resource.data.odometer is int;
+    }
+
+    function isValidFuelLog() {
+      return request.resource.data.keys().hasOnly(['id', 'liters', 'price', 'currentKm', 'station']) &&
+      request.resource.data.id is string &&
+      request.resource.data.liters is int &&
+      request.resource.data.liters > 0 &&
+      request.resource.data.price is int &&
+      request.resource.data.price > 0 &&
+      request.resource.data.currentKm is int &&
+      request.resource.data.currentKm > 0 &&
+      request.resource.data.station is string &&
+      request.resource.data.station.size() > 0;
+    }
+
+    match /artifacts/{appId}/public/data/{collectionName}/{documentId} {
+      allow read: if isKnownApp(appId) && isPublicReadCollection(collectionName);
+      allow create, update: if isKnownApp(appId) &&
+        isPublicWriteCollection(collectionName) &&
+        (
+          (collectionName == 'washReviews' && isValidReview()) ||
+          (collectionName == 'cruiseAttendees' && isValidCruiseJoin())
+        );
+      allow delete: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/{collectionName}/{documentId} {
+      allow read: if isKnownApp(appId) && collectionName in ['profile', 'fuelLogs'];
+      allow create, update: if isKnownApp(appId) &&
+        (
+          (collectionName == 'profile' && documentId == 'current' && isValidProfile(userId)) ||
+          (collectionName == 'fuelLogs' && isValidFuelLog())
+        );
+      allow delete: if false;
+    }
+  }
+}

@@ -32,6 +32,7 @@ src/
     useCruiserWorld.js
   repositories/
     cruiserRepository.js
+    firebaseCruiserRepository.js
     mockCruiserRepository.js
   screens/
     AuthScreen.jsx
@@ -39,6 +40,7 @@ src/
     DriveScreen.jsx
     GarageScreen.jsx
   services/
+    firebaseClient.js
     firebasePaths.js
     storage.js
   test/
@@ -70,6 +72,33 @@ The project currently builds on Node `22.11.0`, but Vite shows a version warning
 cd D:\carfollow
 npm install
 ```
+
+## Firebase Setup
+
+1. Create a local environment file:
+
+```powershell
+cd D:\carfollow
+Copy-Item .env.example .env
+```
+
+2. Fill these values from your Firebase project:
+
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+- `VITE_FIREBASE_DATABASE_URL`
+
+3. Switch the data source mode:
+
+```text
+VITE_CRUISER_DATA_SOURCE=firebase
+```
+
+If this stays `mock`, the app keeps using the local mock-backed repository.
 
 ## Start Development Server
 
@@ -113,8 +142,46 @@ http://localhost:4173/
 - `npm run dev` starts the development server
 - `npm run build` creates the production build in `dist/`
 - `npm run preview` serves the production build locally
+- `npm run seed:firebase` seeds Firestore and Realtime Database using the current `.env`
 - `npm run test` starts Vitest in watch mode
 - `npm run test:run` runs the test suite once
+
+## Seed Firebase
+
+After Firestore and Realtime Database are created and your rules are published, run:
+
+```powershell
+cd D:\carfollow
+npm run seed:firebase
+```
+
+This seeds:
+
+- Firestore public collections under `/artifacts/{appId}/public/data/...`
+- Firestore private user collections under `/artifacts/{appId}/users/{userId}/...`
+- Realtime Database telemetry and DM seed nodes
+
+## Firebase Rules
+
+This repo now includes deploy-ready Firebase rule files:
+
+- `firestore.rules`
+- `database.rules.json`
+- `firebase.json`
+- `.firebaserc`
+
+To publish them:
+
+```powershell
+cd D:\carfollow
+firebase deploy --only firestore:rules,database --project carfollow-75750
+```
+
+If Firebase CLI returns `401 invalid authentication credentials`, refresh the CLI session first:
+
+```powershell
+firebase login --reauth
+```
 
 ## What Was Tested
 
@@ -136,6 +203,7 @@ The project now includes:
 - screen-level components separated from orchestration logic
 - custom hooks for auth/session state and world simulation state
 - repository abstraction between hooks and the mock data source
+- Firebase-backed repository hooks for hydration and persistence
 - local mocked session persistence with `localStorage`
 - Firebase path helper functions for future production binding
 - automated tests for app render, garage utilities, and Firebase path helpers
@@ -148,9 +216,16 @@ The current data flow is intentionally prepared for Firebase migration:
 - UI screens render props only
 - hooks orchestrate user interaction and local state transitions
 - repositories encapsulate read/update behavior for app data
-- the active repository is currently mock-backed
+- the active repository can run in `mock` or `firebase` mode
 
 This means the next Firebase step can replace repository internals without rewriting the screens.
+
+Current Firebase integration behavior:
+
+- public world data can hydrate from Firestore when Firebase mode is enabled
+- user profiles can sync to private Firestore paths
+- fuel logs and wash reviews can be written to Firestore
+- active driver telemetry can be mirrored to Firebase Realtime Database
 
 ## Next Steps
 
