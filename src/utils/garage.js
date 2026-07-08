@@ -1,0 +1,59 @@
+export const createSignUpState = () => ({
+  fullName: "",
+  plate: "",
+  password: "",
+  model: "",
+  tuningStage: "Stock",
+  horsepower: "",
+  garage: "",
+});
+
+export const createWashForm = () => ({
+  foam: 5,
+  water: 5,
+  allowsBuckets: false,
+  shadowDrying: false,
+  note: "",
+});
+
+export const createFuelForm = (odometer) => ({
+  liters: "",
+  price: "",
+  currentKm: odometer,
+  station: "",
+});
+
+export function formatNumber(value) {
+  return new Intl.NumberFormat("tr-TR").format(Math.round(value * 10) / 10);
+}
+
+export function getPartHealth(part, odometer) {
+  const used = Math.max(odometer - part.replacedKm, 0);
+  const percent = Math.max(0, 100 - (used / part.lifeExpectancy) * 100);
+  return Math.round(percent);
+}
+
+export function computeFuelInsights(logs) {
+  if (logs.length < 2) {
+    return {
+      average: 0,
+      costPerFill: 0,
+      totalSpend: logs.reduce((sum, log) => sum + log.price, 0),
+    };
+  }
+
+  const ordered = [...logs].sort((a, b) => b.currentKm - a.currentKm);
+  let liters = 0;
+  let km = 0;
+
+  for (let index = 0; index < ordered.length - 1; index += 1) {
+    liters += Number(ordered[index].liters);
+    km += Math.max(ordered[index].currentKm - ordered[index + 1].currentKm, 0);
+  }
+
+  return {
+    average: km ? (liters / km) * 100 : 0,
+    costPerFill: logs.reduce((sum, log) => sum + log.price, 0) / logs.length,
+    totalSpend: logs.reduce((sum, log) => sum + log.price, 0),
+  };
+}
