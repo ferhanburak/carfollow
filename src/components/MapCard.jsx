@@ -209,12 +209,11 @@ function getDraftWaypointMeta(index, total) {
   };
 }
 
-function FallbackGridMap({ pins, selectedPinId, onSelect, fullScreen = false }) {
+function FallbackGridMap({ pins, selectedPinId, onSelect, fullScreen = false, mapHeight = "18rem" }) {
   return (
     <div
-      className={`relative overflow-hidden border border-white/8 bg-[radial-gradient(circle_at_center,_rgba(163,230,53,0.12),_transparent_32%),linear-gradient(180deg,#0f0f0f,#090909)] ${
-        fullScreen ? "h-full rounded-none" : "h-72 rounded-[1.5rem]"
-      }`}
+      className={`relative overflow-hidden border border-white/8 bg-[radial-gradient(circle_at_center,_rgba(163,230,53,0.12),_transparent_32%),linear-gradient(180deg,#0f0f0f,#090909)] ${fullScreen ? "h-full rounded-none" : "rounded-[1.5rem]"}`}
+      style={fullScreen ? undefined : { height: mapHeight }}
     >
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:32px_32px]" />
       <svg viewBox="0 0 400 280" className="absolute inset-0 h-full w-full">
@@ -252,6 +251,7 @@ export function MapCard({
   onPickLocation,
   fullScreen = false,
   navigationMode = false,
+  mapHeight = "18rem",
 }) {
   const mapsApiKey = getMapsApiKey();
   const shouldUseGoogleMaps = Boolean(mapsApiKey) && pins.every((pin) => typeof pin.lat === "number" && typeof pin.lng === "number");
@@ -262,7 +262,7 @@ export function MapCard({
       <div
         className={`relative overflow-hidden ${
           fullScreen
-            ? "h-full bg-[#050505]"
+            ? "h-full w-full bg-[#050505]"
             : "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4"
         }`}
       >
@@ -275,8 +275,14 @@ export function MapCard({
             <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Fallback Grid</div>
           </div>
         ) : null}
-        <div className={fullScreen ? "h-full p-0" : ""}>
-          <FallbackGridMap pins={pins} selectedPinId={selectedPinId} onSelect={onSelect} fullScreen={fullScreen} />
+        <div className={fullScreen ? "absolute inset-0 p-0" : ""}>
+          <FallbackGridMap
+            pins={pins}
+            selectedPinId={selectedPinId}
+            onSelect={onSelect}
+            fullScreen={fullScreen}
+            mapHeight={mapHeight}
+          />
         </div>
       </div>
     );
@@ -295,6 +301,7 @@ export function MapCard({
       onPickLocation={onPickLocation}
       fullScreen={fullScreen}
       navigationMode={navigationMode}
+      mapHeight={mapHeight}
     />
   );
 }
@@ -311,6 +318,7 @@ function GoogleMapCard({
   onPickLocation,
   fullScreen,
   navigationMode,
+  mapHeight,
 }) {
   const mapRef = useRef(null);
   const watchIdRef = useRef(null);
@@ -519,31 +527,64 @@ function GoogleMapCard({
       return;
     }
 
+    // Google Maps can render into a black/blank canvas if the container size
+    // settles after the map instance is created. Force a resize once visible.
+    const resizeMap = () => {
+      if (!mapRef.current || !window.google?.maps?.event) {
+        return;
+      }
+
+      window.google.maps.event.trigger(mapRef.current, "resize");
+    };
+
+    const animationFrame = window.requestAnimationFrame(resizeMap);
+    const timeoutId = window.setTimeout(resizeMap, 120);
+
     if (hasDisplayedRoute && shouldAutoFrameRouteRef.current) {
       const bounds = new window.google.maps.LatLngBounds();
       displayedRoutePath.forEach((point) => bounds.extend(point));
       mapRef.current.fitBounds(bounds, 48);
       shouldAutoFrameRouteRef.current = false;
-      return;
+      return () => {
+        window.cancelAnimationFrame(animationFrame);
+        window.clearTimeout(timeoutId);
+      };
     }
 
     if (navigationMode && currentLocation && followCurrentLocation) {
       mapRef.current.panTo(currentLocation);
       mapRef.current.setZoom(14);
-      return;
+      return () => {
+        window.cancelAnimationFrame(animationFrame);
+        window.clearTimeout(timeoutId);
+      };
     }
 
     if (!selectedPin) {
-      return;
+      return () => {
+        window.cancelAnimationFrame(animationFrame);
+        window.clearTimeout(timeoutId);
+      };
     }
 
     mapRef.current.panTo(mapCenter);
     mapRef.current.setZoom(12);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(timeoutId);
+    };
   }, [currentLocation, displayedRoutePath, followCurrentLocation, hasDisplayedRoute, isLoaded, mapCenter, navigationMode, selectedPin]);
 
   return (
-    <div className={`relative overflow-hidden ${fullScreen ? "h-full bg-[#050505]" : "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4"}`}>
-      <div className={`${fullScreen ? "absolute right-4 top-4 z-20" : "mb-3 flex items-center justify-between"}`}>
+    <div
+      className={`relative overflow-hidden ${
+        fullScreen
+          ? "h-full w-full bg-[#050505]"
+          : "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4"
+      }`}
+    >
+      <div className={`${fullScreen ? "pointer-events-none absolute right-4 top-4 z-20" : "mb-3 flex items-center justify-between"}`}>
         <div>
           {!fullScreen ? <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Interactive Map Layer</p> : null}
           {!fullScreen ? <h3 className="mt-1 text-lg font-black">Google Maps Cruise Grid</h3> : null}
@@ -561,7 +602,7 @@ function GoogleMapCard({
               setFollowCurrentLocation(true);
             }}
             disabled={!currentLocation}
-            className={`min-h-12 rounded-2xl border px-3 py-2 text-xs transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-neutral-500 ${
+            className={`pointer-events-auto min-h-12 rounded-2xl border px-3 py-2 text-xs transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-neutral-500 ${
               followCurrentLocation
                 ? "border-lime-400/40 bg-lime-400/15 text-lime-200"
                 : "border-rose-400/30 bg-rose-500/10 text-rose-200"
@@ -574,10 +615,17 @@ function GoogleMapCard({
       </div>
 
       {isLoaded && !loadError ? (
-        <div className={`relative overflow-hidden ${fullScreen ? "h-full" : "rounded-[1.5rem] border border-white/8"}`}>
+        <div
+          className={`relative overflow-hidden ${
+            fullScreen ? "absolute inset-0" : "rounded-[1.5rem] border border-white/8"
+          }`}
+        >
+          {fullScreen ? (
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(163,230,53,0.08),_transparent_36%),linear-gradient(180deg,#0a0a0a,#050505)]" />
+          ) : null}
           {!fullScreen ? <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 bg-[linear-gradient(180deg,rgba(10,10,10,0.75),transparent)]" /> : null}
           <GoogleMap
-            mapContainerStyle={fullScreen ? { width: "100%", height: "100%" } : mapContainerStyle}
+            mapContainerStyle={fullScreen ? { width: "100%", height: "100%" } : { width: "100%", height: mapHeight }}
             center={mapCenter}
             zoom={11}
             options={mapOptions}
