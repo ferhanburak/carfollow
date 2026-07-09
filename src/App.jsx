@@ -45,7 +45,9 @@ function App() {
     mapPinErrors,
     mapPinFeedback,
     mapPinForm,
+    mapDraftLocation,
     mapPins,
+    pickMapLocation,
     rateAttendee,
     resetSessionView,
     selectedPin,
@@ -130,8 +132,15 @@ function App() {
         <div className="flex-1 overflow-y-auto px-4 py-4 pb-28">
           {activeTab === "map" ? (
             <section className="space-y-4">
-              <MapCard pins={mapPins} selectedPinId={selectedPinId} onSelect={setSelectedPinId} />
+              <MapCard
+                pins={mapPins}
+                selectedPinId={selectedPinId}
+                onSelect={setSelectedPinId}
+                draftLocation={mapDraftLocation}
+                onPickLocation={pickMapLocation}
+              />
               <MapComposerPanel
+                draftLocation={mapDraftLocation}
                 feedback={mapPinFeedback}
                 form={mapPinForm}
                 errors={mapPinErrors}

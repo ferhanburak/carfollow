@@ -117,6 +117,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   const [mapPinForm, setMapPinForm] = useState(() => createMapPinForm(initialWorld.mapPins[0]));
   const [mapPinErrors, setMapPinErrors] = useState({});
   const [mapPinFeedback, setMapPinFeedback] = useState("");
+  const [mapDraftLocation, setMapDraftLocation] = useState(null);
   const [spotPhotoForm, setSpotPhotoForm] = useState(createSpotPhotoForm);
   const [spotPhotoErrors, setSpotPhotoErrors] = useState({});
   const [spotPhotoFeedback, setSpotPhotoFeedback] = useState("");
@@ -421,6 +422,34 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
       lat: selectedPin.lat ?? current.lat,
       lng: selectedPin.lng ?? current.lng,
     }));
+    setMapDraftLocation({
+      lat: selectedPin.lat ?? mapPinForm.lat,
+      lng: selectedPin.lng ?? mapPinForm.lng,
+      source: "selected",
+    });
+  };
+
+  const pickMapLocation = (coords) => {
+    if (!coords) {
+      return;
+    }
+
+    setMapPinForm((current) => ({
+      ...current,
+      lat: Number(coords.lat.toFixed(4)),
+      lng: Number(coords.lng.toFixed(4)),
+    }));
+    setMapDraftLocation({
+      lat: Number(coords.lat.toFixed(4)),
+      lng: Number(coords.lng.toFixed(4)),
+      source: "map",
+    });
+    setMapPinFeedback("Map uzerinden yeni lokasyon secildi.");
+    setMapPinErrors((current) => ({
+      ...current,
+      lat: undefined,
+      lng: undefined,
+    }));
   };
 
   const submitMapPin = (event) => {
@@ -497,6 +526,11 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
       type: mapPinForm.type,
       lat: newPin.lat,
       lng: newPin.lng,
+    });
+    setMapDraftLocation({
+      lat: newPin.lat,
+      lng: newPin.lng,
+      source: "created",
     });
     setMapPinErrors({});
     setMapPinFeedback(`${newPin.name} added to the live map.`);
@@ -622,7 +656,9 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     mapPinErrors,
     mapPinFeedback,
     mapPinForm,
+    mapDraftLocation,
     mapPins,
+    pickMapLocation,
     rateAttendee,
     resetSessionView,
     selectedPin,

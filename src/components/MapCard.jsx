@@ -115,6 +115,21 @@ function getCurrentLocationIcon() {
   };
 }
 
+function getDraftLocationIcon() {
+  if (typeof window === "undefined" || !window.google?.maps) {
+    return undefined;
+  }
+
+  return {
+    path: window.google.maps.SymbolPath.CIRCLE,
+    fillColor: "#a3e635",
+    fillOpacity: 1,
+    strokeColor: "#f7fee7",
+    strokeWeight: 3,
+    scale: 8,
+  };
+}
+
 function FallbackGridMap({ pins, selectedPinId, onSelect }) {
   return (
     <div className="relative h-72 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_center,_rgba(163,230,53,0.12),_transparent_32%),linear-gradient(180deg,#0f0f0f,#090909)]">
@@ -144,7 +159,7 @@ function FallbackGridMap({ pins, selectedPinId, onSelect }) {
   );
 }
 
-export function MapCard({ pins, selectedPinId, onSelect }) {
+export function MapCard({ pins, selectedPinId, onSelect, draftLocation, onPickLocation }) {
   const mapsApiKey = getMapsApiKey();
   const shouldUseGoogleMaps = Boolean(mapsApiKey) && pins.every((pin) => typeof pin.lat === "number" && typeof pin.lng === "number");
   const selectedPin = pins.find((pin) => pin.id === selectedPinId) ?? pins[0];
@@ -164,10 +179,10 @@ export function MapCard({ pins, selectedPinId, onSelect }) {
     );
   }
 
-  return <GoogleMapCard mapsApiKey={mapsApiKey} pins={pins} selectedPin={selectedPin} selectedPinId={selectedPinId} onSelect={onSelect} />;
+  return <GoogleMapCard mapsApiKey={mapsApiKey} pins={pins} selectedPin={selectedPin} selectedPinId={selectedPinId} onSelect={onSelect} draftLocation={draftLocation} onPickLocation={onPickLocation} />;
 }
 
-function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect }) {
+function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect, draftLocation, onPickLocation }) {
   const mapRef = useRef(null);
   const [routeState, setRouteState] = useState({
     path: [],
@@ -370,6 +385,13 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
             center={mapCenter}
             zoom={11}
             options={mapOptions}
+            onClick={(event) => {
+              const lat = event.latLng?.lat();
+              const lng = event.latLng?.lng();
+              if (typeof lat === "number" && typeof lng === "number") {
+                onPickLocation?.({ lat, lng });
+              }
+            }}
             onLoad={(map) => {
               mapRef.current = map;
             }}
@@ -384,6 +406,14 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
                 title="Current location"
                 zIndex={999}
                 icon={getCurrentLocationIcon()}
+              />
+            ) : null}
+            {draftLocation ? (
+              <MarkerF
+                position={{ lat: draftLocation.lat, lng: draftLocation.lng }}
+                title="Draft location"
+                zIndex={998}
+                icon={getDraftLocationIcon()}
               />
             ) : null}
             {pins.map((pin) => (
@@ -420,6 +450,9 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
                 ) : null}
                 {locationState.source === "ready" ? (
                   <p className="mt-2 text-[11px] text-rose-200">Live location locked and visible on the map.</p>
+                ) : null}
+                {draftLocation ? (
+                  <p className="mt-2 text-[11px] text-lime-200">Map uzerine dokunarak yeni node konumu secili halde tutuluyor.</p>
                 ) : null}
               </div>
               <div className="flex flex-col items-end gap-2">

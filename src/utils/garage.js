@@ -17,7 +17,7 @@ export const createWashForm = () => ({
 });
 
 export const createMapPinForm = (seedPin) => ({
-  type: "spot",
+  type: "meet",
   name: "",
   lat: seedPin?.lat ?? 39.8687,
   lng: seedPin?.lng ?? 32.7766,
