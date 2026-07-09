@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { MapCard } from "../components/MapCard";
 import { MapComposerPanel } from "../components/MapComposerPanel";
 import { PinPanel } from "../components/PinPanel";
@@ -7,6 +7,18 @@ const sheetTabs = [
   { key: "details", label: "Detaylar" },
   { key: "create", label: "Olustur" },
 ];
+
+const sheetModes = [
+  { key: "compact", label: "Mini" },
+  { key: "medium", label: "Orta" },
+  { key: "expanded", label: "Tam" },
+];
+
+const sheetModeClasses = {
+  compact: "h-[25vh]",
+  medium: "h-[48vh]",
+  expanded: "h-[74vh]",
+};
 
 export function MapScreen({
   clearDraftRoute,
@@ -44,6 +56,23 @@ export function MapScreen({
   washFeedback,
 }) {
   const [sheetTab, setSheetTab] = useState("details");
+  const [sheetMode, setSheetMode] = useState("medium");
+
+  const summaryText = useMemo(() => {
+    if (!selectedPin) {
+      return "No selection";
+    }
+
+    if (selectedPin.type === "meet") {
+      return `${selectedPin.attendees.length} convoy member`;
+    }
+
+    if (selectedPin.type === "spot") {
+      return `${selectedPin.gallery.length} gallery shot`;
+    }
+
+    return `${selectedPin.reviews.length} live review`;
+  }, [selectedPin]);
 
   return (
     <section className="-mx-4 -my-4 flex min-h-[calc(95vh-9.25rem)] flex-col overflow-hidden">
@@ -73,8 +102,33 @@ export function MapScreen({
           </div>
         </div>
 
-        <div className="absolute inset-x-0 bottom-0 z-20 rounded-t-[2rem] border-t border-white/10 bg-[#0c0c0c]/96 px-4 pb-6 pt-3 shadow-[0_-24px_80px_rgba(0,0,0,0.55)] backdrop-blur">
+        <div
+          className={`absolute inset-x-0 bottom-0 z-20 rounded-t-[2rem] border-t border-white/10 bg-[#0c0c0c]/96 px-4 pb-6 pt-3 shadow-[0_-24px_80px_rgba(0,0,0,0.55)] backdrop-blur transition-[height] duration-300 ${sheetModeClasses[sheetMode]}`}
+        >
           <div className="mx-auto h-1.5 w-16 rounded-full bg-white/10" />
+
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.24em] text-neutral-500">Bottom Sheet</p>
+              <p className="mt-1 text-sm font-semibold text-neutral-100">{selectedPin?.name ?? "Map Controls"}</p>
+              <p className="text-xs text-neutral-500">{summaryText}</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/8 bg-black/20 p-1.5">
+              {sheetModes.map((mode) => (
+                <button
+                  key={mode.key}
+                  type="button"
+                  onClick={() => setSheetMode(mode.key)}
+                  className={`min-h-10 rounded-xl px-3 text-[11px] font-bold transition ${
+                    sheetMode === mode.key ? "bg-lime-400 text-black" : "text-neutral-400"
+                  }`}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="mt-3 grid grid-cols-2 gap-2 rounded-3xl border border-white/8 bg-black/20 p-2">
             {sheetTabs.map((tab) => (
               <button
@@ -90,7 +144,7 @@ export function MapScreen({
             ))}
           </div>
 
-          <div className="mt-4 max-h-[46vh] overflow-y-auto pb-20">
+          <div className={`mt-4 overflow-y-auto pr-1 ${sheetMode === "compact" ? "max-h-[10vh]" : sheetMode === "medium" ? "max-h-[31vh]" : "max-h-[57vh]"}`}>
             {sheetTab === "details" ? (
               <PinPanel
                 pin={selectedPin}
