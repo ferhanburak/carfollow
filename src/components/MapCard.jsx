@@ -1,10 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GoogleMap, MarkerF, PolylineF, useJsApiLoader } from "@react-google-maps/api";
 
 const mapContainerStyle = {
   width: "100%",
   height: "18rem",
 };
+
+const loaderLibraries = ["routes"];
 
 const mapOptions = {
   disableDefaultUI: true,
@@ -27,8 +29,8 @@ const mapOptions = {
 const routeLineOptions = {
   geodesic: true,
   strokeColor: "#a3e635",
-  strokeOpacity: 0.88,
-  strokeWeight: 4,
+  strokeOpacity: 0.9,
+  strokeWeight: 5,
   icons: [
     {
       icon: {
@@ -66,6 +68,36 @@ function getActiveRoutePath(selectedPin) {
   }
 
   return [];
+}
+
+function formatDistance(distanceMeters) {
+  if (!distanceMeters) {
+    return "-- km";
+  }
+
+  return `${(distanceMeters / 1000).toFixed(1)} km`;
+}
+
+function formatDuration(durationValue) {
+  if (!durationValue) {
+    return "-- dk";
+  }
+
+  const rawSeconds = Number.parseInt(String(durationValue).replace("s", ""), 10);
+
+  if (Number.isNaN(rawSeconds)) {
+    return "-- dk";
+  }
+
+  const totalMinutes = Math.max(1, Math.round(rawSeconds / 60));
+
+  if (totalMinutes >= 60) {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return minutes > 0 ? `${hours}s ${minutes}dk` : `${hours}s`;
+  }
+
+  return `${totalMinutes} dk`;
 }
 
 function FallbackGridMap({ pins, selectedPinId, onSelect }) {
@@ -122,31 +154,113 @@ export function MapCard({ pins, selectedPinId, onSelect }) {
 
 function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect }) {
   const mapRef = useRef(null);
+  const [routeState, setRouteState] = useState({
+    path: [],
+    distanceMeters: null,
+    duration: null,
+    source: "idle",
+    error: "",
+  });
   const { isLoaded, loadError } = useJsApiLoader({
     id: "cruiser-google-maps",
     googleMapsApiKey: mapsApiKey,
+    libraries: loaderLibraries,
   });
   const mapCenter = selectedPin
     ? { lat: selectedPin.lat ?? 39.8687, lng: selectedPin.lng ?? 32.7766 }
     : { lat: 39.8687, lng: 32.7766 };
   const activeRoutePath = getActiveRoutePath(selectedPin);
-  const hasRoute = activeRoutePath.length > 1;
+  const hasMockRoute = activeRoutePath.length > 1;
+  const displayedRoutePath = routeState.path.length > 1 ? routeState.path : activeRoutePath;
+  const hasDisplayedRoute = displayedRoutePath.length > 1;
+
+  useEffect(() => {
+    if (!isLoaded || !hasMockRoute || selectedPin?.type !== "meet") {
+      setRouteState({
+        path: [],
+        distanceMeters: null,
+        duration: null,
+        source: "idle",
+        error: "",
+      });
+      return;
+    }
+
+    let cancelled = false;
+
+    async function syncLiveRoute() {
+      setRouteState((current) => ({
+        ...current,
+        path: [],
+        distanceMeters: null,
+        duration: null,
+        source: "loading",
+        error: "",
+      }));
+
+      try {
+        const { Route } = await window.google.maps.importLibrary("routes");
+        const origin = activeRoutePath[0];
+        const destination = activeRoutePath[activeRoutePath.length - 1];
+        const intermediates = activeRoutePath.slice(1, -1).map((point) => ({ location: point }));
+        const request = {
+          origin,
+          destination,
+          intermediates,
+          travelMode: "DRIVING",
+          fields: ["path", "distanceMeters", "duration"],
+        };
+        const { routes } = await Route.computeRoutes(request);
+        const firstRoute = routes?.[0];
+
+        if (!firstRoute?.path?.length) {
+          throw new Error("No drivable route returned.");
+        }
+
+        if (!cancelled) {
+          setRouteState({
+            path: firstRoute.path,
+            distanceMeters: firstRoute.distanceMeters ?? null,
+            duration: firstRoute.duration ?? null,
+            source: "google",
+            error: "",
+          });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRouteState({
+            path: activeRoutePath,
+            distanceMeters: null,
+            duration: null,
+            source: "fallback",
+            error: error instanceof Error ? error.message : "Route request failed.",
+          });
+        }
+      }
+    }
+
+    void syncLiveRoute();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeRoutePath, hasMockRoute, isLoaded, selectedPin]);
 
   useEffect(() => {
     if (!isLoaded || !mapRef.current || !selectedPin) {
       return;
     }
 
-    if (hasRoute) {
+    if (hasDisplayedRoute) {
       const bounds = new window.google.maps.LatLngBounds();
-      activeRoutePath.forEach((point) => bounds.extend(point));
+      displayedRoutePath.forEach((point) => bounds.extend(point));
       mapRef.current.fitBounds(bounds, 48);
       return;
     }
 
     mapRef.current.panTo(mapCenter);
     mapRef.current.setZoom(12);
-  }, [activeRoutePath, hasRoute, isLoaded, mapCenter, selectedPin]);
+  }, [displayedRoutePath, hasDisplayedRoute, isLoaded, mapCenter, selectedPin]);
 
   return (
     <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4">
@@ -173,7 +287,7 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
               mapRef.current = null;
             }}
           >
-            {hasRoute ? <PolylineF path={activeRoutePath} options={routeLineOptions} /> : null}
+            {hasDisplayedRoute ? <PolylineF path={displayedRoutePath} options={routeLineOptions} /> : null}
             {pins.map((pin) => (
               <MarkerF
                 key={pin.id}
@@ -201,11 +315,22 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
                 <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Selected Node</p>
                 <p className="mt-1 text-sm font-semibold text-neutral-100">{selectedPin?.name}</p>
                 <p className="mt-1 text-xs text-neutral-400">
-                  {hasRoute ? selectedPin.route : "Tap a cruise meet to preview its live convoy route."}
+                  {hasMockRoute ? selectedPin.route : "Tap a cruise meet to preview its live convoy route."}
                 </p>
+                {routeState.source === "fallback" ? (
+                  <p className="mt-2 text-[11px] text-amber-300">Google route unavailable, showing mock cruise path.</p>
+                ) : null}
               </div>
-              <div className={`rounded-2xl border px-3 py-2 text-[11px] ${hasRoute ? "border-lime-400/40 bg-lime-400/10 text-lime-300" : "border-white/10 bg-white/5 text-neutral-400"}`}>
-                {hasRoute ? `${activeRoutePath.length} route nodes` : "No route"}
+              <div className="flex flex-col items-end gap-2">
+                <div className={`rounded-2xl border px-3 py-2 text-[11px] ${routeState.source === "google" ? "border-lime-400/40 bg-lime-400/10 text-lime-300" : "border-white/10 bg-white/5 text-neutral-400"}`}>
+                  {routeState.source === "loading" ? "Syncing route" : hasDisplayedRoute ? `${displayedRoutePath.length} route nodes` : "No route"}
+                </div>
+                {routeState.source === "google" ? (
+                  <div className="rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-right text-[11px] text-neutral-300">
+                    <div>{formatDistance(routeState.distanceMeters)}</div>
+                    <div>{formatDuration(routeState.duration)}</div>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -220,6 +345,8 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
           </p>
         </>
       ) : null}
+
+      {routeState.error ? <p className="mt-3 text-xs text-neutral-500">{routeState.error}</p> : null}
     </div>
   );
 }
