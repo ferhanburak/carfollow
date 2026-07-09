@@ -148,6 +148,67 @@ function getDraftLocationIcon() {
   };
 }
 
+function getDraftWaypointIcon(kind) {
+  if (typeof window === "undefined" || !window.google?.maps) {
+    return undefined;
+  }
+
+  if (kind === "start") {
+    return {
+      path: window.google.maps.SymbolPath.CIRCLE,
+      fillColor: "#22c55e",
+      fillOpacity: 1,
+      strokeColor: "#dcfce7",
+      strokeWeight: 3,
+      scale: 8,
+    };
+  }
+
+  if (kind === "end") {
+    return {
+      path: window.google.maps.SymbolPath.CIRCLE,
+      fillColor: "#f43f5e",
+      fillOpacity: 1,
+      strokeColor: "#ffe4e6",
+      strokeWeight: 3,
+      scale: 8,
+    };
+  }
+
+  return {
+    path: window.google.maps.SymbolPath.CIRCLE,
+    fillColor: "#f59e0b",
+    fillOpacity: 1,
+    strokeColor: "#fef3c7",
+    strokeWeight: 3,
+    scale: 7,
+  };
+}
+
+function getDraftWaypointMeta(index, total) {
+  if (index === 0) {
+    return {
+      kind: "start",
+      badge: "S",
+      title: "Route start",
+    };
+  }
+
+  if (index === total - 1) {
+    return {
+      kind: "end",
+      badge: "F",
+      title: "Route finish",
+    };
+  }
+
+  return {
+    kind: "mid",
+    badge: String(index),
+    title: `Waypoint ${index}`,
+  };
+}
+
 function FallbackGridMap({ pins, selectedPinId, onSelect }) {
   return (
     <div className="relative h-72 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_center,_rgba(163,230,53,0.12),_transparent_32%),linear-gradient(180deg,#0f0f0f,#090909)]">
@@ -427,6 +488,25 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
                 icon={getCurrentLocationIcon()}
               />
             ) : null}
+            {draftRoutePath?.map((point, index) => {
+              const waypoint = getDraftWaypointMeta(index, draftRoutePath.length);
+
+              return (
+                <MarkerF
+                  key={`draft-route-${point.lat}-${point.lng}-${index}`}
+                  position={point}
+                  title={waypoint.title}
+                  zIndex={997}
+                  label={{
+                    text: waypoint.badge,
+                    color: "#0a0a0a",
+                    fontSize: "11px",
+                    fontWeight: "700",
+                  }}
+                  icon={getDraftWaypointIcon(waypoint.kind)}
+                />
+              );
+            })}
             {draftLocation ? (
               <MarkerF
                 position={{ lat: draftLocation.lat, lng: draftLocation.lng }}

@@ -237,6 +237,20 @@ export function MapComposerPanel({
                       Rotayi Temizle
                     </button>
                   </div>
+                  {routePointCount > 0 ? (
+                    <div className="mt-3 rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-xs text-neutral-300">
+                      <p className="font-semibold text-lime-300">Taslak Rota Ozeti</p>
+                      <div className="mt-2 space-y-1">
+                        {form.routePoints.map((point, index) => (
+                          <p key={`${point.lat}-${point.lng}-${index}`}>
+                            {index === 0 ? "S" : index === form.routePoints.length - 1 ? "F" : index}
+                            {" "}
+                            / {point.lat}, {point.lng}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   {errors.routePoints ? <p className="mt-3 text-xs text-rose-300">{errors.routePoints}</p> : null}
                 </div>
               </>
