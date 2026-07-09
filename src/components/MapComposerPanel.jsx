@@ -8,6 +8,7 @@ const nodeTypes = [
 ];
 
 export function MapComposerPanel({
+  alwaysOpen = false,
   draftLocation,
   feedback,
   form,
@@ -21,6 +22,7 @@ export function MapComposerPanel({
   onUseSelectedCoordinates,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const resolvedOpen = alwaysOpen || isOpen;
   const isSpot = form.type === "spot";
   const isMeet = form.type === "meet";
   const isWash = form.type === "wash";
@@ -36,26 +38,28 @@ export function MapComposerPanel({
             Varsayilan akis event odakli. Haritadan ana nokta ve event rota dugumleri secilebilir.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setIsOpen((current) => {
-              const next = !current;
-              if (!next) {
-                onSetMapPickMode("node");
-              }
-              return next;
-            });
-          }}
-          className={`min-h-12 rounded-2xl px-4 text-sm font-semibold transition ${
-            isOpen ? "bg-lime-400 text-black" : "border border-white/10 bg-black/20 text-neutral-300"
-          }`}
-        >
-          {isOpen ? "Editoru Gizle" : "Editoru Ac"}
-        </button>
+        {!alwaysOpen ? (
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen((current) => {
+                const next = !current;
+                if (!next) {
+                  onSetMapPickMode("node");
+                }
+                return next;
+              });
+            }}
+            className={`min-h-12 rounded-2xl px-4 text-sm font-semibold transition ${
+              resolvedOpen ? "bg-lime-400 text-black" : "border border-white/10 bg-black/20 text-neutral-300"
+            }`}
+          >
+            {resolvedOpen ? "Editoru Gizle" : "Editoru Ac"}
+          </button>
+        ) : null}
       </div>
 
-      {!isOpen ? (
+      {!resolvedOpen ? (
         <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 px-4 py-4 text-sm text-neutral-300">
           <p>Su an ikinci bir photo spot degil, sadece yeni node olusturma alani var.</p>
           <p className="mt-2 text-neutral-500">
@@ -66,7 +70,7 @@ export function MapComposerPanel({
         </div>
       ) : null}
 
-      {isOpen ? (
+      {resolvedOpen ? (
         <>
           <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-lime-400/15 bg-lime-400/5 px-4 py-3">
             <div>

@@ -1,11 +1,9 @@
 import { appId, navItems, tuningOptions } from "./data/mockData";
-import { MapCard } from "./components/MapCard";
-import { MapComposerPanel } from "./components/MapComposerPanel";
-import { PinPanel } from "./components/PinPanel";
 import { AuthScreen } from "./screens/AuthScreen";
 import { ClansScreen } from "./screens/ClansScreen";
 import { DriveScreen } from "./screens/DriveScreen";
 import { GarageScreen } from "./screens/GarageScreen";
+import { MapScreen } from "./screens/MapScreen";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
 
@@ -32,6 +30,7 @@ function App() {
   const {
     activeTab,
     clans,
+    clearDraftRoute,
     driveHud,
     drivers,
     fuelInsights,
@@ -42,25 +41,24 @@ function App() {
     likeGalleryImage,
     likePin,
     loadSpotPhotoFile,
+    mapDraftLocation,
+    mapPickMode,
     mapPinErrors,
     mapPinFeedback,
     mapPinForm,
-    mapDraftLocation,
-    mapPickMode,
     mapPins,
     pickMapLocation,
     rateAttendee,
+    removeLastDraftRoutePoint,
     resetSessionView,
     selectedPin,
     selectedPinId,
     setActiveTab,
-    setMapPinForm,
     setMapPickMode,
+    setMapPinForm,
     setSelectedPinId,
     setSpotPhotoForm,
     setWashForm,
-    clearDraftRoute,
-    removeLastDraftRoutePoint,
     spotPhotoErrors,
     spotPhotoFeedback,
     spotPhotoForm,
@@ -133,51 +131,43 @@ function App() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 pb-28">
+        <div className={`flex-1 overflow-y-auto ${activeTab === "map" ? "px-0 py-0 pb-20" : "px-4 py-4 pb-28"}`}>
           {activeTab === "map" ? (
-            <section className="space-y-4">
-              <MapCard
-                pins={mapPins}
-                selectedPinId={selectedPinId}
-                onSelect={setSelectedPinId}
-                draftLocation={mapDraftLocation}
-                draftRoutePath={mapPinForm.routePoints}
-                mapPickMode={mapPickMode}
-                onPickLocation={pickMapLocation}
-              />
-              <MapComposerPanel
-                draftLocation={mapDraftLocation}
-                feedback={mapPinFeedback}
-                form={mapPinForm}
-                errors={mapPinErrors}
-                mapPickMode={mapPickMode}
-                onClearRouteDraft={clearDraftRoute}
-                onFormChange={setMapPinForm}
-                onRemoveLastRoutePoint={removeLastDraftRoutePoint}
-                onSetMapPickMode={setMapPickMode}
-                onSubmit={submitMapPin}
-                onUseSelectedCoordinates={useSelectedPinCoordinates}
-              />
-              <PinPanel
-                pin={selectedPin}
-                user={user}
-                spotPhotoErrors={spotPhotoErrors}
-                spotPhotoFeedback={spotPhotoFeedback}
-                spotPhotoForm={spotPhotoForm}
-                washForm={washForm}
-                washErrors={washErrors}
-                washFeedback={washFeedback}
-                onJoinCruise={joinCruise}
-                onLikeGallery={likeGalleryImage}
-                onLikePin={likePin}
-                onRateAttendee={rateAttendee}
-                onSpotPhotoFileChange={loadSpotPhotoFile}
-                onSpotPhotoFormChange={setSpotPhotoForm}
-                onSubmitSpotPhoto={submitSpotPhoto}
-                onSubmitWashReview={submitWashReview}
-                onWashFormChange={setWashForm}
-              />
-            </section>
+            <MapScreen
+              clearDraftRoute={clearDraftRoute}
+              draftLocation={mapDraftLocation}
+              joinCruise={joinCruise}
+              likeGalleryImage={likeGalleryImage}
+              likePin={likePin}
+              loadSpotPhotoFile={loadSpotPhotoFile}
+              mapPickMode={mapPickMode}
+              mapPinErrors={mapPinErrors}
+              mapPinFeedback={mapPinFeedback}
+              mapPinForm={mapPinForm}
+              mapPins={mapPins}
+              onPickLocation={pickMapLocation}
+              onSelectPin={setSelectedPinId}
+              onSetMapPickMode={setMapPickMode}
+              onSetMapPinForm={setMapPinForm}
+              onSetSpotPhotoForm={setSpotPhotoForm}
+              onSetWashForm={setWashForm}
+              onSubmitMapPin={submitMapPin}
+              onSubmitSpotPhoto={submitSpotPhoto}
+              onSubmitWashReview={submitWashReview}
+              onUseSelectedCoordinates={useSelectedPinCoordinates}
+              pickRouteBack={removeLastDraftRoutePoint}
+              rateAttendee={rateAttendee}
+              selectedPin={selectedPin}
+              selectedPinId={selectedPinId}
+              spotPhotoErrors={spotPhotoErrors}
+              spotPhotoFeedback={spotPhotoFeedback}
+              spotPhotoForm={spotPhotoForm}
+              submitWashReview={submitWashReview}
+              user={user}
+              washForm={washForm}
+              washErrors={washErrors}
+              washFeedback={washFeedback}
+            />
           ) : null}
           {activeTab === "drive" ? (
             <DriveScreen

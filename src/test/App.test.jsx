@@ -38,8 +38,8 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
 
     expect(screen.getByText("CRUISER // Ankara Bati")).toBeInTheDocument();
-    expect(screen.getByText("Interactive Map Layer")).toBeInTheDocument();
-    expect(screen.getByText("Mogan Lake Sunset")).toBeInTheDocument();
+    expect(screen.getByText("CRUISER MAP")).toBeInTheDocument();
+    expect(screen.getAllByText("Mogan Lake Sunset").length).toBeGreaterThan(0);
   });
 
   it("switches to the driving screen when the start ride button is pressed", async () => {

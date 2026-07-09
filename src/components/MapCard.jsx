@@ -238,7 +238,7 @@ function FallbackGridMap({ pins, selectedPinId, onSelect }) {
   );
 }
 
-export function MapCard({ pins, selectedPinId, onSelect, draftLocation, draftRoutePath, mapPickMode, onPickLocation }) {
+export function MapCard({ pins, selectedPinId, onSelect, draftLocation, draftRoutePath, mapPickMode, onPickLocation, fullScreen = false }) {
   const mapsApiKey = getMapsApiKey();
   const shouldUseGoogleMaps = Boolean(mapsApiKey) && pins.every((pin) => typeof pin.lat === "number" && typeof pin.lng === "number");
   const selectedPin = pins.find((pin) => pin.id === selectedPinId) ?? pins[0];
@@ -258,10 +258,10 @@ export function MapCard({ pins, selectedPinId, onSelect, draftLocation, draftRou
     );
   }
 
-  return <GoogleMapCard mapsApiKey={mapsApiKey} pins={pins} selectedPin={selectedPin} selectedPinId={selectedPinId} onSelect={onSelect} draftLocation={draftLocation} draftRoutePath={draftRoutePath} mapPickMode={mapPickMode} onPickLocation={onPickLocation} />;
+  return <GoogleMapCard mapsApiKey={mapsApiKey} pins={pins} selectedPin={selectedPin} selectedPinId={selectedPinId} onSelect={onSelect} draftLocation={draftLocation} draftRoutePath={draftRoutePath} mapPickMode={mapPickMode} onPickLocation={onPickLocation} fullScreen={fullScreen} />;
 }
 
-function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect, draftLocation, draftRoutePath, mapPickMode, onPickLocation }) {
+function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect, draftLocation, draftRoutePath, mapPickMode, onPickLocation, fullScreen }) {
   const mapRef = useRef(null);
   const [routeState, setRouteState] = useState({
     path: [],
@@ -430,11 +430,11 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
   }, [displayedRoutePath, hasDisplayedRoute, isLoaded, mapCenter, selectedPin]);
 
   return (
-    <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4">
-      <div className="mb-3 flex items-center justify-between">
+    <div className={`relative overflow-hidden ${fullScreen ? "h-full bg-[#050505]" : "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4"}`}>
+      <div className={`${fullScreen ? "absolute right-4 top-4 z-20" : "mb-3 flex items-center justify-between"}`}>
         <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Interactive Map Layer</p>
-          <h3 className="mt-1 text-lg font-black">Google Maps Cruise Grid</h3>
+          {!fullScreen ? <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Interactive Map Layer</p> : null}
+          {!fullScreen ? <h3 className="mt-1 text-lg font-black">Google Maps Cruise Grid</h3> : null}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -452,15 +452,15 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
           >
             Konumum
           </button>
-          <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Ankara Live</div>
+          {!fullScreen ? <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Ankara Live</div> : null}
         </div>
       </div>
 
       {isLoaded && !loadError ? (
-        <div className="relative overflow-hidden rounded-[1.5rem] border border-white/8">
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 bg-[linear-gradient(180deg,rgba(10,10,10,0.75),transparent)]" />
+        <div className={`relative overflow-hidden ${fullScreen ? "h-full" : "rounded-[1.5rem] border border-white/8"}`}>
+          {!fullScreen ? <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 bg-[linear-gradient(180deg,rgba(10,10,10,0.75),transparent)]" /> : null}
           <GoogleMap
-            mapContainerStyle={mapContainerStyle}
+            mapContainerStyle={fullScreen ? { width: "100%", height: "100%" } : mapContainerStyle}
             center={mapCenter}
             zoom={11}
             options={mapOptions}
@@ -536,41 +536,43 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
               />
             ))}
           </GoogleMap>
-          <div className="absolute inset-x-3 bottom-3 z-10 rounded-2xl border border-white/10 bg-black/70 px-4 py-3 backdrop-blur">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Selected Node</p>
-                <p className="mt-1 text-sm font-semibold text-neutral-100">{selectedPin?.name}</p>
-                <p className="mt-1 text-xs text-neutral-400">
-                  {hasMockRoute ? selectedPin.route : "Tap a cruise meet to preview its live convoy route."}
-                </p>
-                {routeState.source === "fallback" ? (
-                  <p className="mt-2 text-[11px] text-amber-300">Google route unavailable, showing mock cruise path.</p>
-                ) : null}
-                {locationState.source === "ready" ? (
-                  <p className="mt-2 text-[11px] text-rose-200">Live location locked and visible on the map.</p>
-                ) : null}
-                {draftLocation ? (
-                  <p className="mt-2 text-[11px] text-lime-200">
-                    {mapPickMode === "route"
-                      ? "Route builder aktif. Haritaya dokundukca event rota dugumleri ekleniyor."
-                      : "Map uzerine dokunarak yeni node konumu secili halde tutuluyor."}
+          {!fullScreen ? (
+            <div className="absolute inset-x-3 bottom-3 z-10 rounded-2xl border border-white/10 bg-black/70 px-4 py-3 backdrop-blur">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Selected Node</p>
+                  <p className="mt-1 text-sm font-semibold text-neutral-100">{selectedPin?.name}</p>
+                  <p className="mt-1 text-xs text-neutral-400">
+                    {hasMockRoute ? selectedPin.route : "Tap a cruise meet to preview its live convoy route."}
                   </p>
-                ) : null}
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <div className={`rounded-2xl border px-3 py-2 text-[11px] ${routeState.source === "google" ? "border-lime-400/40 bg-lime-400/10 text-lime-300" : "border-white/10 bg-white/5 text-neutral-400"}`}>
-                  {routeState.source === "loading" ? "Syncing route" : hasDisplayedRoute ? `${displayedRoutePath.length} route nodes` : "No route"}
+                  {routeState.source === "fallback" ? (
+                    <p className="mt-2 text-[11px] text-amber-300">Google route unavailable, showing mock cruise path.</p>
+                  ) : null}
+                  {locationState.source === "ready" ? (
+                    <p className="mt-2 text-[11px] text-rose-200">Live location locked and visible on the map.</p>
+                  ) : null}
+                  {draftLocation ? (
+                    <p className="mt-2 text-[11px] text-lime-200">
+                      {mapPickMode === "route"
+                        ? "Route builder aktif. Haritaya dokundukca event rota dugumleri ekleniyor."
+                        : "Map uzerine dokunarak yeni node konumu secili halde tutuluyor."}
+                    </p>
+                  ) : null}
                 </div>
-                {routeState.source === "google" ? (
-                  <div className="rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-right text-[11px] text-neutral-300">
-                    <div>{formatDistance(routeState.distanceMeters)}</div>
-                    <div>{formatDuration(routeState.duration)}</div>
+                <div className="flex flex-col items-end gap-2">
+                  <div className={`rounded-2xl border px-3 py-2 text-[11px] ${routeState.source === "google" ? "border-lime-400/40 bg-lime-400/10 text-lime-300" : "border-white/10 bg-white/5 text-neutral-400"}`}>
+                    {routeState.source === "loading" ? "Syncing route" : hasDisplayedRoute ? `${displayedRoutePath.length} route nodes` : "No route"}
                   </div>
-                ) : null}
+                  {routeState.source === "google" ? (
+                    <div className="rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-right text-[11px] text-neutral-300">
+                      <div>{formatDistance(routeState.distanceMeters)}</div>
+                      <div>{formatDuration(routeState.duration)}</div>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
         </div>
       ) : null}
 
