@@ -1,38 +1,189 @@
+import { GoogleMap, MarkerF, PolylineF, useJsApiLoader } from "@react-google-maps/api";
+
+const mapContainerStyle = {
+  width: "100%",
+  height: "18rem",
+};
+
+const mapOptions = {
+  disableDefaultUI: true,
+  clickableIcons: false,
+  gestureHandling: "greedy",
+  styles: [
+    { elementType: "geometry", stylers: [{ color: "#0d0d0d" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#8f8f8f" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#0a0a0a" }] },
+    { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#171717" }] },
+    { featureType: "poi", stylers: [{ visibility: "off" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#1b1b1b" }] },
+    { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#222222" }] },
+    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#2a2a2a" }] },
+    { featureType: "transit", stylers: [{ visibility: "off" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#111827" }] },
+  ],
+};
+
+const routePath = [
+  { lat: 39.9042, lng: 32.7315 },
+  { lat: 39.8422, lng: 32.7827 },
+  { lat: 39.7869, lng: 32.8068 },
+];
+
+const routeLineOptions = {
+  geodesic: true,
+  strokeColor: "#a3e635",
+  strokeOpacity: 0.88,
+  strokeWeight: 4,
+  icons: [
+    {
+      icon: {
+        path: "M 0,-1 0,1",
+        strokeOpacity: 1,
+        scale: 3,
+      },
+      offset: "0",
+      repeat: "14px",
+    },
+  ],
+};
+
+function getMapsApiKey() {
+  if (import.meta.env.MODE === "test") {
+    return "";
+  }
+
+  return import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "";
+}
+
+function getPinGlyph(type) {
+  if (type === "spot") {
+    return "📸";
+  }
+
+  if (type === "wash") {
+    return "🧼";
+  }
+
+  return "🏍️";
+}
+
+function FallbackGridMap({ pins, selectedPinId, onSelect }) {
+  return (
+    <div className="relative h-72 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_center,_rgba(163,230,53,0.12),_transparent_32%),linear-gradient(180deg,#0f0f0f,#090909)]">
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:32px_32px]" />
+      <svg viewBox="0 0 400 280" className="absolute inset-0 h-full w-full">
+        <path d="M20 215 C120 150, 145 90, 238 98 S330 130, 390 45" fill="none" stroke="#a3e635" strokeWidth="3" strokeDasharray="10 9" opacity="0.85" />
+        <path d="M24 58 C90 70, 130 165, 235 172 S312 180, 382 240" fill="none" stroke="#f43f5e" strokeWidth="2.5" strokeDasharray="8 8" opacity="0.7" />
+        <path d="M50 255 C180 260, 170 50, 340 85" fill="none" stroke="#fafafa" strokeWidth="1.5" opacity="0.2" />
+      </svg>
+      {pins.map((pin) => (
+        <button
+          key={pin.id}
+          type="button"
+          onClick={() => onSelect(pin.id)}
+          aria-label={`${pin.name} (${pin.type})`}
+          className={`absolute flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl border text-lg transition ${
+            selectedPinId === pin.id
+              ? "border-lime-400 bg-lime-400/20 shadow-[0_0_22px_rgba(163,230,53,0.4)]"
+              : "border-white/10 bg-black/50"
+          }`}
+          style={{ left: pin.x, top: pin.y }}
+        >
+          {getPinGlyph(pin.type)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function MapCard({ pins, selectedPinId, onSelect }) {
+  const mapsApiKey = getMapsApiKey();
+  const shouldUseGoogleMaps = Boolean(mapsApiKey) && pins.every((pin) => typeof pin.lat === "number" && typeof pin.lng === "number");
+  const selectedPin = pins.find((pin) => pin.id === selectedPinId) ?? pins[0];
+
+  if (!shouldUseGoogleMaps) {
+    return (
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Interactive Map Layer</p>
+            <h3 className="mt-1 text-lg font-black">Google Maps Cruise Grid</h3>
+          </div>
+          <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Fallback Grid</div>
+        </div>
+        <FallbackGridMap pins={pins} selectedPinId={selectedPinId} onSelect={onSelect} />
+      </div>
+    );
+  }
+
+  return <GoogleMapCard mapsApiKey={mapsApiKey} pins={pins} selectedPin={selectedPin} selectedPinId={selectedPinId} onSelect={onSelect} />;
+}
+
+function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect }) {
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: "cruiser-google-maps",
+    googleMapsApiKey: mapsApiKey,
+  });
+  const mapCenter = selectedPin
+    ? { lat: selectedPin.lat ?? 39.8687, lng: selectedPin.lng ?? 32.7766 }
+    : { lat: 39.8687, lng: 32.7766 };
+
   return (
     <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4">
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Interactive Map Layer</p>
-          <h3 className="mt-1 text-lg font-black">Driving Grid & Route Curves</h3>
+          <h3 className="mt-1 text-lg font-black">Google Maps Cruise Grid</h3>
         </div>
-        <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Ankara Grid</div>
+        <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Ankara Live</div>
       </div>
 
-      <div className="relative h-72 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_center,_rgba(163,230,53,0.12),_transparent_32%),linear-gradient(180deg,#0f0f0f,#090909)]">
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:32px_32px]" />
-        <svg viewBox="0 0 400 280" className="absolute inset-0 h-full w-full">
-          <path d="M20 215 C120 150, 145 90, 238 98 S330 130, 390 45" fill="none" stroke="#a3e635" strokeWidth="3" strokeDasharray="10 9" opacity="0.85" />
-          <path d="M24 58 C90 70, 130 165, 235 172 S312 180, 382 240" fill="none" stroke="#f43f5e" strokeWidth="2.5" strokeDasharray="8 8" opacity="0.7" />
-          <path d="M50 255 C180 260, 170 50, 340 85" fill="none" stroke="#fafafa" strokeWidth="1.5" opacity="0.2" />
-        </svg>
-        {pins.map((pin) => (
-          <button
-            key={pin.id}
-            type="button"
-            onClick={() => onSelect(pin.id)}
-            aria-label={`${pin.name} (${pin.type})`}
-            className={`absolute flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl border text-lg transition ${
-              selectedPinId === pin.id
-                ? "border-lime-400 bg-lime-400/20 shadow-[0_0_22px_rgba(163,230,53,0.4)]"
-                : "border-white/10 bg-black/50"
-            }`}
-            style={{ left: pin.x, top: pin.y }}
+      {isLoaded && !loadError ? (
+        <div className="relative overflow-hidden rounded-[1.5rem] border border-white/8">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 bg-[linear-gradient(180deg,rgba(10,10,10,0.75),transparent)]" />
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={mapCenter}
+            zoom={11}
+            options={mapOptions}
           >
-            {pin.icon}
-          </button>
-        ))}
-      </div>
+            <PolylineF path={routePath} options={routeLineOptions} />
+            {pins.map((pin) => (
+              <MarkerF
+                key={pin.id}
+                position={{ lat: pin.lat, lng: pin.lng }}
+                onClick={() => onSelect(pin.id)}
+                title={pin.name}
+                label={{
+                  text: getPinGlyph(pin.type),
+                  fontSize: "20px",
+                }}
+                icon={{
+                  path: window.google.maps.SymbolPath.CIRCLE,
+                  fillColor: selectedPinId === pin.id ? "#a3e635" : "#171717",
+                  fillOpacity: 1,
+                  strokeColor: selectedPinId === pin.id ? "#d9f99d" : "#fafafa",
+                  strokeWeight: 2,
+                  scale: selectedPinId === pin.id ? 13 : 11,
+                }}
+              />
+            ))}
+          </GoogleMap>
+          <div className="absolute inset-x-3 bottom-3 z-10 rounded-2xl border border-white/10 bg-black/70 px-4 py-3 backdrop-blur">
+            <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Selected Node</p>
+            <p className="mt-1 text-sm font-semibold text-neutral-100">{selectedPin?.name}</p>
+          </div>
+        </div>
+      ) : null}
+
+      {loadError ? (
+        <>
+          <FallbackGridMap pins={pins} selectedPinId={selectedPinId} onSelect={onSelect} />
+          <p className="mt-3 text-xs text-rose-300">
+            Google Maps could not load. Check API restrictions for `localhost` and `127.0.0.1`.
+          </p>
+        </>
+      ) : null}
     </div>
-  );
+  );  
 }

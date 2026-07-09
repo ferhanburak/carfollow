@@ -116,7 +116,11 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
       }
 
       if (remoteWorld.mapPins?.length) {
-        const orderedMapPins = sortByReferenceOrder(remoteWorld.mapPins, initialWorld.mapPins, (pin) => pin.id);
+        const mergedMapPins = remoteWorld.mapPins.map((pin) => ({
+          ...(initialWorld.mapPins.find((item) => item.id === pin.id) ?? {}),
+          ...pin,
+        }));
+        const orderedMapPins = sortByReferenceOrder(mergedMapPins, initialWorld.mapPins, (pin) => pin.id);
         setMapPins(orderedMapPins);
         setSelectedPinId((current) =>
           orderedMapPins.some((pin) => pin.id === current) ? current : orderedMapPins[0].id,
