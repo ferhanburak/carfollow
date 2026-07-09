@@ -209,9 +209,13 @@ function getDraftWaypointMeta(index, total) {
   };
 }
 
-function FallbackGridMap({ pins, selectedPinId, onSelect }) {
+function FallbackGridMap({ pins, selectedPinId, onSelect, fullScreen = false }) {
   return (
-    <div className="relative h-72 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_center,_rgba(163,230,53,0.12),_transparent_32%),linear-gradient(180deg,#0f0f0f,#090909)]">
+    <div
+      className={`relative overflow-hidden border border-white/8 bg-[radial-gradient(circle_at_center,_rgba(163,230,53,0.12),_transparent_32%),linear-gradient(180deg,#0f0f0f,#090909)] ${
+        fullScreen ? "h-full rounded-none" : "h-72 rounded-[1.5rem]"
+      }`}
+    >
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:32px_32px]" />
       <svg viewBox="0 0 400 280" className="absolute inset-0 h-full w-full">
         <path d="M20 215 C120 150, 145 90, 238 98 S330 130, 390 45" fill="none" stroke="#a3e635" strokeWidth="3" strokeDasharray="10 9" opacity="0.85" />
@@ -238,31 +242,78 @@ function FallbackGridMap({ pins, selectedPinId, onSelect }) {
   );
 }
 
-export function MapCard({ pins, selectedPinId, onSelect, draftLocation, draftRoutePath, mapPickMode, onPickLocation, fullScreen = false }) {
+export function MapCard({
+  pins,
+  selectedPinId,
+  onSelect,
+  draftLocation,
+  draftRoutePath,
+  mapPickMode,
+  onPickLocation,
+  fullScreen = false,
+  navigationMode = false,
+}) {
   const mapsApiKey = getMapsApiKey();
   const shouldUseGoogleMaps = Boolean(mapsApiKey) && pins.every((pin) => typeof pin.lat === "number" && typeof pin.lng === "number");
   const selectedPin = pins.find((pin) => pin.id === selectedPinId) ?? pins[0];
 
   if (!shouldUseGoogleMaps) {
     return (
-      <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Interactive Map Layer</p>
-            <h3 className="mt-1 text-lg font-black">Google Maps Cruise Grid</h3>
+      <div
+        className={`relative overflow-hidden ${
+          fullScreen
+            ? "h-full bg-[#050505]"
+            : "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4"
+        }`}
+      >
+        {!fullScreen ? (
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Interactive Map Layer</p>
+              <h3 className="mt-1 text-lg font-black">Google Maps Cruise Grid</h3>
+            </div>
+            <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Fallback Grid</div>
           </div>
-          <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Fallback Grid</div>
+        ) : null}
+        <div className={fullScreen ? "h-full p-0" : ""}>
+          <FallbackGridMap pins={pins} selectedPinId={selectedPinId} onSelect={onSelect} fullScreen={fullScreen} />
         </div>
-        <FallbackGridMap pins={pins} selectedPinId={selectedPinId} onSelect={onSelect} />
       </div>
     );
   }
 
-  return <GoogleMapCard mapsApiKey={mapsApiKey} pins={pins} selectedPin={selectedPin} selectedPinId={selectedPinId} onSelect={onSelect} draftLocation={draftLocation} draftRoutePath={draftRoutePath} mapPickMode={mapPickMode} onPickLocation={onPickLocation} fullScreen={fullScreen} />;
+  return (
+    <GoogleMapCard
+      mapsApiKey={mapsApiKey}
+      pins={pins}
+      selectedPin={selectedPin}
+      selectedPinId={selectedPinId}
+      onSelect={onSelect}
+      draftLocation={draftLocation}
+      draftRoutePath={draftRoutePath}
+      mapPickMode={mapPickMode}
+      onPickLocation={onPickLocation}
+      fullScreen={fullScreen}
+      navigationMode={navigationMode}
+    />
+  );
 }
 
-function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect, draftLocation, draftRoutePath, mapPickMode, onPickLocation, fullScreen }) {
+function GoogleMapCard({
+  mapsApiKey,
+  pins,
+  selectedPin,
+  selectedPinId,
+  onSelect,
+  draftLocation,
+  draftRoutePath,
+  mapPickMode,
+  onPickLocation,
+  fullScreen,
+  navigationMode,
+}) {
   const mapRef = useRef(null);
+  const watchIdRef = useRef(null);
   const [routeState, setRouteState] = useState({
     path: [],
     distanceMeters: null,
@@ -275,6 +326,7 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
     source: "idle",
     error: "",
   });
+  const [followCurrentLocation, setFollowCurrentLocation] = useState(Boolean(navigationMode));
   const { isLoaded, loadError } = useJsApiLoader({
     id: "cruiser-google-maps",
     googleMapsApiKey: mapsApiKey,
@@ -287,6 +339,10 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
   const hasMockRoute = activeRoutePath.length > 1;
   const displayedRoutePath = routeState.path.length > 1 ? routeState.path : activeRoutePath;
   const hasDisplayedRoute = displayedRoutePath.length > 1;
+
+  useEffect(() => {
+    setFollowCurrentLocation(Boolean(navigationMode));
+  }, [navigationMode]);
 
   useEffect(() => {
     if (!isLoaded || typeof navigator === "undefined" || !navigator.geolocation) {
@@ -336,8 +392,44 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
       },
     );
 
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        if (cancelled) {
+          return;
+        }
+
+        setCurrentLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setLocationState({
+          source: "ready",
+          error: "",
+        });
+      },
+      (error) => {
+        if (cancelled) {
+          return;
+        }
+
+        setLocationState({
+          source: "blocked",
+          error: error.message || "Location tracking denied.",
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 3000,
+        timeout: 10000,
+      },
+    );
+
     return () => {
       cancelled = true;
+      if (watchIdRef.current != null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
     };
   }, [isLoaded]);
 
@@ -414,7 +506,7 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
   }, [activeRoutePath, hasMockRoute, isLoaded, selectedPin]);
 
   useEffect(() => {
-    if (!isLoaded || !mapRef.current || !selectedPin) {
+    if (!isLoaded || !mapRef.current) {
       return;
     }
 
@@ -425,9 +517,19 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
       return;
     }
 
+    if (navigationMode && currentLocation && followCurrentLocation) {
+      mapRef.current.panTo(currentLocation);
+      mapRef.current.setZoom(14);
+      return;
+    }
+
+    if (!selectedPin) {
+      return;
+    }
+
     mapRef.current.panTo(mapCenter);
     mapRef.current.setZoom(12);
-  }, [displayedRoutePath, hasDisplayedRoute, isLoaded, mapCenter, selectedPin]);
+  }, [currentLocation, displayedRoutePath, followCurrentLocation, hasDisplayedRoute, isLoaded, mapCenter, navigationMode, selectedPin]);
 
   return (
     <div className={`relative overflow-hidden ${fullScreen ? "h-full bg-[#050505]" : "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4"}`}>
@@ -445,12 +547,17 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
               }
 
               mapRef.current.panTo(currentLocation);
-              mapRef.current.setZoom(13);
+              mapRef.current.setZoom(14);
+              setFollowCurrentLocation(true);
             }}
             disabled={!currentLocation}
-            className="min-h-12 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200 transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-neutral-500"
+            className={`min-h-12 rounded-2xl border px-3 py-2 text-xs transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-neutral-500 ${
+              followCurrentLocation
+                ? "border-lime-400/40 bg-lime-400/15 text-lime-200"
+                : "border-rose-400/30 bg-rose-500/10 text-rose-200"
+            }`}
           >
-            Konumum
+            {followCurrentLocation ? "Bana Kilitli" : "Konumuma Git"}
           </button>
           {!fullScreen ? <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Ankara Live</div> : null}
         </div>
@@ -465,6 +572,10 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
             zoom={11}
             options={mapOptions}
             onClick={(event) => {
+              if (navigationMode) {
+                return;
+              }
+
               const lat = event.latLng?.lat();
               const lng = event.latLng?.lng();
               if (typeof lat === "number" && typeof lng === "number") {
@@ -473,6 +584,11 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
             }}
             onLoad={(map) => {
               mapRef.current = map;
+            }}
+            onDragStart={() => {
+              if (navigationMode) {
+                setFollowCurrentLocation(false);
+              }
             }}
             onUnmount={() => {
               mapRef.current = null;

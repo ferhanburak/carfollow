@@ -132,7 +132,13 @@ function App() {
           </div>
         </header>
 
-        <div className={`flex-1 overflow-y-auto ${activeTab === "liveMap" ? "px-0 py-0 pb-20" : "px-4 py-4 pb-28"}`}>
+        <div
+          className={`flex-1 min-h-0 ${
+            activeTab === "liveMap"
+              ? "overflow-hidden px-0 py-0"
+              : "overflow-y-auto px-4 py-4 pb-28"
+          }`}
+        >
           {activeTab === "map" ? (
             <MapHubScreen
               clearDraftRoute={clearDraftRoute}
@@ -172,28 +178,18 @@ function App() {
           ) : null}
           {activeTab === "liveMap" ? (
             <MapScreen
-              clearDraftRoute={clearDraftRoute}
-              draftLocation={mapDraftLocation}
+              driveHud={driveHud}
+              isDriving={isDriving}
               joinCruise={joinCruise}
               likeGalleryImage={likeGalleryImage}
               likePin={likePin}
               loadSpotPhotoFile={loadSpotPhotoFile}
-              mapPickMode={mapPickMode}
-              mapPinErrors={mapPinErrors}
-              mapPinFeedback={mapPinFeedback}
-              mapPinForm={mapPinForm}
               mapPins={mapPins}
-              onPickLocation={pickMapLocation}
               onSelectPin={setSelectedPinId}
-              onSetMapPickMode={setMapPickMode}
-              onSetMapPinForm={setMapPinForm}
               onSetSpotPhotoForm={setSpotPhotoForm}
               onSetWashForm={setWashForm}
-              onSubmitMapPin={submitMapPin}
               onSubmitSpotPhoto={submitSpotPhoto}
               onSubmitWashReview={submitWashReview}
-              onUseSelectedCoordinates={useSelectedPinCoordinates}
-              pickRouteBack={removeLastDraftRoutePoint}
               rateAttendee={rateAttendee}
               selectedPin={selectedPin}
               selectedPinId={selectedPinId}
