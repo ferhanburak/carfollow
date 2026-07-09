@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { GoogleMap, MarkerF, PolylineF, useJsApiLoader } from "@react-google-maps/api";
 
 const mapContainerStyle = {
@@ -23,12 +24,6 @@ const mapOptions = {
   ],
 };
 
-const routePath = [
-  { lat: 39.9042, lng: 32.7315 },
-  { lat: 39.8422, lng: 32.7827 },
-  { lat: 39.7869, lng: 32.8068 },
-];
-
 const routeLineOptions = {
   geodesic: true,
   strokeColor: "#a3e635",
@@ -47,6 +42,12 @@ const routeLineOptions = {
   ],
 };
 
+const glyphByType = {
+  spot: "\uD83D\uDCF8",
+  wash: "\uD83E\uDDFC",
+  meet: "\uD83C\uDFCD\uFE0F",
+};
+
 function getMapsApiKey() {
   if (import.meta.env.MODE === "test") {
     return "";
@@ -56,15 +57,15 @@ function getMapsApiKey() {
 }
 
 function getPinGlyph(type) {
-  if (type === "spot") {
-    return "📸";
+  return glyphByType[type] ?? glyphByType.meet;
+}
+
+function getActiveRoutePath(selectedPin) {
+  if (selectedPin?.type === "meet" && Array.isArray(selectedPin.routePath) && selectedPin.routePath.length > 1) {
+    return selectedPin.routePath;
   }
 
-  if (type === "wash") {
-    return "🧼";
-  }
-
-  return "🏍️";
+  return [];
 }
 
 function FallbackGridMap({ pins, selectedPinId, onSelect }) {
@@ -120,6 +121,7 @@ export function MapCard({ pins, selectedPinId, onSelect }) {
 }
 
 function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect }) {
+  const mapRef = useRef(null);
   const { isLoaded, loadError } = useJsApiLoader({
     id: "cruiser-google-maps",
     googleMapsApiKey: mapsApiKey,
@@ -127,6 +129,24 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
   const mapCenter = selectedPin
     ? { lat: selectedPin.lat ?? 39.8687, lng: selectedPin.lng ?? 32.7766 }
     : { lat: 39.8687, lng: 32.7766 };
+  const activeRoutePath = getActiveRoutePath(selectedPin);
+  const hasRoute = activeRoutePath.length > 1;
+
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current || !selectedPin) {
+      return;
+    }
+
+    if (hasRoute) {
+      const bounds = new window.google.maps.LatLngBounds();
+      activeRoutePath.forEach((point) => bounds.extend(point));
+      mapRef.current.fitBounds(bounds, 48);
+      return;
+    }
+
+    mapRef.current.panTo(mapCenter);
+    mapRef.current.setZoom(12);
+  }, [activeRoutePath, hasRoute, isLoaded, mapCenter, selectedPin]);
 
   return (
     <div className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4">
@@ -146,8 +166,14 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
             center={mapCenter}
             zoom={11}
             options={mapOptions}
+            onLoad={(map) => {
+              mapRef.current = map;
+            }}
+            onUnmount={() => {
+              mapRef.current = null;
+            }}
           >
-            <PolylineF path={routePath} options={routeLineOptions} />
+            {hasRoute ? <PolylineF path={activeRoutePath} options={routeLineOptions} /> : null}
             {pins.map((pin) => (
               <MarkerF
                 key={pin.id}
@@ -170,8 +196,18 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
             ))}
           </GoogleMap>
           <div className="absolute inset-x-3 bottom-3 z-10 rounded-2xl border border-white/10 bg-black/70 px-4 py-3 backdrop-blur">
-            <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Selected Node</p>
-            <p className="mt-1 text-sm font-semibold text-neutral-100">{selectedPin?.name}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Selected Node</p>
+                <p className="mt-1 text-sm font-semibold text-neutral-100">{selectedPin?.name}</p>
+                <p className="mt-1 text-xs text-neutral-400">
+                  {hasRoute ? selectedPin.route : "Tap a cruise meet to preview its live convoy route."}
+                </p>
+              </div>
+              <div className={`rounded-2xl border px-3 py-2 text-[11px] ${hasRoute ? "border-lime-400/40 bg-lime-400/10 text-lime-300" : "border-white/10 bg-white/5 text-neutral-400"}`}>
+                {hasRoute ? `${activeRoutePath.length} route nodes` : "No route"}
+              </div>
+            </div>
           </div>
         </div>
       ) : null}
@@ -185,5 +221,5 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
         </>
       ) : null}
     </div>
-  );  
+  );
 }

@@ -134,6 +134,13 @@ export const initialMapPins = [
     y: "72%",
     time: "23:30",
     route: "Beytepe -> Incek -> Mogan",
+    routePath: [
+      { lat: 39.9042, lng: 32.7315 },
+      { lat: 39.8728, lng: 32.7562 },
+      { lat: 39.8422, lng: 32.7827 },
+      { lat: 39.8124, lng: 32.7961 },
+      { lat: 39.7869, lng: 32.8068 },
+    ],
     attendees: ["06 PWA 101", "34 MOTO 410", "07 VTEC 707"],
   },
 ];
