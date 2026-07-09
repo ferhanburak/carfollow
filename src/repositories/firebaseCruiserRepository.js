@@ -45,21 +45,26 @@ export async function saveFirebaseUserProfile(user) {
     return;
   }
 
-  const { firestore } = services;
+  const { firestore, authUser } = services;
   // Private path: /artifacts/{appId}/users/{userId}/{collectionName}
-  await setDoc(doc(firestore, privateUserCollectionPath(user.id, "profile", resolveAppId()), "current"), user, {
-    merge: true,
-  });
+  await setDoc(
+    doc(firestore, privateUserCollectionPath(authUser.uid, "profile", resolveAppId()), "current"),
+    {
+      ...user,
+      firebaseUid: authUser.uid,
+    },
+    { merge: true },
+  );
 }
 
-export async function saveFirebaseFuelLog(userId, nextLog) {
+export async function saveFirebaseFuelLog(nextLog) {
   const services = await getFirebaseServices();
-  if (!services || !userId) {
+  if (!services) {
     return;
   }
 
-  const { firestore } = services;
-  await addDoc(collection(firestore, privateUserCollectionPath(userId, "fuelLogs", resolveAppId())), nextLog);
+  const { firestore, authUser } = services;
+  await addDoc(collection(firestore, privateUserCollectionPath(authUser.uid, "fuelLogs", resolveAppId())), nextLog);
 }
 
 export async function saveFirebaseWashReview(pinId, review) {
@@ -95,7 +100,7 @@ export async function saveFirebaseActiveDriver(driver) {
     return;
   }
 
-  const { database } = services;
+  const { database, authUser } = services;
   if (!database) {
     return;
   }
@@ -103,6 +108,7 @@ export async function saveFirebaseActiveDriver(driver) {
   // Realtime Database is reserved for low-latency driver / DM-like surfaces.
   await set(ref(database, realtimeDmPath(`${driver.plate}_telemetry`)), {
     ...driver,
+    firebaseUid: authUser.uid,
     updatedAt: Date.now(),
   });
 }

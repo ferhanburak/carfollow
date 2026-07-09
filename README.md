@@ -98,6 +98,10 @@ Copy-Item .env.example .env
 VITE_CRUISER_DATA_SOURCE=firebase
 ```
 
+4. Enable Firebase Authentication -> `Sign-in method` -> `Anonymous`.
+
+If Anonymous Auth is disabled, Firebase mode will log a warning and private user sync will stay inactive. The Firebase REST API typically returns `CONFIGURATION_NOT_FOUND` in that case.
+
 If this stays `mock`, the app keeps using the local mock-backed repository.
 
 ## Start Development Server

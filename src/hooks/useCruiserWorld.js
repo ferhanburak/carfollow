@@ -203,7 +203,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setUser((current) => appendFuelLog(current, nextLog));
     setFuelForm(createFuelForm(Number(fuelForm.currentKm)));
     setFuelErrors({});
-    void saveFirebaseFuelLog(user.id, nextLog);
+    void saveFirebaseFuelLog(nextLog);
   };
 
   const toggleDrive = () => {

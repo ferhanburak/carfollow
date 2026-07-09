@@ -6,6 +6,10 @@ service cloud.firestore {
       return appId == 'cruiser-app-prod';
     }
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
     function isPublicReadCollection(collectionName) {
       return collectionName in ['mapPins', 'clans', 'drivers', 'washReviews', 'cruiseAttendees'];
     }
@@ -47,7 +51,8 @@ service cloud.firestore {
     }
 
     function isValidProfile(userId) {
-      return request.resource.data.id == userId &&
+      return request.resource.data.id is string &&
+      request.resource.data.firebaseUid == userId &&
       request.resource.data.plate is string &&
       request.resource.data.fullName is string &&
       request.resource.data.model is string &&
@@ -82,8 +87,13 @@ service cloud.firestore {
     }
 
     match /artifacts/{appId}/users/{userId}/{collectionName}/{documentId} {
-      allow read: if isKnownApp(appId) && collectionName in ['profile', 'fuelLogs'];
+      allow read: if isKnownApp(appId) &&
+        isSignedIn() &&
+        request.auth.uid == userId &&
+        collectionName in ['profile', 'fuelLogs'];
       allow create, update: if isKnownApp(appId) &&
+        isSignedIn() &&
+        request.auth.uid == userId &&
         (
           (collectionName == 'profile' && documentId == 'current' && isValidProfile(userId)) ||
           (collectionName == 'fuelLogs' && isValidFuelLog())

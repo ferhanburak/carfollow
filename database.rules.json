@@ -5,7 +5,7 @@
     "directMessages": {
       "$channelId": {
         ".read": true,
-        ".write": "newData.hasChildren(['plate', 'vehicle', 'node', 'speed', 'updatedAt']) && newData.child('plate').isString() && newData.child('vehicle').isString() && newData.child('node').isString() && newData.child('speed').isNumber() && newData.child('speed').val() >= 0 && newData.child('speed').val() <= 400 && newData.child('updatedAt').isNumber()"
+        ".write": "auth != null && newData.hasChildren(['plate', 'vehicle', 'node', 'speed', 'updatedAt', 'firebaseUid']) && newData.child('plate').isString() && newData.child('vehicle').isString() && newData.child('node').isString() && newData.child('speed').isNumber() && newData.child('speed').val() >= 0 && newData.child('speed').val() <= 400 && newData.child('updatedAt').isNumber() && newData.child('firebaseUid').val() == auth.uid"
       }
     },
     "directMessagesSeed": {

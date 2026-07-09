@@ -21,8 +21,23 @@ function hasRealtimeDatabaseConfig(config) {
 let firebaseApp;
 let firestoreDb;
 let realtimeDb;
+let firebaseAuth;
+
+async function ensureAnonymousSession(auth) {
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+
+  const { signInAnonymously } = await import("firebase/auth");
+  const credential = await signInAnonymously(auth);
+  return credential.user;
+}
 
 export function getCruiserDataSourceMode() {
+  if (import.meta.env.MODE === "test") {
+    return "mock";
+  }
+
   return import.meta.env.VITE_CRUISER_DATA_SOURCE ?? "mock";
 }
 
@@ -41,19 +56,30 @@ export async function getFirebaseServices() {
 
   if (!firebaseApp) {
     const config = readFirebaseConfig();
-    const [{ initializeApp }, { getFirestore }, { getDatabase }] = await Promise.all([
+    const [{ initializeApp }, { getFirestore }, { getDatabase }, { getAuth }] = await Promise.all([
       import("firebase/app"),
       import("firebase/firestore"),
       import("firebase/database"),
+      import("firebase/auth"),
     ]);
     firebaseApp = initializeApp(config);
     firestoreDb = getFirestore(firebaseApp);
     realtimeDb = hasRealtimeDatabaseConfig(config) ? getDatabase(firebaseApp) : null;
+    firebaseAuth = getAuth(firebaseApp);
   }
 
-  return {
-    app: firebaseApp,
-    firestore: firestoreDb,
-    database: realtimeDb,
-  };
+  try {
+    const authUser = await ensureAnonymousSession(firebaseAuth);
+
+    return {
+      app: firebaseApp,
+      auth: firebaseAuth,
+      authUser,
+      firestore: firestoreDb,
+      database: realtimeDb,
+    };
+  } catch (error) {
+    console.warn("Firebase anonymous auth is not ready. Enable Anonymous sign-in in Firebase Auth.", error);
+    return null;
+  }
 }
