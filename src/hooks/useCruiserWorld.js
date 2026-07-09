@@ -118,6 +118,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   const [mapPinErrors, setMapPinErrors] = useState({});
   const [mapPinFeedback, setMapPinFeedback] = useState("");
   const [mapDraftLocation, setMapDraftLocation] = useState(null);
+  const [mapPickMode, setMapPickMode] = useState("node");
   const [spotPhotoForm, setSpotPhotoForm] = useState(createSpotPhotoForm);
   const [spotPhotoErrors, setSpotPhotoErrors] = useState({});
   const [spotPhotoFeedback, setSpotPhotoFeedback] = useState("");
@@ -429,19 +430,54 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     });
   };
 
+  const clearDraftRoute = () => {
+    setMapPinForm((current) => ({
+      ...current,
+      routePoints: [],
+    }));
+    setMapPickMode("node");
+    setMapPinFeedback("Taslak event rotasi temizlendi.");
+  };
+
+  const removeLastDraftRoutePoint = () => {
+    setMapPinForm((current) => ({
+      ...current,
+      routePoints: current.routePoints.slice(0, -1),
+    }));
+    setMapPinFeedback("Son rota noktasi kaldirildi.");
+  };
+
   const pickMapLocation = (coords) => {
     if (!coords) {
       return;
     }
 
+    const normalizedCoords = {
+      lat: Number(coords.lat.toFixed(4)),
+      lng: Number(coords.lng.toFixed(4)),
+    };
+
+    if (mapPinForm.type === "meet" && mapPickMode === "route") {
+      setMapPinForm((current) => ({
+        ...current,
+        routePoints: [...current.routePoints, normalizedCoords],
+      }));
+      setMapPinFeedback("Rota noktasI taslaga eklendi.");
+      setMapPinErrors((current) => ({
+        ...current,
+        routePoints: undefined,
+      }));
+      return;
+    }
+
     setMapPinForm((current) => ({
       ...current,
-      lat: Number(coords.lat.toFixed(4)),
-      lng: Number(coords.lng.toFixed(4)),
+      lat: normalizedCoords.lat,
+      lng: normalizedCoords.lng,
     }));
     setMapDraftLocation({
-      lat: Number(coords.lat.toFixed(4)),
-      lng: Number(coords.lng.toFixed(4)),
+      lat: normalizedCoords.lat,
+      lng: normalizedCoords.lng,
       source: "map",
     });
     setMapPinFeedback("Map uzerinden yeni lokasyon secildi.");
@@ -492,7 +528,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
         ...basePin,
         time: mapPinForm.time,
         route: mapPinForm.route.trim(),
-        routePath: buildMeetRoutePath(lat, lng),
+        routePath: mapPinForm.routePoints.length > 1 ? mapPinForm.routePoints : buildMeetRoutePath(lat, lng),
         attendees: [createAttendeeRecord(user)],
       };
     } else {
@@ -526,12 +562,14 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
       type: mapPinForm.type,
       lat: newPin.lat,
       lng: newPin.lng,
+      routePoints: [],
     });
     setMapDraftLocation({
       lat: newPin.lat,
       lng: newPin.lng,
       source: "created",
     });
+    setMapPickMode("node");
     setMapPinErrors({});
     setMapPinFeedback(`${newPin.name} added to the live map.`);
     void saveFirebaseMapPin(newPin);
@@ -658,6 +696,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     mapPinForm,
     mapDraftLocation,
     mapPins,
+    mapPickMode,
     pickMapLocation,
     rateAttendee,
     resetSessionView,
@@ -665,9 +704,12 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     selectedPinId,
     setActiveTab,
     setMapPinForm,
+    setMapPickMode,
     setSelectedPinId,
     setSpotPhotoForm,
     setWashForm,
+    clearDraftRoute,
+    removeLastDraftRoutePoint,
     spotPhotoErrors,
     spotPhotoFeedback,
     spotPhotoForm,

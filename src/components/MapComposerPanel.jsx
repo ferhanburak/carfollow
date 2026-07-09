@@ -12,7 +12,11 @@ export function MapComposerPanel({
   feedback,
   form,
   errors,
+  mapPickMode,
+  onClearRouteDraft,
   onFormChange,
+  onRemoveLastRoutePoint,
+  onSetMapPickMode,
   onSubmit,
   onUseSelectedCoordinates,
 }) {
@@ -20,6 +24,7 @@ export function MapComposerPanel({
   const isSpot = form.type === "spot";
   const isMeet = form.type === "meet";
   const isWash = form.type === "wash";
+  const routePointCount = form.routePoints.length;
 
   return (
     <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
@@ -28,12 +33,20 @@ export function MapComposerPanel({
           <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Node Studio</p>
           <h3 className="mt-2 text-xl font-black">Yeni Nokta Olustur</h3>
           <p className="mt-2 text-sm text-neutral-400">
-            Varsayilan akis event odakli. En rahati haritada bos bir noktaya dokunup konumu secmek.
+            Varsayilan akis event odakli. Haritadan ana nokta ve event rota dugumleri secilebilir.
           </p>
         </div>
         <button
           type="button"
-          onClick={() => setIsOpen((current) => !current)}
+          onClick={() => {
+            setIsOpen((current) => {
+              const next = !current;
+              if (!next) {
+                onSetMapPickMode("node");
+              }
+              return next;
+            });
+          }}
           className={`min-h-12 rounded-2xl px-4 text-sm font-semibold transition ${
             isOpen ? "bg-lime-400 text-black" : "border border-white/10 bg-black/20 text-neutral-300"
           }`}
@@ -60,7 +73,7 @@ export function MapComposerPanel({
               <p className="text-xs uppercase tracking-[0.18em] text-lime-300">Konum Secimi</p>
               <p className="mt-1 text-sm text-neutral-300">
                 {draftLocation
-                  ? `Map pick active: ${draftLocation.lat}, ${draftLocation.lng}`
+                  ? `Ana nokta: ${draftLocation.lat}, ${draftLocation.lng}`
                   : "Haritada bos bir alana dokun veya secili node konumunu kopyala."}
               </p>
             </div>
@@ -80,7 +93,10 @@ export function MapComposerPanel({
               <button
                 key={type.key}
                 type="button"
-                onClick={() => onFormChange((current) => ({ ...current, type: type.key }))}
+                onClick={() => {
+                  onFormChange((current) => ({ ...current, type: type.key }));
+                  onSetMapPickMode("node");
+                }}
                 className={`min-h-12 rounded-2xl px-3 text-xs font-bold transition ${
                   form.type === type.key ? "bg-lime-400 text-black" : "text-neutral-400"
                 }`}
@@ -153,26 +169,77 @@ export function MapComposerPanel({
             ) : null}
 
             {isMeet ? (
-              <div className="grid grid-cols-2 gap-3">
-                <CompactField label="Launch Time">
-                  <input
-                    value={form.time}
-                    onChange={(event) => onFormChange((current) => ({ ...current, time: event.target.value }))}
-                    className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
-                    placeholder="23:30"
-                  />
-                  {errors.time ? <p className="text-xs text-rose-300">{errors.time}</p> : null}
-                </CompactField>
-                <CompactField label="Route Summary">
-                  <input
-                    value={form.route}
-                    onChange={(event) => onFormChange((current) => ({ ...current, route: event.target.value }))}
-                    className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
-                    placeholder="Beytepe -> Incek -> Mogan"
-                  />
-                  {errors.route ? <p className="text-xs text-rose-300">{errors.route}</p> : null}
-                </CompactField>
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <CompactField label="Launch Time">
+                    <input
+                      value={form.time}
+                      onChange={(event) => onFormChange((current) => ({ ...current, time: event.target.value }))}
+                      className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
+                      placeholder="23:30"
+                    />
+                    {errors.time ? <p className="text-xs text-rose-300">{errors.time}</p> : null}
+                  </CompactField>
+                  <CompactField label="Route Summary">
+                    <input
+                      value={form.route}
+                      onChange={(event) => onFormChange((current) => ({ ...current, route: event.target.value }))}
+                      className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
+                      placeholder="Beytepe -> Incek -> Mogan"
+                    />
+                    {errors.route ? <p className="text-xs text-rose-300">{errors.route}</p> : null}
+                  </CompactField>
+                </div>
+
+                <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-lime-300">Route Builder</p>
+                      <p className="mt-1 text-sm text-neutral-300">
+                        Mod:
+                        {" "}
+                        {mapPickMode === "route" ? "Rota noktasi ekleme" : "Ana event lokasyonu secme"}
+                      </p>
+                      <p className="mt-1 text-xs text-neutral-500">{routePointCount} rota noktasi secildi.</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onSetMapPickMode("node")}
+                        className={`min-h-12 rounded-2xl px-3 text-xs font-semibold ${mapPickMode === "node" ? "bg-lime-400 text-black" : "border border-white/10 text-neutral-300"}`}
+                      >
+                        Ana Nokta
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSetMapPickMode("route")}
+                        className={`min-h-12 rounded-2xl px-3 text-xs font-semibold ${mapPickMode === "route" ? "bg-rose-400 text-black" : "border border-white/10 text-neutral-300"}`}
+                      >
+                        Rota Noktasi
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={onRemoveLastRoutePoint}
+                      disabled={routePointCount === 0}
+                      className="min-h-12 rounded-2xl border border-white/10 px-4 text-xs text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Son Noktayi Sil
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onClearRouteDraft}
+                      disabled={routePointCount === 0}
+                      className="min-h-12 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 text-xs text-rose-200 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Rotayi Temizle
+                    </button>
+                  </div>
+                  {errors.routePoints ? <p className="mt-3 text-xs text-rose-300">{errors.routePoints}</p> : null}
+                </div>
+              </>
             ) : null}
 
             {isWash ? (

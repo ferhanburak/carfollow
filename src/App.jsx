@@ -46,6 +46,7 @@ function App() {
     mapPinFeedback,
     mapPinForm,
     mapDraftLocation,
+    mapPickMode,
     mapPins,
     pickMapLocation,
     rateAttendee,
@@ -54,9 +55,12 @@ function App() {
     selectedPinId,
     setActiveTab,
     setMapPinForm,
+    setMapPickMode,
     setSelectedPinId,
     setSpotPhotoForm,
     setWashForm,
+    clearDraftRoute,
+    removeLastDraftRoutePoint,
     spotPhotoErrors,
     spotPhotoFeedback,
     spotPhotoForm,
@@ -137,6 +141,8 @@ function App() {
                 selectedPinId={selectedPinId}
                 onSelect={setSelectedPinId}
                 draftLocation={mapDraftLocation}
+                draftRoutePath={mapPinForm.routePoints}
+                mapPickMode={mapPickMode}
                 onPickLocation={pickMapLocation}
               />
               <MapComposerPanel
@@ -144,7 +150,11 @@ function App() {
                 feedback={mapPinFeedback}
                 form={mapPinForm}
                 errors={mapPinErrors}
+                mapPickMode={mapPickMode}
+                onClearRouteDraft={clearDraftRoute}
                 onFormChange={setMapPinForm}
+                onRemoveLastRoutePoint={removeLastDraftRoutePoint}
+                onSetMapPickMode={setMapPickMode}
                 onSubmit={submitMapPin}
                 onUseSelectedCoordinates={useSelectedPinCoordinates}
               />

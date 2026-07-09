@@ -30,6 +30,7 @@ export const createMapPinForm = (seedPin) => ({
   allowsBuckets: true,
   shadowDrying: false,
   note: "",
+  routePoints: seedPin?.routePath ?? [],
 });
 
 export const createSpotPhotoForm = () => ({

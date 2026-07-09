@@ -44,6 +44,24 @@ const routeLineOptions = {
   ],
 };
 
+const draftRouteLineOptions = {
+  geodesic: true,
+  strokeColor: "#f43f5e",
+  strokeOpacity: 0.82,
+  strokeWeight: 4,
+  icons: [
+    {
+      icon: {
+        path: "M 0,-1 0,1",
+        strokeOpacity: 1,
+        scale: 3,
+      },
+      offset: "0",
+      repeat: "16px",
+    },
+  ],
+};
+
 const glyphByType = {
   spot: "\uD83D\uDCF8",
   wash: "\uD83E\uDDFC",
@@ -159,7 +177,7 @@ function FallbackGridMap({ pins, selectedPinId, onSelect }) {
   );
 }
 
-export function MapCard({ pins, selectedPinId, onSelect, draftLocation, onPickLocation }) {
+export function MapCard({ pins, selectedPinId, onSelect, draftLocation, draftRoutePath, mapPickMode, onPickLocation }) {
   const mapsApiKey = getMapsApiKey();
   const shouldUseGoogleMaps = Boolean(mapsApiKey) && pins.every((pin) => typeof pin.lat === "number" && typeof pin.lng === "number");
   const selectedPin = pins.find((pin) => pin.id === selectedPinId) ?? pins[0];
@@ -179,10 +197,10 @@ export function MapCard({ pins, selectedPinId, onSelect, draftLocation, onPickLo
     );
   }
 
-  return <GoogleMapCard mapsApiKey={mapsApiKey} pins={pins} selectedPin={selectedPin} selectedPinId={selectedPinId} onSelect={onSelect} draftLocation={draftLocation} onPickLocation={onPickLocation} />;
+  return <GoogleMapCard mapsApiKey={mapsApiKey} pins={pins} selectedPin={selectedPin} selectedPinId={selectedPinId} onSelect={onSelect} draftLocation={draftLocation} draftRoutePath={draftRoutePath} mapPickMode={mapPickMode} onPickLocation={onPickLocation} />;
 }
 
-function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect, draftLocation, onPickLocation }) {
+function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect, draftLocation, draftRoutePath, mapPickMode, onPickLocation }) {
   const mapRef = useRef(null);
   const [routeState, setRouteState] = useState({
     path: [],
@@ -400,6 +418,7 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
             }}
           >
             {hasDisplayedRoute ? <PolylineF path={displayedRoutePath} options={routeLineOptions} /> : null}
+            {draftRoutePath?.length > 1 ? <PolylineF path={draftRoutePath} options={draftRouteLineOptions} /> : null}
             {currentLocation ? (
               <MarkerF
                 position={currentLocation}
@@ -452,7 +471,11 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect,
                   <p className="mt-2 text-[11px] text-rose-200">Live location locked and visible on the map.</p>
                 ) : null}
                 {draftLocation ? (
-                  <p className="mt-2 text-[11px] text-lime-200">Map uzerine dokunarak yeni node konumu secili halde tutuluyor.</p>
+                  <p className="mt-2 text-[11px] text-lime-200">
+                    {mapPickMode === "route"
+                      ? "Route builder aktif. Haritaya dokundukca event rota dugumleri ekleniyor."
+                      : "Map uzerine dokunarak yeni node konumu secili halde tutuluyor."}
+                  </p>
                 ) : null}
               </div>
               <div className="flex flex-col items-end gap-2">
