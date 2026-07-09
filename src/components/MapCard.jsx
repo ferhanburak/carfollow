@@ -100,6 +100,21 @@ function formatDuration(durationValue) {
   return `${totalMinutes} dk`;
 }
 
+function getCurrentLocationIcon() {
+  if (typeof window === "undefined" || !window.google?.maps) {
+    return undefined;
+  }
+
+  return {
+    path: window.google.maps.SymbolPath.CIRCLE,
+    fillColor: "#f43f5e",
+    fillOpacity: 1,
+    strokeColor: "#ffe4e6",
+    strokeWeight: 3,
+    scale: 9,
+  };
+}
+
 function FallbackGridMap({ pins, selectedPinId, onSelect }) {
   return (
     <div className="relative h-72 overflow-hidden rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_center,_rgba(163,230,53,0.12),_transparent_32%),linear-gradient(180deg,#0f0f0f,#090909)]">
@@ -161,6 +176,11 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
     source: "idle",
     error: "",
   });
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [locationState, setLocationState] = useState({
+    source: "idle",
+    error: "",
+  });
   const { isLoaded, loadError } = useJsApiLoader({
     id: "cruiser-google-maps",
     googleMapsApiKey: mapsApiKey,
@@ -173,6 +193,59 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
   const hasMockRoute = activeRoutePath.length > 1;
   const displayedRoutePath = routeState.path.length > 1 ? routeState.path : activeRoutePath;
   const hasDisplayedRoute = displayedRoutePath.length > 1;
+
+  useEffect(() => {
+    if (!isLoaded || typeof navigator === "undefined" || !navigator.geolocation) {
+      setLocationState({
+        source: "unsupported",
+        error: "",
+      });
+      return;
+    }
+
+    let cancelled = false;
+
+    setLocationState({
+      source: "loading",
+      error: "",
+    });
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (cancelled) {
+          return;
+        }
+
+        setCurrentLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setLocationState({
+          source: "ready",
+          error: "",
+        });
+      },
+      (error) => {
+        if (cancelled) {
+          return;
+        }
+
+        setLocationState({
+          source: "blocked",
+          error: error.message || "Location access denied.",
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 60000,
+        timeout: 10000,
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded]);
 
   useEffect(() => {
     if (!isLoaded || !hasMockRoute || selectedPin?.type !== "meet") {
@@ -269,7 +342,24 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
           <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Interactive Map Layer</p>
           <h3 className="mt-1 text-lg font-black">Google Maps Cruise Grid</h3>
         </div>
-        <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Ankara Live</div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (!mapRef.current || !currentLocation) {
+                return;
+              }
+
+              mapRef.current.panTo(currentLocation);
+              mapRef.current.setZoom(13);
+            }}
+            disabled={!currentLocation}
+            className="min-h-12 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200 transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-neutral-500"
+          >
+            Konumum
+          </button>
+          <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Ankara Live</div>
+        </div>
       </div>
 
       {isLoaded && !loadError ? (
@@ -288,6 +378,14 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
             }}
           >
             {hasDisplayedRoute ? <PolylineF path={displayedRoutePath} options={routeLineOptions} /> : null}
+            {currentLocation ? (
+              <MarkerF
+                position={currentLocation}
+                title="Current location"
+                zIndex={999}
+                icon={getCurrentLocationIcon()}
+              />
+            ) : null}
             {pins.map((pin) => (
               <MarkerF
                 key={pin.id}
@@ -320,6 +418,9 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
                 {routeState.source === "fallback" ? (
                   <p className="mt-2 text-[11px] text-amber-300">Google route unavailable, showing mock cruise path.</p>
                 ) : null}
+                {locationState.source === "ready" ? (
+                  <p className="mt-2 text-[11px] text-rose-200">Live location locked and visible on the map.</p>
+                ) : null}
               </div>
               <div className="flex flex-col items-end gap-2">
                 <div className={`rounded-2xl border px-3 py-2 text-[11px] ${routeState.source === "google" ? "border-lime-400/40 bg-lime-400/10 text-lime-300" : "border-white/10 bg-white/5 text-neutral-400"}`}>
@@ -347,6 +448,7 @@ function GoogleMapCard({ mapsApiKey, pins, selectedPin, selectedPinId, onSelect 
       ) : null}
 
       {routeState.error ? <p className="mt-3 text-xs text-neutral-500">{routeState.error}</p> : null}
+      {locationState.source === "blocked" ? <p className="mt-2 text-xs text-neutral-500">{locationState.error}</p> : null}
     </div>
   );
 }
