@@ -314,6 +314,8 @@ function GoogleMapCard({
 }) {
   const mapRef = useRef(null);
   const watchIdRef = useRef(null);
+  const shouldAutoFrameRouteRef = useRef(true);
+  const previousSelectedPinIdRef = useRef(selectedPinId);
   const [routeState, setRouteState] = useState({
     path: [],
     distanceMeters: null,
@@ -343,6 +345,13 @@ function GoogleMapCard({
   useEffect(() => {
     setFollowCurrentLocation(Boolean(navigationMode));
   }, [navigationMode]);
+
+  useEffect(() => {
+    if (previousSelectedPinIdRef.current !== selectedPinId) {
+      previousSelectedPinIdRef.current = selectedPinId;
+      shouldAutoFrameRouteRef.current = true;
+    }
+  }, [selectedPinId]);
 
   useEffect(() => {
     if (!isLoaded || typeof navigator === "undefined" || !navigator.geolocation) {
@@ -510,10 +519,11 @@ function GoogleMapCard({
       return;
     }
 
-    if (hasDisplayedRoute) {
+    if (hasDisplayedRoute && shouldAutoFrameRouteRef.current) {
       const bounds = new window.google.maps.LatLngBounds();
       displayedRoutePath.forEach((point) => bounds.extend(point));
       mapRef.current.fitBounds(bounds, 48);
+      shouldAutoFrameRouteRef.current = false;
       return;
     }
 
@@ -586,6 +596,12 @@ function GoogleMapCard({
               mapRef.current = map;
             }}
             onDragStart={() => {
+              if (navigationMode) {
+                setFollowCurrentLocation(false);
+              }
+              shouldAutoFrameRouteRef.current = false;
+            }}
+            onZoomChanged={() => {
               if (navigationMode) {
                 setFollowCurrentLocation(false);
               }
