@@ -35,6 +35,7 @@ function App() {
     drivers,
     fuelInsights,
     fuelErrors,
+    firebaseStatus,
     isDriving,
     joinCruise,
     likeGalleryImage,
@@ -131,12 +132,19 @@ function App() {
             </section>
           ) : null}
           {activeTab === "drive" ? (
-            <DriveScreen driveHud={driveHud} drivers={drivers} isDriving={isDriving} user={user} />
+            <DriveScreen
+              driveHud={driveHud}
+              drivers={drivers}
+              firebaseStatus={firebaseStatus}
+              isDriving={isDriving}
+              user={user}
+            />
           ) : null}
           {activeTab === "clans" ? <ClansScreen clans={clans} drivers={drivers} user={user} /> : null}
           {activeTab === "garage" ? (
             <GarageScreen
               appId={appId}
+              firebaseStatus={firebaseStatus}
               fuelErrors={fuelErrors}
               fuelForm={fuelForm}
               fuelInsights={fuelInsights}

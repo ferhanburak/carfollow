@@ -19,6 +19,7 @@ import {
   syncActiveDriver,
   tickAmbientDrivers,
 } from "../repositories/cruiserRepository";
+import { getFirebaseServices } from "../services/firebaseClient";
 import { createFuelForm, createWashForm, computeFuelInsights } from "../utils/garage";
 import { validateFuelForm, validateWashForm } from "../utils/validation";
 
@@ -34,6 +35,7 @@ function sortByReferenceOrder(items, referenceItems, keySelector) {
 
 export function useCruiserWorld(user, setUser, setFuelForm) {
   const initialWorld = getInitialWorldState();
+  const firebaseMode = isFirebaseRepositoryEnabled() ? "firebase" : "mock";
   const [activeTab, setActiveTab] = useState("map");
   const [isDriving, setIsDriving] = useState(false);
   const [driveHud, setDriveHud] = useState({ speed: 0, sessionKm: 0, etaNode: "Hazir" });
@@ -45,8 +47,60 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   const [fuelErrors, setFuelErrors] = useState({});
   const [clans, setClans] = useState(initialWorld.clans);
   const [drivers, setDrivers] = useState(initialWorld.drivers);
+  const [firebaseStatus, setFirebaseStatus] = useState({
+    mode: firebaseMode,
+    authUid: null,
+    profile: "idle",
+    fuel: "idle",
+    telemetry: "idle",
+    lastProfileSyncAt: null,
+    lastFuelSyncAt: null,
+    lastTelemetrySyncAt: null,
+    error: null,
+  });
   const tickerRef = useRef(0);
   const lastRemoteUserSyncRef = useRef(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateFirebaseSession() {
+      if (!isFirebaseRepositoryEnabled()) {
+        setFirebaseStatus((current) => ({ ...current, mode: "mock" }));
+        return;
+      }
+
+      try {
+        const services = await getFirebaseServices();
+        if (!services || cancelled) {
+          return;
+        }
+
+        setFirebaseStatus((current) => ({
+          ...current,
+          mode: "firebase",
+          authUid: services.authUser.uid,
+          error: null,
+        }));
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setFirebaseStatus((current) => ({
+          ...current,
+          mode: "firebase",
+          error: error instanceof Error ? error.message : "Firebase session could not be initialized.",
+        }));
+      }
+    }
+
+    void hydrateFirebaseSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,7 +184,27 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     }
 
     lastRemoteUserSyncRef.current = now;
-    void saveFirebaseUserProfile(user);
+    setFirebaseStatus((current) => ({ ...current, profile: "syncing", error: null }));
+    void saveFirebaseUserProfile(user)
+      .then((result) => {
+        if (!result) {
+          return;
+        }
+
+        setFirebaseStatus((current) => ({
+          ...current,
+          authUid: result.authUid,
+          profile: "synced",
+          lastProfileSyncAt: result.syncedAt,
+        }));
+      })
+      .catch((error) => {
+        setFirebaseStatus((current) => ({
+          ...current,
+          profile: "error",
+          error: error instanceof Error ? error.message : "Profile sync failed.",
+        }));
+      });
   }, [user]);
 
   const selectedPin = mapPins.find((pin) => pin.id === selectedPinId) ?? mapPins[0];
@@ -203,19 +277,59 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setUser((current) => appendFuelLog(current, nextLog));
     setFuelForm(createFuelForm(Number(fuelForm.currentKm)));
     setFuelErrors({});
-    void saveFirebaseFuelLog(nextLog);
+    setFirebaseStatus((current) => ({ ...current, fuel: "syncing", error: null }));
+    void saveFirebaseFuelLog(nextLog)
+      .then((result) => {
+        if (!result) {
+          return;
+        }
+
+        setFirebaseStatus((current) => ({
+          ...current,
+          authUid: result.authUid,
+          fuel: "synced",
+          lastFuelSyncAt: result.syncedAt,
+        }));
+      })
+      .catch((error) => {
+        setFirebaseStatus((current) => ({
+          ...current,
+          fuel: "error",
+          error: error instanceof Error ? error.message : "Fuel log sync failed.",
+        }));
+      });
   };
 
   const toggleDrive = () => {
     setIsDriving((current) => !current);
     setActiveTab("drive");
     if (user) {
+      setFirebaseStatus((current) => ({ ...current, telemetry: "syncing", error: null }));
       void saveFirebaseActiveDriver({
         plate: user.plate,
         vehicle: user.model,
         node: driveHud.etaNode,
         speed: driveHud.speed,
-      });
+      })
+        .then((result) => {
+          if (!result) {
+            return;
+          }
+
+          setFirebaseStatus((current) => ({
+            ...current,
+            authUid: result.authUid,
+            telemetry: "synced",
+            lastTelemetrySyncAt: result.syncedAt,
+          }));
+        })
+        .catch((error) => {
+          setFirebaseStatus((current) => ({
+            ...current,
+            telemetry: "error",
+            error: error instanceof Error ? error.message : "Telemetry sync failed.",
+          }));
+        });
     }
   };
 
@@ -246,6 +360,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     submitFuelLog,
     submitWashReview,
     toggleDrive,
+    firebaseStatus,
     washForm,
     washErrors,
     washFeedback,

@@ -42,7 +42,7 @@ export async function loadFirebaseWorldState() {
 export async function saveFirebaseUserProfile(user) {
   const services = await getFirebaseServices();
   if (!services || !user?.id) {
-    return;
+    return null;
   }
 
   const { firestore, authUser } = services;
@@ -55,16 +55,26 @@ export async function saveFirebaseUserProfile(user) {
     },
     { merge: true },
   );
+
+  return {
+    authUid: authUser.uid,
+    syncedAt: Date.now(),
+  };
 }
 
 export async function saveFirebaseFuelLog(nextLog) {
   const services = await getFirebaseServices();
   if (!services) {
-    return;
+    return null;
   }
 
   const { firestore, authUser } = services;
   await addDoc(collection(firestore, privateUserCollectionPath(authUser.uid, "fuelLogs", resolveAppId())), nextLog);
+
+  return {
+    authUid: authUser.uid,
+    syncedAt: Date.now(),
+  };
 }
 
 export async function saveFirebaseWashReview(pinId, review) {
@@ -97,12 +107,12 @@ export async function saveFirebaseCruiseJoin(pinId, plate) {
 export async function saveFirebaseActiveDriver(driver) {
   const services = await getFirebaseServices();
   if (!services || !driver?.plate) {
-    return;
+    return null;
   }
 
   const { database, authUser } = services;
   if (!database) {
-    return;
+    return null;
   }
 
   // Realtime Database is reserved for low-latency driver / DM-like surfaces.
@@ -111,4 +121,9 @@ export async function saveFirebaseActiveDriver(driver) {
     firebaseUid: authUser.uid,
     updatedAt: Date.now(),
   });
+
+  return {
+    authUid: authUser.uid,
+    syncedAt: Date.now(),
+  };
 }

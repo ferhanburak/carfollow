@@ -1,7 +1,28 @@
 import { CompactField, InsightCard } from "../components/ui";
 import { formatNumber, getPartHealth } from "../utils/garage";
 
-export function GarageScreen({ appId, fuelErrors, fuelForm, fuelInsights, onFuelFormChange, onSubmitFuelLog, user }) {
+function formatSyncTime(timestamp) {
+  if (!timestamp) {
+    return "waiting";
+  }
+
+  return new Date(timestamp).toLocaleTimeString("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+export function GarageScreen({
+  appId,
+  firebaseStatus,
+  fuelErrors,
+  fuelForm,
+  fuelInsights,
+  onFuelFormChange,
+  onSubmitFuelLog,
+  user,
+}) {
   return (
     <section className="space-y-4">
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
@@ -24,6 +45,21 @@ export function GarageScreen({ appId, fuelErrors, fuelForm, fuelInsights, onFuel
               {badge}
             </span>
           ))}
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-neutral-400">
+          <div className="flex items-center justify-between">
+            <span className="uppercase tracking-[0.22em] text-neutral-500">Private Firebase Sync</span>
+            <span className={firebaseStatus.profile === "error" || firebaseStatus.fuel === "error" ? "text-rose-300" : "text-lime-300"}>
+              {firebaseStatus.mode}
+            </span>
+          </div>
+          <p className="mt-2 font-mono text-[11px] text-lime-300">
+            UID: {firebaseStatus.authUid ?? "anonymous session pending"}
+          </p>
+          <p className="mt-1">Profile sync: {firebaseStatus.profile} @ {formatSyncTime(firebaseStatus.lastProfileSyncAt)}</p>
+          <p className="mt-1">Fuel log sync: {firebaseStatus.fuel} @ {formatSyncTime(firebaseStatus.lastFuelSyncAt)}</p>
+          {firebaseStatus.error ? <p className="mt-2 text-rose-300">{firebaseStatus.error}</p> : null}
         </div>
       </div>
 

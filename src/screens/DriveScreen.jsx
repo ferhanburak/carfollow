@@ -1,6 +1,18 @@
 import { HudStat } from "../components/ui";
 
-export function DriveScreen({ driveHud, drivers, isDriving, user }) {
+function formatSyncTime(timestamp) {
+  if (!timestamp) {
+    return "waiting";
+  }
+
+  return new Date(timestamp).toLocaleTimeString("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+export function DriveScreen({ driveHud, drivers, firebaseStatus, isDriving, user }) {
   return (
     <section className="space-y-4">
       <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(160deg,#171717,#0b0b0b)] p-5 shadow-[inset_0_0_24px_rgba(163,230,53,0.05)]">
@@ -31,6 +43,19 @@ export function DriveScreen({ driveHud, drivers, isDriving, user }) {
           <p className="mt-3 text-sm text-neutral-400">
             Surus aktifken kilometre sayaci ve bakim bilesen omru es zamanli guncellenir.
           </p>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-neutral-400">
+          <div className="flex items-center justify-between">
+            <span className="uppercase tracking-[0.22em] text-neutral-500">Telemetry Sync</span>
+            <span className={firebaseStatus.telemetry === "error" ? "text-rose-300" : "text-lime-300"}>
+              {firebaseStatus.telemetry}
+            </span>
+          </div>
+          <p className="mt-2 font-mono text-[11px] text-lime-300">
+            UID: {firebaseStatus.authUid ?? "anonymous session pending"}
+          </p>
+          <p className="mt-1">Last RTDB push: {formatSyncTime(firebaseStatus.lastTelemetrySyncAt)}</p>
         </div>
       </div>
 
