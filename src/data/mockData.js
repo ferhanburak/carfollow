@@ -245,6 +245,7 @@ export const tuningOptions = ["Stock", "Stage 1", "Stage 2+", "Stage 3"];
 
 export const navItems = [
   { key: "map", label: "Harita", icon: "Grid" },
+  { key: "liveMap", label: "Live Map", icon: "Map" },
   { key: "drive", label: "Surus", icon: "HUD" },
   { key: "clans", label: "Klanlar", icon: "Crew" },
   { key: "garage", label: "Garaj", icon: "Servis" },

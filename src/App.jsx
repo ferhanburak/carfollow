@@ -3,6 +3,7 @@ import { AuthScreen } from "./screens/AuthScreen";
 import { ClansScreen } from "./screens/ClansScreen";
 import { DriveScreen } from "./screens/DriveScreen";
 import { GarageScreen } from "./screens/GarageScreen";
+import { MapHubScreen } from "./screens/MapHubScreen";
 import { MapScreen } from "./screens/MapScreen";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
@@ -131,8 +132,45 @@ function App() {
           </div>
         </header>
 
-        <div className={`flex-1 overflow-y-auto ${activeTab === "map" ? "px-0 py-0 pb-20" : "px-4 py-4 pb-28"}`}>
+        <div className={`flex-1 overflow-y-auto ${activeTab === "liveMap" ? "px-0 py-0 pb-20" : "px-4 py-4 pb-28"}`}>
           {activeTab === "map" ? (
+            <MapHubScreen
+              clearDraftRoute={clearDraftRoute}
+              draftLocation={mapDraftLocation}
+              joinCruise={joinCruise}
+              likeGalleryImage={likeGalleryImage}
+              likePin={likePin}
+              loadSpotPhotoFile={loadSpotPhotoFile}
+              mapPickMode={mapPickMode}
+              mapPinErrors={mapPinErrors}
+              mapPinFeedback={mapPinFeedback}
+              mapPinForm={mapPinForm}
+              mapPins={mapPins}
+              onPickLocation={pickMapLocation}
+              onSelectPin={setSelectedPinId}
+              onSetMapPickMode={setMapPickMode}
+              onSetMapPinForm={setMapPinForm}
+              onSetSpotPhotoForm={setSpotPhotoForm}
+              onSetWashForm={setWashForm}
+              onSubmitMapPin={submitMapPin}
+              onSubmitSpotPhoto={submitSpotPhoto}
+              onSubmitWashReview={submitWashReview}
+              onUseSelectedCoordinates={useSelectedPinCoordinates}
+              pickRouteBack={removeLastDraftRoutePoint}
+              rateAttendee={rateAttendee}
+              selectedPin={selectedPin}
+              selectedPinId={selectedPinId}
+              spotPhotoErrors={spotPhotoErrors}
+              spotPhotoFeedback={spotPhotoFeedback}
+              spotPhotoForm={spotPhotoForm}
+              submitWashReview={submitWashReview}
+              user={user}
+              washForm={washForm}
+              washErrors={washErrors}
+              washFeedback={washFeedback}
+            />
+          ) : null}
+          {activeTab === "liveMap" ? (
             <MapScreen
               clearDraftRoute={clearDraftRoute}
               draftLocation={mapDraftLocation}
@@ -194,7 +232,7 @@ function App() {
         </div>
 
         <nav className="fixed bottom-4 left-1/2 z-20 w-[calc(100%-1.5rem)] max-w-md -translate-x-1/2 px-3">
-          <div className="grid grid-cols-4 gap-2 rounded-[1.8rem] border border-white/10 bg-[#111111]/95 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur">
+          <div className="grid grid-cols-5 gap-2 rounded-[1.8rem] border border-white/10 bg-[#111111]/95 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur">
             {navItems.map((item) => (
               <button
                 key={item.key}
