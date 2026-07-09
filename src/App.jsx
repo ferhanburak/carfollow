@@ -1,5 +1,6 @@
 import { appId, navItems, tuningOptions } from "./data/mockData";
 import { MapCard } from "./components/MapCard";
+import { MapComposerPanel } from "./components/MapComposerPanel";
 import { PinPanel } from "./components/PinPanel";
 import { AuthScreen } from "./screens/AuthScreen";
 import { ClansScreen } from "./screens/ClansScreen";
@@ -40,16 +41,29 @@ function App() {
     joinCruise,
     likeGalleryImage,
     likePin,
+    loadSpotPhotoFile,
+    mapPinErrors,
+    mapPinFeedback,
+    mapPinForm,
     mapPins,
+    rateAttendee,
     resetSessionView,
     selectedPin,
     selectedPinId,
     setActiveTab,
+    setMapPinForm,
     setSelectedPinId,
+    setSpotPhotoForm,
     setWashForm,
+    spotPhotoErrors,
+    spotPhotoFeedback,
+    spotPhotoForm,
     submitFuelLog,
+    submitMapPin,
+    submitSpotPhoto,
     submitWashReview,
     toggleDrive,
+    useSelectedPinCoordinates,
     washForm,
     washErrors,
     washFeedback,
@@ -117,15 +131,30 @@ function App() {
           {activeTab === "map" ? (
             <section className="space-y-4">
               <MapCard pins={mapPins} selectedPinId={selectedPinId} onSelect={setSelectedPinId} />
+              <MapComposerPanel
+                feedback={mapPinFeedback}
+                form={mapPinForm}
+                errors={mapPinErrors}
+                onFormChange={setMapPinForm}
+                onSubmit={submitMapPin}
+                onUseSelectedCoordinates={useSelectedPinCoordinates}
+              />
               <PinPanel
                 pin={selectedPin}
                 user={user}
+                spotPhotoErrors={spotPhotoErrors}
+                spotPhotoFeedback={spotPhotoFeedback}
+                spotPhotoForm={spotPhotoForm}
                 washForm={washForm}
                 washErrors={washErrors}
                 washFeedback={washFeedback}
                 onJoinCruise={joinCruise}
                 onLikeGallery={likeGalleryImage}
                 onLikePin={likePin}
+                onRateAttendee={rateAttendee}
+                onSpotPhotoFileChange={loadSpotPhotoFile}
+                onSpotPhotoFormChange={setSpotPhotoForm}
+                onSubmitSpotPhoto={submitSpotPhoto}
                 onSubmitWashReview={submitWashReview}
                 onWashFormChange={setWashForm}
               />

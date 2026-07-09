@@ -127,3 +127,24 @@ export async function saveFirebaseActiveDriver(driver) {
     syncedAt: Date.now(),
   };
 }
+
+export async function saveFirebaseMapPin(pin) {
+  const services = await getFirebaseServices();
+  if (!services || !pin?.id) {
+    return null;
+  }
+
+  const { firestore } = services;
+  await setDoc(
+    doc(collection(firestore, publicCollectionPath("mapPins", resolveAppId())), pin.id),
+    {
+      ...pin,
+      updatedAt: Date.now(),
+    },
+    { merge: true },
+  );
+
+  return {
+    syncedAt: Date.now(),
+  };
+}

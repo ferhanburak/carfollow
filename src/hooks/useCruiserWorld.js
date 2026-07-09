@@ -1,8 +1,11 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import {
   appendFuelLog,
+  appendMapPin,
+  appendSpotPhoto,
   appendWashReview,
   buildDriveTickState,
+  createAttendeeRecord,
   getInitialWorldState,
   incrementClanKm,
   incrementGalleryLike,
@@ -11,17 +14,30 @@ import {
   isFirebaseRepositoryEnabled,
   joinCruiseAttendee,
   loadFirebaseWorldState,
+  rateCruiseAttendee,
   saveFirebaseActiveDriver,
   saveFirebaseCruiseJoin,
   saveFirebaseFuelLog,
+  saveFirebaseMapPin,
   saveFirebaseUserProfile,
   saveFirebaseWashReview,
   syncActiveDriver,
   tickAmbientDrivers,
 } from "../repositories/cruiserRepository";
 import { getFirebaseServices } from "../services/firebaseClient";
-import { createFuelForm, createWashForm, computeFuelInsights } from "../utils/garage";
-import { validateFuelForm, validateWashForm } from "../utils/validation";
+import {
+  createFuelForm,
+  createMapPinForm,
+  createSpotPhotoForm,
+  createWashForm,
+  computeFuelInsights,
+} from "../utils/garage";
+import {
+  validateFuelForm,
+  validateMapPinForm,
+  validateSpotPhotoForm,
+  validateWashForm,
+} from "../utils/validation";
 
 function sortByReferenceOrder(items, referenceItems, keySelector) {
   const referenceOrder = new Map(referenceItems.map((item, index) => [keySelector(item), index]));
@@ -30,6 +46,60 @@ function sortByReferenceOrder(items, referenceItems, keySelector) {
     const leftIndex = referenceOrder.get(keySelector(left)) ?? Number.MAX_SAFE_INTEGER;
     const rightIndex = referenceOrder.get(keySelector(right)) ?? Number.MAX_SAFE_INTEGER;
     return leftIndex - rightIndex;
+  });
+}
+
+function mergeReferenceItems(referenceItems, remoteItems, keySelector) {
+  const remoteById = new Map(remoteItems.map((item) => [keySelector(item), item]));
+  const mergedReferenceItems = referenceItems.map((item) => ({
+    ...item,
+    ...(remoteById.get(keySelector(item)) ?? {}),
+  }));
+  const extraRemoteItems = remoteItems.filter((item) => !referenceItems.some((entry) => keySelector(entry) === keySelector(item)));
+
+  return [...mergedReferenceItems, ...extraRemoteItems];
+}
+
+function parseTags(rawTags) {
+  return rawTags
+    .split(/[\s,]+/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`));
+}
+
+function buildFallbackGridPosition(lat, lng, pins) {
+  const latitudes = [...pins.map((pin) => pin.lat).filter((value) => typeof value === "number"), lat];
+  const longitudes = [...pins.map((pin) => pin.lng).filter((value) => typeof value === "number"), lng];
+  const minLat = Math.min(...latitudes);
+  const maxLat = Math.max(...latitudes);
+  const minLng = Math.min(...longitudes);
+  const maxLng = Math.max(...longitudes);
+  const latRange = maxLat - minLat || 1;
+  const lngRange = maxLng - minLng || 1;
+  const normalizedX = 15 + ((lng - minLng) / lngRange) * 70;
+  const normalizedY = 85 - ((lat - minLat) / latRange) * 70;
+
+  return {
+    x: `${normalizedX.toFixed(0)}%`,
+    y: `${normalizedY.toFixed(0)}%`,
+  };
+}
+
+function buildMeetRoutePath(lat, lng) {
+  return [
+    { lat: Number((lat + 0.028).toFixed(4)), lng: Number((lng - 0.051).toFixed(4)) },
+    { lat: Number((lat + 0.013).toFixed(4)), lng: Number((lng - 0.021).toFixed(4)) },
+    { lat: Number(lat.toFixed(4)), lng: Number(lng.toFixed(4)) },
+  ];
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(new Error("Photo file could not be read."));
+    reader.readAsDataURL(file);
   });
 }
 
@@ -44,6 +114,12 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   const [washForm, setWashForm] = useState(createWashForm);
   const [washErrors, setWashErrors] = useState({});
   const [washFeedback, setWashFeedback] = useState("");
+  const [mapPinForm, setMapPinForm] = useState(() => createMapPinForm(initialWorld.mapPins[0]));
+  const [mapPinErrors, setMapPinErrors] = useState({});
+  const [mapPinFeedback, setMapPinFeedback] = useState("");
+  const [spotPhotoForm, setSpotPhotoForm] = useState(createSpotPhotoForm);
+  const [spotPhotoErrors, setSpotPhotoErrors] = useState({});
+  const [spotPhotoFeedback, setSpotPhotoFeedback] = useState("");
   const [fuelErrors, setFuelErrors] = useState({});
   const [clans, setClans] = useState(initialWorld.clans);
   const [drivers, setDrivers] = useState(initialWorld.drivers);
@@ -116,10 +192,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
       }
 
       if (remoteWorld.mapPins?.length) {
-        const mergedMapPins = remoteWorld.mapPins.map((pin) => ({
-          ...(initialWorld.mapPins.find((item) => item.id === pin.id) ?? {}),
-          ...pin,
-        }));
+        const mergedMapPins = mergeReferenceItems(initialWorld.mapPins, remoteWorld.mapPins, (pin) => pin.id);
         const orderedMapPins = sortByReferenceOrder(mergedMapPins, initialWorld.mapPins, (pin) => pin.id);
         setMapPins(orderedMapPins);
         setSelectedPinId((current) =>
@@ -127,10 +200,10 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
         );
       }
       if (remoteWorld.clans?.length) {
-        setClans(sortByReferenceOrder(remoteWorld.clans, initialWorld.clans, (clan) => clan.id));
+        setClans(sortByReferenceOrder(mergeReferenceItems(initialWorld.clans, remoteWorld.clans, (clan) => clan.id), initialWorld.clans, (clan) => clan.id));
       }
       if (remoteWorld.drivers?.length) {
-        setDrivers(sortByReferenceOrder(remoteWorld.drivers, initialWorld.drivers, (driver) => driver.plate));
+        setDrivers(sortByReferenceOrder(mergeReferenceItems(initialWorld.drivers, remoteWorld.drivers, (driver) => driver.plate), initialWorld.drivers, (driver) => driver.plate));
       }
     }
 
@@ -243,11 +316,19 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
       note: washForm.note,
     };
 
-    setMapPins((current) => appendWashReview(current, selectedPin.id, review));
+    let nextPin = null;
+    setMapPins((current) => {
+      const nextPins = appendWashReview(current, selectedPin.id, review);
+      nextPin = nextPins.find((pin) => pin.id === selectedPin.id) ?? null;
+      return nextPins;
+    });
     setWashForm(createWashForm());
     setWashErrors({});
     setWashFeedback("Review added successfully.");
     void saveFirebaseWashReview(selectedPin.id, review);
+    if (nextPin) {
+      void saveFirebaseMapPin(nextPin);
+    }
   };
 
   const joinCruise = () => {
@@ -255,16 +336,42 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
       return;
     }
 
-    setMapPins((current) => joinCruiseAttendee(current, selectedPin.id, user.plate));
+    const attendee = createAttendeeRecord(user);
+    let nextPin = null;
+    setMapPins((current) => {
+      const nextPins = joinCruiseAttendee(current, selectedPin.id, attendee);
+      nextPin = nextPins.find((pin) => pin.id === selectedPin.id) ?? null;
+      return nextPins;
+    });
     void saveFirebaseCruiseJoin(selectedPin.id, user.plate);
+    if (nextPin) {
+      void saveFirebaseMapPin(nextPin);
+    }
   };
 
-  const submitFuelLog = (event, fuelForm) => {
+  const rateAttendee = (plate, signal) => {
+    if (selectedPin.type !== "meet") {
+      return;
+    }
+
+    let nextPin = null;
+    setMapPins((current) => {
+      const nextPins = rateCruiseAttendee(current, selectedPin.id, plate, signal);
+      nextPin = nextPins.find((pin) => pin.id === selectedPin.id) ?? null;
+      return nextPins;
+    });
+
+    if (nextPin) {
+      void saveFirebaseMapPin(nextPin);
+    }
+  };
+
+  const submitFuelLog = (event, nextFuelForm) => {
     event.preventDefault();
     if (!user) {
       return;
     }
-    const validationErrors = validateFuelForm(fuelForm, user.odometer);
+    const validationErrors = validateFuelForm(nextFuelForm, user.odometer);
     setFuelErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
       return;
@@ -272,14 +379,14 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
 
     const nextLog = {
       id: `fuel-${Date.now()}`,
-      liters: Number(fuelForm.liters),
-      price: Number(fuelForm.price),
-      currentKm: Number(fuelForm.currentKm),
-      station: fuelForm.station,
+      liters: Number(nextFuelForm.liters),
+      price: Number(nextFuelForm.price),
+      currentKm: Number(nextFuelForm.currentKm),
+      station: nextFuelForm.station,
     };
 
     setUser((current) => appendFuelLog(current, nextLog));
-    setFuelForm(createFuelForm(Number(fuelForm.currentKm)));
+    setFuelForm(createFuelForm(Number(nextFuelForm.currentKm)));
     setFuelErrors({});
     setFirebaseStatus((current) => ({ ...current, fuel: "syncing", error: null }));
     void saveFirebaseFuelLog(nextLog)
@@ -302,6 +409,160 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
           error: error instanceof Error ? error.message : "Fuel log sync failed.",
         }));
       });
+  };
+
+  const useSelectedPinCoordinates = () => {
+    if (!selectedPin) {
+      return;
+    }
+
+    setMapPinForm((current) => ({
+      ...current,
+      lat: selectedPin.lat ?? current.lat,
+      lng: selectedPin.lng ?? current.lng,
+    }));
+  };
+
+  const submitMapPin = (event) => {
+    event.preventDefault();
+    if (!user) {
+      return;
+    }
+
+    const validationErrors = validateMapPinForm(mapPinForm);
+    setMapPinErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
+
+    const lat = Number(mapPinForm.lat);
+    const lng = Number(mapPinForm.lng);
+    const fallbackPosition = buildFallbackGridPosition(lat, lng, mapPins);
+    const basePin = {
+      id: `${mapPinForm.type}-${Date.now()}`,
+      type: mapPinForm.type,
+      icon: mapPinForm.type === "spot" ? "📸" : mapPinForm.type === "wash" ? "🧼" : "🏍️",
+      name: mapPinForm.name.trim(),
+      lat,
+      lng,
+      ...fallbackPosition,
+    };
+
+    let newPin;
+    if (mapPinForm.type === "spot") {
+      newPin = {
+        ...basePin,
+        likes: 0,
+        galleryLikes: 0,
+        tags: parseTags(mapPinForm.tags),
+        description: mapPinForm.description.trim(),
+        gallery: [],
+      };
+    } else if (mapPinForm.type === "meet") {
+      newPin = {
+        ...basePin,
+        time: mapPinForm.time,
+        route: mapPinForm.route.trim(),
+        routePath: buildMeetRoutePath(lat, lng),
+        attendees: [createAttendeeRecord(user)],
+      };
+    } else {
+      const initialReview = {
+        id: `wash-review-${Date.now()}`,
+        author: user.plate,
+        foam: Number(mapPinForm.foam),
+        water: Number(mapPinForm.water),
+        allowsBuckets: mapPinForm.allowsBuckets,
+        shadowDrying: mapPinForm.shadowDrying,
+        note: mapPinForm.note.trim(),
+      };
+
+      newPin = {
+        ...basePin,
+        rating: {
+          foam: initialReview.foam,
+          water: initialReview.water,
+          reviews: 1,
+          allowsBuckets: initialReview.allowsBuckets ? 1 : 0,
+          shadowDrying: initialReview.shadowDrying ? 1 : 0,
+        },
+        reviews: [initialReview],
+      };
+    }
+
+    setMapPins((current) => appendMapPin(current, newPin));
+    setSelectedPinId(newPin.id);
+    setMapPinForm({
+      ...createMapPinForm(newPin),
+      type: mapPinForm.type,
+      lat: newPin.lat,
+      lng: newPin.lng,
+    });
+    setMapPinErrors({});
+    setMapPinFeedback(`${newPin.name} added to the live map.`);
+    void saveFirebaseMapPin(newPin);
+  };
+
+  const submitSpotPhoto = (event) => {
+    event.preventDefault();
+    if (!user || selectedPin.type !== "spot") {
+      return;
+    }
+
+    const validationErrors = validateSpotPhotoForm(spotPhotoForm);
+    setSpotPhotoErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
+
+    const photo = {
+      id: `gallery-${Date.now()}`,
+      title: spotPhotoForm.title.trim(),
+      likes: 0,
+      author: user.plate,
+      imageUrl: spotPhotoForm.imageUrl,
+      uploadedAt: Date.now(),
+    };
+
+    let nextPin = null;
+    setMapPins((current) => {
+      const nextPins = appendSpotPhoto(current, selectedPin.id, photo);
+      nextPin = nextPins.find((pin) => pin.id === selectedPin.id) ?? null;
+      return nextPins;
+    });
+    setSpotPhotoForm(createSpotPhotoForm());
+    setSpotPhotoErrors({});
+    setSpotPhotoFeedback("Photo dropped into the spot gallery.");
+    if (nextPin) {
+      void saveFirebaseMapPin(nextPin);
+    }
+  };
+
+  const loadSpotPhotoFile = async (file) => {
+    if (!file) {
+      setSpotPhotoForm((current) => ({
+        ...current,
+        imageUrl: "",
+        fileName: "",
+      }));
+      return;
+    }
+
+    try {
+      const imageUrl = await readFileAsDataUrl(file);
+      setSpotPhotoForm((current) => ({
+        ...current,
+        imageUrl,
+        fileName: file.name,
+        title: current.title || file.name.replace(/\.[^.]+$/, ""),
+      }));
+      setSpotPhotoErrors((current) => ({ ...current, imageUrl: undefined }));
+    } catch (error) {
+      setSpotPhotoErrors((current) => ({
+        ...current,
+        imageUrl: error instanceof Error ? error.message : "Photo file could not be read.",
+      }));
+    }
   };
 
   const toggleDrive = () => {
@@ -341,6 +602,8 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setActiveTab("map");
     setDriveHud({ speed: 0, sessionKm: 0, etaNode: "Hazir" });
     setWashFeedback("");
+    setMapPinFeedback("");
+    setSpotPhotoFeedback("");
   };
 
   return {
@@ -348,23 +611,36 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     clans,
     driveHud,
     drivers,
+    firebaseStatus,
     fuelInsights,
     fuelErrors,
     isDriving,
     joinCruise,
     likeGalleryImage,
     likePin,
+    loadSpotPhotoFile,
+    mapPinErrors,
+    mapPinFeedback,
+    mapPinForm,
     mapPins,
+    rateAttendee,
     resetSessionView,
     selectedPin,
     selectedPinId,
     setActiveTab,
+    setMapPinForm,
     setSelectedPinId,
+    setSpotPhotoForm,
     setWashForm,
+    spotPhotoErrors,
+    spotPhotoFeedback,
+    spotPhotoForm,
     submitFuelLog,
+    submitMapPin,
+    submitSpotPhoto,
     submitWashReview,
     toggleDrive,
-    firebaseStatus,
+    useSelectedPinCoordinates,
     washForm,
     washErrors,
     washFeedback,

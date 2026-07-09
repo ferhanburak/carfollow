@@ -16,6 +16,28 @@ export const createWashForm = () => ({
   note: "",
 });
 
+export const createMapPinForm = (seedPin) => ({
+  type: "spot",
+  name: "",
+  lat: seedPin?.lat ?? 39.8687,
+  lng: seedPin?.lng ?? 32.7766,
+  description: "",
+  tags: "#NightRun #CrewApproved",
+  time: "22:30",
+  route: "",
+  foam: 5,
+  water: 5,
+  allowsBuckets: true,
+  shadowDrying: false,
+  note: "",
+});
+
+export const createSpotPhotoForm = () => ({
+  title: "",
+  imageUrl: "",
+  fileName: "",
+});
+
 export const createFuelForm = (odometer) => ({
   liters: "",
   price: "",

@@ -7,6 +7,62 @@ function clone(value) {
   return structuredClone(value);
 }
 
+function getDriverStanding(score, harmonyVotes, alertVotes) {
+  if (alertVotes >= harmonyVotes + 2 || score < 60) {
+    return "Watchlist";
+  }
+
+  if (harmonyVotes >= alertVotes + 3 || score >= 88) {
+    return "Uyumlu";
+  }
+
+  return "Convoy Ready";
+}
+
+function normalizeAttendee(attendee) {
+  if (typeof attendee === "string") {
+    return {
+      plate: attendee,
+      fullName: attendee,
+      model: "Unknown Setup",
+      region: "Unknown Region",
+      score: 70,
+      harmonyVotes: 0,
+      alertVotes: 0,
+      status: "Convoy Ready",
+    };
+  }
+
+  const score = attendee.score ?? 70;
+  const harmonyVotes = attendee.harmonyVotes ?? 0;
+  const alertVotes = attendee.alertVotes ?? 0;
+
+  return {
+    ...attendee,
+    score,
+    harmonyVotes,
+    alertVotes,
+    status: attendee.status ?? getDriverStanding(score, harmonyVotes, alertVotes),
+  };
+}
+
+export function createAttendeeRecord(user) {
+  const score = user.driverScore ?? 82;
+  const harmonyVotes = user.harmonyVotes ?? 0;
+  const alertVotes = user.alertVotes ?? 0;
+
+  return {
+    plate: user.plate,
+    fullName: user.fullName,
+    model: user.model,
+    region: user.region,
+    score,
+    harmonyVotes,
+    alertVotes,
+    status: getDriverStanding(score, harmonyVotes, alertVotes),
+  };
+}
+
 export function listQuickProfiles() {
   return clone(quickProfiles);
 }
@@ -39,6 +95,9 @@ export function createSignedUpUser(signUpForm) {
       { key: "spark", name: "Spark Plugs", replacedKm: 12000, lifeExpectancy: 24000 },
     ],
     fuelLogs: [],
+    driverScore: 80,
+    harmonyVotes: 1,
+    alertVotes: 0,
   };
 }
 
@@ -110,7 +169,23 @@ export function incrementGalleryLike(mapPins, pinId, galleryId) {
       ? {
           ...pin,
           galleryLikes: (pin.galleryLikes ?? 0) + 1,
-          gallery: pin.gallery.map((entry) => (entry.id === galleryId ? { ...entry, likes: entry.likes + 1 } : entry)),
+          gallery: pin.gallery.map((entry) => (entry.id === galleryId ? { ...entry, likes: (entry.likes ?? 0) + 1 } : entry)),
+        }
+      : pin,
+  );
+}
+
+export function appendMapPin(mapPins, pin) {
+  const withoutDuplicate = mapPins.filter((entry) => entry.id !== pin.id);
+  return [pin, ...withoutDuplicate];
+}
+
+export function appendSpotPhoto(mapPins, pinId, photo) {
+  return mapPins.map((pin) =>
+    pin.id === pinId
+      ? {
+          ...pin,
+          gallery: [photo, ...(pin.gallery ?? [])],
         }
       : pin,
   );
@@ -140,15 +215,55 @@ export function appendWashReview(mapPins, pinId, review) {
   });
 }
 
-export function joinCruiseAttendee(mapPins, pinId, plate) {
-  return mapPins.map((pin) =>
-    pin.id === pinId
-      ? {
-          ...pin,
-          attendees: pin.attendees.includes(plate) ? pin.attendees : [...pin.attendees, plate],
+export function joinCruiseAttendee(mapPins, pinId, attendee) {
+  return mapPins.map((pin) => {
+    if (pin.id !== pinId) {
+      return pin;
+    }
+
+    const currentAttendees = (pin.attendees ?? []).map(normalizeAttendee);
+    if (currentAttendees.some((entry) => entry.plate === attendee.plate)) {
+      return {
+        ...pin,
+        attendees: currentAttendees,
+      };
+    }
+
+    return {
+      ...pin,
+      attendees: [...currentAttendees, normalizeAttendee(attendee)],
+    };
+  });
+}
+
+export function rateCruiseAttendee(mapPins, pinId, plate, signal) {
+  return mapPins.map((pin) => {
+    if (pin.id !== pinId) {
+      return pin;
+    }
+
+    return {
+      ...pin,
+      attendees: (pin.attendees ?? []).map((entry) => {
+        const attendee = normalizeAttendee(entry);
+        if (attendee.plate !== plate) {
+          return attendee;
         }
-      : pin,
-  );
+
+        const harmonyVotes = signal === "harmony" ? attendee.harmonyVotes + 1 : attendee.harmonyVotes;
+        const alertVotes = signal === "alert" ? attendee.alertVotes + 1 : attendee.alertVotes;
+        const score = signal === "harmony" ? Math.min(99, attendee.score + 3) : Math.max(5, attendee.score - 8);
+
+        return {
+          ...attendee,
+          score,
+          harmonyVotes,
+          alertVotes,
+          status: getDriverStanding(score, harmonyVotes, alertVotes),
+        };
+      }),
+    };
+  });
 }
 
 export function appendFuelLog(user, nextLog) {

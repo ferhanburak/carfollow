@@ -1,7 +1,10 @@
 export {
   appendFuelLog,
+  appendMapPin,
+  appendSpotPhoto,
   appendWashReview,
   buildDriveTickState,
+  createAttendeeRecord,
   createAuthenticatedUser,
   createSignedUpUser,
   getInitialWorldState,
@@ -12,6 +15,7 @@ export {
   incrementUserOdometer,
   joinCruiseAttendee,
   listQuickProfiles,
+  rateCruiseAttendee,
   syncActiveDriver,
   tickAmbientDrivers,
 } from "./mockCruiserRepository";
@@ -22,6 +26,7 @@ export {
   saveFirebaseActiveDriver,
   saveFirebaseCruiseJoin,
   saveFirebaseFuelLog,
+  saveFirebaseMapPin,
   saveFirebaseUserProfile,
   saveFirebaseWashReview,
 } from "./firebaseCruiserRepository";

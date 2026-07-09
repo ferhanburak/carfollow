@@ -35,6 +35,9 @@ export const quickProfiles = [
       { id: "f2", liters: 32, price: 1664, currentKm: 67640, station: "Shell Esenboga" },
       { id: "f3", liters: 34, price: 1734, currentKm: 67120, station: "Total Cayyolu" },
     ],
+    driverScore: 91,
+    harmonyVotes: 17,
+    alertVotes: 1,
   },
   {
     id: "p2",
@@ -61,6 +64,9 @@ export const quickProfiles = [
       { id: "m2", liters: 15, price: 765, currentKm: 27610, station: "Petrol Ofisi Kadikoy" },
       { id: "m3", liters: 13, price: 663, currentKm: 27260, station: "Aytemiz Bostanci" },
     ],
+    driverScore: 88,
+    harmonyVotes: 12,
+    alertVotes: 2,
   },
 ];
 
@@ -79,8 +85,22 @@ export const initialMapPins = [
     tags: ["#SmoothAsphalt", "#EpicSunset", "#CinematicPull"],
     description: "Golden hour rollers ve dusuk trafikli sahil hatti.",
     gallery: [
-      { id: "g1", title: "Lake Line", likes: 78 },
-      { id: "g2", title: "Rear Diff Glow", likes: 59 },
+      {
+        id: "g1",
+        title: "Lake Line",
+        likes: 78,
+        author: "06 PWA 101",
+        imageUrl:
+          "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=900&q=80",
+      },
+      {
+        id: "g2",
+        title: "Rear Diff Glow",
+        likes: 59,
+        author: "34 MOTO 410",
+        imageUrl:
+          "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=900&q=80",
+      },
     ],
   },
   {
@@ -124,6 +144,37 @@ export const initialMapPins = [
     ],
   },
   {
+    id: "wash-2",
+    type: "wash",
+    icon: "ğŸ§¼",
+    name: "Night Mist Wash Hub",
+    lat: 39.8544,
+    lng: 32.8391,
+    x: "74%",
+    y: "38%",
+    rating: { foam: 4.7, water: 4.4, reviews: 2, allowsBuckets: 2, shadowDrying: 2 },
+    reviews: [
+      {
+        id: "r4",
+        author: "34 MOTO 410",
+        foam: 5,
+        water: 4,
+        allowsBuckets: true,
+        shadowDrying: true,
+        note: "Jet guclu, gece aydinlatmasi baya iyi.",
+      },
+      {
+        id: "r5",
+        author: "06 PWA 101",
+        foam: 4,
+        water: 5,
+        allowsBuckets: true,
+        shadowDrying: true,
+        note: "Kirec dusuk, bezle kurulama alani rahat.",
+      },
+    ],
+  },
+  {
     id: "meet-1",
     type: "meet",
     icon: "🏍️",
@@ -141,7 +192,38 @@ export const initialMapPins = [
       { lat: 39.8124, lng: 32.7961 },
       { lat: 39.7869, lng: 32.8068 },
     ],
-    attendees: ["06 PWA 101", "34 MOTO 410", "07 VTEC 707"],
+    attendees: [
+      {
+        plate: "06 PWA 101",
+        fullName: "Poyraz Alkan",
+        model: "Seat Ibiza Cupra",
+        region: "Ankara Bati",
+        score: 91,
+        harmonyVotes: 17,
+        alertVotes: 1,
+        status: "Uyumlu",
+      },
+      {
+        plate: "34 MOTO 410",
+        fullName: "Mert Ozan",
+        model: "Yamaha R6",
+        region: "Istanbul Kuzey",
+        score: 88,
+        harmonyVotes: 12,
+        alertVotes: 2,
+        status: "Convoy Ready",
+      },
+      {
+        plate: "07 VTEC 707",
+        fullName: "Deniz Korhan",
+        model: "Honda Civic FB7",
+        region: "Antalya Sahil",
+        score: 54,
+        harmonyVotes: 4,
+        alertVotes: 7,
+        status: "Watchlist",
+      },
+    ],
   },
 ];
 
