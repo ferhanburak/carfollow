@@ -1,5 +1,10 @@
+import { ServiceHistoryList } from "../components/garage/ServiceHistoryList";
+import { ServiceLogForm } from "../components/garage/ServiceLogForm";
+import { UpcomingMaintenanceList } from "../components/garage/UpcomingMaintenanceList";
+import { VehiclePassportSummary } from "../components/garage/VehiclePassportSummary";
 import { CompactField, InsightCard } from "../components/ui";
-import { formatNumber, getPartHealth } from "../utils/garage";
+import { formatNumber } from "../utils/garage";
+import { getPartHealthSnapshot } from "../utils/vehiclePassport";
 
 function formatSyncTime(timestamp) {
   if (!timestamp) {
@@ -37,8 +42,17 @@ export function GarageScreen({
   fuelInsights,
   onFuelFormChange,
   onSubmitFuelLog,
+  onServiceLogFormChange,
+  onSubmitServiceLog,
+  passportSummary,
+  serviceLogErrors,
+  serviceLogFeedback,
+  serviceLogForm,
+  upcomingMaintenance,
   user,
 }) {
+  const partsByKey = new Map((user.parts ?? []).map((part) => [part.key, part]));
+
   return (
     <section className="space-y-4">
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
@@ -78,8 +92,33 @@ export function GarageScreen({
           </p>
           <p className="mt-1">Profile sync: {firebaseStatus.profile} @ {formatSyncTime(firebaseStatus.lastProfileSyncAt)}</p>
           <p className="mt-1">Fuel log sync: {firebaseStatus.fuel} @ {formatSyncTime(firebaseStatus.lastFuelSyncAt)}</p>
+          <p className="mt-1">Service sync: {firebaseStatus.service} @ {formatSyncTime(firebaseStatus.lastServiceSyncAt)}</p>
           {firebaseStatus.error ? <p className="mt-2 text-rose-300">{firebaseStatus.error}</p> : null}
         </div>
+      </div>
+
+      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Vehicle Passport</p>
+            <p className="text-xs text-neutral-500">Servis gecmisi, saglik skoru ve satis oncesi dogrulanabilir kayitlar.</p>
+          </div>
+          <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.24em] text-lime-300">
+            Passport Live
+          </span>
+        </div>
+        {passportSummary ? <VehiclePassportSummary summary={passportSummary} /> : null}
+      </div>
+
+      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Upcoming Maintenance</p>
+            <p className="text-xs text-neutral-500">KM ve tarih bazli kalan omur birlikte izlenir.</p>
+          </div>
+          <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">Priority Queue</span>
+        </div>
+        <UpcomingMaintenanceList items={upcomingMaintenance} />
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
@@ -89,25 +128,60 @@ export function GarageScreen({
         </div>
         <div className="mt-4 space-y-4">
           {user.parts.map((part) => {
-            const health = getPartHealth(part, user.odometer);
-            const tone = health > 50 ? "bg-lime-400" : health > 20 ? "bg-amber-400" : "bg-rose-500 animate-pulse";
+            const snapshot = getPartHealthSnapshot(part, user.odometer);
+            const tone =
+              snapshot.health > 50 ? "bg-lime-400" : snapshot.health > 20 ? "bg-amber-400" : "bg-rose-500 animate-pulse";
 
             return (
               <div key={part.key} className="rounded-2xl bg-black/20 p-4">
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span>{part.name}</span>
-                  <span className={health <= 20 ? "text-rose-300" : "text-neutral-300"}>{health}%</span>
+                  <span className={snapshot.health <= 20 ? "text-rose-300" : "text-neutral-300"}>{snapshot.health}%</span>
                 </div>
                 <div className="h-3 overflow-hidden rounded-full bg-neutral-800">
-                  <div className={`h-full rounded-full ${tone} transition-all duration-700`} style={{ width: `${health}%` }} />
+                  <div className={`h-full rounded-full ${tone} transition-all duration-700`} style={{ width: `${snapshot.health}%` }} />
                 </div>
-                <p className="mt-2 text-xs text-neutral-500">
-                  Formula: Current_Odometer - Replaced_Km / Life_Expectancy
-                </p>
+                <div className="mt-2 flex items-center justify-between text-xs text-neutral-500">
+                  <span>{formatNumber(snapshot.kmRemaining)} KM kaldi</span>
+                  <span>{snapshot.daysRemaining === null ? "--" : `${snapshot.daysRemaining} gun`}</span>
+                </div>
               </div>
             );
           })}
         </div>
+      </div>
+
+      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Service Entry</p>
+            <p className="text-xs text-neutral-500">Parca degisimi, kontrol ve onarimlar burada kayda girilir.</p>
+          </div>
+          <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">Private Log</span>
+        </div>
+        {serviceLogFeedback ? (
+          <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-200">
+            {serviceLogFeedback}
+          </div>
+        ) : null}
+        <ServiceLogForm
+          errors={serviceLogErrors}
+          form={serviceLogForm}
+          onChange={onServiceLogFormChange}
+          onSubmit={onSubmitServiceLog}
+          parts={user.parts}
+        />
+      </div>
+
+      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Service History</p>
+            <p className="text-xs text-neutral-500">Tarih, KM ve servis atolyeleriyle arac gecmisi saklanir.</p>
+          </div>
+          <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">{user.serviceLogs.length} kayit</span>
+        </div>
+        <ServiceHistoryList logs={user.serviceLogs} partsByKey={partsByKey} />
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">

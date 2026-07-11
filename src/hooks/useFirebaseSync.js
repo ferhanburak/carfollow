@@ -4,7 +4,9 @@ import {
   loadFirebaseWorldState,
   saveFirebaseActiveDriver,
   saveFirebaseFuelLog,
+  saveFirebaseServiceLog,
   saveFirebaseUserProfile,
+  saveFirebaseVehiclePart,
 } from "../repositories/cruiserRepository";
 import {
   getFirebaseModeDiagnostics,
@@ -48,9 +50,11 @@ export function useFirebaseSync({
     authUid: null,
     profile: "idle",
     fuel: "idle",
+    service: "idle",
     telemetry: "idle",
     lastProfileSyncAt: null,
     lastFuelSyncAt: null,
+    lastServiceSyncAt: null,
     lastTelemetrySyncAt: null,
     error: firebaseDiagnostics.enabled ? null : firebaseDiagnostics.message,
   });
@@ -259,9 +263,43 @@ export function useFirebaseSync({
       });
   };
 
+  const syncServiceLog = (serviceLog, part) => {
+    setFirebaseStatus((current) => ({ ...current, service: "syncing", error: null }));
+    void Promise.all([
+      saveFirebaseServiceLog(serviceLog),
+      part ? saveFirebaseVehiclePart(part) : Promise.resolve(null),
+    ])
+      .then(([serviceResult, partResult]) => {
+        const result = serviceResult ?? partResult;
+        if (!result) {
+          setFirebaseStatus((current) => ({
+            ...current,
+            service: "error",
+            error: getLastFirebaseServicesError() || "Service sync was skipped because Firebase is unavailable.",
+          }));
+          return;
+        }
+
+        setFirebaseStatus((current) => ({
+          ...current,
+          authUid: result.authUid,
+          service: "synced",
+          lastServiceSyncAt: result.syncedAt,
+        }));
+      })
+      .catch((error) => {
+        setFirebaseStatus((current) => ({
+          ...current,
+          service: "error",
+          error: error instanceof Error ? error.message : "Service sync failed.",
+        }));
+      });
+  };
+
   return {
     firebaseStatus,
     syncFuelLog,
+    syncServiceLog,
     syncTelemetry,
   };
 }

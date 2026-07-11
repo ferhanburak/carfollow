@@ -76,15 +76,20 @@ function App() {
     mapPinFeedback,
     mapPinForm,
     mapPins,
+    passportSummary,
     pickMapLocation,
     rateAttendee,
     removeLastDraftRoutePoint,
     resetSessionView,
     selectedPin,
     selectedPinId,
+    serviceLogErrors,
+    serviceLogFeedback,
+    serviceLogForm,
     setActiveTab,
     setMapPickMode,
     setMapPinForm,
+    setServiceLogForm,
     setSelectedPinId,
     setSpotPhotoForm,
     setWashForm,
@@ -92,10 +97,12 @@ function App() {
     spotPhotoFeedback,
     spotPhotoForm,
     submitFuelLog,
+    submitServiceLog,
     submitMapPin,
     submitSpotPhoto,
     submitWashReview,
     toggleDrive,
+    upcomingMaintenance,
     useSelectedPinCoordinates,
     washForm,
     washErrors,
@@ -254,6 +261,13 @@ function App() {
                 fuelInsights={fuelInsights}
                 onFuelFormChange={setFuelForm}
                 onSubmitFuelLog={(event) => submitFuelLog(event, fuelForm)}
+                onServiceLogFormChange={setServiceLogForm}
+                onSubmitServiceLog={submitServiceLog}
+                passportSummary={passportSummary}
+                serviceLogErrors={serviceLogErrors}
+                serviceLogFeedback={serviceLogFeedback}
+                serviceLogForm={serviceLogForm}
+                upcomingMaintenance={upcomingMaintenance}
                 user={user}
               />
             ) : null}

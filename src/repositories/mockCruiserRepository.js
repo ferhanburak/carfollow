@@ -1,4 +1,5 @@
 import { initialClans, initialDrivers, initialMapPins, quickProfiles } from "../data/mockData";
+import { applyPartServiceToUser } from "../utils/vehiclePassport";
 
 const ambientNodes = ["Eskisehir Yolu", "TEM North", "Mogan Ring", "FSM Koprusu", "Anadolu Otoyolu"];
 const routeNodes = ["Tunel Cikisi", "Sehir Disi Hat", "Viraj Koridoru", "Kuzey Dugumu", "Rolling Spot"];
@@ -90,10 +91,11 @@ export function createSignedUpUser(signUpForm) {
     avatar:
       "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=900&q=80",
     parts: [
-      { key: "oil", name: "Engine Oil", replacedKm: 12000, lifeExpectancy: 8000 },
-      { key: "brakes", name: "Brake Pads", replacedKm: 12000, lifeExpectancy: 18000 },
-      { key: "spark", name: "Spark Plugs", replacedKm: 12000, lifeExpectancy: 24000 },
+      { key: "oil", name: "Engine Oil", replacedKm: 12000, replacedAt: "2026-07-11", lifeExpectancyKm: 8000, lifeExpectancyMonths: 12 },
+      { key: "brakes", name: "Brake Pads", replacedKm: 12000, replacedAt: "2026-07-11", lifeExpectancyKm: 18000, lifeExpectancyMonths: 18 },
+      { key: "spark", name: "Spark Plugs", replacedKm: 12000, replacedAt: "2026-07-11", lifeExpectancyKm: 24000, lifeExpectancyMonths: 18 },
     ],
+    serviceLogs: [],
     fuelLogs: [],
     driverScore: 80,
     harmonyVotes: 1,
@@ -105,6 +107,7 @@ export function createAuthenticatedUser(profile) {
   return {
     ...clone(profile),
     parts: profile.parts.map((part) => ({ ...part })),
+    serviceLogs: (profile.serviceLogs ?? []).map((log) => ({ ...log })),
   };
 }
 
@@ -272,4 +275,8 @@ export function appendFuelLog(user, nextLog) {
     odometer: Math.max(user.odometer, nextLog.currentKm),
     fuelLogs: [nextLog, ...user.fuelLogs],
   };
+}
+
+export function appendServiceLog(user, serviceLog) {
+  return applyPartServiceToUser(user, serviceLog);
 }

@@ -46,13 +46,28 @@ export const createFuelForm = (odometer) => ({
   station: "",
 });
 
+export const createServiceLogForm = (user) => ({
+  partKey: user?.parts?.[0]?.key ?? "oil",
+  type: "replacement",
+  serviceDate: new Date().toISOString().slice(0, 10),
+  serviceKm: Math.round(user?.odometer ?? 0),
+  serviceShop: user?.garage ?? "",
+  cost: "",
+  notes: "",
+  receiptImageUrl: "",
+});
+
 export function formatNumber(value) {
   return new Intl.NumberFormat("tr-TR").format(Math.round(value * 10) / 10);
 }
 
 export function getPartHealth(part, odometer) {
   const used = Math.max(odometer - part.replacedKm, 0);
-  const percent = Math.max(0, 100 - (used / part.lifeExpectancy) * 100);
+  const lifeExpectancy = Number(part.lifeExpectancyKm ?? part.lifeExpectancy ?? 0);
+  if (!lifeExpectancy) {
+    return 100;
+  }
+  const percent = Math.max(0, 100 - (used / lifeExpectancy) * 100);
   return Math.round(percent);
 }
 

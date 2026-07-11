@@ -7,6 +7,7 @@ import {
 import { useDriveSession } from "./useDriveSession";
 import { useFirebaseSync } from "./useFirebaseSync";
 import { useMapPins } from "./useMapPins";
+import { useVehiclePassport } from "./useVehiclePassport";
 import {
   createFuelForm,
   computeFuelInsights,
@@ -58,7 +59,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     initialWorld,
     user,
   });
-  const { firebaseStatus, syncFuelLog, syncTelemetry } = useFirebaseSync({
+  const { firebaseStatus, syncFuelLog, syncServiceLog, syncTelemetry } = useFirebaseSync({
     initialWorld,
     user,
     setMapPins,
@@ -72,6 +73,19 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setClans,
     setDrivers,
     onTelemetrySync: syncTelemetry,
+  });
+  const {
+    passportSummary,
+    serviceLogErrors,
+    serviceLogFeedback,
+    serviceLogForm,
+    setServiceLogForm,
+    submitServiceLog,
+    upcomingMaintenance,
+  } = useVehiclePassport({
+    user,
+    setUser,
+    syncServiceLog,
   });
 
   useEffect(() => {
@@ -139,6 +153,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     mapPinErrors,
     mapPinFeedback,
     mapPinForm,
+    passportSummary,
     mapDraftLocation,
     mapPins,
     mapPickMode,
@@ -147,9 +162,13 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     resetSessionView,
     selectedPin,
     selectedPinId,
+    serviceLogErrors,
+    serviceLogFeedback,
+    serviceLogForm,
     setActiveTab,
     setMapPinForm,
     setMapPickMode,
+    setServiceLogForm,
     setSelectedPinId,
     setSpotPhotoForm,
     setWashForm,
@@ -159,10 +178,12 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     spotPhotoFeedback,
     spotPhotoForm,
     submitFuelLog,
+    submitServiceLog,
     submitMapPin,
     submitSpotPhoto,
     submitWashReview,
     toggleDrive,
+    upcomingMaintenance,
     useSelectedPinCoordinates,
     washForm,
     washErrors,

@@ -1,5 +1,6 @@
 export {
   appendFuelLog,
+  appendServiceLog,
   appendMapPin,
   appendSpotPhoto,
   appendWashReview,
@@ -26,7 +27,9 @@ export {
   saveFirebaseActiveDriver,
   saveFirebaseCruiseJoin,
   saveFirebaseFuelLog,
+  saveFirebaseServiceLog,
   saveFirebaseMapPin,
+  saveFirebaseVehiclePart,
   saveFirebaseUserProfile,
   saveFirebaseWashReview,
 } from "./firebaseCruiserRepository";

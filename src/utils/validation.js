@@ -104,3 +104,27 @@ export function validateSpotPhotoForm(form) {
 
   return errors;
 }
+
+export function validateServiceLogForm(form, odometer) {
+  const errors = {};
+  const serviceKm = Number(form.serviceKm);
+  const cost = Number(form.cost);
+
+  if (!form.partKey?.trim()) {
+    errors.partKey = "Part selection is required.";
+  }
+  if (!form.serviceDate?.trim()) {
+    errors.serviceDate = "Service date is required.";
+  }
+  if (!Number.isFinite(serviceKm) || serviceKm < Number(odometer)) {
+    errors.serviceKm = "Service KM cannot be below current odometer.";
+  }
+  if (!form.serviceShop?.trim()) {
+    errors.serviceShop = "Service shop is required.";
+  }
+  if (!Number.isFinite(cost) || cost < 0) {
+    errors.cost = "Cost must be 0 or greater.";
+  }
+
+  return errors;
+}

@@ -86,6 +86,22 @@ export async function saveFirebaseFuelLog(nextLog) {
   };
 }
 
+export async function saveFirebaseServiceLog(serviceLog) {
+  const services = await getFirebaseServices();
+  if (!services) {
+    return null;
+  }
+
+  const { firestore, authUser } = services;
+  const { addDoc, collection } = await loadFirestoreModule();
+  await addDoc(collection(firestore, privateUserCollectionPath(authUser.uid, "serviceLogs", resolveAppId())), serviceLog);
+
+  return {
+    authUid: authUser.uid,
+    syncedAt: Date.now(),
+  };
+}
+
 export async function saveFirebaseWashReview(pinId, review) {
   const services = await getFirebaseServices();
   if (!services || !pinId) {
@@ -158,6 +174,29 @@ export async function saveFirebaseMapPin(pin) {
   );
 
   return {
+    syncedAt: Date.now(),
+  };
+}
+
+export async function saveFirebaseVehiclePart(part) {
+  const services = await getFirebaseServices();
+  if (!services || !part?.key) {
+    return null;
+  }
+
+  const { firestore, authUser } = services;
+  const { doc, setDoc } = await loadFirestoreModule();
+  await setDoc(
+    doc(firestore, privateUserCollectionPath(authUser.uid, "parts", resolveAppId()), part.key),
+    {
+      ...part,
+      updatedAt: Date.now(),
+    },
+    { merge: true },
+  );
+
+  return {
+    authUid: authUser.uid,
     syncedAt: Date.now(),
   };
 }

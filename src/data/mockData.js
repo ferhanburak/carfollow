@@ -27,9 +27,13 @@ export const quickProfiles = [
     avatar:
       "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=900&q=80",
     parts: [
-      { key: "oil", name: "Engine Oil", replacedKm: 64500, lifeExpectancy: 8000 },
-      { key: "brakes", name: "Brake Pads", replacedKm: 59200, lifeExpectancy: 18000 },
-      { key: "spark", name: "Spark Plugs", replacedKm: 52000, lifeExpectancy: 30000 },
+      { key: "oil", name: "Engine Oil", replacedKm: 64500, replacedAt: "2026-03-10", lifeExpectancyKm: 8000, lifeExpectancyMonths: 12 },
+      { key: "brakes", name: "Brake Pads", replacedKm: 59200, replacedAt: "2025-11-02", lifeExpectancyKm: 18000, lifeExpectancyMonths: 18 },
+      { key: "spark", name: "Spark Plugs", replacedKm: 52000, replacedAt: "2025-05-24", lifeExpectancyKm: 30000, lifeExpectancyMonths: 24 },
+    ],
+    serviceLogs: [
+      { id: "s1", partKey: "oil", type: "replacement", serviceDate: "2026-03-10", serviceKm: 64500, serviceShop: "Ankara Apex Garage", cost: 2250, notes: "5W-40 ve filtre seti degisti." },
+      { id: "s2", partKey: "brakes", type: "replacement", serviceDate: "2025-11-02", serviceKm: 59200, serviceShop: "Ankara Apex Garage", cost: 4850, notes: "On balatalar ve disk kontrolu yapildi." },
     ],
     fuelLogs: [
       { id: "f1", liters: 36, price: 1848, currentKm: 68110, station: "OPET Bilkent" },
@@ -56,9 +60,13 @@ export const quickProfiles = [
     avatar:
       "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=900&q=80",
     parts: [
-      { key: "oil", name: "Engine Oil", replacedKm: 25800, lifeExpectancy: 5000 },
-      { key: "brakes", name: "Brake Pads", replacedKm: 24100, lifeExpectancy: 14000 },
-      { key: "spark", name: "Spark Plugs", replacedKm: 21000, lifeExpectancy: 20000 },
+      { key: "oil", name: "Engine Oil", replacedKm: 25800, replacedAt: "2026-04-18", lifeExpectancyKm: 5000, lifeExpectancyMonths: 8 },
+      { key: "brakes", name: "Brake Pads", replacedKm: 24100, replacedAt: "2025-12-12", lifeExpectancyKm: 14000, lifeExpectancyMonths: 18 },
+      { key: "spark", name: "Spark Plugs", replacedKm: 21000, replacedAt: "2025-08-01", lifeExpectancyKm: 20000, lifeExpectancyMonths: 18 },
+    ],
+    serviceLogs: [
+      { id: "ms1", partKey: "oil", type: "replacement", serviceDate: "2026-04-18", serviceKm: 25800, serviceShop: "MotoLab Istanbul", cost: 1650, notes: "Sentetik yag ve filtre degisimi." },
+      { id: "ms2", partKey: "brakes", type: "inspection", serviceDate: "2026-02-08", serviceKm: 24940, serviceShop: "MotoLab Istanbul", cost: 450, notes: "Balata kalinligi olculdu, degisim gerekmiyor." },
     ],
     fuelLogs: [
       { id: "m1", liters: 14, price: 714, currentKm: 27980, station: "BP Atasehir" },
