@@ -1,6 +1,7 @@
 import { initialClans, initialDrivers, initialMapPins, quickProfiles } from "../data/mockData";
 import { applyPartServiceToUser } from "../utils/vehiclePassport";
 import { createDefaultParts, inferVehicleType, normalizeVehicleParts } from "../utils/vehicleParts";
+import { normalizeSocialState } from "../utils/socialGraph";
 
 const ambientNodes = ["Eskisehir Yolu", "TEM North", "Mogan Ring", "FSM Koprusu", "Anadolu Otoyolu"];
 const routeNodes = ["Tunel Cikisi", "Sehir Disi Hat", "Viraj Koridoru", "Kuzey Dugumu", "Rolling Spot"];
@@ -100,13 +101,16 @@ export function createSignedUpUser(signUpForm) {
     driverScore: 80,
     harmonyVotes: 1,
     alertVotes: 0,
+    friends: [],
+    incomingRequests: [],
+    outgoingRequests: [],
   };
 }
 
 export function createAuthenticatedUser(profile) {
   const vehicleType = profile.vehicleType ?? inferVehicleType(profile.model);
   return {
-    ...clone(profile),
+    ...normalizeSocialState(clone(profile)),
     vehicleType,
     badges: [...(profile.badges ?? [])],
     parts: normalizeVehicleParts(profile.parts ?? [], vehicleType),

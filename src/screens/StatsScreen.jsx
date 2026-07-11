@@ -2,13 +2,176 @@ import { individualDriverSeed } from "../data/mockData";
 import { formatNumber } from "../utils/garage";
 import { buildAchievementProgress, buildIndividualLeaderboard, buildPersonalStats } from "../utils/socialStats";
 
-export function StatsScreen({ clans, drivers, user }) {
+function getActionTone(status) {
+  if (status === "friend") {
+    return "border-lime-400/20 bg-lime-400/10 text-lime-300";
+  }
+  if (status === "incoming") {
+    return "border-amber-400/20 bg-amber-400/10 text-amber-200";
+  }
+  if (status === "outgoing") {
+    return "border-white/10 bg-white/5 text-neutral-300";
+  }
+  return "border-rose-400/20 bg-rose-400/10 text-rose-200";
+}
+
+export function StatsScreen({
+  approveFriendRequest,
+  clans,
+  declineFriendRequest,
+  drivers,
+  friendSearchQuery,
+  friendSearchResults,
+  onFriendSearchChange,
+  requestFriend,
+  socialFeedback,
+  user,
+  withdrawFriendRequest,
+}) {
   const personalStats = buildPersonalStats(user);
   const achievementProgress = buildAchievementProgress(user);
   const individualLeaderboard = buildIndividualLeaderboard(user, individualDriverSeed);
 
   return (
     <section className="space-y-4">
+      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Social Graph</p>
+            <h3 className="mt-2 text-xl font-black">Arkadas Bul ve Baglan</h3>
+          </div>
+          <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">
+            {(user.friends ?? []).length} friends
+          </div>
+        </div>
+        {socialFeedback ? (
+          <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-100">
+            {socialFeedback}
+          </div>
+        ) : null}
+        <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
+          <p className="text-sm font-semibold">Kullanici Ara</p>
+          <input
+            value={friendSearchQuery}
+            onChange={(event) => onFriendSearchChange(event.target.value)}
+            placeholder="Plaka, model, isim ya da bolge ile ara"
+            className="mt-3 h-12 w-full rounded-2xl border border-white/10 bg-black/20 px-4 text-sm outline-none focus:border-lime-400"
+          />
+          <div className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1">
+            {friendSearchResults.slice(0, 8).map((entry) => (
+              <div key={`${entry.userId}-${entry.plate}`} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
+                    <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
+                    <p className="text-xs text-neutral-500">{entry.model} • {entry.region}</p>
+                  </div>
+                  {entry.friendshipStatus === "none" ? (
+                    <button
+                      type="button"
+                      onClick={() => requestFriend(entry)}
+                      className="min-h-12 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black"
+                    >
+                      Arkadas Ekle
+                    </button>
+                  ) : entry.friendshipStatus === "outgoing" ? (
+                    <button
+                      type="button"
+                      onClick={() => withdrawFriendRequest(entry.plate)}
+                      className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
+                    >
+                      Istegi Geri Cek
+                    </button>
+                  ) : entry.friendshipStatus === "incoming" ? (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => approveFriendRequest(entry.plate)}
+                        className="min-h-12 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black"
+                      >
+                        Kabul
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => declineFriendRequest(entry.plate)}
+                        className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
+                      >
+                        Reddet
+                      </button>
+                    </div>
+                  ) : (
+                    <span className={`rounded-xl border px-3 py-2 text-xs font-semibold ${getActionTone(entry.friendshipStatus)}`}>
+                      Friends
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+            <p className="text-sm font-semibold">Gelen Istekler</p>
+            <div className="mt-4 space-y-3">
+              {(user.incomingRequests ?? []).length ? (
+                user.incomingRequests.map((entry) => (
+                  <div key={`${entry.plate}-incoming`} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                    <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
+                    <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
+                    <p className="text-xs text-neutral-500">{entry.model}</p>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => approveFriendRequest(entry.plate)}
+                        className="min-h-12 flex-1 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black"
+                      >
+                        Kabul Et
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => declineFriendRequest(entry.plate)}
+                        className="min-h-12 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
+                      >
+                        Reddet
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
+                  Yeni arkadas istegi yok.
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+            <p className="text-sm font-semibold">Arkadas Listesi</p>
+            <div className="mt-4 space-y-3">
+              {(user.friends ?? []).length ? (
+                user.friends.map((entry) => (
+                  <div key={`${entry.plate}-friend`} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
+                        <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
+                        <p className="text-xs text-neutral-500">{entry.model} • {entry.region}</p>
+                      </div>
+                      <span className="rounded-xl border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-xs font-semibold text-lime-300">
+                        Friend
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
+                  Henuz arkadas eklenmedi.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div className="flex items-center justify-between">
           <div>

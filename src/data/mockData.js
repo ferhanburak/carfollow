@@ -69,6 +69,45 @@ export const quickProfiles = [
     driverScore: 91,
     harmonyVotes: 17,
     alertVotes: 1,
+    friends: [
+      {
+        userId: "seed-35-srt-908",
+        plate: "35 SRT 908",
+        fullName: "Ece Yalin",
+        model: "Ducati Monster",
+        region: "Izmir Cevre",
+        clan: "Midnight Apex",
+        avatar: "",
+        status: "accepted",
+        createdAt: 1751902200000,
+      },
+    ],
+    incomingRequests: [
+      {
+        userId: "seed-34-turbo-54",
+        plate: "34 TURBO 54",
+        fullName: "Can Sarp",
+        model: "Golf GTI Clubsport",
+        region: "Istanbul Avrupa",
+        clan: "Turbo Syndicate",
+        avatar: "",
+        status: "pending",
+        createdAt: 1752229800000,
+      },
+    ],
+    outgoingRequests: [
+      {
+        userId: "seed-16-gti-232",
+        plate: "16 GTI 232",
+        fullName: "Mete Alp",
+        model: "Golf GTI",
+        region: "Bursa Ring",
+        clan: "Neon Wolves",
+        avatar: "",
+        status: "pending",
+        createdAt: 1752143400000,
+      },
+    ],
   },
   {
     id: "p2",
@@ -114,6 +153,33 @@ export const quickProfiles = [
     driverScore: 88,
     harmonyVotes: 12,
     alertVotes: 2,
+    friends: [
+      {
+        userId: "seed-34-turbo-54",
+        plate: "34 TURBO 54",
+        fullName: "Can Sarp",
+        model: "Golf GTI Clubsport",
+        region: "Istanbul Avrupa",
+        clan: "Turbo Syndicate",
+        avatar: "",
+        status: "accepted",
+        createdAt: 1751821200000,
+      },
+    ],
+    incomingRequests: [],
+    outgoingRequests: [
+      {
+        userId: "seed-07-vtec-707",
+        plate: "07 VTEC 707",
+        fullName: "Deniz Korhan",
+        model: "Honda Civic FB7",
+        region: "Antalya Sahil",
+        clan: "Lowline Union",
+        avatar: "",
+        status: "pending",
+        createdAt: 1752172200000,
+      },
+    ],
   },
 ];
 
@@ -343,4 +409,23 @@ export const navItems = [
   { key: "drive", label: "Surus", icon: "HUD" },
   { key: "clans", label: "Stats", icon: "Rank" },
   { key: "garage", label: "Garaj", icon: "Servis" },
+];
+
+export const socialDirectorySeed = [
+  ...quickProfiles.map((profile) => ({
+    userId: profile.id,
+    plate: profile.plate,
+    fullName: profile.fullName,
+    model: profile.model,
+    region: profile.region,
+    clan: profile.clan,
+    avatar: profile.avatar,
+    driverScore: profile.driverScore,
+    monthlyKm: profile.monthlyKm,
+  })),
+  ...individualDriverSeed.map((profile) => ({
+    ...profile,
+    userId: `seed-${profile.plate.toLowerCase().replaceAll(" ", "-")}`,
+    avatar: "",
+  })),
 ];

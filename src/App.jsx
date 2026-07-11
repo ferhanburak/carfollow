@@ -64,6 +64,8 @@ function App() {
     drivers,
     fuelInsights,
     fuelErrors,
+    friendSearchQuery,
+    friendSearchResults,
     firebaseStatus,
     isDriving,
     joinCruise,
@@ -79,21 +81,27 @@ function App() {
     passportSummary,
     primeServiceLogForm,
     pickMapLocation,
+    requestFriend,
+    approveFriendRequest,
+    declineFriendRequest,
     rateAttendee,
     removeLastDraftRoutePoint,
     resetSessionView,
+    safeUser,
     selectedPin,
     selectedPinId,
     serviceLogErrors,
     serviceLogFeedback,
     serviceLogForm,
     setActiveTab,
+    setFriendSearchQuery,
     setMapPickMode,
     setMapPinForm,
     setServiceLogForm,
     setSelectedPinId,
     setSpotPhotoForm,
     setWashForm,
+    socialFeedback,
     spotPhotoErrors,
     spotPhotoFeedback,
     spotPhotoForm,
@@ -105,6 +113,7 @@ function App() {
     toggleDrive,
     upcomingMaintenance,
     useSelectedPinCoordinates,
+    withdrawFriendRequest,
     washForm,
     washErrors,
     washFeedback,
@@ -252,7 +261,21 @@ function App() {
                 user={user}
               />
             ) : null}
-            {activeTab === "clans" ? <StatsScreen clans={clans} drivers={drivers} user={user} /> : null}
+            {activeTab === "clans" ? (
+              <StatsScreen
+                approveFriendRequest={approveFriendRequest}
+                clans={clans}
+                declineFriendRequest={declineFriendRequest}
+                drivers={drivers}
+                friendSearchQuery={friendSearchQuery}
+                friendSearchResults={friendSearchResults}
+                onFriendSearchChange={setFriendSearchQuery}
+                requestFriend={requestFriend}
+                socialFeedback={socialFeedback}
+                user={safeUser ?? user}
+                withdrawFriendRequest={withdrawFriendRequest}
+              />
+            ) : null}
             {activeTab === "garage" ? (
               <GarageScreen
                 appId={appId}

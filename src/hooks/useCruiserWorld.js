@@ -7,7 +7,9 @@ import {
 import { useDriveSession } from "./useDriveSession";
 import { useFirebaseSync } from "./useFirebaseSync";
 import { useMapPins } from "./useMapPins";
+import { useSocialGraph } from "./useSocialGraph";
 import { useVehiclePassport } from "./useVehiclePassport";
+import { socialDirectorySeed } from "../data/mockData";
 import {
   createFuelForm,
   computeFuelInsights,
@@ -88,6 +90,21 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setUser,
     syncServiceLog,
   });
+  const {
+    approveFriendRequest,
+    declineFriendRequest,
+    friendSearchQuery,
+    friendSearchResults,
+    requestFriend,
+    safeUser,
+    setFriendSearchQuery,
+    socialFeedback,
+    withdrawFriendRequest,
+  } = useSocialGraph({
+    socialDirectory: socialDirectorySeed,
+    user,
+    setUser,
+  });
 
   useEffect(() => {
     const shuffleTimer = window.setInterval(() => {
@@ -146,6 +163,8 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     firebaseStatus,
     fuelInsights,
     fuelErrors,
+    friendSearchQuery,
+    friendSearchResults,
     isDriving,
     joinCruise,
     likeGalleryImage,
@@ -156,18 +175,23 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     mapPinForm,
     passportSummary,
     primeServiceLogForm,
+    requestFriend,
     mapDraftLocation,
     mapPins,
     mapPickMode,
     pickMapLocation,
+    approveFriendRequest,
+    declineFriendRequest,
     rateAttendee,
     resetSessionView,
+    safeUser,
     selectedPin,
     selectedPinId,
     serviceLogErrors,
     serviceLogFeedback,
     serviceLogForm,
     setActiveTab,
+    setFriendSearchQuery,
     setMapPinForm,
     setMapPickMode,
     setServiceLogForm,
@@ -176,6 +200,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setWashForm,
     clearDraftRoute,
     removeLastDraftRoutePoint,
+    socialFeedback,
     spotPhotoErrors,
     spotPhotoFeedback,
     spotPhotoForm,
@@ -187,6 +212,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     toggleDrive,
     upcomingMaintenance,
     useSelectedPinCoordinates,
+    withdrawFriendRequest,
     washForm,
     washErrors,
     washFeedback,
