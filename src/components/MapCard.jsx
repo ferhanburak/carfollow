@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { GoogleMap, MarkerF, PolylineF, useJsApiLoader } from "@react-google-maps/api";
+import { getPinIcon } from "../constants/pins";
 
 const mapContainerStyle = {
   width: "100%",
@@ -62,12 +63,6 @@ const draftRouteLineOptions = {
   ],
 };
 
-const glyphByType = {
-  spot: "\uD83D\uDCF8",
-  wash: "\uD83E\uDDFC",
-  meet: "\uD83C\uDFCD\uFE0F",
-};
-
 function getMapsApiKey() {
   if (import.meta.env.MODE === "test") {
     return "";
@@ -77,7 +72,7 @@ function getMapsApiKey() {
 }
 
 function getPinGlyph(type) {
-  return glyphByType[type] ?? glyphByType.meet;
+  return getPinIcon(type);
 }
 
 function getActiveRoutePath(selectedPin) {

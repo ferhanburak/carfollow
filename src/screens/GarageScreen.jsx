@@ -13,6 +13,22 @@ function formatSyncTime(timestamp) {
   });
 }
 
+function getConnectionTone(connection) {
+  if (connection === "online") {
+    return "text-lime-300";
+  }
+
+  if (connection === "degraded" || connection === "partial" || connection === "configured") {
+    return "text-amber-300";
+  }
+
+  if (connection === "disabled") {
+    return "text-neutral-400";
+  }
+
+  return "text-rose-300";
+}
+
 export function GarageScreen({
   appId,
   firebaseStatus,
@@ -54,6 +70,9 @@ export function GarageScreen({
               {firebaseStatus.mode}
             </span>
           </div>
+          <p className={`mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] ${getConnectionTone(firebaseStatus.connection)}`}>
+            Connection: {firebaseStatus.connection}
+          </p>
           <p className="mt-2 font-mono text-[11px] text-lime-300">
             UID: {firebaseStatus.authUid ?? "anonymous session pending"}
           </p>

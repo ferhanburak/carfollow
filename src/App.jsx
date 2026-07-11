@@ -1,12 +1,25 @@
+import { lazy, Suspense } from "react";
 import { appId, navItems, tuningOptions } from "./data/mockData";
 import { AuthScreen } from "./screens/AuthScreen";
-import { ClansScreen } from "./screens/ClansScreen";
-import { DriveScreen } from "./screens/DriveScreen";
-import { GarageScreen } from "./screens/GarageScreen";
-import { MapHubScreen } from "./screens/MapHubScreen";
-import { MapScreen } from "./screens/MapScreen";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
+
+const ClansScreen = lazy(() => import("./screens/ClansScreen").then((module) => ({ default: module.ClansScreen })));
+const DriveScreen = lazy(() => import("./screens/DriveScreen").then((module) => ({ default: module.DriveScreen })));
+const GarageScreen = lazy(() => import("./screens/GarageScreen").then((module) => ({ default: module.GarageScreen })));
+const MapHubScreen = lazy(() => import("./screens/MapHubScreen").then((module) => ({ default: module.MapHubScreen })));
+const MapScreen = lazy(() => import("./screens/MapScreen").then((module) => ({ default: module.MapScreen })));
+
+function ScreenLoader() {
+  return (
+    <div className="flex h-full min-h-[14rem] items-center justify-center">
+      <div className="rounded-[1.5rem] border border-white/10 bg-[#111111] px-5 py-4 text-center">
+        <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">CRUISER LOADING</p>
+        <p className="mt-2 text-sm font-semibold text-neutral-200">Ekran hazirlaniyor...</p>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const {
@@ -141,93 +154,95 @@ function App() {
               : "overflow-y-auto px-4 py-4 pb-28"
           }`}
         >
-          {activeTab === "map" ? (
-            <MapHubScreen
-              clearDraftRoute={clearDraftRoute}
-              draftLocation={mapDraftLocation}
-              joinCruise={joinCruise}
-              likeGalleryImage={likeGalleryImage}
-              likePin={likePin}
-              loadSpotPhotoFile={loadSpotPhotoFile}
-              mapPickMode={mapPickMode}
-              mapPinErrors={mapPinErrors}
-              mapPinFeedback={mapPinFeedback}
-              mapPinForm={mapPinForm}
-              mapPins={mapPins}
-              onPickLocation={pickMapLocation}
-              onSelectPin={setSelectedPinId}
-              onSetMapPickMode={setMapPickMode}
-              onSetMapPinForm={setMapPinForm}
-              onSetSpotPhotoForm={setSpotPhotoForm}
-              onSetWashForm={setWashForm}
-              onSubmitMapPin={submitMapPin}
-              onSubmitSpotPhoto={submitSpotPhoto}
-              onSubmitWashReview={submitWashReview}
-              onUseSelectedCoordinates={useSelectedPinCoordinates}
-              pickRouteBack={removeLastDraftRoutePoint}
-              rateAttendee={rateAttendee}
-              selectedPin={selectedPin}
-              selectedPinId={selectedPinId}
-              spotPhotoErrors={spotPhotoErrors}
-              spotPhotoFeedback={spotPhotoFeedback}
-              spotPhotoForm={spotPhotoForm}
-              submitWashReview={submitWashReview}
-              user={user}
-              washForm={washForm}
-              washErrors={washErrors}
-              washFeedback={washFeedback}
-            />
-          ) : null}
-          {activeTab === "liveMap" ? (
-            <MapScreen
-              driveHud={driveHud}
-              isDriving={isDriving}
-              joinCruise={joinCruise}
-              likeGalleryImage={likeGalleryImage}
-              likePin={likePin}
-              loadSpotPhotoFile={loadSpotPhotoFile}
-              mapPins={mapPins}
-              onSelectPin={setSelectedPinId}
-              onSetSpotPhotoForm={setSpotPhotoForm}
-              onSetWashForm={setWashForm}
-              onSubmitSpotPhoto={submitSpotPhoto}
-              onSubmitWashReview={submitWashReview}
-              rateAttendee={rateAttendee}
-              selectedPin={selectedPin}
-              selectedPinId={selectedPinId}
-              spotPhotoErrors={spotPhotoErrors}
-              spotPhotoFeedback={spotPhotoFeedback}
-              spotPhotoForm={spotPhotoForm}
-              submitWashReview={submitWashReview}
-              toggleDrive={toggleDrive}
-              user={user}
-              washForm={washForm}
-              washErrors={washErrors}
-              washFeedback={washFeedback}
-            />
-          ) : null}
-          {activeTab === "drive" ? (
-            <DriveScreen
-              driveHud={driveHud}
-              drivers={drivers}
-              firebaseStatus={firebaseStatus}
-              isDriving={isDriving}
-              user={user}
-            />
-          ) : null}
-          {activeTab === "clans" ? <ClansScreen clans={clans} drivers={drivers} user={user} /> : null}
-          {activeTab === "garage" ? (
-            <GarageScreen
-              appId={appId}
-              firebaseStatus={firebaseStatus}
-              fuelErrors={fuelErrors}
-              fuelForm={fuelForm}
-              fuelInsights={fuelInsights}
-              onFuelFormChange={setFuelForm}
-              onSubmitFuelLog={(event) => submitFuelLog(event, fuelForm)}
-              user={user}
-            />
-          ) : null}
+          <Suspense fallback={<ScreenLoader />}>
+            {activeTab === "map" ? (
+              <MapHubScreen
+                clearDraftRoute={clearDraftRoute}
+                draftLocation={mapDraftLocation}
+                joinCruise={joinCruise}
+                likeGalleryImage={likeGalleryImage}
+                likePin={likePin}
+                loadSpotPhotoFile={loadSpotPhotoFile}
+                mapPickMode={mapPickMode}
+                mapPinErrors={mapPinErrors}
+                mapPinFeedback={mapPinFeedback}
+                mapPinForm={mapPinForm}
+                mapPins={mapPins}
+                onPickLocation={pickMapLocation}
+                onSelectPin={setSelectedPinId}
+                onSetMapPickMode={setMapPickMode}
+                onSetMapPinForm={setMapPinForm}
+                onSetSpotPhotoForm={setSpotPhotoForm}
+                onSetWashForm={setWashForm}
+                onSubmitMapPin={submitMapPin}
+                onSubmitSpotPhoto={submitSpotPhoto}
+                onSubmitWashReview={submitWashReview}
+                onUseSelectedCoordinates={useSelectedPinCoordinates}
+                pickRouteBack={removeLastDraftRoutePoint}
+                rateAttendee={rateAttendee}
+                selectedPin={selectedPin}
+                selectedPinId={selectedPinId}
+                spotPhotoErrors={spotPhotoErrors}
+                spotPhotoFeedback={spotPhotoFeedback}
+                spotPhotoForm={spotPhotoForm}
+                submitWashReview={submitWashReview}
+                user={user}
+                washForm={washForm}
+                washErrors={washErrors}
+                washFeedback={washFeedback}
+              />
+            ) : null}
+            {activeTab === "liveMap" ? (
+              <MapScreen
+                driveHud={driveHud}
+                isDriving={isDriving}
+                joinCruise={joinCruise}
+                likeGalleryImage={likeGalleryImage}
+                likePin={likePin}
+                loadSpotPhotoFile={loadSpotPhotoFile}
+                mapPins={mapPins}
+                onSelectPin={setSelectedPinId}
+                onSetSpotPhotoForm={setSpotPhotoForm}
+                onSetWashForm={setWashForm}
+                onSubmitSpotPhoto={submitSpotPhoto}
+                onSubmitWashReview={submitWashReview}
+                rateAttendee={rateAttendee}
+                selectedPin={selectedPin}
+                selectedPinId={selectedPinId}
+                spotPhotoErrors={spotPhotoErrors}
+                spotPhotoFeedback={spotPhotoFeedback}
+                spotPhotoForm={spotPhotoForm}
+                submitWashReview={submitWashReview}
+                toggleDrive={toggleDrive}
+                user={user}
+                washForm={washForm}
+                washErrors={washErrors}
+                washFeedback={washFeedback}
+              />
+            ) : null}
+            {activeTab === "drive" ? (
+              <DriveScreen
+                driveHud={driveHud}
+                drivers={drivers}
+                firebaseStatus={firebaseStatus}
+                isDriving={isDriving}
+                user={user}
+              />
+            ) : null}
+            {activeTab === "clans" ? <ClansScreen clans={clans} drivers={drivers} user={user} /> : null}
+            {activeTab === "garage" ? (
+              <GarageScreen
+                appId={appId}
+                firebaseStatus={firebaseStatus}
+                fuelErrors={fuelErrors}
+                fuelForm={fuelForm}
+                fuelInsights={fuelInsights}
+                onFuelFormChange={setFuelForm}
+                onSubmitFuelLog={(event) => submitFuelLog(event, fuelForm)}
+                user={user}
+              />
+            ) : null}
+          </Suspense>
         </div>
 
         <nav

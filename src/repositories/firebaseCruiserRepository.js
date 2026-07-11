@@ -1,5 +1,3 @@
-import { ref, set } from "firebase/database";
-import { addDoc, collection, doc, getDocs, query, setDoc } from "firebase/firestore";
 import {
   privateUserCollectionPath,
   publicCollectionPath,
@@ -15,6 +13,14 @@ function mapCollectionSnapshot(snapshot) {
   }));
 }
 
+async function loadFirestoreModule() {
+  return import("firebase/firestore/lite");
+}
+
+async function loadDatabaseModule() {
+  return import("firebase/database");
+}
+
 export function isFirebaseRepositoryEnabled() {
   return isFirebaseModeEnabled();
 }
@@ -26,6 +32,7 @@ export async function loadFirebaseWorldState() {
   }
 
   const { firestore } = services;
+  const { collection, getDocs, query } = await loadFirestoreModule();
   const [mapPinsSnapshot, clansSnapshot, driversSnapshot] = await Promise.all([
     getDocs(query(collection(firestore, publicCollectionPath("mapPins", resolveAppId())))),
     getDocs(query(collection(firestore, publicCollectionPath("clans", resolveAppId())))),
@@ -46,6 +53,7 @@ export async function saveFirebaseUserProfile(user) {
   }
 
   const { firestore, authUser } = services;
+  const { doc, setDoc } = await loadFirestoreModule();
   // Private path: /artifacts/{appId}/users/{userId}/{collectionName}
   await setDoc(
     doc(firestore, privateUserCollectionPath(authUser.uid, "profile", resolveAppId()), "current"),
@@ -69,6 +77,7 @@ export async function saveFirebaseFuelLog(nextLog) {
   }
 
   const { firestore, authUser } = services;
+  const { addDoc, collection } = await loadFirestoreModule();
   await addDoc(collection(firestore, privateUserCollectionPath(authUser.uid, "fuelLogs", resolveAppId())), nextLog);
 
   return {
@@ -84,6 +93,7 @@ export async function saveFirebaseWashReview(pinId, review) {
   }
 
   const { firestore } = services;
+  const { addDoc, collection } = await loadFirestoreModule();
   await addDoc(collection(firestore, publicCollectionPath("washReviews", resolveAppId())), {
     pinId,
     ...review,
@@ -97,6 +107,7 @@ export async function saveFirebaseCruiseJoin(pinId, plate) {
   }
 
   const { firestore } = services;
+  const { collection, doc, setDoc } = await loadFirestoreModule();
   await setDoc(
     doc(collection(firestore, publicCollectionPath("cruiseAttendees", resolveAppId())), `${pinId}_${plate}`),
     { pinId, plate, joinedAt: Date.now() },
@@ -115,6 +126,7 @@ export async function saveFirebaseActiveDriver(driver) {
     return null;
   }
 
+  const { ref, set } = await loadDatabaseModule();
   // Realtime Database is reserved for low-latency driver / DM-like surfaces.
   await set(ref(database, realtimeDmPath(`${driver.plate}_telemetry`)), {
     ...driver,
@@ -135,6 +147,7 @@ export async function saveFirebaseMapPin(pin) {
   }
 
   const { firestore } = services;
+  const { collection, doc, setDoc } = await loadFirestoreModule();
   await setDoc(
     doc(collection(firestore, publicCollectionPath("mapPins", resolveAppId())), pin.id),
     {

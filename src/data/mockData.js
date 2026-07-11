@@ -1,3 +1,4 @@
+import { getPinIcon } from "../constants/pins";
 import { resolveAppId } from "../services/firebasePaths.js";
 
 export const appId = resolveAppId();
@@ -74,7 +75,7 @@ export const initialMapPins = [
   {
     id: "spot-1",
     type: "spot",
-    icon: "📸",
+    icon: getPinIcon("spot"),
     name: "Mogan Lake Sunset",
     lat: 39.7869,
     lng: 32.8068,
@@ -106,7 +107,7 @@ export const initialMapPins = [
   {
     id: "wash-1",
     type: "wash",
-    icon: "🧼",
+    icon: getPinIcon("wash"),
     name: "Foam District Self Wash",
     lat: 39.9042,
     lng: 32.7315,
@@ -146,7 +147,7 @@ export const initialMapPins = [
   {
     id: "wash-2",
     type: "wash",
-    icon: "ğŸ§¼",
+    icon: getPinIcon("wash"),
     name: "Night Mist Wash Hub",
     lat: 39.8544,
     lng: 32.8391,
@@ -177,7 +178,7 @@ export const initialMapPins = [
   {
     id: "meet-1",
     type: "meet",
-    icon: "🏍️",
+    icon: getPinIcon("meet"),
     name: "Sahil Midnight Cruise",
     lat: 39.8422,
     lng: 32.7827,

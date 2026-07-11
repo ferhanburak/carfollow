@@ -38,8 +38,8 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
 
     expect(screen.getByText("CRUISER // Ankara Bati")).toBeInTheDocument();
-    expect(screen.getByText("CRUISER MAP")).toBeInTheDocument();
-    expect(screen.getAllByText("Mogan Lake Sunset").length).toBeGreaterThan(0);
+    expect(await screen.findByText("CRUISER MAP")).toBeInTheDocument();
+    expect((await screen.findAllByText("Mogan Lake Sunset")).length).toBeGreaterThan(0);
   });
 
   it("switches to the driving screen when the start ride button is pressed", async () => {
@@ -49,9 +49,9 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /34 MOTO 410/i }));
     await user.click(screen.getByRole("button", { name: "Suruse Basla" }));
 
-    expect(screen.getByText(/Surus Modu Aktif|Surus Modu Hazir/i)).toBeInTheDocument();
-    expect(screen.getByText("Live GPS HUD")).toBeInTheDocument();
-    expect(screen.getByText("Canli Aktif Suruculer")).toBeInTheDocument();
+    expect(await screen.findByText(/Surus Modu Aktif|Surus Modu Hazir/i)).toBeInTheDocument();
+    expect(await screen.findByText("Live GPS HUD")).toBeInTheDocument();
+    expect(await screen.findByText("Canli Aktif Suruculer")).toBeInTheDocument();
   });
 
   it("blocks invalid sign up and shows field errors", async () => {
@@ -72,13 +72,16 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
     await user.click(screen.getByRole("button", { name: /Garaj/i }));
-    await user.clear(screen.getByRole("spinbutton", { name: "Liters" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Liters" }), "0");
-    await user.clear(screen.getByRole("spinbutton", { name: "Price (TL)" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Price (TL)" }), "0");
-    await user.clear(screen.getByRole("spinbutton", { name: "Current KM" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Current KM" }), "1");
-    const stationInput = screen.getByRole("textbox", { name: "Station" });
+    const litersInput = await screen.findByRole("spinbutton", { name: "Liters" });
+    const priceInput = await screen.findByRole("spinbutton", { name: "Price (TL)" });
+    const currentKmInput = await screen.findByRole("spinbutton", { name: "Current KM" });
+    const stationInput = await screen.findByRole("textbox", { name: "Station" });
+    await user.clear(litersInput);
+    await user.type(litersInput, "0");
+    await user.clear(priceInput);
+    await user.type(priceInput, "0");
+    await user.clear(currentKmInput);
+    await user.type(currentKmInput, "1");
     await user.clear(stationInput);
     await user.click(screen.getByRole("button", { name: "Receipt Ekle" }));
 
@@ -94,13 +97,15 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
     await user.click(screen.getByRole("button", { name: /Foam District Self Wash \(wash\)/i }));
-    const noteInput = screen.getByRole("textbox", { name: "Review Note" });
+    const noteInput = await screen.findByRole("textbox", { name: "Review Note" });
     await user.clear(noteInput);
     await user.type(noteInput, "Foam was dense and rinse quality stayed stable.");
-    await user.clear(screen.getByRole("spinbutton", { name: "Foam" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Foam" }), "5");
-    await user.clear(screen.getByRole("spinbutton", { name: "Water" }));
-    await user.type(screen.getByRole("spinbutton", { name: "Water" }), "4");
+    const foamInput = await screen.findByRole("spinbutton", { name: "Foam" });
+    const waterInput = await screen.findByRole("spinbutton", { name: "Water" });
+    await user.clear(foamInput);
+    await user.type(foamInput, "5");
+    await user.clear(waterInput);
+    await user.type(waterInput, "4");
     await user.click(screen.getByRole("button", { name: "Review Ekle" }));
 
     expect(screen.getByText("Review added successfully.")).toBeInTheDocument();

@@ -22,6 +22,7 @@ let firebaseApp;
 let firestoreDb;
 let realtimeDb;
 let firebaseAuth;
+let lastFirebaseServicesError = "";
 
 async function ensureAnonymousSession(auth) {
   if (auth.currentUser) {
@@ -49,6 +50,42 @@ export function isFirebaseModeEnabled() {
   return getCruiserDataSourceMode() === "firebase" && isFirebaseConfigured();
 }
 
+export function getFirebaseModeDiagnostics() {
+  const mode = getCruiserDataSourceMode();
+  const config = readFirebaseConfig();
+
+  if (mode !== "firebase") {
+    return {
+      mode: "mock",
+      enabled: false,
+      connection: "disabled",
+      message: "Mock data mode active. Firebase sync is currently disabled.",
+    };
+  }
+
+  if (!hasRequiredFirebaseConfig(config)) {
+    return {
+      mode: "firebase",
+      enabled: false,
+      connection: "misconfigured",
+      message: "Firebase mode is selected but required environment variables are missing.",
+    };
+  }
+
+  return {
+    mode: "firebase",
+    enabled: true,
+    connection: hasRealtimeDatabaseConfig(config) ? "configured" : "partial",
+    message: hasRealtimeDatabaseConfig(config)
+      ? "Firebase is configured and ready to authenticate."
+      : "Firestore is configured, but Realtime Database URL is missing.",
+  };
+}
+
+export function getLastFirebaseServicesError() {
+  return lastFirebaseServicesError;
+}
+
 export async function getFirebaseServices() {
   if (!isFirebaseModeEnabled()) {
     return null;
@@ -58,7 +95,7 @@ export async function getFirebaseServices() {
     const config = readFirebaseConfig();
     const [{ initializeApp }, { getFirestore }, { getDatabase }, { getAuth }] = await Promise.all([
       import("firebase/app"),
-      import("firebase/firestore"),
+      import("firebase/firestore/lite"),
       import("firebase/database"),
       import("firebase/auth"),
     ]);
@@ -70,6 +107,7 @@ export async function getFirebaseServices() {
 
   try {
     const authUser = await ensureAnonymousSession(firebaseAuth);
+    lastFirebaseServicesError = "";
 
     return {
       app: firebaseApp,
@@ -79,6 +117,10 @@ export async function getFirebaseServices() {
       database: realtimeDb,
     };
   } catch (error) {
+    lastFirebaseServicesError =
+      error instanceof Error
+        ? error.message
+        : "Firebase anonymous auth is not ready. Enable Anonymous sign-in in Firebase Auth.";
     console.warn("Firebase anonymous auth is not ready. Enable Anonymous sign-in in Firebase Auth.", error);
     return null;
   }

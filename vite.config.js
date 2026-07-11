@@ -8,7 +8,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes("node_modules/@firebase/firestore") || id.includes("node_modules/firebase/firestore")) {
+          if (
+            id.includes("node_modules/@firebase/firestore") ||
+            id.includes("node_modules/firebase/firestore") ||
+            id.includes("node_modules/firebase/firestore/lite")
+          ) {
             return "firebase-firestore";
           }
 
