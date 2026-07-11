@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { ServiceHistoryList } from "../components/garage/ServiceHistoryList";
 import { ServiceLogForm } from "../components/garage/ServiceLogForm";
 import { UpcomingMaintenanceList } from "../components/garage/UpcomingMaintenanceList";
+import { VehicleHealthDiagram } from "../components/garage/VehicleHealthDiagram";
 import { VehiclePassportSummary } from "../components/garage/VehiclePassportSummary";
 import { CompactField, InsightCard } from "../components/ui";
 import { formatNumber } from "../utils/garage";
@@ -51,7 +53,12 @@ export function GarageScreen({
   upcomingMaintenance,
   user,
 }) {
-  const partsByKey = new Map((user.parts ?? []).map((part) => [part.key, part]));
+  const safeBadges = user.badges ?? [];
+  const safeParts = user.parts ?? [];
+  const safeServiceLogs = user.serviceLogs ?? [];
+  const safeFuelLogs = user.fuelLogs ?? [];
+  const partsByKey = new Map(safeParts.map((part) => [part.key, part]));
+  const [selectedPartKey, setSelectedPartKey] = useState(safeParts[0]?.key ?? null);
 
   return (
     <section className="space-y-4">
@@ -70,7 +77,7 @@ export function GarageScreen({
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {user.badges.map((badge) => (
+          {safeBadges.map((badge) => (
             <span key={badge} className="rounded-full border border-lime-400/30 bg-lime-400/10 px-3 py-2 text-xs text-lime-200">
               {badge}
             </span>
@@ -126,8 +133,15 @@ export function GarageScreen({
           <p className="text-sm font-semibold">Digital Maintenance Log</p>
           <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">Live Wear</span>
         </div>
+        <VehicleHealthDiagram
+          odometer={user.odometer}
+          onSelectPart={setSelectedPartKey}
+          parts={safeParts}
+          selectedPartKey={selectedPartKey}
+          vehicleType={user.vehicleType ?? "car"}
+        />
         <div className="mt-4 space-y-4">
-          {user.parts.map((part) => {
+          {safeParts.map((part) => {
             const snapshot = getPartHealthSnapshot(part, user.odometer);
             const tone =
               snapshot.health > 50 ? "bg-lime-400" : snapshot.health > 20 ? "bg-amber-400" : "bg-rose-500 animate-pulse";
@@ -169,7 +183,7 @@ export function GarageScreen({
           form={serviceLogForm}
           onChange={onServiceLogFormChange}
           onSubmit={onSubmitServiceLog}
-          parts={user.parts}
+          parts={safeParts}
         />
       </div>
 
@@ -179,9 +193,9 @@ export function GarageScreen({
             <p className="text-sm font-semibold">Service History</p>
             <p className="text-xs text-neutral-500">Tarih, KM ve servis atolyeleriyle arac gecmisi saklanir.</p>
           </div>
-          <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">{user.serviceLogs.length} kayit</span>
+          <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">{safeServiceLogs.length} kayit</span>
         </div>
-        <ServiceHistoryList logs={user.serviceLogs} partsByKey={partsByKey} />
+        <ServiceHistoryList logs={safeServiceLogs} partsByKey={partsByKey} />
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
@@ -243,11 +257,11 @@ export function GarageScreen({
         <div className="mt-4 grid grid-cols-3 gap-3">
           <InsightCard label="Total Spend" value={`${formatNumber(fuelInsights.totalSpend)} TL`} />
           <InsightCard label="Per Fill" value={`${formatNumber(fuelInsights.costPerFill)} TL`} />
-          <InsightCard label="Logs" value={`${user.fuelLogs.length}`} />
+          <InsightCard label="Logs" value={`${safeFuelLogs.length}`} />
         </div>
 
         <div className="mt-4 max-h-64 space-y-3 overflow-y-auto pr-1">
-          {user.fuelLogs.map((log) => (
+          {safeFuelLogs.map((log) => (
             <div key={log.id} className="rounded-2xl bg-black/20 p-4">
               <div className="flex items-center justify-between">
                 <p className="font-semibold">{log.station}</p>

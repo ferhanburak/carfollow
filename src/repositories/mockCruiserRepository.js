@@ -1,5 +1,6 @@
 import { initialClans, initialDrivers, initialMapPins, quickProfiles } from "../data/mockData";
 import { applyPartServiceToUser } from "../utils/vehiclePassport";
+import { createDefaultParts, inferVehicleType, normalizeVehicleParts } from "../utils/vehicleParts";
 
 const ambientNodes = ["Eskisehir Yolu", "TEM North", "Mogan Ring", "FSM Koprusu", "Anadolu Otoyolu"];
 const routeNodes = ["Tunel Cikisi", "Sehir Disi Hat", "Viraj Koridoru", "Kuzey Dugumu", "Rolling Spot"];
@@ -75,6 +76,7 @@ export function getQuickProfileByCredentials(plate, password) {
 }
 
 export function createSignedUpUser(signUpForm) {
+  const vehicleType = inferVehicleType(signUpForm.model);
   return {
     id: `signup-${Date.now()}`,
     fullName: signUpForm.fullName,
@@ -90,11 +92,8 @@ export function createSignedUpUser(signUpForm) {
     region: "Ankara Merkez",
     avatar:
       "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=900&q=80",
-    parts: [
-      { key: "oil", name: "Engine Oil", replacedKm: 12000, replacedAt: "2026-07-11", lifeExpectancyKm: 8000, lifeExpectancyMonths: 12 },
-      { key: "brakes", name: "Brake Pads", replacedKm: 12000, replacedAt: "2026-07-11", lifeExpectancyKm: 18000, lifeExpectancyMonths: 18 },
-      { key: "spark", name: "Spark Plugs", replacedKm: 12000, replacedAt: "2026-07-11", lifeExpectancyKm: 24000, lifeExpectancyMonths: 18 },
-    ],
+    vehicleType,
+    parts: createDefaultParts(vehicleType, 12000, "2026-07-11"),
     serviceLogs: [],
     fuelLogs: [],
     driverScore: 80,
@@ -104,10 +103,14 @@ export function createSignedUpUser(signUpForm) {
 }
 
 export function createAuthenticatedUser(profile) {
+  const vehicleType = profile.vehicleType ?? inferVehicleType(profile.model);
   return {
     ...clone(profile),
-    parts: profile.parts.map((part) => ({ ...part })),
+    vehicleType,
+    badges: [...(profile.badges ?? [])],
+    parts: normalizeVehicleParts(profile.parts ?? [], vehicleType),
     serviceLogs: (profile.serviceLogs ?? []).map((log) => ({ ...log })),
+    fuelLogs: (profile.fuelLogs ?? []).map((log) => ({ ...log })),
   };
 }
 

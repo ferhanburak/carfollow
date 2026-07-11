@@ -2,7 +2,9 @@ import { formatNumber } from "../../utils/garage";
 import { formatServiceDate } from "../../utils/vehiclePassport";
 
 export function ServiceHistoryList({ logs, partsByKey }) {
-  if (!logs.length) {
+  const safeLogs = logs ?? [];
+
+  if (!safeLogs.length) {
     return (
       <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
         Henuz servis kaydi yok. Ilk kayitla birlikte Vehicle Passport olusmaya baslayacak.
@@ -12,7 +14,7 @@ export function ServiceHistoryList({ logs, partsByKey }) {
 
   return (
     <div className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1">
-      {logs.map((log) => (
+      {safeLogs.map((log) => (
         <div key={log.id} className="rounded-2xl bg-black/20 p-4">
           <div className="flex items-start justify-between gap-3">
             <div>

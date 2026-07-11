@@ -12,17 +12,18 @@ import { validateSignUpForm } from "../utils/validation";
 export function useCruiserAuth() {
   const quickProfiles = listQuickProfiles();
   const persistedSession = loadCruiserSession();
+  const hydratedPersistedUser = persistedSession?.user ? createAuthenticatedUser(persistedSession.user) : null;
   const [authTab, setAuthTab] = useState("login");
-  const [authMode, setAuthMode] = useState(persistedSession?.user ? "authenticated" : "locked");
+  const [authMode, setAuthMode] = useState(hydratedPersistedUser ? "authenticated" : "locked");
   const [loginForm, setLoginForm] = useState({
     plate: quickProfiles[0].plate,
     password: quickProfiles[0].password,
   });
   const [signUpForm, setSignUpForm] = useState(createSignUpState);
   const [signUpErrors, setSignUpErrors] = useState({});
-  const [user, setUser] = useState(persistedSession?.user ?? null);
+  const [user, setUser] = useState(hydratedPersistedUser);
   const [fuelForm, setFuelForm] = useState(
-    createFuelForm(persistedSession?.user?.odometer ?? quickProfiles[0].odometer),
+    createFuelForm(hydratedPersistedUser?.odometer ?? quickProfiles[0].odometer),
   );
 
   useEffect(() => {

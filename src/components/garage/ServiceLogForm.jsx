@@ -7,6 +7,8 @@ export function ServiceLogForm({
   onSubmit,
   parts,
 }) {
+  const safeParts = parts ?? [];
+
   return (
     <form className="mt-4 grid grid-cols-2 gap-3" onSubmit={onSubmit}>
       <CompactField label="Part">
@@ -15,7 +17,7 @@ export function ServiceLogForm({
           onChange={(event) => onChange((current) => ({ ...current, partKey: event.target.value }))}
           className="h-12 w-full rounded-2xl border border-white/10 bg-black/20 px-4 outline-none focus:border-lime-400"
         >
-          {parts.map((part) => (
+          {safeParts.map((part) => (
             <option key={part.key} value={part.key}>
               {part.name}
             </option>

@@ -1,7 +1,21 @@
 import { getPinIcon } from "../constants/pins";
 import { resolveAppId } from "../services/firebasePaths.js";
+import { createDefaultParts, inferVehicleType, normalizeVehicleParts } from "../utils/vehicleParts";
 
 export const appId = resolveAppId();
+
+function buildParts(model, baseKm, overrides = {}) {
+  const vehicleType = inferVehicleType(model);
+  const defaultParts = createDefaultParts(vehicleType, baseKm);
+
+  return normalizeVehicleParts(
+    defaultParts.map((part) => ({
+      ...part,
+      ...(overrides[part.key] ?? {}),
+    })),
+    vehicleType,
+  );
+}
 
 // Firestore public collections:
 // /artifacts/{appId}/public/data/{collectionName}
@@ -26,14 +40,25 @@ export const quickProfiles = [
     region: "Ankara Bati",
     avatar:
       "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=900&q=80",
-    parts: [
-      { key: "oil", name: "Engine Oil", replacedKm: 64500, replacedAt: "2026-03-10", lifeExpectancyKm: 8000, lifeExpectancyMonths: 12 },
-      { key: "brakes", name: "Brake Pads", replacedKm: 59200, replacedAt: "2025-11-02", lifeExpectancyKm: 18000, lifeExpectancyMonths: 18 },
-      { key: "spark", name: "Spark Plugs", replacedKm: 52000, replacedAt: "2025-05-24", lifeExpectancyKm: 30000, lifeExpectancyMonths: 24 },
-    ],
+    vehicleType: "car",
+    parts: buildParts("Seat Ibiza Cupra", 68420, {
+      oil: { replacedKm: 64500, replacedAt: "2026-03-10" },
+      oilFilter: { replacedKm: 64500, replacedAt: "2026-03-10" },
+      airFilter: { replacedKm: 63200, replacedAt: "2026-01-18" },
+      cabinFilter: { replacedKm: 62050, replacedAt: "2025-12-14" },
+      spark: { replacedKm: 52000, replacedAt: "2025-05-24" },
+      coolant: { replacedKm: 46800, replacedAt: "2025-02-12" },
+      battery: { replacedKm: 41000, replacedAt: "2024-10-04" },
+      transmissionFluid: { replacedKm: 37800, replacedAt: "2024-06-22" },
+      frontBrakes: { replacedKm: 59200, replacedAt: "2025-11-02" },
+      rearBrakes: { replacedKm: 55100, replacedAt: "2025-08-08" },
+      frontTires: { replacedKm: 49500, replacedAt: "2025-04-16" },
+      rearTires: { replacedKm: 44800, replacedAt: "2024-12-06" },
+    }),
     serviceLogs: [
       { id: "s1", partKey: "oil", type: "replacement", serviceDate: "2026-03-10", serviceKm: 64500, serviceShop: "Ankara Apex Garage", cost: 2250, notes: "5W-40 ve filtre seti degisti." },
-      { id: "s2", partKey: "brakes", type: "replacement", serviceDate: "2025-11-02", serviceKm: 59200, serviceShop: "Ankara Apex Garage", cost: 4850, notes: "On balatalar ve disk kontrolu yapildi." },
+      { id: "s2", partKey: "frontBrakes", type: "replacement", serviceDate: "2025-11-02", serviceKm: 59200, serviceShop: "Ankara Apex Garage", cost: 4850, notes: "On balatalar ve disk kontrolu yapildi." },
+      { id: "s3", partKey: "frontTires", type: "replacement", serviceDate: "2025-04-16", serviceKm: 49500, serviceShop: "Ankara Apex Garage", cost: 13200, notes: "On lastikler performans seti ile yenilendi." },
     ],
     fuelLogs: [
       { id: "f1", liters: 36, price: 1848, currentKm: 68110, station: "OPET Bilkent" },
@@ -59,14 +84,25 @@ export const quickProfiles = [
     region: "Istanbul Kuzey",
     avatar:
       "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=900&q=80",
-    parts: [
-      { key: "oil", name: "Engine Oil", replacedKm: 25800, replacedAt: "2026-04-18", lifeExpectancyKm: 5000, lifeExpectancyMonths: 8 },
-      { key: "brakes", name: "Brake Pads", replacedKm: 24100, replacedAt: "2025-12-12", lifeExpectancyKm: 14000, lifeExpectancyMonths: 18 },
-      { key: "spark", name: "Spark Plugs", replacedKm: 21000, replacedAt: "2025-08-01", lifeExpectancyKm: 20000, lifeExpectancyMonths: 18 },
-    ],
+    vehicleType: "motorcycle",
+    parts: buildParts("Yamaha R6", 28140, {
+      oil: { replacedKm: 25800, replacedAt: "2026-04-18" },
+      oilFilter: { replacedKm: 25800, replacedAt: "2026-04-18" },
+      airFilter: { replacedKm: 23500, replacedAt: "2026-01-11" },
+      spark: { replacedKm: 21000, replacedAt: "2025-08-01" },
+      coolant: { replacedKm: 20200, replacedAt: "2025-06-22" },
+      battery: { replacedKm: 18050, replacedAt: "2025-02-10" },
+      chain: { replacedKm: 22400, replacedAt: "2025-10-02" },
+      clutch: { replacedKm: 17300, replacedAt: "2024-12-18" },
+      frontBrakes: { replacedKm: 24100, replacedAt: "2025-12-12" },
+      rearBrakes: { replacedKm: 21600, replacedAt: "2025-09-20" },
+      frontTires: { replacedKm: 20880, replacedAt: "2025-08-12" },
+      rearTires: { replacedKm: 23340, replacedAt: "2026-02-20" },
+    }),
     serviceLogs: [
       { id: "ms1", partKey: "oil", type: "replacement", serviceDate: "2026-04-18", serviceKm: 25800, serviceShop: "MotoLab Istanbul", cost: 1650, notes: "Sentetik yag ve filtre degisimi." },
-      { id: "ms2", partKey: "brakes", type: "inspection", serviceDate: "2026-02-08", serviceKm: 24940, serviceShop: "MotoLab Istanbul", cost: 450, notes: "Balata kalinligi olculdu, degisim gerekmiyor." },
+      { id: "ms2", partKey: "frontBrakes", type: "inspection", serviceDate: "2026-02-08", serviceKm: 24940, serviceShop: "MotoLab Istanbul", cost: 450, notes: "Balata kalinligi olculdu, degisim gerekmiyor." },
+      { id: "ms3", partKey: "chain", type: "repair", serviceDate: "2025-10-02", serviceKm: 22400, serviceShop: "MotoLab Istanbul", cost: 1200, notes: "Zincir gergisi ve temizligi yapildi." },
     ],
     fuelLogs: [
       { id: "m1", liters: 14, price: 714, currentKm: 27980, station: "BP Atasehir" },
