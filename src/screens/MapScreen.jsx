@@ -25,21 +25,23 @@ function buildNavigationSummary(selectedPin, driveHud, isDriving) {
 
 function OverlayCard({ children, title, onClose }) {
   return (
-    <div className="absolute inset-x-3 top-14 bottom-22 z-30 overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#0d0d0d]/96 shadow-[0_24px_80px_rgba(0,0,0,0.58)] backdrop-blur">
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Popup</p>
-          <h3 className="mt-1 text-base font-black text-white">{title}</h3>
+    <div className="absolute inset-0 z-30 flex items-end bg-black/45 px-3 pb-3 pt-14 backdrop-blur-[2px]">
+      <div className="w-full overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#0d0d0d]/96 shadow-[0_24px_80px_rgba(0,0,0,0.58)] backdrop-blur">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Popup</p>
+            <h3 className="mt-1 text-base font-black text-white">{title}</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="min-h-10 rounded-xl border border-white/10 bg-black/25 px-3 text-xs font-semibold text-neutral-300 transition hover:border-lime-400/30 hover:text-white"
+          >
+            Kapat
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="min-h-10 rounded-xl border border-white/10 bg-black/25 px-3 text-xs font-semibold text-neutral-300"
-        >
-          Kapat
-        </button>
+        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto px-4 py-4">{children}</div>
       </div>
-      <div className="h-[calc(100%-4.5rem)] overflow-y-auto px-4 py-4">{children}</div>
     </div>
   );
 }

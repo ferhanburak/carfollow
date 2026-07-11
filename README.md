@@ -7,6 +7,8 @@ CRUISER is a React + Vite + Tailwind CSS single page application for car and mot
 - Live driving HUD simulation
 - Clan leaderboard and active driver feed
 - Digital garage, maintenance tracking, and fuel log
+- Firebase-ready data layer with mock/fallback mode
+- Lazy-loaded screens and optimized Firebase bundle loading
 
 ## Tech Stack
 
@@ -24,11 +26,20 @@ src/
   components/
     MapCard.jsx
     PinPanel.jsx
+    pin-panels/
+      MeetPinPanel.jsx
+      SpotPinPanel.jsx
+      WashPinPanel.jsx
     ui.jsx
+  constants/
+    pins.js
   data/
     mockData.js
   hooks/
     useCruiserAuth.js
+    useDriveSession.js
+    useFirebaseSync.js
+    useMapPins.js
     useCruiserWorld.js
   repositories/
     cruiserRepository.js
@@ -41,6 +52,7 @@ src/
     GarageScreen.jsx
   services/
     firebaseClient.js
+    firebaseClient.test.js
     firebasePaths.js
     storage.js
   test/
@@ -230,14 +242,25 @@ Current Firebase integration behavior:
 - user profiles can sync to private Firestore paths
 - fuel logs and wash reviews can be written to Firestore
 - active driver telemetry can be mirrored to Firebase Realtime Database
+- Firestore calls use the lighter `firebase/firestore/lite` client for smaller production bundles
+
+## Performance Notes
+
+Recent optimizations in the current build:
+
+- non-auth screens are lazy-loaded with `React.lazy`
+- pin detail views are split into separate lazy-loaded spot/wash/meet panels
+- Firebase repository imports are loaded on demand
+- Firestore uses the Lite SDK to reduce the production chunk size
+
+This means first load is lighter, and map/detail code is fetched closer to when the user actually opens those surfaces.
 
 ## Next Steps
 
 Suggested improvements for the next iteration:
 
-- introduce a Firebase-backed repository implementation alongside the mock one
-- switch repository selection by environment/config
 - add persistence for map reviews, clan movement, and fuel history beyond the active session
 - add more repository-level tests for update functions
 - persist more of the mock app world, not only the active user session
 - add route-level architecture only if the SPA grows beyond the current shell
+- upgrade local Node.js to `22.12+` to remove the Vite version warning

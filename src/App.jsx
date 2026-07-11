@@ -13,9 +13,24 @@ const MapScreen = lazy(() => import("./screens/MapScreen").then((module) => ({ d
 function ScreenLoader() {
   return (
     <div className="flex h-full min-h-[14rem] items-center justify-center">
-      <div className="rounded-[1.5rem] border border-white/10 bg-[#111111] px-5 py-4 text-center">
-        <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">CRUISER LOADING</p>
-        <p className="mt-2 text-sm font-semibold text-neutral-200">Ekran hazirlaniyor...</p>
+      <div className="w-full rounded-[1.75rem] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(163,230,53,0.12),transparent_42%),linear-gradient(180deg,#131313,#0d0d0d)] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.32em] text-lime-400">CRUISER LOADING</p>
+            <p className="mt-2 text-sm font-semibold text-neutral-200">Ekran hazirlaniyor...</p>
+          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-lime-400/20 bg-lime-400/10">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-lime-300/40 border-t-lime-300" />
+          </div>
+        </div>
+        <div className="mt-5 space-y-3">
+          <div className="h-3 w-2/3 animate-pulse rounded-full bg-white/8" />
+          <div className="h-20 animate-pulse rounded-[1.25rem] bg-white/[0.04]" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="h-16 animate-pulse rounded-[1.15rem] bg-white/[0.04]" />
+            <div className="h-16 animate-pulse rounded-[1.15rem] bg-white/[0.04]" />
+          </div>
+        </div>
       </div>
     </div>
   );
