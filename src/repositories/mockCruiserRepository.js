@@ -96,6 +96,7 @@ export function createSignedUpUser(signUpForm) {
     parts: createDefaultParts(vehicleType, 12000, "2026-07-11"),
     serviceLogs: [],
     fuelLogs: [],
+    monthlyKm: 0,
     driverScore: 80,
     harmonyVotes: 1,
     alertVotes: 0,
@@ -111,6 +112,10 @@ export function createAuthenticatedUser(profile) {
     parts: normalizeVehicleParts(profile.parts ?? [], vehicleType),
     serviceLogs: (profile.serviceLogs ?? []).map((log) => ({ ...log })),
     fuelLogs: (profile.fuelLogs ?? []).map((log) => ({ ...log })),
+    monthlyKm: Number(profile.monthlyKm ?? 0),
+    driverScore: Number(profile.driverScore ?? 80),
+    harmonyVotes: Number(profile.harmonyVotes ?? 0),
+    alertVotes: Number(profile.alertVotes ?? 0),
   };
 }
 
@@ -145,6 +150,7 @@ export function incrementUserOdometer(user) {
   return {
     ...user,
     odometer: Number((user.odometer + 0.4).toFixed(1)),
+    monthlyKm: Number(((user.monthlyKm ?? 0) + 0.4).toFixed(1)),
   };
 }
 
