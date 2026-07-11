@@ -4,11 +4,11 @@ import { AuthScreen } from "./screens/AuthScreen";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
 
-const ClansScreen = lazy(() => import("./screens/ClansScreen").then((module) => ({ default: module.ClansScreen })));
 const DriveScreen = lazy(() => import("./screens/DriveScreen").then((module) => ({ default: module.DriveScreen })));
 const GarageScreen = lazy(() => import("./screens/GarageScreen").then((module) => ({ default: module.GarageScreen })));
 const MapHubScreen = lazy(() => import("./screens/MapHubScreen").then((module) => ({ default: module.MapHubScreen })));
 const MapScreen = lazy(() => import("./screens/MapScreen").then((module) => ({ default: module.MapScreen })));
+const StatsScreen = lazy(() => import("./screens/StatsScreen").then((module) => ({ default: module.StatsScreen })));
 
 function ScreenLoader() {
   return (
@@ -252,7 +252,7 @@ function App() {
                 user={user}
               />
             ) : null}
-            {activeTab === "clans" ? <ClansScreen clans={clans} drivers={drivers} user={user} /> : null}
+            {activeTab === "clans" ? <StatsScreen clans={clans} drivers={drivers} user={user} /> : null}
             {activeTab === "garage" ? (
               <GarageScreen
                 appId={appId}

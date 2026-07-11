@@ -2,7 +2,7 @@ import { individualDriverSeed } from "../data/mockData";
 import { formatNumber } from "../utils/garage";
 import { buildAchievementProgress, buildIndividualLeaderboard, buildPersonalStats } from "../utils/socialStats";
 
-export function ClansScreen({ clans, drivers, user }) {
+export function StatsScreen({ clans, drivers, user }) {
   const personalStats = buildPersonalStats(user);
   const achievementProgress = buildAchievementProgress(user);
   const individualLeaderboard = buildIndividualLeaderboard(user, individualDriverSeed);
