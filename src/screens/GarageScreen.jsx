@@ -43,6 +43,7 @@ export function GarageScreen({
   fuelForm,
   fuelInsights,
   onFuelFormChange,
+  onPrimeServiceLogForm,
   onSubmitFuelLog,
   onServiceLogFormChange,
   onSubmitServiceLog,
@@ -59,6 +60,12 @@ export function GarageScreen({
   const safeFuelLogs = user.fuelLogs ?? [];
   const partsByKey = new Map(safeParts.map((part) => [part.key, part]));
   const [selectedPartKey, setSelectedPartKey] = useState(safeParts[0]?.key ?? null);
+  const activeServicePart = safeParts.find((part) => part.key === serviceLogForm?.partKey) ?? null;
+
+  const handleSelectPart = (partKey) => {
+    setSelectedPartKey(partKey);
+    onPrimeServiceLogForm(partKey, serviceLogForm?.type ?? "inspection");
+  };
 
   return (
     <section className="space-y-4">
@@ -135,7 +142,7 @@ export function GarageScreen({
         </div>
         <VehicleHealthDiagram
           odometer={user.odometer}
-          onSelectPart={setSelectedPartKey}
+          onSelectPart={handleSelectPart}
           parts={safeParts}
           selectedPartKey={selectedPartKey}
           vehicleType={user.vehicleType ?? "car"}
@@ -179,6 +186,7 @@ export function GarageScreen({
           </div>
         ) : null}
         <ServiceLogForm
+          activePart={activeServicePart}
           errors={serviceLogErrors}
           form={serviceLogForm}
           onChange={onServiceLogFormChange}

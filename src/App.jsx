@@ -77,6 +77,7 @@ function App() {
     mapPinForm,
     mapPins,
     passportSummary,
+    primeServiceLogForm,
     pickMapLocation,
     rateAttendee,
     removeLastDraftRoutePoint,
@@ -261,6 +262,7 @@ function App() {
                 fuelInsights={fuelInsights}
                 onFuelFormChange={setFuelForm}
                 onSubmitFuelLog={(event) => submitFuelLog(event, fuelForm)}
+                onPrimeServiceLogForm={primeServiceLogForm}
                 onServiceLogFormChange={setServiceLogForm}
                 onSubmitServiceLog={submitServiceLog}
                 passportSummary={passportSummary}

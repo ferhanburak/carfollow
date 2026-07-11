@@ -76,6 +76,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   });
   const {
     passportSummary,
+    primeServiceLogForm,
     serviceLogErrors,
     serviceLogFeedback,
     serviceLogForm,
@@ -154,6 +155,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     mapPinFeedback,
     mapPinForm,
     passportSummary,
+    primeServiceLogForm,
     mapDraftLocation,
     mapPins,
     mapPickMode,

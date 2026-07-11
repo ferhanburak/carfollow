@@ -23,28 +23,27 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
   const passportSummary = user ? buildVehiclePassportSummary(user) : null;
   const upcomingMaintenance = user ? getUpcomingMaintenance(user.parts ?? [], user.odometer) : [];
 
-  const submitServiceLog = (event) => {
-    event.preventDefault();
+  const commitServiceLog = (draftLog) => {
     if (!user) {
       return;
     }
 
-    const validationErrors = validateServiceLogForm(serviceLogForm, user.odometer);
+    const validationErrors = validateServiceLogForm(draftLog, user.odometer);
     setServiceLogErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
       return;
     }
 
     const nextLog = {
-      id: `service-${Date.now()}`,
-      partKey: serviceLogForm.partKey,
-      type: serviceLogForm.type,
-      serviceDate: serviceLogForm.serviceDate,
-      serviceKm: Number(serviceLogForm.serviceKm),
-      serviceShop: serviceLogForm.serviceShop.trim(),
-      cost: Number(serviceLogForm.cost || 0),
-      notes: serviceLogForm.notes.trim(),
-      receiptImageUrl: serviceLogForm.receiptImageUrl.trim(),
+      id: draftLog.id ?? `service-${Date.now()}`,
+      partKey: draftLog.partKey,
+      type: draftLog.type,
+      serviceDate: draftLog.serviceDate,
+      serviceKm: Number(draftLog.serviceKm),
+      serviceShop: draftLog.serviceShop.trim(),
+      cost: Number(draftLog.cost || 0),
+      notes: draftLog.notes.trim(),
+      receiptImageUrl: draftLog.receiptImageUrl?.trim?.() ?? "",
     };
 
     let nextUserSnapshot = null;
@@ -58,10 +57,35 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
     setServiceLogErrors({});
     setServiceLogFeedback(`${servicedPart?.name ?? "Part"} service saved to Vehicle Passport.`);
     syncServiceLog?.(nextLog, servicedPart);
+    return nextLog;
+  };
+
+  const submitServiceLog = (event) => {
+    event.preventDefault();
+    commitServiceLog(serviceLogForm);
+  };
+
+  const primeServiceLogForm = (partKey, type = "inspection") => {
+    const selectedPart = (user?.parts ?? []).find((part) => part.key === partKey);
+    setServiceLogForm((current) => ({
+      ...current,
+      partKey,
+      type,
+      serviceDate: new Date().toISOString().slice(0, 10),
+      serviceKm: Math.round(user?.odometer ?? current.serviceKm ?? 0),
+      serviceShop: user?.garage ?? current.serviceShop ?? "",
+      notes:
+        type === "replacement"
+          ? `${selectedPart?.name ?? "Part"} replacement prepared from vehicle map.`
+          : `${selectedPart?.name ?? "Part"} inspection prepared from vehicle map.`,
+    }));
+    setServiceLogErrors({});
+    setServiceLogFeedback(`${selectedPart?.name ?? "Part"} loaded into service form.`);
   };
 
   return {
     passportSummary,
+    primeServiceLogForm,
     serviceLogErrors,
     serviceLogFeedback,
     serviceLogForm,
