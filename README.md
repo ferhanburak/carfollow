@@ -78,6 +78,15 @@ Recommended Node version:
 Note:
 The project currently builds on Node `22.11.0`, but Vite shows a version warning. Upgrading Node will remove that warning.
 
+If you do not want to update Node system-wide right away, this repo now includes a portable Node `22.23.1` setup under [D:\carfollow\tools](/D:/carfollow/tools). You can run project commands with it using:
+
+```powershell
+cd D:\carfollow
+.\use-node22.ps1 npm run build
+.\use-node22.ps1 npm run dev
+.\use-node22.ps1 npm run test:run
+```
+
 ## Install
 
 ```powershell
