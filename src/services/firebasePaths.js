@@ -24,6 +24,10 @@ export function realtimeDmThreadPath(threadId, resolvedAppId = resolveAppId()) {
   return `${realtimeDmThreadsPath(resolvedAppId)}/${threadId}`;
 }
 
+export function realtimeDmThreadTypingPath(threadId, resolvedAppId = resolveAppId()) {
+  return `${realtimeDmThreadPath(threadId, resolvedAppId)}/typing`;
+}
+
 export function realtimePresencePath(resolvedAppId = resolveAppId()) {
   return `artifacts/${resolvedAppId}/realtime/presence`;
 }

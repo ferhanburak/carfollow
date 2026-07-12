@@ -59,6 +59,7 @@ function App() {
   const {
     activeConversation,
     activeConversationId,
+    activeTypingUsers,
     activeTab,
     approveCruiseJoinRequest,
     acceptIncomingClanInvite,
@@ -298,6 +299,7 @@ function App() {
               <StatsScreen
                 activeConversation={activeConversation}
                 activeConversationId={activeConversationId}
+                activeTypingUsers={activeTypingUsers}
                 acceptIncomingClanInvite={acceptIncomingClanInvite}
                 approveFriendRequest={approveFriendRequest}
                 chatFeedback={chatFeedback}

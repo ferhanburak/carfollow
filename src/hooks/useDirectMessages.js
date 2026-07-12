@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   saveFirebaseDirectMessage,
   saveFirebasePresence,
+  saveFirebaseTypingState,
   subscribeFirebaseDirectMessages,
   subscribeFirebasePresence,
+  subscribeFirebaseTyping,
 } from "../repositories/cruiserRepository";
 import {
   appendDirectMessage,
@@ -20,6 +22,7 @@ export function useDirectMessages({ user, setUser }) {
   const [chatFeedback, setChatFeedback] = useState("");
   const [firebaseConversations, setFirebaseConversations] = useState({});
   const [presenceMap, setPresenceMap] = useState({});
+  const [typingMap, setTypingMap] = useState({});
 
   const normalizedConversations = useMemo(() => {
     if (!user) {
@@ -101,6 +104,33 @@ export function useDirectMessages({ user, setUser }) {
   }, [trackedPresencePlates]);
 
   useEffect(() => {
+    let cancelled = false;
+    let unsubscribe = () => {};
+
+    async function bindTyping() {
+      if (!activeConversationId) {
+        if (!cancelled) {
+          setTypingMap({});
+        }
+        return;
+      }
+
+      unsubscribe = await subscribeFirebaseTyping(activeConversationId, (typingState) => {
+        if (!cancelled) {
+          setTypingMap(typingState);
+        }
+      });
+    }
+
+    void bindTyping();
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [activeConversationId]);
+
+  useEffect(() => {
     if (!user?.plate) {
       return undefined;
     }
@@ -144,6 +174,13 @@ export function useDirectMessages({ user, setUser }) {
   }, [user?.plate]);
 
   const activeConversation = activeConversationId ? normalizedConversations[activeConversationId] ?? null : null;
+  const activeTypingUsers = useMemo(
+    () =>
+      Object.values(typingMap ?? {}).filter(
+        (entry) => entry?.plate && entry.plate !== user?.plate && entry.status === "typing",
+      ),
+    [typingMap, user?.plate],
+  );
 
   useEffect(() => {
     if (!activeConversationId || !activeConversation) {
@@ -164,6 +201,31 @@ export function useDirectMessages({ user, setUser }) {
 
     setUser((current) => markConversationRead(current, activeConversationId, Number(lastForeignMessage.createdAt ?? Date.now())));
   }, [activeConversation, activeConversationId, setUser, user?.plate]);
+
+  useEffect(() => {
+    if (!user?.plate || !activeConversationId) {
+      return undefined;
+    }
+
+    const isTyping = Boolean(messageDraft.trim());
+    void saveFirebaseTypingState(activeConversationId, user.plate, {
+      status: isTyping ? "typing" : "idle",
+      updatedAt: Date.now(),
+    });
+
+    if (!isTyping) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void saveFirebaseTypingState(activeConversationId, user.plate, {
+        status: "idle",
+        updatedAt: Date.now(),
+      });
+    }, 2200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeConversationId, messageDraft, user?.plate]);
 
   const openConversation = (friend) => {
     const nextConversationId = buildConversationId(user.plate, friend.plate);
@@ -215,6 +277,7 @@ export function useDirectMessages({ user, setUser }) {
   return {
     activeConversation,
     activeConversationId,
+    activeTypingUsers,
     chatFeedback,
     conversationList,
     messageDraft,

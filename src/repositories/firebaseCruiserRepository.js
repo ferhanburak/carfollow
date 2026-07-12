@@ -4,6 +4,7 @@ import {
   realtimeDmPath,
   realtimePresencePath,
   realtimePresencePlatePath,
+  realtimeDmThreadTypingPath,
   realtimeDmThreadsPath,
   realtimeDmThreadPath,
   resolveAppId,
@@ -215,6 +216,23 @@ export async function subscribeFirebaseDirectMessages(userPlate, onThreadsChange
   return unsubscribe;
 }
 
+export async function subscribeFirebaseTyping(threadId, onTypingChange) {
+  const services = await getFirebaseServices();
+  if (!services || !services.database || !threadId || typeof onTypingChange !== "function") {
+    return () => {};
+  }
+
+  const { database } = services;
+  const { onValue, ref } = await loadDatabaseModule();
+  const typingRef = ref(database, realtimeDmThreadTypingPath(threadId, resolveAppId()));
+
+  const unsubscribe = onValue(typingRef, (snapshot) => {
+    onTypingChange(snapshot.val() ?? {});
+  });
+
+  return unsubscribe;
+}
+
 export async function saveFirebaseDirectMessage(threadId, participants, participantProfiles, message) {
   const services = await getFirebaseServices();
   if (!services || !services.database || !threadId || !participants?.length || !message) {
@@ -249,6 +267,27 @@ export async function saveFirebaseDirectMessage(threadId, participants, particip
     authUid: authUser.uid,
     syncedAt: Date.now(),
     messageId,
+  };
+}
+
+export async function saveFirebaseTypingState(threadId, plate, typingState) {
+  const services = await getFirebaseServices();
+  if (!services || !services.database || !threadId || !plate) {
+    return null;
+  }
+
+  const { database, authUser } = services;
+  const { ref, update } = await loadDatabaseModule();
+  await update(ref(database, `${realtimeDmThreadTypingPath(threadId, resolveAppId())}/${plate.replaceAll(" ", "_")}`), {
+    ...typingState,
+    plate,
+    firebaseUid: authUser.uid,
+    updatedAt: Date.now(),
+  });
+
+  return {
+    authUid: authUser.uid,
+    syncedAt: Date.now(),
   };
 }
 

@@ -64,9 +64,35 @@ function formatPresenceLabel(presence) {
   return `${diffHours} sa once`;
 }
 
+function formatMessageTime(timestamp) {
+  const time = Number(timestamp ?? 0);
+  if (!time) {
+    return "--";
+  }
+
+  const diffMinutes = Math.max(0, Math.round((Date.now() - time) / 60000));
+  if (diffMinutes < 1) {
+    return "simdi";
+  }
+  if (diffMinutes < 60) {
+    return `${diffMinutes} dk`;
+  }
+  if (diffMinutes < 1440) {
+    return `${Math.round(diffMinutes / 60)} sa`;
+  }
+
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(time));
+}
+
 export function StatsScreen({
   activeConversation,
   activeConversationId,
+  activeTypingUsers,
   acceptIncomingClanInvite,
   approveFriendRequest,
   chatFeedback,
@@ -512,6 +538,9 @@ export function StatsScreen({
                         <span className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
                           {formatPresenceLabel(presenceMap?.[conversation.participantPlate])}
                         </span>
+                        <span className="text-[10px] text-neutral-500">
+                          {formatMessageTime(conversation.lastMessage?.createdAt)}
+                        </span>
                         {conversation.unreadCount ? (
                           <span className="rounded-full bg-rose-500 px-2 py-1 text-[10px] font-bold text-white">
                             {conversation.unreadCount}
@@ -554,6 +583,11 @@ export function StatsScreen({
                       </div>
                     ))}
                   </div>
+                  {activeTypingUsers.length ? (
+                    <p className="mt-3 text-xs text-lime-300">
+                      {activeTypingUsers.map((entry) => entry.plate).join(", ")} yaziyor...
+                    </p>
+                  ) : null}
                   <div className="mt-4 flex gap-2">
                     <input
                       value={messageDraft}

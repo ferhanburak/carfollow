@@ -141,6 +141,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   const {
     activeConversation,
     activeConversationId,
+    activeTypingUsers,
     chatFeedback,
     conversationList,
     messageDraft,
@@ -207,6 +208,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   return {
     activeConversation,
     activeConversationId,
+    activeTypingUsers,
     activeTab,
     acceptIncomingClanInvite,
     approveFriendRequest,
