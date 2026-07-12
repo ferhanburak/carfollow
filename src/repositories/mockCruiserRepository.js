@@ -1,4 +1,5 @@
 import { initialClans, initialDrivers, initialMapPins, quickProfiles } from "../data/mockData";
+import { normalizeClanState } from "../utils/clanGraph";
 import { applyPartServiceToUser } from "../utils/vehiclePassport";
 import { createDefaultParts, inferVehicleType, normalizeVehicleParts } from "../utils/vehicleParts";
 import { normalizeSocialState } from "../utils/socialGraph";
@@ -91,6 +92,7 @@ export function createSignedUpUser(signUpForm) {
     odometer: 12000,
     badges: ["Yeni Uye", "Garajda Aktif"],
     clan: "Lowline Union",
+    clanRole: "member",
     region: "Ankara Merkez",
     avatar:
       "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=900&q=80",
@@ -105,13 +107,15 @@ export function createSignedUpUser(signUpForm) {
     friends: [],
     incomingRequests: [],
     outgoingRequests: [],
+    clanInvites: [],
+    sentClanInvites: [],
   };
 }
 
 export function createAuthenticatedUser(profile) {
   const vehicleType = profile.vehicleType ?? inferVehicleType(profile.model);
   return {
-    ...normalizeSocialState(clone(profile)),
+    ...normalizeClanState(normalizeSocialState(clone(profile))),
     vehicleType,
     badges: [...(profile.badges ?? [])],
     parts: normalizeVehicleParts(profile.parts ?? [], vehicleType),

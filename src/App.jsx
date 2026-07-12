@@ -60,12 +60,18 @@ function App() {
     activeConversation,
     activeConversationId,
     activeTab,
+    acceptIncomingClanInvite,
     approveFriendRequest,
     chatFeedback,
+    clanFeedback,
+    clanForm,
     clans,
     clearDraftRoute,
     conversationList,
+    createNewClan,
+    currentClan,
     declineFriendRequest,
+    declineIncomingClanInvite,
     driveHud,
     drivers,
     firebaseStatus,
@@ -93,6 +99,7 @@ function App() {
     removeLastDraftRoutePoint,
     requestFriend,
     resetSessionView,
+    revokeClanInvite,
     safeUser,
     selectedPin,
     selectedPinId,
@@ -101,6 +108,7 @@ function App() {
     serviceLogFeedback,
     serviceLogForm,
     setActiveTab,
+    setClanForm,
     setFriendSearchQuery,
     setMapPickMode,
     setMapPinForm,
@@ -124,6 +132,7 @@ function App() {
     washErrors,
     washFeedback,
     washForm,
+    inviteFriendToClan,
     withdrawFriendRequest,
   } = useCruiserWorld(user, setUser, setFuelForm);
 
@@ -276,19 +285,28 @@ function App() {
               <StatsScreen
                 activeConversation={activeConversation}
                 activeConversationId={activeConversationId}
+                acceptIncomingClanInvite={acceptIncomingClanInvite}
                 approveFriendRequest={approveFriendRequest}
                 chatFeedback={chatFeedback}
+                clanFeedback={clanFeedback}
+                clanForm={clanForm}
                 clans={clans}
                 conversationList={conversationList}
+                createNewClan={createNewClan}
+                currentClan={currentClan}
                 declineFriendRequest={declineFriendRequest}
+                declineIncomingClanInvite={declineIncomingClanInvite}
                 drivers={drivers}
                 friendSearchQuery={friendSearchQuery}
                 friendSearchResults={friendSearchResults}
                 messageDraft={messageDraft}
+                onClanFormChange={setClanForm}
                 onFriendSearchChange={setFriendSearchQuery}
                 onMessageDraftChange={setMessageDraft}
                 openConversation={openConversation}
+                inviteFriendToClan={inviteFriendToClan}
                 requestFriend={requestFriend}
+                revokeClanInvite={revokeClanInvite}
                 sendMessage={sendMessage}
                 socialFeedback={socialFeedback}
                 user={safeUser ?? user}

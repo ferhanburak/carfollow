@@ -37,6 +37,7 @@ export const quickProfiles = [
     odometer: 68420,
     badges: ["Gece Savascisi", "Asfalt Aglatan", "Grid Hunter"],
     clan: "Neon Wolves",
+    clanRole: "owner",
     region: "Ankara Bati",
     avatar:
       "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=900&q=80",
@@ -108,6 +109,36 @@ export const quickProfiles = [
         createdAt: 1752143400000,
       },
     ],
+    clanInvites: [
+      {
+        id: "clan-invite-seed-1",
+        clanId: "c2",
+        clanName: "Midnight Apex",
+        clanTag: "APEX",
+        fromPlate: "35 SRT 908",
+        fromName: "Ece Yalin",
+        targetPlate: "06 PWA 101",
+        targetName: "Poyraz Alkan",
+        targetModel: "Seat Ibiza Cupra",
+        createdAt: 1752236400000,
+        status: "pending",
+      },
+    ],
+    sentClanInvites: [
+      {
+        id: "clan-sent-seed-1",
+        clanId: "c1",
+        clanName: "Neon Wolves",
+        clanTag: "WOLF",
+        fromPlate: "06 PWA 101",
+        fromName: "Poyraz Alkan",
+        targetPlate: "35 SRT 908",
+        targetName: "Ece Yalin",
+        targetModel: "Ducati Monster",
+        createdAt: 1752237000000,
+        status: "pending",
+      },
+    ],
     conversations: {
       "06_PWA_101__35_SRT_908": {
         id: "06_PWA_101__35_SRT_908",
@@ -146,6 +177,7 @@ export const quickProfiles = [
     odometer: 28140,
     badges: ["Viraj Krali", "Night Run", "Quick Launch"],
     clan: "Midnight Apex",
+    clanRole: "member",
     region: "Istanbul Kuzey",
     avatar:
       "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=900&q=80",
@@ -205,6 +237,22 @@ export const quickProfiles = [
         createdAt: 1752172200000,
       },
     ],
+    clanInvites: [
+      {
+        id: "clan-invite-seed-2",
+        clanId: "c3",
+        clanName: "Turbo Syndicate",
+        clanTag: "TRBO",
+        fromPlate: "34 TURBO 54",
+        fromName: "Can Sarp",
+        targetPlate: "34 MOTO 410",
+        targetName: "Mert Ozan",
+        targetModel: "Yamaha R6",
+        createdAt: 1752237600000,
+        status: "pending",
+      },
+    ],
+    sentClanInvites: [],
     conversations: {
       "34_MOTO_410__34_TURBO_54": {
         id: "34_MOTO_410__34_TURBO_54",
@@ -431,10 +479,10 @@ export const initialMapPins = [
 ];
 
 export const initialClans = [
-  { id: "c1", name: "Neon Wolves", km: 14280, members: 31 },
-  { id: "c2", name: "Midnight Apex", km: 12840, members: 28 },
-  { id: "c3", name: "Turbo Syndicate", km: 11770, members: 24 },
-  { id: "c4", name: "Lowline Union", km: 9640, members: 19 },
+  { id: "c1", name: "Neon Wolves", tag: "WOLF", description: "Ankara cikisli gece surusu ve hatchback odakli ekip.", km: 14280, members: 31, captainPlate: "06 PWA 101", visibility: "friends" },
+  { id: "c2", name: "Midnight Apex", tag: "APEX", description: "Sport bike ve precision cruise karisimi premium convoy ekibi.", km: 12840, members: 28, captainPlate: "35 SRT 908", visibility: "public" },
+  { id: "c3", name: "Turbo Syndicate", tag: "TRBO", description: "Istanbul merkezli hizli organize bulusma ve rolling squad.", km: 11770, members: 24, captainPlate: "34 TURBO 54", visibility: "public" },
+  { id: "c4", name: "Lowline Union", tag: "LOW", description: "Fitment, static setup ve chill route seven suruculerin grubu.", km: 9640, members: 19, captainPlate: "07 VTEC 707", visibility: "friends" },
 ];
 
 export const initialDrivers = [

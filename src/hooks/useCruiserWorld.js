@@ -13,6 +13,7 @@ import { validateFuelForm } from "../utils/validation";
 import { useDirectMessages } from "./useDirectMessages";
 import { useDriveSession } from "./useDriveSession";
 import { useFirebaseSync } from "./useFirebaseSync";
+import { useClanGraph } from "./useClanGraph";
 import { useMapPins } from "./useMapPins";
 import { useSocialGraph } from "./useSocialGraph";
 import { useVehiclePassport } from "./useVehiclePassport";
@@ -97,6 +98,24 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   });
 
   const {
+    acceptIncomingClanInvite,
+    clanFeedback,
+    clanForm,
+    createNewClan,
+    currentClan,
+    declineIncomingClanInvite,
+    inviteFriendToClan,
+    revokeClanInvite,
+    safeUser: safeClanUser,
+    setClanForm,
+  } = useClanGraph({
+    clans,
+    setClans,
+    user,
+    setUser,
+  });
+
+  const {
     approveFriendRequest,
     declineFriendRequest,
     friendSearchQuery,
@@ -112,6 +131,8 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setUser,
   });
 
+  const resolvedSafeUser = safeClanUser ?? safeUser ?? user;
+
   const {
     activeConversation,
     activeConversationId,
@@ -122,7 +143,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     sendMessage,
     setMessageDraft,
   } = useDirectMessages({
-    user: safeUser ?? user,
+    user: resolvedSafeUser,
     setUser,
   });
 
@@ -180,12 +201,18 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     activeConversation,
     activeConversationId,
     activeTab,
+    acceptIncomingClanInvite,
     approveFriendRequest,
     chatFeedback,
+    clanFeedback,
+    clanForm,
     clans,
     clearDraftRoute,
     conversationList,
+    createNewClan,
+    currentClan,
     declineFriendRequest,
+    declineIncomingClanInvite,
     driveHud,
     drivers,
     firebaseStatus,
@@ -213,7 +240,8 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     removeLastDraftRoutePoint,
     requestFriend,
     resetSessionView,
-    safeUser,
+    revokeClanInvite,
+    safeUser: resolvedSafeUser,
     selectedPin,
     selectedPinId,
     sendMessage,
@@ -221,6 +249,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     serviceLogFeedback,
     serviceLogForm,
     setActiveTab,
+    setClanForm,
     setFriendSearchQuery,
     setMapPickMode,
     setMapPinForm,
@@ -244,6 +273,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     washErrors,
     washFeedback,
     washForm,
+    inviteFriendToClan,
     withdrawFriendRequest,
   };
 }

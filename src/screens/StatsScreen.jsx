@@ -15,22 +15,44 @@ function getActionTone(status) {
   return "border-rose-400/20 bg-rose-400/10 text-rose-200";
 }
 
+function getClanRankTone(index) {
+  if (index === 0) {
+    return "bg-amber-300 text-black";
+  }
+  if (index === 1) {
+    return "bg-neutral-300 text-black";
+  }
+  if (index === 2) {
+    return "bg-orange-500 text-black";
+  }
+  return "bg-white/10 text-white";
+}
+
 export function StatsScreen({
   activeConversation,
   activeConversationId,
+  acceptIncomingClanInvite,
   approveFriendRequest,
   chatFeedback,
+  clanFeedback,
+  clanForm,
   clans,
   conversationList,
+  createNewClan,
+  currentClan,
   declineFriendRequest,
+  declineIncomingClanInvite,
   drivers,
   friendSearchQuery,
   friendSearchResults,
+  inviteFriendToClan,
   messageDraft,
+  onClanFormChange,
   onFriendSearchChange,
   onMessageDraftChange,
   openConversation,
   requestFriend,
+  revokeClanInvite,
   sendMessage,
   socialFeedback,
   user,
@@ -39,9 +61,180 @@ export function StatsScreen({
   const personalStats = buildPersonalStats(user);
   const achievementProgress = buildAchievementProgress(user);
   const individualLeaderboard = buildIndividualLeaderboard(user, individualDriverSeed);
+  const sortedClans = [...clans].sort((a, b) => b.km - a.km);
+  const canInviteToClan = ["owner", "captain"].includes(user.clanRole ?? "member");
 
   return (
     <section className="space-y-4">
+      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Clan Management</p>
+            <h3 className="mt-2 text-xl font-black">Klan Merkezi</h3>
+          </div>
+          <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">
+            {user.clan ? user.clan : "Clanless"}
+          </div>
+        </div>
+
+        {clanFeedback ? (
+          <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-100">
+            {clanFeedback}
+          </div>
+        ) : null}
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">Aktif Klan</p>
+                <p className="mt-1 text-xs text-neutral-500">Uyeligin, rolun ve aylik ekip ritmi.</p>
+              </div>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-300">
+                {user.clanRole ?? "member"}
+              </span>
+            </div>
+
+            {currentClan ? (
+              <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-black text-lime-200">{currentClan.name}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.22em] text-lime-300">{currentClan.tag}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-black text-lime-200">{formatNumber(currentClan.km)} KM</p>
+                    <p className="text-xs text-lime-100/70">{currentClan.members} members</p>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-lime-100/80">{currentClan.description}</p>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
+                Henuz aktif bir klan bulunmuyor. Yeni ekip kurabilir ya da gelen daveti kabul edebilirsin.
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+            <p className="text-sm font-semibold">Yeni Klan Kur</p>
+            <p className="mt-1 text-xs text-neutral-500">Mevcut klanindaysan yeni klan kurunca lider olarak yeni ekibe gecersin.</p>
+            <div className="mt-4 space-y-3">
+              <input
+                value={clanForm.name}
+                onChange={(event) => onClanFormChange((current) => ({ ...current, name: event.target.value }))}
+                placeholder="Klan adi"
+                className="h-12 w-full rounded-2xl border border-white/10 bg-black/20 px-4 text-sm outline-none focus:border-lime-400"
+              />
+              <input
+                value={clanForm.tag}
+                onChange={(event) => onClanFormChange((current) => ({ ...current, tag: event.target.value.toUpperCase() }))}
+                placeholder="Kisa tag"
+                maxLength={6}
+                className="h-12 w-full rounded-2xl border border-white/10 bg-black/20 px-4 text-sm uppercase tracking-[0.16em] outline-none focus:border-lime-400"
+              />
+              <textarea
+                value={clanForm.description}
+                onChange={(event) => onClanFormChange((current) => ({ ...current, description: event.target.value }))}
+                placeholder="Kisa klan aciklamasi"
+                rows={3}
+                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-lime-400"
+              />
+              <button
+                type="button"
+                onClick={createNewClan}
+                className="min-h-12 w-full rounded-2xl bg-lime-400 px-4 py-3 text-sm font-bold text-black"
+              >
+                Klani Kur
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+            <p className="text-sm font-semibold">Gelen Klan Davetleri</p>
+            <div className="mt-4 space-y-3">
+              {(user.clanInvites ?? []).length ? (
+                user.clanInvites.map((invite) => (
+                  <div key={invite.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold">{invite.clanName}</p>
+                        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-lime-300">{invite.clanTag}</p>
+                        <p className="mt-2 text-xs text-neutral-500">Davet eden: {invite.fromName} / {invite.fromPlate}</p>
+                      </div>
+                      <span className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-amber-200">
+                        Pending
+                      </span>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => acceptIncomingClanInvite(invite.id)}
+                        className="min-h-12 flex-1 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black"
+                      >
+                        Kabul Et
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => declineIncomingClanInvite(invite.id)}
+                        className="min-h-12 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
+                      >
+                        Reddet
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
+                  Bekleyen klan daveti yok.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">Giden Klan Davetleri</p>
+                <p className="mt-1 text-xs text-neutral-500">Liderler arkadas listesi uzerinden ekip daveti yollayabilir.</p>
+              </div>
+              <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+                {canInviteToClan ? "Invite On" : "Leader Only"}
+              </span>
+            </div>
+            <div className="mt-4 space-y-3">
+              {(user.sentClanInvites ?? []).length ? (
+                user.sentClanInvites.map((invite) => (
+                  <div key={invite.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                    <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{invite.targetPlate}</p>
+                    <p className="mt-1 text-sm font-semibold">{invite.targetName}</p>
+                    <p className="text-xs text-neutral-500">{invite.targetModel}</p>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-300">
+                        {invite.clanName}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => revokeClanInvite(invite.id)}
+                        className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
+                      >
+                        Iptal Et
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
+                  Henuz giden klan daveti yok.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -72,7 +265,7 @@ export function StatsScreen({
                   <div>
                     <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
                     <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
-                    <p className="text-xs text-neutral-500">{entry.model} • {entry.region}</p>
+                    <p className="text-xs text-neutral-500">{entry.model} / {entry.region}</p>
                   </div>
                   {entry.friendshipStatus === "none" ? (
                     <button
@@ -164,19 +357,29 @@ export function StatsScreen({
                       <div>
                         <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
                         <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
-                        <p className="text-xs text-neutral-500">{entry.model} • {entry.region}</p>
+                        <p className="text-xs text-neutral-500">{entry.model} / {entry.region}</p>
                       </div>
                       <div className="flex flex-col gap-2">
-                        <span className="rounded-xl border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-center text-xs font-semibold text-lime-300">
-                          Friend
-                        </span>
                         <button
                           type="button"
                           onClick={() => openConversation(entry)}
-                          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
+                          className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
                         >
                           Sohbet Ac
                         </button>
+                        {canInviteToClan ? (
+                          <button
+                            type="button"
+                            onClick={() => inviteFriendToClan(entry)}
+                            className="min-h-12 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black"
+                          >
+                            Klana Davet Et
+                          </button>
+                        ) : (
+                          <span className="rounded-xl border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-center text-xs font-semibold text-lime-300">
+                            Friend
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -221,9 +424,7 @@ export function StatsScreen({
                       })
                     }
                     className={`w-full rounded-2xl border p-4 text-left transition ${
-                      activeConversationId === conversation.id
-                        ? "border-lime-400/30 bg-lime-400/10"
-                        : "border-white/8 bg-white/[0.03]"
+                      activeConversationId === conversation.id ? "border-lime-400/30 bg-lime-400/10" : "border-white/8 bg-white/[0.03]"
                     }`}
                   >
                     <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{conversation.participantPlate}</p>
@@ -251,9 +452,7 @@ export function StatsScreen({
                       <div
                         key={message.id}
                         className={`rounded-2xl px-4 py-3 text-sm ${
-                          message.authorPlate === user.plate
-                            ? "ml-8 bg-lime-400/10 text-lime-100"
-                            : "mr-8 bg-black/30 text-neutral-200"
+                          message.authorPlate === user.plate ? "ml-8 bg-lime-400/10 text-lime-100" : "mr-8 bg-black/30 text-neutral-200"
                         }`}
                       >
                         <p>{message.body}</p>
@@ -312,28 +511,18 @@ export function StatsScreen({
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-black ${
-                      driver.rank === 1
-                        ? "bg-amber-300 text-black"
-                        : driver.rank === 2
-                          ? "bg-neutral-300 text-black"
-                          : driver.rank === 3
-                            ? "bg-orange-500 text-black"
-                            : "bg-white/10 text-white"
-                    }`}
-                  >
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-black ${getClanRankTone(driver.rank - 1)}`}>
                     #{driver.rank}
                   </div>
                   <div>
                     <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{driver.plate}</p>
                     <p className="text-sm font-semibold">{driver.fullName}</p>
-                    <p className="text-xs text-neutral-500">{driver.model} • {driver.region}</p>
+                    <p className="text-xs text-neutral-500">{driver.model} / {driver.region}</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-black text-lime-300">{formatNumber(driver.monthlyKm)} KM</p>
-                  <p className="text-xs text-neutral-500">Score {driver.driverScore} • {driver.clan}</p>
+                  <p className="text-xs text-neutral-500">Score {driver.driverScore} / {driver.clan}</p>
                 </div>
               </div>
             </div>
@@ -350,39 +539,27 @@ export function StatsScreen({
           <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Live Sync</div>
         </div>
         <div className="mt-4 space-y-3">
-          {[...clans]
-            .sort((a, b) => b.km - a.km)
-            .map((clan, index) => (
-              <div key={clan.id} className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-black ${
-                        index === 0
-                          ? "bg-amber-300 text-black"
-                          : index === 1
-                            ? "bg-neutral-300 text-black"
-                            : index === 2
-                              ? "bg-orange-500 text-black"
-                              : "bg-white/10 text-white"
-                      }`}
-                    >
-                      #{index + 1}
-                    </div>
-                    <div>
-                      <p className="font-semibold">{clan.name}</p>
-                      <p className="text-xs text-neutral-500">{clan.members} members</p>
-                    </div>
+          {sortedClans.map((clan, index) => (
+            <div key={clan.id} className="rounded-2xl border border-white/8 bg-black/20 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-black ${getClanRankTone(index)}`}>
+                    #{index + 1}
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-black text-lime-300">{formatNumber(clan.km)} KM</p>
-                    <p className="text-xs text-neutral-500">
-                      {clan.name === user.clan ? "Your clan is syncing live" : "Monthly total"}
-                    </p>
+                  <div>
+                    <p className="font-semibold">{clan.name}</p>
+                    <p className="text-xs text-neutral-500">{clan.members} members / {clan.tag}</p>
                   </div>
                 </div>
+                <div className="text-right">
+                  <p className="text-lg font-black text-lime-300">{formatNumber(clan.km)} KM</p>
+                  <p className="text-xs text-neutral-500">
+                    {clan.name === user.clan ? "Your clan is syncing live" : "Monthly total"}
+                  </p>
+                </div>
               </div>
-            ))}
+            </div>
+          ))}
         </div>
       </div>
 
