@@ -530,7 +530,8 @@ export const navItems = [
   { key: "liveMap", label: "Live Map", icon: "Map" },
   { key: "drive", label: "Surus", icon: "HUD" },
   { key: "clans", label: "Stats", icon: "Rank" },
-  { key: "garage", label: "Garaj", icon: "Servis" },
+  { key: "profile", label: "Profil", icon: "ID" },
+  { key: "garage", label: "Servis", icon: "Wrench" },
 ];
 
 export const socialDirectorySeed = [

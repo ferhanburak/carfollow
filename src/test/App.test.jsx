@@ -71,7 +71,7 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(screen.getByRole("button", { name: /Garaj/i }));
+    await user.click(screen.getByRole("button", { name: /Servis/i }));
     const litersInput = await screen.findByRole("spinbutton", { name: "Liters" });
     const priceInput = await screen.findByRole("spinbutton", { name: "Price (TL)" });
     const currentKmInput = await screen.findByRole("spinbutton", { name: "Current KM" });

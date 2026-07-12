@@ -8,6 +8,7 @@ const DriveScreen = lazy(() => import("./screens/DriveScreen").then((module) => 
 const GarageScreen = lazy(() => import("./screens/GarageScreen").then((module) => ({ default: module.GarageScreen })));
 const MapHubScreen = lazy(() => import("./screens/MapHubScreen").then((module) => ({ default: module.MapHubScreen })));
 const MapScreen = lazy(() => import("./screens/MapScreen").then((module) => ({ default: module.MapScreen })));
+const ProfileScreen = lazy(() => import("./screens/ProfileScreen").then((module) => ({ default: module.ProfileScreen })));
 const StatsScreen = lazy(() => import("./screens/StatsScreen").then((module) => ({ default: module.StatsScreen })));
 
 function ScreenLoader() {
@@ -100,6 +101,10 @@ function App() {
     openConversation,
     passportSummary,
     pickMapLocation,
+    profileCompletion,
+    profileErrors,
+    profileFeedback,
+    profileForm,
     presenceMap,
     primeServiceLogForm,
     rateAttendee,
@@ -120,6 +125,7 @@ function App() {
     setMapPickMode,
     setMapPinForm,
     setMessageDraft,
+    setProfileForm,
     setSelectedPinId,
     setServiceLogForm,
     setSpotPhotoForm,
@@ -130,6 +136,7 @@ function App() {
     spotPhotoForm,
     submitFuelLog,
     submitMapPin,
+    submitProfile,
     submitServiceLog,
     submitSpotPhoto,
     submitWashReview,
@@ -353,6 +360,20 @@ function App() {
                 user={user}
               />
             ) : null}
+
+            {activeTab === "profile" ? (
+              <ProfileScreen
+                onProfileFormChange={setProfileForm}
+                onSubmitProfile={submitProfile}
+                passportSummary={passportSummary}
+                profileCompletion={profileCompletion}
+                profileErrors={profileErrors}
+                profileFeedback={profileFeedback}
+                profileForm={profileForm}
+                tuningOptions={tuningOptions}
+                user={user}
+              />
+            ) : null}
           </Suspense>
         </div>
 
@@ -364,7 +385,7 @@ function App() {
           }`}
         >
           <div
-            className={`grid grid-cols-5 gap-2 border border-white/10 bg-[#111111]/95 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur ${
+            className={`grid grid-cols-6 gap-2 border border-white/10 bg-[#111111]/95 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur ${
               activeTab === "liveMap" ? "rounded-[1.35rem] p-1.5" : "rounded-[1.8rem] p-2"
             }`}
           >

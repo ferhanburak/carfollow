@@ -15,6 +15,7 @@ import { useDriveSession } from "./useDriveSession";
 import { useFirebaseSync } from "./useFirebaseSync";
 import { useClanGraph } from "./useClanGraph";
 import { useMapPins } from "./useMapPins";
+import { useProfileEditor } from "./useProfileEditor";
 import { useSocialGraph } from "./useSocialGraph";
 import { useVehiclePassport } from "./useVehiclePassport";
 
@@ -25,6 +26,18 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   const [clans, setClans] = useState(initialWorld.clans);
   const [drivers, setDrivers] = useState(initialWorld.drivers);
   const tickerRef = useRef(0);
+
+  const {
+    profileCompletion,
+    profileErrors,
+    profileFeedback,
+    profileForm,
+    setProfileForm,
+    submitProfile,
+  } = useProfileEditor({
+    user,
+    setUser,
+  });
 
   const {
     approveCruiseJoinRequest,
@@ -246,6 +259,10 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     openConversation,
     passportSummary,
     pickMapLocation,
+    profileCompletion,
+    profileErrors,
+    profileFeedback,
+    profileForm,
     presenceMap,
     primeServiceLogForm,
     approveCruiseJoinRequest,
@@ -267,6 +284,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setMapPickMode,
     setMapPinForm,
     setMessageDraft,
+    setProfileForm,
     setSelectedPinId,
     setServiceLogForm,
     setSpotPhotoForm,
@@ -277,6 +295,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     spotPhotoForm,
     submitFuelLog,
     submitMapPin,
+    submitProfile,
     submitServiceLog,
     submitSpotPhoto,
     submitWashReview,
