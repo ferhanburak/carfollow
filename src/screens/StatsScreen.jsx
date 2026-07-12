@@ -16,14 +16,22 @@ function getActionTone(status) {
 }
 
 export function StatsScreen({
+  activeConversation,
+  activeConversationId,
   approveFriendRequest,
+  chatFeedback,
   clans,
+  conversationList,
   declineFriendRequest,
   drivers,
   friendSearchQuery,
   friendSearchResults,
+  messageDraft,
   onFriendSearchChange,
+  onMessageDraftChange,
+  openConversation,
   requestFriend,
+  sendMessage,
   socialFeedback,
   user,
   withdrawFriendRequest,
@@ -109,6 +117,7 @@ export function StatsScreen({
             ))}
           </div>
         </div>
+
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
             <p className="text-sm font-semibold">Gelen Istekler</p>
@@ -144,6 +153,7 @@ export function StatsScreen({
               )}
             </div>
           </div>
+
           <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
             <p className="text-sm font-semibold">Arkadas Listesi</p>
             <div className="mt-4 space-y-3">
@@ -156,15 +166,127 @@ export function StatsScreen({
                         <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
                         <p className="text-xs text-neutral-500">{entry.model} • {entry.region}</p>
                       </div>
-                      <span className="rounded-xl border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-xs font-semibold text-lime-300">
-                        Friend
-                      </span>
+                      <div className="flex flex-col gap-2">
+                        <span className="rounded-xl border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-center text-xs font-semibold text-lime-300">
+                          Friend
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => openConversation(entry)}
+                          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
+                        >
+                          Sohbet Ac
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
                   Henuz arkadas eklenmedi.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">DM Panel</p>
+              <p className="text-xs text-neutral-500">Realtime Database baglantisina hazir mock sohbet akisi.</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+              {conversationList.length} thread
+            </div>
+          </div>
+          {chatFeedback ? (
+            <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-100">
+              {chatFeedback}
+            </div>
+          ) : null}
+          <div className="mt-4 grid gap-4 md:grid-cols-[0.9fr,1.1fr]">
+            <div className="space-y-3">
+              {conversationList.length ? (
+                conversationList.map((conversation) => (
+                  <button
+                    key={conversation.id}
+                    type="button"
+                    onClick={() =>
+                      openConversation({
+                        plate: conversation.participantPlate,
+                        fullName: conversation.participantName,
+                        model: conversation.participantModel,
+                        avatar: conversation.participantAvatar,
+                      })
+                    }
+                    className={`w-full rounded-2xl border p-4 text-left transition ${
+                      activeConversationId === conversation.id
+                        ? "border-lime-400/30 bg-lime-400/10"
+                        : "border-white/8 bg-white/[0.03]"
+                    }`}
+                  >
+                    <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{conversation.participantPlate}</p>
+                    <p className="mt-1 text-sm font-semibold">{conversation.participantName}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{conversation.lastMessage?.body ?? "Mesaj yok"}</p>
+                  </button>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
+                  Henuz aktif DM thread yok.
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+              {activeConversation ? (
+                <>
+                  <div className="border-b border-white/8 pb-3">
+                    <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{activeConversation.participantPlate}</p>
+                    <p className="mt-1 text-sm font-semibold">{activeConversation.participantName}</p>
+                    <p className="text-xs text-neutral-500">{activeConversation.participantModel}</p>
+                  </div>
+                  <div className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1">
+                    {(activeConversation.messages ?? []).map((message) => (
+                      <div
+                        key={message.id}
+                        className={`rounded-2xl px-4 py-3 text-sm ${
+                          message.authorPlate === user.plate
+                            ? "ml-8 bg-lime-400/10 text-lime-100"
+                            : "mr-8 bg-black/30 text-neutral-200"
+                        }`}
+                      >
+                        <p>{message.body}</p>
+                        <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-neutral-500">{message.authorPlate}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <input
+                      value={messageDraft}
+                      onChange={(event) => onMessageDraftChange(event.target.value)}
+                      placeholder="Mesaj yaz..."
+                      className="h-12 flex-1 rounded-2xl border border-white/10 bg-black/20 px-4 text-sm outline-none focus:border-lime-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        sendMessage({
+                          plate: activeConversation.participantPlate,
+                          fullName: activeConversation.participantName,
+                          model: activeConversation.participantModel,
+                          avatar: activeConversation.participantAvatar,
+                        })
+                      }
+                      className="min-h-12 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black"
+                    >
+                      Gonder
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
+                  Sohbet acmak icin bir arkadas sec.
                 </div>
               )}
             </div>

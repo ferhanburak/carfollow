@@ -1,8 +1,8 @@
 import { lazy, Suspense } from "react";
 import { appId, navItems, tuningOptions } from "./data/mockData";
-import { AuthScreen } from "./screens/AuthScreen";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
+import { AuthScreen } from "./screens/AuthScreen";
 
 const DriveScreen = lazy(() => import("./screens/DriveScreen").then((module) => ({ default: module.DriveScreen })));
 const GarageScreen = lazy(() => import("./screens/GarageScreen").then((module) => ({ default: module.GarageScreen })));
@@ -57,16 +57,22 @@ function App() {
   } = useCruiserAuth();
 
   const {
+    activeConversation,
+    activeConversationId,
     activeTab,
+    approveFriendRequest,
+    chatFeedback,
     clans,
     clearDraftRoute,
+    conversationList,
+    declineFriendRequest,
     driveHud,
     drivers,
-    fuelInsights,
+    firebaseStatus,
     fuelErrors,
+    fuelInsights,
     friendSearchQuery,
     friendSearchResults,
-    firebaseStatus,
     isDriving,
     joinCruise,
     likeGalleryImage,
@@ -78,18 +84,19 @@ function App() {
     mapPinFeedback,
     mapPinForm,
     mapPins,
+    messageDraft,
+    openConversation,
     passportSummary,
-    primeServiceLogForm,
     pickMapLocation,
-    requestFriend,
-    approveFriendRequest,
-    declineFriendRequest,
+    primeServiceLogForm,
     rateAttendee,
     removeLastDraftRoutePoint,
+    requestFriend,
     resetSessionView,
     safeUser,
     selectedPin,
     selectedPinId,
+    sendMessage,
     serviceLogErrors,
     serviceLogFeedback,
     serviceLogForm,
@@ -97,8 +104,9 @@ function App() {
     setFriendSearchQuery,
     setMapPickMode,
     setMapPinForm,
-    setServiceLogForm,
+    setMessageDraft,
     setSelectedPinId,
+    setServiceLogForm,
     setSpotPhotoForm,
     setWashForm,
     socialFeedback,
@@ -106,17 +114,17 @@ function App() {
     spotPhotoFeedback,
     spotPhotoForm,
     submitFuelLog,
-    submitServiceLog,
     submitMapPin,
+    submitServiceLog,
     submitSpotPhoto,
     submitWashReview,
     toggleDrive,
     upcomingMaintenance,
     useSelectedPinCoordinates,
-    withdrawFriendRequest,
-    washForm,
     washErrors,
     washFeedback,
+    washForm,
+    withdrawFriendRequest,
   } = useCruiserWorld(user, setUser, setFuelForm);
 
   if (authMode !== "authenticated" || !user) {
@@ -219,11 +227,12 @@ function App() {
                 spotPhotoForm={spotPhotoForm}
                 submitWashReview={submitWashReview}
                 user={user}
-                washForm={washForm}
                 washErrors={washErrors}
                 washFeedback={washFeedback}
+                washForm={washForm}
               />
             ) : null}
+
             {activeTab === "liveMap" ? (
               <MapScreen
                 driveHud={driveHud}
@@ -247,11 +256,12 @@ function App() {
                 submitWashReview={submitWashReview}
                 toggleDrive={toggleDrive}
                 user={user}
-                washForm={washForm}
                 washErrors={washErrors}
                 washFeedback={washFeedback}
+                washForm={washForm}
               />
             ) : null}
+
             {activeTab === "drive" ? (
               <DriveScreen
                 driveHud={driveHud}
@@ -261,21 +271,31 @@ function App() {
                 user={user}
               />
             ) : null}
+
             {activeTab === "clans" ? (
               <StatsScreen
+                activeConversation={activeConversation}
+                activeConversationId={activeConversationId}
                 approveFriendRequest={approveFriendRequest}
+                chatFeedback={chatFeedback}
                 clans={clans}
+                conversationList={conversationList}
                 declineFriendRequest={declineFriendRequest}
                 drivers={drivers}
                 friendSearchQuery={friendSearchQuery}
                 friendSearchResults={friendSearchResults}
+                messageDraft={messageDraft}
                 onFriendSearchChange={setFriendSearchQuery}
+                onMessageDraftChange={setMessageDraft}
+                openConversation={openConversation}
                 requestFriend={requestFriend}
+                sendMessage={sendMessage}
                 socialFeedback={socialFeedback}
                 user={safeUser ?? user}
                 withdrawFriendRequest={withdrawFriendRequest}
               />
             ) : null}
+
             {activeTab === "garage" ? (
               <GarageScreen
                 appId={appId}
@@ -284,9 +304,9 @@ function App() {
                 fuelForm={fuelForm}
                 fuelInsights={fuelInsights}
                 onFuelFormChange={setFuelForm}
-                onSubmitFuelLog={(event) => submitFuelLog(event, fuelForm)}
                 onPrimeServiceLogForm={primeServiceLogForm}
                 onServiceLogFormChange={setServiceLogForm}
+                onSubmitFuelLog={(event) => submitFuelLog(event, fuelForm)}
                 onSubmitServiceLog={submitServiceLog}
                 passportSummary={passportSummary}
                 serviceLogErrors={serviceLogErrors}

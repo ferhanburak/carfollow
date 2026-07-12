@@ -1,20 +1,21 @@
 import { startTransition, useEffect, useRef, useState } from "react";
+import { socialDirectorySeed } from "../data/mockData";
 import {
   appendFuelLog,
   getInitialWorldState,
   tickAmbientDrivers,
 } from "../repositories/cruiserRepository";
+import {
+  computeFuelInsights,
+  createFuelForm,
+} from "../utils/garage";
+import { validateFuelForm } from "../utils/validation";
+import { useDirectMessages } from "./useDirectMessages";
 import { useDriveSession } from "./useDriveSession";
 import { useFirebaseSync } from "./useFirebaseSync";
 import { useMapPins } from "./useMapPins";
 import { useSocialGraph } from "./useSocialGraph";
 import { useVehiclePassport } from "./useVehiclePassport";
-import { socialDirectorySeed } from "../data/mockData";
-import {
-  createFuelForm,
-  computeFuelInsights,
-} from "../utils/garage";
-import { validateFuelForm } from "../utils/validation";
 
 export function useCruiserWorld(user, setUser, setFuelForm) {
   const initialWorld = getInitialWorldState();
@@ -23,6 +24,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   const [clans, setClans] = useState(initialWorld.clans);
   const [drivers, setDrivers] = useState(initialWorld.drivers);
   const tickerRef = useRef(0);
+
   const {
     clearDraftRoute,
     joinCruise,
@@ -61,6 +63,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     initialWorld,
     user,
   });
+
   const { firebaseStatus, syncFuelLog, syncServiceLog, syncTelemetry } = useFirebaseSync({
     initialWorld,
     user,
@@ -69,6 +72,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setClans,
     setDrivers,
   });
+
   const { driveHud, isDriving, resetDriveSession, toggleDrive: toggleDriveSession } = useDriveSession({
     user,
     setUser,
@@ -76,6 +80,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setDrivers,
     onTelemetrySync: syncTelemetry,
   });
+
   const {
     passportSummary,
     primeServiceLogForm,
@@ -90,6 +95,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setUser,
     syncServiceLog,
   });
+
   const {
     approveFriendRequest,
     declineFriendRequest,
@@ -103,6 +109,20 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   } = useSocialGraph({
     socialDirectory: socialDirectorySeed,
     user,
+    setUser,
+  });
+
+  const {
+    activeConversation,
+    activeConversationId,
+    chatFeedback,
+    conversationList,
+    messageDraft,
+    openConversation,
+    sendMessage,
+    setMessageDraft,
+  } = useDirectMessages({
+    user: safeUser ?? user,
     setUser,
   });
 
@@ -124,6 +144,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     if (!user) {
       return;
     }
+
     const validationErrors = validateFuelForm(nextFuelForm, user.odometer);
     setFuelErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
@@ -156,13 +177,20 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   };
 
   return {
+    activeConversation,
+    activeConversationId,
     activeTab,
+    approveFriendRequest,
+    chatFeedback,
     clans,
+    clearDraftRoute,
+    conversationList,
+    declineFriendRequest,
     driveHud,
     drivers,
     firebaseStatus,
-    fuelInsights,
     fuelErrors,
+    fuelInsights,
     friendSearchQuery,
     friendSearchResults,
     isDriving,
@@ -170,51 +198,52 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     likeGalleryImage,
     likePin,
     loadSpotPhotoFile,
+    mapDraftLocation,
+    mapPickMode,
     mapPinErrors,
     mapPinFeedback,
     mapPinForm,
-    passportSummary,
-    primeServiceLogForm,
-    requestFriend,
-    mapDraftLocation,
     mapPins,
-    mapPickMode,
+    messageDraft,
+    openConversation,
+    passportSummary,
     pickMapLocation,
-    approveFriendRequest,
-    declineFriendRequest,
+    primeServiceLogForm,
     rateAttendee,
+    removeLastDraftRoutePoint,
+    requestFriend,
     resetSessionView,
     safeUser,
     selectedPin,
     selectedPinId,
+    sendMessage,
     serviceLogErrors,
     serviceLogFeedback,
     serviceLogForm,
     setActiveTab,
     setFriendSearchQuery,
-    setMapPinForm,
     setMapPickMode,
-    setServiceLogForm,
+    setMapPinForm,
+    setMessageDraft,
     setSelectedPinId,
+    setServiceLogForm,
     setSpotPhotoForm,
     setWashForm,
-    clearDraftRoute,
-    removeLastDraftRoutePoint,
     socialFeedback,
     spotPhotoErrors,
     spotPhotoFeedback,
     spotPhotoForm,
     submitFuelLog,
-    submitServiceLog,
     submitMapPin,
+    submitServiceLog,
     submitSpotPhoto,
     submitWashReview,
     toggleDrive,
     upcomingMaintenance,
     useSelectedPinCoordinates,
-    withdrawFriendRequest,
-    washForm,
     washErrors,
     washFeedback,
+    washForm,
+    withdrawFriendRequest,
   };
 }

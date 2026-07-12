@@ -2,6 +2,7 @@ import { initialClans, initialDrivers, initialMapPins, quickProfiles } from "../
 import { applyPartServiceToUser } from "../utils/vehiclePassport";
 import { createDefaultParts, inferVehicleType, normalizeVehicleParts } from "../utils/vehicleParts";
 import { normalizeSocialState } from "../utils/socialGraph";
+import { normalizeConversations } from "../utils/socialChat";
 
 const ambientNodes = ["Eskisehir Yolu", "TEM North", "Mogan Ring", "FSM Koprusu", "Anadolu Otoyolu"];
 const routeNodes = ["Tunel Cikisi", "Sehir Disi Hat", "Viraj Koridoru", "Kuzey Dugumu", "Rolling Spot"];
@@ -120,6 +121,7 @@ export function createAuthenticatedUser(profile) {
     driverScore: Number(profile.driverScore ?? 80),
     harmonyVotes: Number(profile.harmonyVotes ?? 0),
     alertVotes: Number(profile.alertVotes ?? 0),
+    conversations: normalizeConversations(profile),
   };
 }
 

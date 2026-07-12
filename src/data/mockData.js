@@ -108,6 +108,31 @@ export const quickProfiles = [
         createdAt: 1752143400000,
       },
     ],
+    conversations: {
+      "06_PWA_101__35_SRT_908": {
+        id: "06_PWA_101__35_SRT_908",
+        participantPlate: "35 SRT 908",
+        participantName: "Ece Yalin",
+        participantModel: "Ducati Monster",
+        participantAvatar: "",
+        messages: [
+          {
+            id: "msg-seed-1",
+            authorPlate: "35 SRT 908",
+            authorName: "Ece Yalin",
+            body: "Mogan cikisi icin 22:30 bulusalim mi?",
+            createdAt: 1752231600000,
+          },
+          {
+            id: "msg-seed-2",
+            authorPlate: "06 PWA 101",
+            authorName: "Poyraz Alkan",
+            body: "Olur, ben de route'u hazirliyorum.",
+            createdAt: 1752232200000,
+          },
+        ],
+      },
+    },
   },
   {
     id: "p2",
@@ -180,6 +205,24 @@ export const quickProfiles = [
         createdAt: 1752172200000,
       },
     ],
+    conversations: {
+      "34_MOTO_410__34_TURBO_54": {
+        id: "34_MOTO_410__34_TURBO_54",
+        participantPlate: "34 TURBO 54",
+        participantName: "Can Sarp",
+        participantModel: "Golf GTI Clubsport",
+        participantAvatar: "",
+        messages: [
+          {
+            id: "msg-seed-3",
+            authorPlate: "34 TURBO 54",
+            authorName: "Can Sarp",
+            body: "Arkadaslara ozel mini konvoy acalim mi?",
+            createdAt: 1752235200000,
+          },
+        ],
+      },
+    },
   },
 ];
 
