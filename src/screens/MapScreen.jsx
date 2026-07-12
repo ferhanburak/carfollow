@@ -47,6 +47,7 @@ function OverlayCard({ children, title, onClose }) {
 }
 
 export function MapScreen({
+  convoyFeedback,
   driveHud,
   isDriving,
   joinCruise,
@@ -54,6 +55,8 @@ export function MapScreen({
   likePin,
   loadSpotPhotoFile,
   mapPins,
+  onApproveCruiseJoinRequest,
+  onDeclineCruiseJoinRequest,
   onSelectPin,
   onSetSpotPhotoForm,
   onSetWashForm,
@@ -117,12 +120,15 @@ export function MapScreen({
             <PinPanel
               pin={selectedPin}
               user={user}
+              convoyFeedback={convoyFeedback}
               spotPhotoErrors={spotPhotoErrors}
               spotPhotoFeedback={spotPhotoFeedback}
               spotPhotoForm={spotPhotoForm}
               washForm={washForm}
               washErrors={washErrors}
               washFeedback={washFeedback}
+              onApproveCruiseJoinRequest={onApproveCruiseJoinRequest}
+              onDeclineCruiseJoinRequest={onDeclineCruiseJoinRequest}
               onJoinCruise={joinCruise}
               onLikeGallery={likeGalleryImage}
               onLikePin={likePin}

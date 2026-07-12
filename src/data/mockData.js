@@ -437,9 +437,36 @@ export const initialMapPins = [
     time: "23:30",
     route: "Beytepe -> Incek -> Mogan",
     visibility: "public",
+    capacity: 8,
     createdByPlate: "06 PWA 101",
     createdByName: "Poyraz Alkan",
     createdByClan: "Neon Wolves",
+    invitedGuests: [
+      {
+        plate: "35 SRT 908",
+        fullName: "Ece Yalin",
+        model: "Ducati Monster",
+        region: "Izmir Cevre",
+      },
+      {
+        plate: "34 MOTO 410",
+        fullName: "Mert Ozan",
+        model: "Yamaha R6",
+        region: "Istanbul Kuzey",
+      },
+    ],
+    pendingRequests: [
+      {
+        plate: "16 GTI 232",
+        fullName: "Mete Alp",
+        model: "Golf GTI",
+        region: "Bursa Ring",
+        score: 84,
+        harmonyVotes: 11,
+        alertVotes: 3,
+        status: "Pending Review",
+      },
+    ],
     routePath: [
       { lat: 39.9042, lng: 32.7315 },
       { lat: 39.8728, lng: 32.7562 },

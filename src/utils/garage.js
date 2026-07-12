@@ -32,6 +32,8 @@ export const createMapPinForm = (seedPin) => ({
   note: "",
   routePoints: seedPin?.routePath ?? [],
   visibility: seedPin?.visibility ?? "friends",
+  capacity: seedPin?.capacity ?? 12,
+  invitedPlates: seedPin?.invitedGuests?.map((guest) => guest.plate) ?? [],
 });
 
 export const createSpotPhotoForm = () => ({

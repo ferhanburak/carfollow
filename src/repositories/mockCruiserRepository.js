@@ -51,6 +51,19 @@ function normalizeAttendee(attendee) {
   };
 }
 
+function normalizeInvitee(invitee) {
+  if (!invitee) {
+    return null;
+  }
+
+  return {
+    plate: invitee.plate,
+    fullName: invitee.fullName,
+    model: invitee.model,
+    region: invitee.region,
+  };
+}
+
 export function createAttendeeRecord(user) {
   const score = user.driverScore ?? 82;
   const harmonyVotes = user.harmonyVotes ?? 0;
@@ -244,16 +257,104 @@ export function joinCruiseAttendee(mapPins, pinId, attendee) {
     }
 
     const currentAttendees = (pin.attendees ?? []).map(normalizeAttendee);
+    const pendingRequests = (pin.pendingRequests ?? []).map(normalizeAttendee);
     if (currentAttendees.some((entry) => entry.plate === attendee.plate)) {
       return {
         ...pin,
         attendees: currentAttendees,
+        pendingRequests,
+      };
+    }
+
+    const capacity = Number(pin.capacity ?? 999);
+    const invitedGuests = (pin.invitedGuests ?? []).map(normalizeInvitee).filter(Boolean);
+    const isInvited = invitedGuests.some((entry) => entry.plate === attendee.plate);
+    const requiresApproval = pin.visibility !== "public" && !isInvited && pin.createdByPlate !== attendee.plate;
+    const isFull = currentAttendees.length >= capacity;
+
+    if (isFull) {
+      return {
+        ...pin,
+        attendees: currentAttendees,
+        pendingRequests,
+        convoyStatus: "full",
+      };
+    }
+
+    if (requiresApproval) {
+      if (pendingRequests.some((entry) => entry.plate === attendee.plate)) {
+        return {
+          ...pin,
+          attendees: currentAttendees,
+          pendingRequests,
+        };
+      }
+
+      return {
+        ...pin,
+        attendees: currentAttendees,
+        pendingRequests: [
+          ...pendingRequests,
+          {
+            ...normalizeAttendee(attendee),
+            status: "Pending Review",
+          },
+        ],
       };
     }
 
     return {
       ...pin,
       attendees: [...currentAttendees, normalizeAttendee(attendee)],
+      pendingRequests: pendingRequests.filter((entry) => entry.plate !== attendee.plate),
+    };
+  });
+}
+
+export function approveCruiseRequest(mapPins, pinId, plate) {
+  return mapPins.map((pin) => {
+    if (pin.id !== pinId) {
+      return pin;
+    }
+
+    const currentAttendees = (pin.attendees ?? []).map(normalizeAttendee);
+    const pendingRequests = (pin.pendingRequests ?? []).map(normalizeAttendee);
+    const request = pendingRequests.find((entry) => entry.plate === plate);
+    if (!request) {
+      return {
+        ...pin,
+        attendees: currentAttendees,
+        pendingRequests,
+      };
+    }
+
+    const capacity = Number(pin.capacity ?? 999);
+    if (currentAttendees.length >= capacity) {
+      return {
+        ...pin,
+        attendees: currentAttendees,
+        pendingRequests,
+        convoyStatus: "full",
+      };
+    }
+
+    return {
+      ...pin,
+      attendees: [...currentAttendees, { ...request, status: request.status === "Pending Review" ? "Convoy Ready" : request.status }],
+      pendingRequests: pendingRequests.filter((entry) => entry.plate !== plate),
+    };
+  });
+}
+
+export function declineCruiseRequest(mapPins, pinId, plate) {
+  return mapPins.map((pin) => {
+    if (pin.id !== pinId) {
+      return pin;
+    }
+
+    return {
+      ...pin,
+      pendingRequests: (pin.pendingRequests ?? []).filter((entry) => entry.plate !== plate),
     };
   });
 }

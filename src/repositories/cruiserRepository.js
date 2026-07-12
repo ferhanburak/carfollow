@@ -16,6 +16,8 @@ export {
   incrementUserOdometer,
   joinCruiseAttendee,
   listQuickProfiles,
+  approveCruiseRequest,
+  declineCruiseRequest,
   rateCruiseAttendee,
   syncActiveDriver,
   tickAmbientDrivers,

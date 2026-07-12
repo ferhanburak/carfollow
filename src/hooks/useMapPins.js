@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  approveCruiseRequest,
   appendMapPin,
   appendSpotPhoto,
   appendWashReview,
   createAttendeeRecord,
+  declineCruiseRequest,
   incrementGalleryLike,
   incrementPinLike,
   joinCruiseAttendee,
@@ -82,6 +84,7 @@ export function useMapPins({ initialWorld, user }) {
   const [spotPhotoForm, setSpotPhotoForm] = useState(createSpotPhotoForm);
   const [spotPhotoErrors, setSpotPhotoErrors] = useState({});
   const [spotPhotoFeedback, setSpotPhotoFeedback] = useState("");
+  const [convoyFeedback, setConvoyFeedback] = useState("");
 
   const visibleMapPins = useMemo(() => filterVisibleMapPins(mapPins, user), [mapPins, user]);
   const selectedPin = visibleMapPins.find((pin) => pin.id === selectedPinId) ?? visibleMapPins[0] ?? null;
@@ -160,7 +163,58 @@ export function useMapPins({ initialWorld, user }) {
       nextPin = nextPins.find((pin) => pin.id === selectedPin.id) ?? null;
       return nextPins;
     });
+
+    if (nextPin?.convoyStatus === "full") {
+      setConvoyFeedback("Bu konvoy kapasiteye ulasti.");
+    } else if ((nextPin?.pendingRequests ?? []).some((entry) => entry.plate === user.plate)) {
+      setConvoyFeedback("Katilim istegin host onayina gonderildi.");
+    } else if ((nextPin?.attendees ?? []).some((entry) => entry.plate === user.plate)) {
+      setConvoyFeedback("Konvoya katilim onaylandi.");
+    }
+
     void saveFirebaseCruiseJoin(selectedPin.id, user.plate);
+    if (nextPin) {
+      void saveFirebaseMapPin(nextPin);
+    }
+  };
+
+  const approveCruiseJoinRequest = (plate) => {
+    if (!selectedPin || selectedPin.type !== "meet") {
+      return;
+    }
+
+    let nextPin = null;
+    setMapPins((current) => {
+      const nextPins = approveCruiseRequest(current, selectedPin.id, plate);
+      nextPin = nextPins.find((pin) => pin.id === selectedPin.id) ?? null;
+      return nextPins;
+    });
+
+    if (nextPin?.convoyStatus === "full") {
+      setConvoyFeedback("Kapasite dolu oldugu icin istek onaylanamadi.");
+    } else {
+      setConvoyFeedback(`${plate} konvoya kabul edildi.`);
+    }
+
+    if (nextPin) {
+      void saveFirebaseMapPin(nextPin);
+    }
+  };
+
+  const declineCruiseJoinRequest = (plate) => {
+    if (!selectedPin || selectedPin.type !== "meet") {
+      return;
+    }
+
+    let nextPin = null;
+    setMapPins((current) => {
+      const nextPins = declineCruiseRequest(current, selectedPin.id, plate);
+      nextPin = nextPins.find((pin) => pin.id === selectedPin.id) ?? null;
+      return nextPins;
+    });
+
+    setConvoyFeedback(`${plate} icin katilim istegi reddedildi.`);
+
     if (nextPin) {
       void saveFirebaseMapPin(nextPin);
     }
@@ -298,11 +352,21 @@ export function useMapPins({ initialWorld, user }) {
         ...basePin,
         time: mapPinForm.time,
         route: mapPinForm.route.trim(),
+        capacity: Number(mapPinForm.capacity),
         routePath: mapPinForm.routePoints.length > 1 ? mapPinForm.routePoints : buildMeetRoutePath(lat, lng),
         visibility: mapPinForm.visibility,
         createdByPlate: user.plate,
         createdByName: user.fullName,
         createdByClan: user.clan ?? "",
+        invitedGuests: (user.friends ?? [])
+          .filter((friend) => (mapPinForm.invitedPlates ?? []).includes(friend.plate))
+          .map((friend) => ({
+            plate: friend.plate,
+            fullName: friend.fullName,
+            model: friend.model,
+            region: friend.region,
+          })),
+        pendingRequests: [],
         attendees: [createAttendeeRecord(user)],
       };
     } else {
@@ -415,10 +479,14 @@ export function useMapPins({ initialWorld, user }) {
     setWashFeedback("");
     setMapPinFeedback("");
     setSpotPhotoFeedback("");
+    setConvoyFeedback("");
   };
 
   return {
+    approveCruiseJoinRequest,
     clearDraftRoute,
+    convoyFeedback,
+    declineCruiseJoinRequest,
     joinCruise,
     likeGalleryImage,
     likePin,

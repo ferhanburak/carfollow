@@ -7,7 +7,9 @@ function ReputationBadge({ attendee }) {
       ? "border-rose-400/30 bg-rose-500/10 text-rose-200"
       : attendee.status === "Uyumlu"
         ? "border-lime-400/30 bg-lime-400/10 text-lime-200"
-        : "border-white/10 bg-white/5 text-neutral-300";
+        : attendee.status === "Pending Review"
+          ? "border-amber-400/30 bg-amber-400/10 text-amber-200"
+          : "border-white/10 bg-white/5 text-neutral-300";
 
   return <span className={`rounded-full border px-3 py-1 text-[11px] ${styles}`}>{attendee.status}</span>;
 }
@@ -29,7 +31,63 @@ function normalizeAttendee(attendee) {
   return attendee;
 }
 
-export function MeetPinPanel({ pin, user, onJoinCruise, onRateAttendee }) {
+function getJoinState(pin, user) {
+  const attendees = (pin.attendees ?? []).map(normalizeAttendee);
+  const requests = (pin.pendingRequests ?? []).map(normalizeAttendee);
+  const invitedGuests = pin.invitedGuests ?? [];
+
+  if (pin.createdByPlate === user.plate) {
+    return "host";
+  }
+  if (attendees.some((entry) => entry.plate === user.plate)) {
+    return "joined";
+  }
+  if (requests.some((entry) => entry.plate === user.plate)) {
+    return "requested";
+  }
+  if (invitedGuests.some((entry) => entry.plate === user.plate)) {
+    return "invited";
+  }
+
+  return "available";
+}
+
+function getJoinButtonLabel(joinState, visibility) {
+  if (joinState === "host") {
+    return "Host Panel";
+  }
+  if (joinState === "joined") {
+    return "Konvoyda";
+  }
+  if (joinState === "requested") {
+    return "Istek Gonderildi";
+  }
+  if (joinState === "invited") {
+    return "Daveti Kabul Et";
+  }
+  if (visibility === "public") {
+    return "Join Cruise";
+  }
+
+  return "Katilim Istegi Gonder";
+}
+
+export function MeetPinPanel({
+  convoyFeedback,
+  pin,
+  user,
+  onApproveCruiseJoinRequest,
+  onDeclineCruiseJoinRequest,
+  onJoinCruise,
+  onRateAttendee,
+}) {
+  const attendees = (pin.attendees ?? []).map(normalizeAttendee);
+  const pendingRequests = (pin.pendingRequests ?? []).map(normalizeAttendee);
+  const invitedGuests = pin.invitedGuests ?? [];
+  const joinState = getJoinState(pin, user);
+  const isHost = joinState === "host";
+  const isJoinDisabled = joinState === "host" || joinState === "joined" || joinState === "requested";
+
   return (
     <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
       <div className="flex items-start justify-between gap-3">
@@ -37,15 +95,20 @@ export function MeetPinPanel({ pin, user, onJoinCruise, onRateAttendee }) {
           <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Group Meets & Cruises</p>
           <h3 className="mt-2 text-xl font-black">{pin.name}</h3>
         </div>
-        <InsightCard label="Convoy Size" value={`${pin.attendees.length}`} />
+        <InsightCard label="Convoy Size" value={`${attendees.length}/${pin.capacity ?? attendees.length}`} />
       </div>
+
       <div className="mt-4 grid grid-cols-2 gap-3">
         <InsightCard label="Launch Time" value={pin.time} />
         <InsightCard label="Route" value={pin.route} />
       </div>
+
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-lime-300">
           {getMeetVisibilityLabel(pin.visibility)}
+        </span>
+        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-300">
+          Capacity {pin.capacity ?? attendees.length}
         </span>
         {pin.createdByPlate ? (
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-300">
@@ -53,16 +116,84 @@ export function MeetPinPanel({ pin, user, onJoinCruise, onRateAttendee }) {
           </span>
         ) : null}
       </div>
+
+      {convoyFeedback ? (
+        <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-100">
+          {convoyFeedback}
+        </div>
+      ) : null}
+
       <button
         type="button"
+        disabled={isJoinDisabled}
         onClick={onJoinCruise}
-        className="mt-4 min-h-12 w-full rounded-2xl bg-lime-400 font-bold text-black shadow-[0_0_20px_rgba(163,230,53,0.35)]"
+        className="mt-4 min-h-12 w-full rounded-2xl bg-lime-400 font-bold text-black shadow-[0_0_20px_rgba(163,230,53,0.35)] disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Join Cruise
+        {getJoinButtonLabel(joinState, pin.visibility)}
       </button>
+
+      {invitedGuests.length ? (
+        <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold">Invited Drivers</p>
+            <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-300">
+              {invitedGuests.length} invited
+            </span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {invitedGuests.map((guest) => (
+              <div key={guest.plate} className="rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-3">
+                <p className="font-mono text-xs tracking-[0.14em] text-lime-300">{guest.plate}</p>
+                <p className="mt-1 text-sm font-semibold">{guest.fullName}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {isHost && pendingRequests.length ? (
+        <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold">Pending RSVP Requests</p>
+            <span className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-amber-200">
+              {pendingRequests.length} waiting
+            </span>
+          </div>
+          <div className="mt-3 space-y-3">
+            {pendingRequests.map((attendee) => (
+              <div key={attendee.plate} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{attendee.plate}</p>
+                    <p className="mt-1 text-sm font-semibold">{attendee.fullName}</p>
+                    <p className="text-xs text-neutral-500">{attendee.model} / {attendee.region}</p>
+                  </div>
+                  <ReputationBadge attendee={attendee} />
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onApproveCruiseJoinRequest(attendee.plate)}
+                    className="min-h-12 rounded-2xl bg-lime-400 px-4 text-sm font-bold text-black"
+                  >
+                    Kabul Et
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDeclineCruiseJoinRequest(attendee.plate)}
+                    className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-neutral-200"
+                  >
+                    Reddet
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-4 space-y-3">
-        {pin.attendees.map((rawAttendee) => {
-          const attendee = normalizeAttendee(rawAttendee);
+        {attendees.map((attendee) => {
           const isSelf = attendee.plate === user.plate;
 
           return (

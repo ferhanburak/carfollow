@@ -27,7 +27,10 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   const tickerRef = useRef(0);
 
   const {
+    approveCruiseJoinRequest,
     clearDraftRoute,
+    convoyFeedback,
+    declineCruiseJoinRequest,
     joinCruise,
     likeGalleryImage,
     likePin,
@@ -208,11 +211,13 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     clanForm,
     clans,
     clearDraftRoute,
+    convoyFeedback,
     conversationList,
     createNewClan,
     currentClan,
     declineFriendRequest,
     declineIncomingClanInvite,
+    declineCruiseJoinRequest,
     driveHud,
     drivers,
     firebaseStatus,
@@ -236,6 +241,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     passportSummary,
     pickMapLocation,
     primeServiceLogForm,
+    approveCruiseJoinRequest,
     rateAttendee,
     removeLastDraftRoutePoint,
     requestFriend,

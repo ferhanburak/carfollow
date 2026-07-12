@@ -60,6 +60,7 @@ function App() {
     activeConversation,
     activeConversationId,
     activeTab,
+    approveCruiseJoinRequest,
     acceptIncomingClanInvite,
     approveFriendRequest,
     chatFeedback,
@@ -67,9 +68,11 @@ function App() {
     clanForm,
     clans,
     clearDraftRoute,
+    convoyFeedback,
     conversationList,
     createNewClan,
     currentClan,
+    declineCruiseJoinRequest,
     declineFriendRequest,
     declineIncomingClanInvite,
     driveHud,
@@ -207,6 +210,7 @@ function App() {
             {activeTab === "map" ? (
               <MapHubScreen
                 clearDraftRoute={clearDraftRoute}
+                convoyFeedback={convoyFeedback}
                 draftLocation={mapDraftLocation}
                 joinCruise={joinCruise}
                 likeGalleryImage={likeGalleryImage}
@@ -218,6 +222,8 @@ function App() {
                 mapPinForm={mapPinForm}
                 mapPins={mapPins}
                 onPickLocation={pickMapLocation}
+                onApproveCruiseJoinRequest={approveCruiseJoinRequest}
+                onDeclineCruiseJoinRequest={declineCruiseJoinRequest}
                 onSelectPin={setSelectedPinId}
                 onSetMapPickMode={setMapPickMode}
                 onSetMapPinForm={setMapPinForm}
@@ -252,6 +258,8 @@ function App() {
                 loadSpotPhotoFile={loadSpotPhotoFile}
                 mapPins={mapPins}
                 onSelectPin={setSelectedPinId}
+                onApproveCruiseJoinRequest={approveCruiseJoinRequest}
+                onDeclineCruiseJoinRequest={declineCruiseJoinRequest}
                 onSetSpotPhotoForm={setSpotPhotoForm}
                 onSetWashForm={setWashForm}
                 onSubmitSpotPhoto={submitSpotPhoto}
@@ -259,6 +267,7 @@ function App() {
                 rateAttendee={rateAttendee}
                 selectedPin={selectedPin}
                 selectedPinId={selectedPinId}
+                convoyFeedback={convoyFeedback}
                 spotPhotoErrors={spotPhotoErrors}
                 spotPhotoFeedback={spotPhotoFeedback}
                 spotPhotoForm={spotPhotoForm}

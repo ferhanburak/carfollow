@@ -22,6 +22,7 @@ export function MapComposerPanel({
   onSetMapPickMode,
   onSubmit,
   onUseSelectedCoordinates,
+  user,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const resolvedOpen = alwaysOpen || isOpen;
@@ -197,6 +198,18 @@ export function MapComposerPanel({
                   </CompactField>
                 </div>
 
+                <CompactField label="Capacity">
+                  <input
+                    type="number"
+                    min="2"
+                    max="50"
+                    value={form.capacity}
+                    onChange={(event) => onFormChange((current) => ({ ...current, capacity: event.target.value }))}
+                    className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
+                  />
+                  {errors.capacity ? <p className="text-xs text-rose-300">{errors.capacity}</p> : null}
+                </CompactField>
+
                 <CompactField label="Visibility">
                   <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/8 bg-black/20 p-2">
                     {visibilityOptions.map((visibility) => (
@@ -213,6 +226,46 @@ export function MapComposerPanel({
                     ))}
                   </div>
                   {errors.visibility ? <p className="text-xs text-rose-300">{errors.visibility}</p> : null}
+                </CompactField>
+
+                <CompactField label="Invite Friends">
+                  <div className="space-y-2 rounded-2xl border border-white/8 bg-black/20 p-3">
+                    {(user?.friends ?? []).length ? (
+                      user.friends.map((friend) => {
+                        const active = (form.invitedPlates ?? []).includes(friend.plate);
+
+                        return (
+                          <button
+                            key={friend.plate}
+                            type="button"
+                            onClick={() =>
+                              onFormChange((current) => ({
+                                ...current,
+                                invitedPlates: active
+                                  ? current.invitedPlates.filter((plate) => plate !== friend.plate)
+                                  : [...current.invitedPlates, friend.plate],
+                              }))
+                            }
+                            className={`flex min-h-12 w-full items-center justify-between rounded-2xl border px-3 py-2 text-left transition ${
+                              active
+                                ? "border-lime-400/30 bg-lime-400/10 text-lime-200"
+                                : "border-white/10 bg-white/5 text-neutral-300"
+                            }`}
+                          >
+                            <span>
+                              <span className="block font-mono text-xs tracking-[0.14em]">{friend.plate}</span>
+                              <span className="block text-xs text-neutral-400">{friend.fullName}</span>
+                            </span>
+                            <span className="text-[10px] uppercase tracking-[0.18em]">
+                              {active ? "Invited" : "Add"}
+                            </span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <p className="text-xs text-neutral-500">Davet eklemek icin once arkadas listeni buyut.</p>
+                    )}
+                  </div>
                 </CompactField>
 
                 <div className="rounded-2xl border border-white/8 bg-black/20 p-4">

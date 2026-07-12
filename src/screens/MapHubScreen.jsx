@@ -3,6 +3,7 @@ import { MapComposerPanel } from "../components/MapComposerPanel";
 import { PinPanel } from "../components/PinPanel";
 
 export function MapHubScreen({
+  convoyFeedback,
   clearDraftRoute,
   draftLocation,
   joinCruise,
@@ -14,6 +15,8 @@ export function MapHubScreen({
   mapPinFeedback,
   mapPinForm,
   mapPins,
+  onApproveCruiseJoinRequest,
+  onDeclineCruiseJoinRequest,
   onPickLocation,
   onSelectPin,
   onSetMapPickMode,
@@ -68,16 +71,20 @@ export function MapHubScreen({
         onSetMapPickMode={onSetMapPickMode}
         onSubmit={onSubmitMapPin}
         onUseSelectedCoordinates={onUseSelectedCoordinates}
+        user={user}
       />
       <PinPanel
         pin={selectedPin}
         user={user}
+        convoyFeedback={convoyFeedback}
         spotPhotoErrors={spotPhotoErrors}
         spotPhotoFeedback={spotPhotoFeedback}
         spotPhotoForm={spotPhotoForm}
         washForm={washForm}
         washErrors={washErrors}
         washFeedback={washFeedback}
+        onApproveCruiseJoinRequest={onApproveCruiseJoinRequest}
+        onDeclineCruiseJoinRequest={onDeclineCruiseJoinRequest}
         onJoinCruise={joinCruise}
         onLikeGallery={likeGalleryImage}
         onLikePin={likePin}
