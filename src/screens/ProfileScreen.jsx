@@ -1,7 +1,10 @@
 import { VehiclePassportSummary } from "../components/garage/VehiclePassportSummary";
 import { CompactField, InsightCard } from "../components/ui";
+import { buildAchievementProgress, buildPersonalStats } from "../utils/socialStats";
 
 export function ProfileScreen({
+  onOpenService,
+  onOpenStats,
   passportSummary,
   profileCompletion,
   profileErrors,
@@ -12,6 +15,15 @@ export function ProfileScreen({
   onProfileFormChange,
   onSubmitProfile,
 }) {
+  const achievementProgress = buildAchievementProgress(user);
+  const personalStats = buildPersonalStats(user);
+  const socialSummary = [
+    { key: "friends", label: "Arkadas", value: `${user.friends?.length ?? 0}` },
+    { key: "incoming", label: "Gelen Istek", value: `${user.incomingRequests?.length ?? 0}` },
+    { key: "outgoing", label: "Giden Istek", value: `${user.outgoingRequests?.length ?? 0}` },
+    { key: "clan-invites", label: "Klan Daveti", value: `${user.clanInvites?.length ?? 0}` },
+  ];
+
   return (
     <section className="space-y-4">
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
@@ -40,6 +52,23 @@ export function ProfileScreen({
             </span>
           ))}
         </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={onOpenStats}
+            className="min-h-12 rounded-2xl bg-lime-400 font-semibold text-black shadow-[0_0_20px_rgba(163,230,53,0.3)]"
+          >
+            Stats Ekranina Git
+          </button>
+          <button
+            type="button"
+            onClick={onOpenService}
+            className="min-h-12 rounded-2xl border border-white/10 bg-black/20 font-semibold text-neutral-200"
+          >
+            Servis Defterini Ac
+          </button>
+        </div>
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
@@ -53,6 +82,90 @@ export function ProfileScreen({
           </span>
         </div>
         {passportSummary ? <VehiclePassportSummary summary={passportSummary} /> : null}
+      </div>
+
+      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Driver Stats Snapshot</p>
+            <p className="text-xs text-neutral-500">Bireysel performans, servis disiplini ve sosyal ag ozeti.</p>
+          </div>
+          <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">Live Profile</span>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {personalStats.map((stat) => (
+            <InsightCard key={stat.key} label={stat.label} value={stat.value} />
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Achievement Progress</p>
+            <p className="text-xs text-neutral-500">Unvanlari nasil kazanacagini ve ne kadar kaldigini net gor.</p>
+          </div>
+          <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">{(user.badges ?? []).length} aktif unvan</span>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {achievementProgress.map((achievement) => (
+            <div key={achievement.key} className="rounded-2xl border border-white/8 bg-black/20 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-neutral-100">{achievement.title}</p>
+                  <p className="mt-1 text-xs text-neutral-500">{achievement.description}</p>
+                </div>
+                <span
+                  className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
+                    achievement.unlocked ? "bg-lime-400/15 text-lime-200" : "bg-white/8 text-neutral-300"
+                  }`}
+                >
+                  {achievement.unlocked ? "Unlocked" : `%${achievement.percent}`}
+                </span>
+              </div>
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/8">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${
+                    achievement.unlocked ? "bg-lime-400" : achievement.percent >= 70 ? "bg-amber-400" : "bg-white/30"
+                  }`}
+                  style={{ width: `${achievement.percent}%` }}
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs text-neutral-500">
+                <span>
+                  {achievement.current} / {achievement.target} {achievement.unit}
+                </span>
+                <span>{achievement.unlocked ? "Tamamlandi" : "Devam ediyor"}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Social Cockpit</p>
+            <p className="text-xs text-neutral-500">Arkadaslar, davetler ve klan akisina hizli bakis.</p>
+          </div>
+          <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">Crew Pulse</span>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {socialSummary.map((item) => (
+            <InsightCard key={item.key} label={item.label} value={item.value} />
+          ))}
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-neutral-300">
+          <p className="font-semibold text-neutral-100">Mevcut klan</p>
+          <p className="mt-2">{user.clan ?? "Klan yok"}</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            Rol: {user.clanRole ?? "member"} / Uyum oyu: {user.harmonyVotes ?? 0} / Uyari oyu: {user.alertVotes ?? 0}
+          </p>
+        </div>
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">

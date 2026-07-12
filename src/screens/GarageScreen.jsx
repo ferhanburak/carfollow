@@ -6,7 +6,7 @@ import { VehicleHealthDiagram } from "../components/garage/VehicleHealthDiagram"
 import { VehiclePassportSummary } from "../components/garage/VehiclePassportSummary";
 import { CompactField, InsightCard } from "../components/ui";
 import { formatNumber } from "../utils/garage";
-import { getPartHealthSnapshot } from "../utils/vehiclePassport";
+import { formatServiceDate, getPartHealthSnapshot } from "../utils/vehiclePassport";
 
 function formatSyncTime(timestamp) {
   if (!timestamp) {
@@ -60,7 +60,22 @@ export function GarageScreen({
   const safeFuelLogs = user.fuelLogs ?? [];
   const partsByKey = new Map(safeParts.map((part) => [part.key, part]));
   const [selectedPartKey, setSelectedPartKey] = useState(safeParts[0]?.key ?? null);
+  const [historyTypeFilter, setHistoryTypeFilter] = useState("all");
   const activeServicePart = safeParts.find((part) => part.key === serviceLogForm?.partKey) ?? null;
+  const selectedPart = safeParts.find((part) => part.key === selectedPartKey) ?? safeParts[0] ?? null;
+  const filteredServiceLogs = safeServiceLogs.filter((log) => {
+    const matchesPart = selectedPartKey ? log.partKey === selectedPartKey : true;
+    const matchesType = historyTypeFilter === "all" ? true : log.type === historyTypeFilter;
+    return matchesPart && matchesType;
+  });
+  const selectedPartLogCount = safeServiceLogs.filter((log) => log.partKey === selectedPartKey).length;
+  const selectedPartSpend = safeServiceLogs
+    .filter((log) => log.partKey === selectedPartKey)
+    .reduce((sum, log) => sum + Number(log.cost ?? 0), 0);
+  const lastSelectedPartLog =
+    [...safeServiceLogs]
+      .filter((log) => log.partKey === selectedPartKey)
+      .sort((left, right) => new Date(right.serviceDate) - new Date(left.serviceDate))[0] ?? null;
 
   const handleSelectPart = (partKey) => {
     setSelectedPartKey(partKey);
@@ -201,9 +216,54 @@ export function GarageScreen({
             <p className="text-sm font-semibold">Service History</p>
             <p className="text-xs text-neutral-500">Tarih, KM ve servis atolyeleriyle arac gecmisi saklanir.</p>
           </div>
-          <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">{safeServiceLogs.length} kayit</span>
+          <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">{filteredServiceLogs.length} gorunuyor</span>
         </div>
-        <ServiceHistoryList logs={safeServiceLogs} partsByKey={partsByKey} />
+
+        {selectedPart ? (
+          <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-lime-400">Part History Explorer</p>
+                <p className="mt-2 text-lg font-semibold text-neutral-100">{selectedPart.name}</p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Diyagramdan secilen parcaya ait bakim akisini burada filtreleyebilirsin.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onPrimeServiceLogForm(selectedPart.key, "replacement")}
+                className="min-h-12 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 text-xs font-semibold text-lime-200"
+              >
+                Bugun Degisti
+              </button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              <InsightCard label="Kayit" value={`${selectedPartLogCount}`} />
+              <InsightCard label="Toplam Masraf" value={`${formatNumber(selectedPartSpend)} TL`} />
+              <InsightCard label="Son Islem" value={lastSelectedPartLog ? formatServiceDate(lastSelectedPartLog.serviceDate) : "--"} />
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {["all", "replacement", "inspection", "repair"].map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setHistoryTypeFilter(type)}
+              className={`min-h-12 rounded-2xl px-4 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                historyTypeFilter === type
+                  ? "bg-lime-400 text-black shadow-[0_0_18px_rgba(163,230,53,0.28)]"
+                  : "border border-white/10 bg-black/20 text-neutral-300"
+              }`}
+            >
+              {type === "all" ? "All" : type}
+            </button>
+          ))}
+        </div>
+
+        <ServiceHistoryList logs={filteredServiceLogs} partsByKey={partsByKey} />
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">

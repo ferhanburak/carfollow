@@ -364,6 +364,8 @@ function App() {
             {activeTab === "profile" ? (
               <ProfileScreen
                 onProfileFormChange={setProfileForm}
+                onOpenService={() => setActiveTab("garage")}
+                onOpenStats={() => setActiveTab("clans")}
                 onSubmitProfile={submitProfile}
                 passportSummary={passportSummary}
                 profileCompletion={profileCompletion}

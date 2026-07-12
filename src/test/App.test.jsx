@@ -111,4 +111,17 @@ describe("App", () => {
     expect(screen.getByText("Review added successfully.")).toBeInTheDocument();
     expect(screen.getByText("Foam was dense and rinse quality stayed stable.")).toBeInTheDocument();
   });
+
+  it("shows achievements and profile stats on the dedicated profile screen", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
+    await user.click(screen.getByRole("button", { name: /Profil/i }));
+
+    expect(await screen.findByText("Achievement Progress")).toBeInTheDocument();
+    expect(screen.getByText("Driver Stats Snapshot")).toBeInTheDocument();
+    expect(screen.getByText("Social Cockpit")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Stats Ekranina Git" })).toBeInTheDocument();
+  });
 });
