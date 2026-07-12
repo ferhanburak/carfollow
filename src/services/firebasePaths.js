@@ -15,3 +15,11 @@ export function privateUserCollectionPath(userId, collectionName, resolvedAppId 
 export function realtimeDmPath(plate) {
   return `directMessages/${plate.replaceAll(" ", "_")}`;
 }
+
+export function realtimeDmThreadsPath(resolvedAppId = resolveAppId()) {
+  return `artifacts/${resolvedAppId}/realtime/directMessages/threads`;
+}
+
+export function realtimeDmThreadPath(threadId, resolvedAppId = resolveAppId()) {
+  return `${realtimeDmThreadsPath(resolvedAppId)}/${threadId}`;
+}

@@ -29,10 +29,12 @@ export {
   loadFirebaseWorldState,
   saveFirebaseActiveDriver,
   saveFirebaseCruiseJoin,
+  saveFirebaseDirectMessage,
   saveFirebaseFuelLog,
   saveFirebaseServiceLog,
   saveFirebaseMapPin,
   saveFirebaseVehiclePart,
   saveFirebaseUserProfile,
   saveFirebaseWashReview,
+  subscribeFirebaseDirectMessages,
 } from "./firebaseCruiserRepository";

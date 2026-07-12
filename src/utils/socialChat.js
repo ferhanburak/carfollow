@@ -35,6 +35,35 @@ export function buildConversationList(user) {
     .sort((left, right) => Number(right.lastMessage?.createdAt ?? 0) - Number(left.lastMessage?.createdAt ?? 0));
 }
 
+export function mergeConversations(...conversationGroups) {
+  const merged = {};
+
+  conversationGroups
+    .filter(Boolean)
+    .forEach((conversationGroup) => {
+      Object.entries(conversationGroup).forEach(([threadId, conversation]) => {
+        const currentConversation = merged[threadId] ?? {
+          ...conversation,
+          messages: [],
+        };
+
+        merged[threadId] = {
+          ...currentConversation,
+          ...conversation,
+          messages: sortMessages([
+            ...(currentConversation.messages ?? []),
+            ...(conversation.messages ?? []),
+          ]).filter((message, index, messages) => {
+            const firstIndex = messages.findIndex((entry) => entry.id === message.id);
+            return firstIndex === index;
+          }),
+        };
+      });
+    });
+
+  return merged;
+}
+
 export function appendDirectMessage(user, friend, messageText) {
   if (!user || !friend || !messageText.trim()) {
     return user;

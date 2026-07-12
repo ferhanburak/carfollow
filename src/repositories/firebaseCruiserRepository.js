@@ -2,6 +2,8 @@ import {
   privateUserCollectionPath,
   publicCollectionPath,
   realtimeDmPath,
+  realtimeDmThreadsPath,
+  realtimeDmThreadPath,
   resolveAppId,
 } from "../services/firebasePaths";
 import { getFirebaseServices, isFirebaseModeEnabled } from "../services/firebaseClient";
@@ -153,6 +155,98 @@ export async function saveFirebaseActiveDriver(driver) {
   return {
     authUid: authUser.uid,
     syncedAt: Date.now(),
+  };
+}
+
+function normalizeFirebaseThread(threadId, payload, userPlate) {
+  if (!payload || !userPlate) {
+    return null;
+  }
+
+  const participants = payload.participants ?? [];
+  if (!participants.includes(userPlate)) {
+    return null;
+  }
+
+  const participant = (payload.participantProfiles ?? []).find((entry) => entry.plate !== userPlate) ?? {};
+  const messages = Object.entries(payload.messages ?? {})
+    .map(([messageId, message]) => ({
+      id: message.id ?? messageId,
+      ...message,
+    }))
+    .sort((left, right) => Number(left.createdAt ?? 0) - Number(right.createdAt ?? 0));
+
+  return {
+    id: threadId,
+    participantPlate: participant.plate ?? payload.participants?.find((plate) => plate !== userPlate) ?? "UNKNOWN",
+    participantName: participant.fullName ?? participant.plate ?? "Unknown Driver",
+    participantModel: participant.model ?? "Unknown Setup",
+    participantAvatar: participant.avatar ?? "",
+    messages,
+    updatedAt: Number(payload.updatedAt ?? 0),
+  };
+}
+
+export async function subscribeFirebaseDirectMessages(userPlate, onThreadsChange) {
+  const services = await getFirebaseServices();
+  if (!services || !services.database || !userPlate || typeof onThreadsChange !== "function") {
+    return () => {};
+  }
+
+  const { database } = services;
+  const { onValue, ref } = await loadDatabaseModule();
+  // Realtime Database schema for low-latency plate-based DM:
+  // /artifacts/{appId}/realtime/directMessages/threads/{threadId}
+  const threadsRef = ref(database, realtimeDmThreadsPath(resolveAppId()));
+
+  const unsubscribe = onValue(threadsRef, (snapshot) => {
+    const rawThreads = snapshot.val() ?? {};
+    const conversations = Object.fromEntries(
+      Object.entries(rawThreads)
+        .map(([threadId, payload]) => [threadId, normalizeFirebaseThread(threadId, payload, userPlate)])
+        .filter(([, conversation]) => Boolean(conversation)),
+    );
+
+    onThreadsChange(conversations);
+  });
+
+  return unsubscribe;
+}
+
+export async function saveFirebaseDirectMessage(threadId, participants, participantProfiles, message) {
+  const services = await getFirebaseServices();
+  if (!services || !services.database || !threadId || !participants?.length || !message) {
+    return null;
+  }
+
+  const { database, authUser } = services;
+  const { ref, set, update } = await loadDatabaseModule();
+  const threadRef = ref(database, realtimeDmThreadPath(threadId, resolveAppId()));
+  const messageId = message.id ?? `msg-${Date.now()}`;
+  const nextMessageRef = ref(database, `${realtimeDmThreadPath(threadId, resolveAppId())}/messages/${messageId}`);
+  const nextMessage = {
+    ...message,
+    id: messageId,
+    firebaseUid: authUser.uid,
+  };
+
+  await Promise.all([
+    update(threadRef, {
+      id: threadId,
+      participants,
+      participantProfiles,
+      updatedAt: Date.now(),
+      lastMessage: nextMessage,
+    }),
+    set(nextMessageRef, {
+      ...nextMessage,
+    }),
+  ]);
+
+  return {
+    authUid: authUser.uid,
+    syncedAt: Date.now(),
+    messageId,
   };
 }
 
