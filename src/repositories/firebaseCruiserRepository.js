@@ -2,6 +2,8 @@ import {
   privateUserCollectionPath,
   publicCollectionPath,
   realtimeDmPath,
+  realtimePresencePath,
+  realtimePresencePlatePath,
   realtimeDmThreadsPath,
   realtimeDmThreadPath,
   resolveAppId,
@@ -248,6 +250,51 @@ export async function saveFirebaseDirectMessage(threadId, participants, particip
     syncedAt: Date.now(),
     messageId,
   };
+}
+
+export async function saveFirebasePresence(plate, presence) {
+  const services = await getFirebaseServices();
+  if (!services || !services.database || !plate || !presence) {
+    return null;
+  }
+
+  const { database, authUser } = services;
+  const { ref, update } = await loadDatabaseModule();
+  await update(ref(database, realtimePresencePlatePath(plate, resolveAppId())), {
+    ...presence,
+    firebaseUid: authUser.uid,
+    updatedAt: Date.now(),
+  });
+
+  return {
+    authUid: authUser.uid,
+    syncedAt: Date.now(),
+  };
+}
+
+export async function subscribeFirebasePresence(plates, onPresenceChange) {
+  const services = await getFirebaseServices();
+  if (!services || !services.database || typeof onPresenceChange !== "function") {
+    return () => {};
+  }
+
+  const normalizedPlateSet = new Set((plates ?? []).filter(Boolean).map((plate) => plate.replaceAll(" ", "_")));
+  const { database } = services;
+  const { onValue, ref } = await loadDatabaseModule();
+  const presenceRef = ref(database, realtimePresencePath(resolveAppId()));
+
+  const unsubscribe = onValue(presenceRef, (snapshot) => {
+    const payload = snapshot.val() ?? {};
+    const filteredPresence = Object.fromEntries(
+      Object.entries(payload)
+        .filter(([key]) => normalizedPlateSet.size === 0 || normalizedPlateSet.has(key))
+        .map(([key, value]) => [key.replaceAll("_", " "), value]),
+    );
+
+    onPresenceChange(filteredPresence);
+  });
+
+  return unsubscribe;
 }
 
 export async function saveFirebaseMapPin(pin) {

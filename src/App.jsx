@@ -99,6 +99,7 @@ function App() {
     openConversation,
     passportSummary,
     pickMapLocation,
+    presenceMap,
     primeServiceLogForm,
     rateAttendee,
     removeLastDraftRoutePoint,
@@ -132,6 +133,7 @@ function App() {
     submitSpotPhoto,
     submitWashReview,
     toggleDrive,
+    totalUnreadCount,
     upcomingMaintenance,
     useSelectedPinCoordinates,
     washErrors,
@@ -317,11 +319,13 @@ function App() {
                 onFriendSearchChange={setFriendSearchQuery}
                 onMessageDraftChange={setMessageDraft}
                 openConversation={openConversation}
+                presenceMap={presenceMap}
                 inviteFriendToClan={inviteFriendToClan}
                 requestFriend={requestFriend}
                 revokeClanInvite={revokeClanInvite}
                 sendMessage={sendMessage}
                 socialFeedback={socialFeedback}
+                totalUnreadCount={totalUnreadCount}
                 user={safeUser ?? user}
                 withdrawFriendRequest={withdrawFriendRequest}
               />

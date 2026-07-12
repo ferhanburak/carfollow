@@ -29,6 +29,41 @@ function getClanRankTone(index) {
   return "bg-white/10 text-white";
 }
 
+function getPresenceTone(status) {
+  if (status === "online") {
+    return "bg-lime-400";
+  }
+  if (status === "away") {
+    return "bg-amber-400";
+  }
+  return "bg-neutral-500";
+}
+
+function formatPresenceLabel(presence) {
+  if (!presence) {
+    return "offline";
+  }
+  if (presence.status === "online") {
+    return "online";
+  }
+  if (presence.status === "away") {
+    return "away";
+  }
+
+  const lastSeen = Number(presence.lastSeen ?? 0);
+  if (!lastSeen) {
+    return "offline";
+  }
+
+  const diffMinutes = Math.max(1, Math.round((Date.now() - lastSeen) / 60000));
+  if (diffMinutes < 60) {
+    return `${diffMinutes} dk once`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  return `${diffHours} sa once`;
+}
+
 export function StatsScreen({
   activeConversation,
   activeConversationId,
@@ -54,10 +89,12 @@ export function StatsScreen({
   onFriendSearchChange,
   onMessageDraftChange,
   openConversation,
+  presenceMap,
   requestFriend,
   revokeClanInvite,
   sendMessage,
   socialFeedback,
+  totalUnreadCount,
   user,
   withdrawFriendRequest,
 }) {
@@ -432,10 +469,10 @@ export function StatsScreen({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold">DM Panel</p>
-              <p className="text-xs text-neutral-500">Realtime Database baglantisina hazir mock sohbet akisi.</p>
+              <p className="text-xs text-neutral-500">Realtime Database baglantili dusuk gecikmeli sohbet akisi.</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
-              {conversationList.length} thread
+              {conversationList.length} thread / {totalUnreadCount} unread
             </div>
           </div>
           {chatFeedback ? (
@@ -462,9 +499,26 @@ export function StatsScreen({
                       activeConversationId === conversation.id ? "border-lime-400/30 bg-lime-400/10" : "border-white/8 bg-white/[0.03]"
                     }`}
                   >
-                    <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{conversation.participantPlate}</p>
-                    <p className="mt-1 text-sm font-semibold">{conversation.participantName}</p>
-                    <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{conversation.lastMessage?.body ?? "Mesaj yok"}</p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-block h-2.5 w-2.5 rounded-full ${getPresenceTone(presenceMap?.[conversation.participantPlate]?.status)}`} />
+                          <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{conversation.participantPlate}</p>
+                        </div>
+                        <p className="mt-1 text-sm font-semibold">{conversation.participantName}</p>
+                        <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{conversation.lastMessage?.body ?? "Mesaj yok"}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+                          {formatPresenceLabel(presenceMap?.[conversation.participantPlate])}
+                        </span>
+                        {conversation.unreadCount ? (
+                          <span className="rounded-full bg-rose-500 px-2 py-1 text-[10px] font-bold text-white">
+                            {conversation.unreadCount}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
                   </button>
                 ))
               ) : (
@@ -478,9 +532,14 @@ export function StatsScreen({
               {activeConversation ? (
                 <>
                   <div className="border-b border-white/8 pb-3">
-                    <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{activeConversation.participantPlate}</p>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block h-2.5 w-2.5 rounded-full ${getPresenceTone(presenceMap?.[activeConversation.participantPlate]?.status)}`} />
+                      <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{activeConversation.participantPlate}</p>
+                    </div>
                     <p className="mt-1 text-sm font-semibold">{activeConversation.participantName}</p>
-                    <p className="text-xs text-neutral-500">{activeConversation.participantModel}</p>
+                    <p className="text-xs text-neutral-500">
+                      {activeConversation.participantModel} / {formatPresenceLabel(presenceMap?.[activeConversation.participantPlate])}
+                    </p>
                   </div>
                   <div className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1">
                     {(activeConversation.messages ?? []).map((message) => (

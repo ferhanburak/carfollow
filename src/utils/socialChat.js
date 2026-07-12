@@ -16,6 +16,7 @@ export function normalizeConversations(user) {
       threadId,
       {
         ...conversation,
+        lastReadAt: Number(conversation.lastReadAt ?? 0),
         messages: sortMessages(conversation.messages ?? []),
       },
     ]),
@@ -27,9 +28,15 @@ export function buildConversationList(user) {
   return Object.values(normalizedConversations)
     .map((conversation) => {
       const lastMessage = [...(conversation.messages ?? [])].at(-1) ?? null;
+      const unreadCount = (conversation.messages ?? []).filter(
+        (message) =>
+          message.authorPlate !== user.plate &&
+          Number(message.createdAt ?? 0) > Number(conversation.lastReadAt ?? 0),
+      ).length;
       return {
         ...conversation,
         lastMessage,
+        unreadCount,
       };
     })
     .sort((left, right) => Number(right.lastMessage?.createdAt ?? 0) - Number(left.lastMessage?.createdAt ?? 0));
@@ -94,7 +101,36 @@ export function appendDirectMessage(user, friend, messageText) {
       ...normalizedConversations,
       [threadId]: {
         ...currentConversation,
+        lastReadAt: Number(currentConversation.lastReadAt ?? 0),
         messages: [...currentConversation.messages, nextMessage],
+      },
+    },
+  };
+}
+
+export function markConversationRead(user, threadId, readAt = Date.now()) {
+  if (!user || !threadId) {
+    return user;
+  }
+
+  const normalizedConversations = normalizeConversations(user);
+  const currentConversation = normalizedConversations[threadId];
+  if (!currentConversation) {
+    return user;
+  }
+
+  const nextReadAt = Math.max(Number(currentConversation.lastReadAt ?? 0), Number(readAt ?? Date.now()));
+  if (nextReadAt === Number(currentConversation.lastReadAt ?? 0)) {
+    return user;
+  }
+
+  return {
+    ...user,
+    conversations: {
+      ...normalizedConversations,
+      [threadId]: {
+        ...currentConversation,
+        lastReadAt: nextReadAt,
       },
     },
   };

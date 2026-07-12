@@ -30,6 +30,7 @@ export {
   saveFirebaseActiveDriver,
   saveFirebaseCruiseJoin,
   saveFirebaseDirectMessage,
+  saveFirebasePresence,
   saveFirebaseFuelLog,
   saveFirebaseServiceLog,
   saveFirebaseMapPin,
@@ -37,4 +38,5 @@ export {
   saveFirebaseUserProfile,
   saveFirebaseWashReview,
   subscribeFirebaseDirectMessages,
+  subscribeFirebasePresence,
 } from "./firebaseCruiserRepository";

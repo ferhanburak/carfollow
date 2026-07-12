@@ -23,3 +23,11 @@ export function realtimeDmThreadsPath(resolvedAppId = resolveAppId()) {
 export function realtimeDmThreadPath(threadId, resolvedAppId = resolveAppId()) {
   return `${realtimeDmThreadsPath(resolvedAppId)}/${threadId}`;
 }
+
+export function realtimePresencePath(resolvedAppId = resolveAppId()) {
+  return `artifacts/${resolvedAppId}/realtime/presence`;
+}
+
+export function realtimePresencePlatePath(plate, resolvedAppId = resolveAppId()) {
+  return `${realtimePresencePath(resolvedAppId)}/${plate.replaceAll(" ", "_")}`;
+}
