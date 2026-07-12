@@ -187,6 +187,7 @@ export function StatsScreen({
   withdrawFriendRequest,
 }) {
   const [profileDrawer, setProfileDrawer] = useState(null);
+  const [expandedProfile, setExpandedProfile] = useState(null);
   const individualLeaderboard = buildIndividualLeaderboard(user, individualDriverSeed);
   const sortedClans = [...clans].sort((a, b) => b.km - a.km);
   const canInviteToClan = ["owner", "captain"].includes(user.clanRole ?? "member");
@@ -198,6 +199,15 @@ export function StatsScreen({
 
   const openProfileDrawer = (profile, source = "community") => {
     setProfileDrawer({ ...profile, source });
+  };
+
+  const openExpandedProfile = (profile) => {
+    setExpandedProfile(profile);
+    setProfileDrawer(null);
+  };
+
+  const closeExpandedProfile = () => {
+    setExpandedProfile(null);
   };
 
   const selectedProfileStatus = profileDrawer
@@ -235,6 +245,21 @@ export function StatsScreen({
 
     inviteDriverToMeet(primaryHostableConvoy.id, profileDrawer);
   };
+
+  const expandedProfileStatus = expandedProfile
+    ? expandedProfile.plate === user.plate
+      ? "self"
+      : friendPlateSet.has(expandedProfile.plate)
+        ? "friend"
+        : incomingPlateSet.has(expandedProfile.plate)
+          ? "incoming"
+          : outgoingPlateSet.has(expandedProfile.plate)
+            ? "outgoing"
+            : "none"
+    : "none";
+  const expandedPresence = expandedProfile ? presenceMap?.[expandedProfile.plate] : null;
+  const expandedStats = expandedProfile ? buildDrawerStats(expandedProfile, user) : [];
+  const expandedReputation = expandedProfile ? resolveDrawerReputation(expandedProfile) : null;
 
   return (
     <section className="space-y-4">
@@ -846,6 +871,14 @@ export function StatsScreen({
                 ))}
               </div>
 
+              <button
+                type="button"
+                onClick={() => openExpandedProfile(profileDrawer)}
+                className="min-h-12 w-full rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 text-sm font-semibold text-lime-100"
+              >
+                Detayli Profili Ac
+              </button>
+
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
@@ -915,6 +948,138 @@ export function StatsScreen({
                 <p className="mt-1">Iliski durumu: {selectedProfileStatus}</p>
                 {primaryHostableConvoy ? <p className="mt-1">Aktif host konvoyu: {primaryHostableConvoy.name}</p> : <p className="mt-1">Aktif host konvoyu bulunmuyor.</p>}
                 {profileDrawer.speed ? <p className="mt-1">Anlik hiz: {profileDrawer.speed} KM/H</p> : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {expandedProfile ? (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#050505]/95 px-3 py-6 backdrop-blur-sm">
+          <div className="mx-auto max-w-md rounded-[2rem] border border-white/10 bg-[#0d0d0d] shadow-[0_24px_80px_rgba(0,0,0,0.58)]">
+            <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-[2rem] border-b border-white/10 bg-[#0d0d0d]/95 px-4 py-4 backdrop-blur">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.24em] text-lime-400">Public Driver Profile</p>
+                <h3 className="mt-1 text-lg font-black">{expandedProfile.fullName ?? expandedProfile.plate}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeExpandedProfile}
+                className="min-h-12 rounded-2xl border border-white/10 bg-black/25 px-4 text-xs font-semibold text-neutral-300"
+              >
+                Kapat
+              </button>
+            </div>
+
+            <div className="space-y-4 px-4 py-4">
+              <div className="rounded-[1.5rem] border border-white/8 bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.12),transparent_35%),linear-gradient(180deg,#171717,#0f0f0f)] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-sm tracking-[0.16em] text-lime-300">{expandedProfile.plate}</p>
+                    <p className="mt-1 text-base font-semibold text-neutral-100">{expandedProfile.model ?? "Unknown Setup"}</p>
+                    <p className="mt-1 text-xs text-neutral-500">{expandedProfile.region ?? user.region}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className={`inline-block h-2.5 w-2.5 rounded-full ${getPresenceTone(expandedPresence?.status)}`} />
+                      <span className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+                        {formatPresenceLabel(expandedPresence)}
+                      </span>
+                    </div>
+                    {expandedProfile.clan ? <p className="mt-2 text-xs text-neutral-400">{expandedProfile.clan}</p> : null}
+                  </div>
+                </div>
+
+                {expandedReputation ? (
+                  <div className={`mt-4 rounded-2xl border px-4 py-3 ${expandedReputation.tone}`}>
+                    <p className="text-xs uppercase tracking-[0.18em]">Reputation</p>
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <p className="font-semibold">{expandedReputation.label}</p>
+                      <p className="text-xs">{expandedProfileStatus}</p>
+                    </div>
+                    <p className="mt-2 text-xs">{expandedReputation.description}</p>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {expandedStats.map((stat) => (
+                  <div key={stat.key} className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-neutral-500">{stat.label}</p>
+                    <p className="mt-2 text-sm font-bold text-lime-300">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                <p className="text-sm font-semibold text-neutral-100">Konvoy Uyumu</p>
+                <div className="mt-3 h-3 overflow-hidden rounded-full bg-white/8">
+                  <div
+                    className={`h-full rounded-full ${
+                      Number(expandedProfile.alertVotes ?? 0) > Number(expandedProfile.harmonyVotes ?? 0) ? "bg-rose-500" : "bg-lime-400"
+                    }`}
+                    style={{
+                      width: `${clampPercent(
+                        ((Number(expandedProfile.harmonyVotes ?? 0) /
+                          Math.max(1, Number(expandedProfile.harmonyVotes ?? 0) + Number(expandedProfile.alertVotes ?? 0))) *
+                          100),
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <div className="mt-3 flex items-center justify-between text-xs text-neutral-500">
+                  <span>Uyum oyu: {Number(expandedProfile.harmonyVotes ?? 0)}</span>
+                  <span>Uyari oyu: {Number(expandedProfile.alertVotes ?? 0)}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  disabled={expandedProfileStatus !== "none"}
+                  onClick={() => requestFriend(expandedProfile)}
+                  className="min-h-12 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {expandedProfileStatus === "friend"
+                    ? "Zaten Arkadas"
+                    : expandedProfileStatus === "incoming"
+                      ? "Istek Bekliyor"
+                      : expandedProfileStatus === "outgoing"
+                        ? "Istek Gonderildi"
+                        : expandedProfileStatus === "self"
+                          ? "Bu Sensin"
+                          : "Arkadas Ekle"}
+                </button>
+                <button
+                  type="button"
+                  disabled={expandedProfileStatus === "self"}
+                  onClick={() => openConversation(expandedProfile)}
+                  className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Mesaj Gonder
+                </button>
+                <button
+                  type="button"
+                  disabled={!canInviteToClan || expandedProfileStatus === "self"}
+                  onClick={() => inviteFriendToClan(expandedProfile)}
+                  className="min-h-12 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 text-xs font-semibold text-lime-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Klana Davet
+                </button>
+                <button
+                  type="button"
+                  disabled={!primaryHostableConvoy || expandedProfileStatus === "self"}
+                  onClick={() => inviteDriverToMeet(primaryHostableConvoy.id, expandedProfile)}
+                  className="min-h-12 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 text-xs font-semibold text-rose-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Konvoya Davet
+                </button>
+              </div>
+
+              <div className="rounded-2xl border border-white/8 bg-black/20 p-4 text-xs text-neutral-400">
+                <p>Kaynak: {expandedProfile.source}</p>
+                <p className="mt-1">Durum: {expandedProfileStatus}</p>
+                {expandedProfile.speed ? <p className="mt-1">Anlik hiz: {expandedProfile.speed} KM/H</p> : null}
               </div>
             </div>
           </div>

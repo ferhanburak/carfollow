@@ -124,4 +124,18 @@ describe("App", () => {
     expect(screen.getByText("Social Cockpit")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Stats Ekranina Git" })).toBeInTheDocument();
   });
+
+  it("opens the detailed public driver profile from stats", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
+    await user.click(screen.getByRole("button", { name: /Stats/i }));
+    await user.click((await screen.findAllByRole("button", { name: /35 SRT 908/i }))[0]);
+    await user.click(screen.getByRole("button", { name: "Detayli Profili Ac" }));
+
+    expect(await screen.findByText("Public Driver Profile")).toBeInTheDocument();
+    expect(screen.getByText("Konvoy Uyumu")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mesaj Gonder" })).toBeInTheDocument();
+  });
 });
