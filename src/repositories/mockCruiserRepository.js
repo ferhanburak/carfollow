@@ -359,6 +359,41 @@ export function declineCruiseRequest(mapPins, pinId, plate) {
   });
 }
 
+export function inviteCruiseGuest(mapPins, pinId, profile) {
+  return mapPins.map((pin) => {
+    if (pin.id !== pinId) {
+      return pin;
+    }
+
+    const invitedGuests = (pin.invitedGuests ?? []).map(normalizeInvitee).filter(Boolean);
+    const attendees = (pin.attendees ?? []).map(normalizeAttendee);
+    const pendingRequests = (pin.pendingRequests ?? []).map(normalizeAttendee);
+
+    if (
+      invitedGuests.some((entry) => entry.plate === profile.plate) ||
+      attendees.some((entry) => entry.plate === profile.plate) ||
+      pendingRequests.some((entry) => entry.plate === profile.plate)
+    ) {
+      return {
+        ...pin,
+        invitedGuests,
+        attendees,
+        pendingRequests,
+      };
+    }
+
+    return {
+      ...pin,
+      invitedGuests: [
+        ...invitedGuests,
+        normalizeInvitee(profile),
+      ],
+      attendees,
+      pendingRequests,
+    };
+  });
+}
+
 export function rateCruiseAttendee(mapPins, pinId, plate, signal) {
   return mapPins.map((pin) => {
     if (pin.id !== pinId) {

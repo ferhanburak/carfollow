@@ -82,7 +82,9 @@ function App() {
     fuelInsights,
     friendSearchQuery,
     friendSearchResults,
+    hostableConvoys,
     isDriving,
+    inviteDriverToMeet,
     joinCruise,
     likeGalleryImage,
     likePin,
@@ -308,6 +310,8 @@ function App() {
                 drivers={drivers}
                 friendSearchQuery={friendSearchQuery}
                 friendSearchResults={friendSearchResults}
+                hostableConvoys={hostableConvoys}
+                inviteDriverToMeet={inviteDriverToMeet}
                 messageDraft={messageDraft}
                 onClanFormChange={setClanForm}
                 onFriendSearchChange={setFriendSearchQuery}

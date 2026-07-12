@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { individualDriverSeed } from "../data/mockData";
 import { formatNumber } from "../utils/garage";
 import { buildAchievementProgress, buildIndividualLeaderboard, buildPersonalStats } from "../utils/socialStats";
@@ -45,6 +46,8 @@ export function StatsScreen({
   drivers,
   friendSearchQuery,
   friendSearchResults,
+  hostableConvoys,
+  inviteDriverToMeet,
   inviteFriendToClan,
   messageDraft,
   onClanFormChange,
@@ -58,11 +61,41 @@ export function StatsScreen({
   user,
   withdrawFriendRequest,
 }) {
+  const [profileDrawer, setProfileDrawer] = useState(null);
   const personalStats = buildPersonalStats(user);
   const achievementProgress = buildAchievementProgress(user);
   const individualLeaderboard = buildIndividualLeaderboard(user, individualDriverSeed);
   const sortedClans = [...clans].sort((a, b) => b.km - a.km);
   const canInviteToClan = ["owner", "captain"].includes(user.clanRole ?? "member");
+  const primaryHostableConvoy = hostableConvoys?.[0] ?? null;
+
+  const friendPlateSet = useMemo(() => new Set((user.friends ?? []).map((entry) => entry.plate)), [user.friends]);
+  const incomingPlateSet = useMemo(() => new Set((user.incomingRequests ?? []).map((entry) => entry.plate)), [user.incomingRequests]);
+  const outgoingPlateSet = useMemo(() => new Set((user.outgoingRequests ?? []).map((entry) => entry.plate)), [user.outgoingRequests]);
+
+  const openProfileDrawer = (profile, source = "community") => {
+    setProfileDrawer({ ...profile, source });
+  };
+
+  const selectedProfileStatus = profileDrawer
+    ? profileDrawer.plate === user.plate
+      ? "self"
+      : friendPlateSet.has(profileDrawer.plate)
+        ? "friend"
+        : incomingPlateSet.has(profileDrawer.plate)
+          ? "incoming"
+          : outgoingPlateSet.has(profileDrawer.plate)
+            ? "outgoing"
+            : "none"
+    : "none";
+
+  const handleConvoyInviteFromDrawer = () => {
+    if (!profileDrawer || !primaryHostableConvoy) {
+      return;
+    }
+
+    inviteDriverToMeet(primaryHostableConvoy.id, profileDrawer);
+  };
 
   return (
     <section className="space-y-4">
@@ -262,11 +295,11 @@ export function StatsScreen({
             {friendSearchResults.slice(0, 8).map((entry) => (
               <div key={`${entry.userId}-${entry.plate}`} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <button type="button" onClick={() => openProfileDrawer(entry, "search")} className="text-left">
                     <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
                     <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
                     <p className="text-xs text-neutral-500">{entry.model} / {entry.region}</p>
-                  </div>
+                  </button>
                   {entry.friendshipStatus === "none" ? (
                     <button
                       type="button"
@@ -318,9 +351,11 @@ export function StatsScreen({
               {(user.incomingRequests ?? []).length ? (
                 user.incomingRequests.map((entry) => (
                   <div key={`${entry.plate}-incoming`} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                    <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
-                    <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
-                    <p className="text-xs text-neutral-500">{entry.model}</p>
+                    <button type="button" onClick={() => openProfileDrawer(entry, "incoming")} className="text-left">
+                      <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
+                      <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
+                      <p className="text-xs text-neutral-500">{entry.model}</p>
+                    </button>
                     <div className="mt-3 flex gap-2">
                       <button
                         type="button"
@@ -354,11 +389,11 @@ export function StatsScreen({
                 user.friends.map((entry) => (
                   <div key={`${entry.plate}-friend`} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
                     <div className="flex items-center justify-between gap-3">
-                      <div>
+                      <button type="button" onClick={() => openProfileDrawer(entry, "friend")} className="text-left">
                         <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
                         <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
                         <p className="text-xs text-neutral-500">{entry.model} / {entry.region}</p>
-                      </div>
+                      </button>
                       <div className="flex flex-col gap-2">
                         <button
                           type="button"
@@ -509,7 +544,7 @@ export function StatsScreen({
                 driver.plate === user.plate ? "border-lime-400/30 bg-lime-400/10" : "border-white/8 bg-black/20"
               }`}
             >
-              <div className="flex items-center justify-between gap-3">
+              <button type="button" onClick={() => openProfileDrawer(driver, "leaderboard")} className="flex w-full items-center justify-between gap-3 text-left">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-black ${getClanRankTone(driver.rank - 1)}`}>
                     #{driver.rank}
@@ -524,7 +559,7 @@ export function StatsScreen({
                   <p className="text-lg font-black text-lime-300">{formatNumber(driver.monthlyKm)} KM</p>
                   <p className="text-xs text-neutral-500">Score {driver.driverScore} / {driver.clan}</p>
                 </div>
-              </div>
+              </button>
             </div>
           ))}
         </div>
@@ -629,7 +664,12 @@ export function StatsScreen({
         <p className="text-sm font-semibold">Active Drivers on the Highway</p>
         <div className="mt-4 space-y-3">
           {drivers.map((driver) => (
-            <div key={`${driver.plate}-leader`} className="flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3">
+            <button
+              key={`${driver.plate}-leader`}
+              type="button"
+              onClick={() => openProfileDrawer({ plate: driver.plate, model: driver.vehicle, region: driver.node, fullName: driver.plate, speed: driver.speed }, "highway")}
+              className="flex w-full items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3 text-left"
+            >
               <div>
                 <p className="font-mono text-sm tracking-[0.16em] text-lime-300">{driver.plate}</p>
                 <p className="text-xs text-neutral-500">{driver.vehicle}</p>
@@ -638,10 +678,109 @@ export function StatsScreen({
                 <p className="text-sm font-semibold">{driver.node}</p>
                 <p className="text-xs text-rose-300">{driver.speed} KM/H</p>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
+
+      {profileDrawer ? (
+        <div className="fixed inset-0 z-40 flex items-end bg-black/50 px-3 pb-3 pt-14 backdrop-blur-[2px]">
+          <div className="w-full max-w-md overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#0d0d0d] shadow-[0_24px_80px_rgba(0,0,0,0.58)]">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.24em] text-lime-400">Driver Profile</p>
+                <h3 className="mt-1 text-base font-black">{profileDrawer.fullName ?? profileDrawer.plate}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProfileDrawer(null)}
+                className="min-h-10 rounded-xl border border-white/10 bg-black/25 px-3 text-xs font-semibold text-neutral-300"
+              >
+                Kapat
+              </button>
+            </div>
+
+            <div className="space-y-4 px-4 py-4">
+              <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                <p className="font-mono text-sm tracking-[0.16em] text-lime-300">{profileDrawer.plate}</p>
+                <p className="mt-1 text-sm font-semibold">{profileDrawer.model ?? "Unknown Setup"}</p>
+                <p className="text-xs text-neutral-500">{profileDrawer.region ?? user.region}</p>
+                {profileDrawer.clan ? <p className="mt-2 text-xs text-neutral-400">Clan: {profileDrawer.clan}</p> : null}
+                {profileDrawer.driverScore ? <p className="text-xs text-neutral-400">Score: {profileDrawer.driverScore}</p> : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  disabled={selectedProfileStatus === "self" || selectedProfileStatus === "friend"}
+                  onClick={() => requestFriend(profileDrawer)}
+                  className="min-h-12 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {selectedProfileStatus === "friend" ? "Arkadas" : selectedProfileStatus === "self" ? "Sen" : "Arkadas Ekle"}
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedProfileStatus === "self"}
+                  onClick={() => openConversation(profileDrawer)}
+                  className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Mesaj Gonder
+                </button>
+                <button
+                  type="button"
+                  disabled={!canInviteToClan || selectedProfileStatus === "self"}
+                  onClick={() => inviteFriendToClan(profileDrawer)}
+                  className="min-h-12 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 text-xs font-semibold text-lime-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Klana Davet
+                </button>
+                <button
+                  type="button"
+                  disabled={!primaryHostableConvoy || selectedProfileStatus === "self"}
+                  onClick={handleConvoyInviteFromDrawer}
+                  className="min-h-12 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 text-xs font-semibold text-rose-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Konvoya Davet
+                </button>
+              </div>
+
+              {selectedProfileStatus === "incoming" ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => approveFriendRequest(profileDrawer.plate)}
+                    className="min-h-12 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black"
+                  >
+                    Istegi Kabul Et
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => declineFriendRequest(profileDrawer.plate)}
+                    className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-neutral-200"
+                  >
+                    Istegi Reddet
+                  </button>
+                </div>
+              ) : null}
+
+              {selectedProfileStatus === "outgoing" ? (
+                <button
+                  type="button"
+                  onClick={() => withdrawFriendRequest(profileDrawer.plate)}
+                  className="min-h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-neutral-200"
+                >
+                  Giden Arkadaslik Isteğini Geri Cek
+                </button>
+              ) : null}
+
+              <div className="rounded-2xl border border-white/8 bg-black/20 p-4 text-xs text-neutral-400">
+                <p>Kaynak: {profileDrawer.source}</p>
+                {primaryHostableConvoy ? <p className="mt-1">Aktif host konvoyu: {primaryHostableConvoy.name}</p> : <p className="mt-1">Aktif host konvoyu bulunmuyor.</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

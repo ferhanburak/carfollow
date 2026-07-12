@@ -8,6 +8,7 @@ import {
   declineCruiseRequest,
   incrementGalleryLike,
   incrementPinLike,
+  inviteCruiseGuest,
   joinCruiseAttendee,
   rateCruiseAttendee,
   saveFirebaseCruiseJoin,
@@ -216,6 +217,24 @@ export function useMapPins({ initialWorld, user }) {
     setConvoyFeedback(`${plate} icin katilim istegi reddedildi.`);
 
     if (nextPin) {
+      void saveFirebaseMapPin(nextPin);
+    }
+  };
+
+  const inviteDriverToMeet = (pinId, profile) => {
+    if (!profile) {
+      return;
+    }
+
+    let nextPin = null;
+    setMapPins((current) => {
+      const nextPins = inviteCruiseGuest(current, pinId, profile);
+      nextPin = nextPins.find((pin) => pin.id === pinId) ?? null;
+      return nextPins;
+    });
+
+    if (nextPin) {
+      setConvoyFeedback(`${profile.fullName} aktif konvoya davet edildi.`);
       void saveFirebaseMapPin(nextPin);
     }
   };
@@ -487,6 +506,7 @@ export function useMapPins({ initialWorld, user }) {
     clearDraftRoute,
     convoyFeedback,
     declineCruiseJoinRequest,
+    inviteDriverToMeet,
     joinCruise,
     likeGalleryImage,
     likePin,

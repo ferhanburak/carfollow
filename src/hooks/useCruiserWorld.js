@@ -31,6 +31,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     clearDraftRoute,
     convoyFeedback,
     declineCruiseJoinRequest,
+    inviteDriverToMeet,
     joinCruise,
     likeGalleryImage,
     likePin,
@@ -135,6 +136,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   });
 
   const resolvedSafeUser = safeClanUser ?? safeUser ?? user;
+  const hostableConvoys = mapPins.filter((pin) => pin.type === "meet" && pin.createdByPlate === resolvedSafeUser?.plate);
 
   const {
     activeConversation,
@@ -279,7 +281,9 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     washErrors,
     washFeedback,
     washForm,
+    hostableConvoys,
     inviteFriendToClan,
+    inviteDriverToMeet,
     withdrawFriendRequest,
   };
 }

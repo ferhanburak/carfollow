@@ -14,6 +14,7 @@ export {
   incrementGalleryLike,
   incrementPinLike,
   incrementUserOdometer,
+  inviteCruiseGuest,
   joinCruiseAttendee,
   listQuickProfiles,
   approveCruiseRequest,
