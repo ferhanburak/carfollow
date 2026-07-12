@@ -1,4 +1,5 @@
 import { InsightCard } from "../ui";
+import { getMeetVisibilityLabel } from "../../utils/meetVisibility";
 
 function ReputationBadge({ attendee }) {
   const styles =
@@ -41,6 +42,16 @@ export function MeetPinPanel({ pin, user, onJoinCruise, onRateAttendee }) {
       <div className="mt-4 grid grid-cols-2 gap-3">
         <InsightCard label="Launch Time" value={pin.time} />
         <InsightCard label="Route" value={pin.route} />
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-lime-300">
+          {getMeetVisibilityLabel(pin.visibility)}
+        </span>
+        {pin.createdByPlate ? (
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-300">
+            Host {pin.createdByPlate}
+          </span>
+        ) : null}
       </div>
       <button
         type="button"

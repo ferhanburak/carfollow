@@ -31,6 +31,7 @@ export const createMapPinForm = (seedPin) => ({
   shadowDrying: false,
   note: "",
   routePoints: seedPin?.routePath ?? [],
+  visibility: seedPin?.visibility ?? "friends",
 });
 
 export const createSpotPhotoForm = () => ({

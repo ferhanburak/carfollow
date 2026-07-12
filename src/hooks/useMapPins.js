@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   appendMapPin,
   appendSpotPhoto,
@@ -23,6 +23,7 @@ import {
   validateSpotPhotoForm,
   validateWashForm,
 } from "../utils/validation";
+import { filterVisibleMapPins } from "../utils/meetVisibility";
 
 function parseTags(rawTags) {
   return rawTags
@@ -82,19 +83,37 @@ export function useMapPins({ initialWorld, user }) {
   const [spotPhotoErrors, setSpotPhotoErrors] = useState({});
   const [spotPhotoFeedback, setSpotPhotoFeedback] = useState("");
 
-  const selectedPin = mapPins.find((pin) => pin.id === selectedPinId) ?? mapPins[0];
+  const visibleMapPins = useMemo(() => filterVisibleMapPins(mapPins, user), [mapPins, user]);
+  const selectedPin = visibleMapPins.find((pin) => pin.id === selectedPinId) ?? visibleMapPins[0] ?? null;
+
+  useEffect(() => {
+    if (!visibleMapPins.length) {
+      return;
+    }
+
+    const selectedStillVisible = visibleMapPins.some((pin) => pin.id === selectedPinId);
+    if (!selectedStillVisible) {
+      setSelectedPinId(visibleMapPins[0].id);
+    }
+  }, [selectedPinId, visibleMapPins]);
 
   const likePin = () => {
+    if (!selectedPin) {
+      return;
+    }
     setMapPins((current) => incrementPinLike(current, selectedPin.id));
   };
 
   const likeGalleryImage = (galleryId) => {
+    if (!selectedPin) {
+      return;
+    }
     setMapPins((current) => incrementGalleryLike(current, selectedPin.id, galleryId));
   };
 
   const submitWashReview = (event) => {
     event.preventDefault();
-    if (!user || selectedPin.type !== "wash") {
+    if (!user || !selectedPin || selectedPin.type !== "wash") {
       return;
     }
 
@@ -130,7 +149,7 @@ export function useMapPins({ initialWorld, user }) {
   };
 
   const joinCruise = () => {
-    if (!user || selectedPin.type !== "meet") {
+    if (!user || !selectedPin || selectedPin.type !== "meet") {
       return;
     }
 
@@ -148,7 +167,7 @@ export function useMapPins({ initialWorld, user }) {
   };
 
   const rateAttendee = (plate, signal) => {
-    if (selectedPin.type !== "meet") {
+    if (!selectedPin || selectedPin.type !== "meet") {
       return;
     }
 
@@ -280,6 +299,10 @@ export function useMapPins({ initialWorld, user }) {
         time: mapPinForm.time,
         route: mapPinForm.route.trim(),
         routePath: mapPinForm.routePoints.length > 1 ? mapPinForm.routePoints : buildMeetRoutePath(lat, lng),
+        visibility: mapPinForm.visibility,
+        createdByPlate: user.plate,
+        createdByName: user.fullName,
+        createdByClan: user.clan ?? "",
         attendees: [createAttendeeRecord(user)],
       };
     } else {
@@ -328,7 +351,7 @@ export function useMapPins({ initialWorld, user }) {
 
   const submitSpotPhoto = (event) => {
     event.preventDefault();
-    if (!user || selectedPin.type !== "spot") {
+    if (!user || !selectedPin || selectedPin.type !== "spot") {
       return;
     }
 
@@ -405,7 +428,7 @@ export function useMapPins({ initialWorld, user }) {
     mapPinErrors,
     mapPinFeedback,
     mapPinForm,
-    mapPins,
+    mapPins: visibleMapPins,
     pickMapLocation,
     rateAttendee,
     removeLastDraftRoutePoint,

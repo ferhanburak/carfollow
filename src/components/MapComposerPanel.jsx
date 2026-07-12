@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getMeetVisibilityLabel, getMeetVisibilityOptions } from "../utils/meetVisibility";
 import { CompactField } from "./ui";
 
 const nodeTypes = [
@@ -6,6 +7,7 @@ const nodeTypes = [
   { key: "spot", label: "Photo Spot" },
   { key: "wash", label: "Wash" },
 ];
+const visibilityOptions = getMeetVisibilityOptions();
 
 export function MapComposerPanel({
   alwaysOpen = false,
@@ -194,6 +196,24 @@ export function MapComposerPanel({
                     {errors.route ? <p className="text-xs text-rose-300">{errors.route}</p> : null}
                   </CompactField>
                 </div>
+
+                <CompactField label="Visibility">
+                  <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/8 bg-black/20 p-2">
+                    {visibilityOptions.map((visibility) => (
+                      <button
+                        key={visibility}
+                        type="button"
+                        onClick={() => onFormChange((current) => ({ ...current, visibility }))}
+                        className={`min-h-12 rounded-2xl px-3 text-[11px] font-bold transition ${
+                          form.visibility === visibility ? "bg-lime-400 text-black" : "text-neutral-400"
+                        }`}
+                      >
+                        {getMeetVisibilityLabel(visibility)}
+                      </button>
+                    ))}
+                  </div>
+                  {errors.visibility ? <p className="text-xs text-rose-300">{errors.visibility}</p> : null}
+                </CompactField>
 
                 <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
                   <div className="flex items-start justify-between gap-3">

@@ -71,6 +71,9 @@ export function validateMapPinForm(form) {
     if (!form.route.trim()) {
       errors.route = "Route summary is required.";
     }
+    if (!["public", "friends", "clan"].includes(form.visibility)) {
+      errors.visibility = "Visibility must be public, friends, or clan.";
+    }
     if (Array.isArray(form.routePoints) && form.routePoints.length === 1) {
       errors.routePoints = "Add at least 2 route points or clear the draft route.";
     }

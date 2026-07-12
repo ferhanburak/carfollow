@@ -436,6 +436,10 @@ export const initialMapPins = [
     y: "72%",
     time: "23:30",
     route: "Beytepe -> Incek -> Mogan",
+    visibility: "public",
+    createdByPlate: "06 PWA 101",
+    createdByName: "Poyraz Alkan",
+    createdByClan: "Neon Wolves",
     routePath: [
       { lat: 39.9042, lng: 32.7315 },
       { lat: 39.8728, lng: 32.7562 },
