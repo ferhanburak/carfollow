@@ -1,7 +1,11 @@
 import { useMemo, useState } from "react";
 import { individualDriverSeed } from "../data/mockData";
 import { formatNumber } from "../utils/garage";
-import { buildAchievementProgress, buildIndividualLeaderboard, buildPersonalStats } from "../utils/socialStats";
+import { buildIndividualLeaderboard } from "../utils/socialStats";
+
+function clampPercent(value) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
 
 function getActionTone(status) {
   if (status === "friend") {
@@ -89,6 +93,64 @@ function formatMessageTime(timestamp) {
   }).format(new Date(time));
 }
 
+function buildDrawerStats(profileDrawer, fallbackUser) {
+  const harmonyVotes = Number(profileDrawer?.harmonyVotes ?? 0);
+  const alertVotes = Number(profileDrawer?.alertVotes ?? 0);
+  const totalVotes = harmonyVotes + alertVotes;
+  const harmonyRatio = totalVotes ? clampPercent((harmonyVotes / totalVotes) * 100) : 100;
+
+  return [
+    {
+      key: "score",
+      label: "Surucu Skoru",
+      value: `${Number(profileDrawer?.driverScore ?? 0)}/100`,
+    },
+    {
+      key: "km",
+      label: "Aylik KM",
+      value: `${formatNumber(Number(profileDrawer?.monthlyKm ?? 0))} KM`,
+    },
+    {
+      key: "harmony",
+      label: "Uyum Orani",
+      value: `%${harmonyRatio}`,
+    },
+    {
+      key: "presence",
+      label: "Bolge",
+      value: profileDrawer?.region ?? fallbackUser?.region ?? "--",
+    },
+  ];
+}
+
+function resolveDrawerReputation(profileDrawer) {
+  const score = Number(profileDrawer?.driverScore ?? 0);
+  const harmonyVotes = Number(profileDrawer?.harmonyVotes ?? 0);
+  const alertVotes = Number(profileDrawer?.alertVotes ?? 0);
+
+  if (score >= 90 && alertVotes <= 1) {
+    return {
+      label: "Convoy Elite",
+      tone: "border-lime-400/20 bg-lime-400/10 text-lime-200",
+      description: "Yuksek skor ve temiz uyum kaydi.",
+    };
+  }
+
+  if (score >= 75 && harmonyVotes >= alertVotes) {
+    return {
+      label: "Road Friendly",
+      tone: "border-white/10 bg-white/[0.04] text-neutral-200",
+      description: "Konvoy icin guvenli ve uyumlu gorunuyor.",
+    };
+  }
+
+  return {
+    label: "Watchlist",
+    tone: "border-rose-400/20 bg-rose-500/10 text-rose-200",
+    description: "Davet oncesi davranis gecmisi tekrar kontrol edilmeli.",
+  };
+}
+
 export function StatsScreen({
   activeConversation,
   activeConversationId,
@@ -125,8 +187,6 @@ export function StatsScreen({
   withdrawFriendRequest,
 }) {
   const [profileDrawer, setProfileDrawer] = useState(null);
-  const personalStats = buildPersonalStats(user);
-  const achievementProgress = buildAchievementProgress(user);
   const individualLeaderboard = buildIndividualLeaderboard(user, individualDriverSeed);
   const sortedClans = [...clans].sort((a, b) => b.km - a.km);
   const canInviteToClan = ["owner", "captain"].includes(user.clanRole ?? "member");
@@ -151,6 +211,22 @@ export function StatsScreen({
             ? "outgoing"
             : "none"
     : "none";
+  const drawerStats = profileDrawer ? buildDrawerStats(profileDrawer, user) : [];
+  const drawerReputation = profileDrawer ? resolveDrawerReputation(profileDrawer) : null;
+  const drawerPresence = profileDrawer ? presenceMap?.[profileDrawer.plate] : null;
+  const drawerCanMessage = selectedProfileStatus !== "self";
+  const drawerCanInviteToClan = canInviteToClan && selectedProfileStatus !== "self";
+  const drawerCanInviteToConvoy = Boolean(primaryHostableConvoy) && selectedProfileStatus !== "self";
+  const drawerActionLabel =
+    selectedProfileStatus === "friend"
+      ? "Arkadas"
+      : selectedProfileStatus === "incoming"
+        ? "Istek Bekliyor"
+        : selectedProfileStatus === "outgoing"
+          ? "Gonderildi"
+          : selectedProfileStatus === "self"
+            ? "Sen"
+            : "Arkadas Ekle";
 
   const handleConvoyInviteFromDrawer = () => {
     if (!profileDrawer || !primaryHostableConvoy) {
@@ -692,68 +768,6 @@ export function StatsScreen({
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Driver Stats</p>
-            <h3 className="mt-2 text-xl font-black">Personal Progress Board</h3>
-          </div>
-          <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Live Profile</div>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          {personalStats.map((stat) => (
-            <div key={stat.key} className="rounded-2xl border border-white/8 bg-black/20 p-4">
-              <p className="text-[10px] uppercase tracking-[0.22em] text-neutral-500">{stat.label}</p>
-              <p className="mt-2 text-sm font-bold text-lime-300">{stat.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Achievements</p>
-            <h3 className="mt-2 text-xl font-black">Titles and Unlock Progress</h3>
-          </div>
-          <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">
-            {(user.badges ?? []).length} active titles
-          </div>
-        </div>
-        <div className="mt-4 space-y-3">
-          {achievementProgress.map((achievement) => (
-            <div key={achievement.key} className="rounded-2xl border border-white/8 bg-black/20 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold">{achievement.title}</p>
-                  <p className="mt-1 text-xs text-neutral-500">{achievement.description}</p>
-                </div>
-                <span
-                  className={`rounded-full px-3 py-2 text-[10px] uppercase tracking-[0.22em] ${
-                    achievement.unlocked
-                      ? "border border-lime-400/20 bg-lime-400/10 text-lime-300"
-                      : "border border-white/10 bg-white/5 text-neutral-400"
-                  }`}
-                >
-                  {achievement.unlocked ? "Unlocked" : `%${achievement.percent}`}
-                </span>
-              </div>
-              <div className="mt-3 h-3 overflow-hidden rounded-full bg-neutral-800">
-                <div
-                  className={`h-full rounded-full transition-all duration-700 ${
-                    achievement.unlocked ? "bg-lime-400" : achievement.percent >= 70 ? "bg-amber-400" : "bg-white/30"
-                  }`}
-                  style={{ width: `${achievement.percent}%` }}
-                />
-              </div>
-              <p className="mt-2 text-xs text-neutral-500">
-                {formatNumber(achievement.current)} / {formatNumber(achievement.target)} {achievement.unit}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <p className="text-sm font-semibold">Active Drivers on the Highway</p>
         <div className="mt-4 space-y-3">
           {drivers.map((driver) => (
@@ -795,25 +809,55 @@ export function StatsScreen({
 
             <div className="space-y-4 px-4 py-4">
               <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                <p className="font-mono text-sm tracking-[0.16em] text-lime-300">{profileDrawer.plate}</p>
-                <p className="mt-1 text-sm font-semibold">{profileDrawer.model ?? "Unknown Setup"}</p>
-                <p className="text-xs text-neutral-500">{profileDrawer.region ?? user.region}</p>
-                {profileDrawer.clan ? <p className="mt-2 text-xs text-neutral-400">Clan: {profileDrawer.clan}</p> : null}
-                {profileDrawer.driverScore ? <p className="text-xs text-neutral-400">Score: {profileDrawer.driverScore}</p> : null}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-sm tracking-[0.16em] text-lime-300">{profileDrawer.plate}</p>
+                    <p className="mt-1 text-sm font-semibold">{profileDrawer.model ?? "Unknown Setup"}</p>
+                    <p className="text-xs text-neutral-500">{profileDrawer.region ?? user.region}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className={`inline-block h-2.5 w-2.5 rounded-full ${getPresenceTone(drawerPresence?.status)}`} />
+                      <span className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+                        {formatPresenceLabel(drawerPresence)}
+                      </span>
+                    </div>
+                    {profileDrawer.clan ? <p className="mt-2 text-xs text-neutral-400">{profileDrawer.clan}</p> : null}
+                  </div>
+                </div>
+
+                {drawerReputation ? (
+                  <div className={`mt-4 rounded-2xl border px-4 py-3 ${drawerReputation.tone}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs uppercase tracking-[0.18em]">Driver Reputation</p>
+                      <span className="text-xs font-semibold">{drawerReputation.label}</span>
+                    </div>
+                    <p className="mt-2 text-xs">{drawerReputation.description}</p>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {drawerStats.map((stat) => (
+                  <div key={stat.key} className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-neutral-500">{stat.label}</p>
+                    <p className="mt-2 text-sm font-bold text-lime-300">{stat.value}</p>
+                  </div>
+                ))}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  disabled={selectedProfileStatus === "self" || selectedProfileStatus === "friend"}
+                  disabled={selectedProfileStatus === "self" || selectedProfileStatus === "friend" || selectedProfileStatus === "incoming" || selectedProfileStatus === "outgoing"}
                   onClick={() => requestFriend(profileDrawer)}
                   className="min-h-12 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {selectedProfileStatus === "friend" ? "Arkadas" : selectedProfileStatus === "self" ? "Sen" : "Arkadas Ekle"}
+                  {drawerActionLabel}
                 </button>
                 <button
                   type="button"
-                  disabled={selectedProfileStatus === "self"}
+                  disabled={!drawerCanMessage}
                   onClick={() => openConversation(profileDrawer)}
                   className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -821,7 +865,7 @@ export function StatsScreen({
                 </button>
                 <button
                   type="button"
-                  disabled={!canInviteToClan || selectedProfileStatus === "self"}
+                  disabled={!drawerCanInviteToClan}
                   onClick={() => inviteFriendToClan(profileDrawer)}
                   className="min-h-12 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 text-xs font-semibold text-lime-200 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -829,7 +873,7 @@ export function StatsScreen({
                 </button>
                 <button
                   type="button"
-                  disabled={!primaryHostableConvoy || selectedProfileStatus === "self"}
+                  disabled={!drawerCanInviteToConvoy}
                   onClick={handleConvoyInviteFromDrawer}
                   className="min-h-12 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 text-xs font-semibold text-rose-200 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -868,7 +912,9 @@ export function StatsScreen({
 
               <div className="rounded-2xl border border-white/8 bg-black/20 p-4 text-xs text-neutral-400">
                 <p>Kaynak: {profileDrawer.source}</p>
+                <p className="mt-1">Iliski durumu: {selectedProfileStatus}</p>
                 {primaryHostableConvoy ? <p className="mt-1">Aktif host konvoyu: {primaryHostableConvoy.name}</p> : <p className="mt-1">Aktif host konvoyu bulunmuyor.</p>}
+                {profileDrawer.speed ? <p className="mt-1">Anlik hiz: {profileDrawer.speed} KM/H</p> : null}
               </div>
             </div>
           </div>
