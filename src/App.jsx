@@ -120,7 +120,9 @@ function App() {
     serviceLogFeedback,
     serviceLogForm,
     setActiveTab,
+    setAttendeeTripStatus,
     setClanForm,
+    setConvoyLifecycleStatus,
     setFriendSearchQuery,
     setMapPickMode,
     setMapPinForm,
@@ -237,6 +239,8 @@ function App() {
                 onApproveCruiseJoinRequest={approveCruiseJoinRequest}
                 onDeclineCruiseJoinRequest={declineCruiseJoinRequest}
                 onSelectPin={setSelectedPinId}
+                onSetAttendeeTripStatus={setAttendeeTripStatus}
+                onSetConvoyLifecycleStatus={setConvoyLifecycleStatus}
                 onSetMapPickMode={setMapPickMode}
                 onSetMapPinForm={setMapPinForm}
                 onSetSpotPhotoForm={setSpotPhotoForm}
@@ -273,6 +277,8 @@ function App() {
                 onApproveCruiseJoinRequest={approveCruiseJoinRequest}
                 onDeclineCruiseJoinRequest={declineCruiseJoinRequest}
                 onSetSpotPhotoForm={setSpotPhotoForm}
+                onSetAttendeeTripStatus={setAttendeeTripStatus}
+                onSetConvoyLifecycleStatus={setConvoyLifecycleStatus}
                 onSetWashForm={setWashForm}
                 onSubmitSpotPhoto={submitSpotPhoto}
                 onSubmitWashReview={submitWashReview}

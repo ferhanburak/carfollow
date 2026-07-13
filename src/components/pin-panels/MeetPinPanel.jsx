@@ -72,6 +72,34 @@ function getJoinButtonLabel(joinState, visibility) {
   return "Katilim Istegi Gonder";
 }
 
+function getLifecycleLabel(value) {
+  if (value === "rolling") {
+    return "Basladi";
+  }
+  if (value === "delayed") {
+    return "Gecikiyor";
+  }
+  if (value === "completed") {
+    return "Tamamlandi";
+  }
+
+  return "Hazirlaniyor";
+}
+
+function getTripStatusLabel(value) {
+  if (value === "enroute") {
+    return "Yolda";
+  }
+  if (value === "arrived") {
+    return "Vardi";
+  }
+  if (value === "cancelled") {
+    return "Iptal";
+  }
+
+  return "Hazir";
+}
+
 export function MeetPinPanel({
   convoyFeedback,
   pin,
@@ -80,6 +108,8 @@ export function MeetPinPanel({
   onDeclineCruiseJoinRequest,
   onJoinCruise,
   onRateAttendee,
+  onSetAttendeeTripStatus,
+  onSetConvoyLifecycleStatus,
 }) {
   const attendees = (pin.attendees ?? []).map(normalizeAttendee);
   const pendingRequests = (pin.pendingRequests ?? []).map(normalizeAttendee);
@@ -88,6 +118,8 @@ export function MeetPinPanel({
   const isHost = joinState === "host";
   const accessState = getConvoyAccessState(pin, user);
   const isJoinDisabled = joinState === "host" || joinState === "joined" || joinState === "requested" || !accessState.canJoin;
+  const selfAttendee = attendees.find((entry) => entry.plate === user.plate) ?? null;
+  const lifecycleStatus = pin.lifecycleStatus ?? "planning";
 
   return (
     <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
@@ -102,6 +134,11 @@ export function MeetPinPanel({
       <div className="mt-4 grid grid-cols-2 gap-3">
         <InsightCard label="Launch Time" value={accessState.canViewDetails ? pin.time : "Restricted"} />
         <InsightCard label="Route" value={accessState.canViewDetails ? pin.route : "Trusted drivers only"} />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <InsightCard label="Convoy Status" value={getLifecycleLabel(lifecycleStatus)} />
+        <InsightCard label="My Status" value={selfAttendee ? getTripStatusLabel(selfAttendee.tripStatus) : "Disarda"} />
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -150,6 +187,56 @@ export function MeetPinPanel({
       >
         {getJoinButtonLabel(joinState, pin.visibility)}
       </button>
+
+      {accessState.canViewDetails && isHost ? (
+        <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold">Host Convoy Control</p>
+            <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-lime-300">
+              {getLifecycleLabel(lifecycleStatus)}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {["planning", "rolling", "delayed", "completed"].map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => onSetConvoyLifecycleStatus(status)}
+                className={`min-h-12 rounded-2xl px-3 text-xs font-semibold transition ${
+                  lifecycleStatus === status ? "bg-lime-400 text-black" : "border border-white/10 bg-white/5 text-neutral-300"
+                }`}
+              >
+                {getLifecycleLabel(status)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {accessState.canViewDetails && selfAttendee && !isHost ? (
+        <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold">My Convoy Status</p>
+            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-300">
+              {getTripStatusLabel(selfAttendee.tripStatus)}
+            </span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {["ready", "enroute", "arrived", "cancelled"].map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => onSetAttendeeTripStatus(user.plate, status)}
+                className={`min-h-12 rounded-2xl px-3 text-xs font-semibold transition ${
+                  selfAttendee.tripStatus === status ? "bg-lime-400 text-black" : "border border-white/10 bg-white/5 text-neutral-300"
+                }`}
+              >
+                {getTripStatusLabel(status)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {!accessState.canViewDetails ? null : (
         <>
@@ -233,6 +320,9 @@ export function MeetPinPanel({
                     <InsightCard label="Score" value={`${attendee.score}`} />
                     <InsightCard label="Uyum" value={`${attendee.harmonyVotes}`} />
                     <InsightCard label="Alert" value={`${attendee.alertVotes}`} />
+                  </div>
+                  <div className="mt-2">
+                    <InsightCard label="Trip Status" value={getTripStatusLabel(attendee.tripStatus)} />
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <button

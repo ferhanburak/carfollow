@@ -442,6 +442,7 @@ export const initialMapPins = [
     minDriverScore: 70,
     minHarmonyVotes: 6,
     maxAlertVotes: 3,
+    lifecycleStatus: "planning",
     capacity: 8,
     createdByPlate: "06 PWA 101",
     createdByName: "Poyraz Alkan",
@@ -489,6 +490,7 @@ export const initialMapPins = [
         harmonyVotes: 17,
         alertVotes: 1,
         status: "Uyumlu",
+        tripStatus: "ready",
       },
       {
         plate: "34 MOTO 410",
@@ -499,6 +501,7 @@ export const initialMapPins = [
         harmonyVotes: 12,
         alertVotes: 2,
         status: "Convoy Ready",
+        tripStatus: "enroute",
       },
       {
         plate: "07 VTEC 707",
@@ -509,6 +512,7 @@ export const initialMapPins = [
         harmonyVotes: 4,
         alertVotes: 7,
         status: "Watchlist",
+        tripStatus: "cancelled",
       },
     ],
   },

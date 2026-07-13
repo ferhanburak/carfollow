@@ -19,6 +19,8 @@ export function MapHubScreen({
   onDeclineCruiseJoinRequest,
   onPickLocation,
   onSelectPin,
+  onSetAttendeeTripStatus,
+  onSetConvoyLifecycleStatus,
   onSetMapPickMode,
   onSetMapPinForm,
   onSetSpotPhotoForm,
@@ -90,6 +92,8 @@ export function MapHubScreen({
         onLikeGallery={likeGalleryImage}
         onLikePin={likePin}
         onRateAttendee={rateAttendee}
+        onSetAttendeeTripStatus={onSetAttendeeTripStatus}
+        onSetConvoyLifecycleStatus={onSetConvoyLifecycleStatus}
         onSpotPhotoFileChange={loadSpotPhotoFile}
         onSpotPhotoFormChange={onSetSpotPhotoForm}
         onSubmitSpotPhoto={onSubmitSpotPhoto}

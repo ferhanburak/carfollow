@@ -36,6 +36,7 @@ function normalizeAttendee(attendee) {
       harmonyVotes: 0,
       alertVotes: 0,
       status: "Convoy Ready",
+      tripStatus: "ready",
     };
   }
 
@@ -49,6 +50,7 @@ function normalizeAttendee(attendee) {
     harmonyVotes,
     alertVotes,
     status: attendee.status ?? getDriverStanding(score, harmonyVotes, alertVotes),
+    tripStatus: attendee.tripStatus ?? "ready",
   };
 }
 
@@ -79,6 +81,7 @@ export function createAttendeeRecord(user) {
     harmonyVotes,
     alertVotes,
     status: getDriverStanding(score, harmonyVotes, alertVotes),
+    tripStatus: "ready",
   };
 }
 
@@ -360,6 +363,42 @@ export function approveCruiseRequest(mapPins, pinId, plate) {
       ...pin,
       attendees: [...currentAttendees, { ...request, status: request.status === "Pending Review" ? "Convoy Ready" : request.status }],
       pendingRequests: pendingRequests.filter((entry) => entry.plate !== plate),
+    };
+  });
+}
+
+export function updateConvoyLifecycleStatus(mapPins, pinId, lifecycleStatus) {
+  return mapPins.map((pin) => {
+    if (pin.id !== pinId) {
+      return pin;
+    }
+
+    return {
+      ...pin,
+      lifecycleStatus,
+    };
+  });
+}
+
+export function updateConvoyAttendeeTripStatus(mapPins, pinId, plate, tripStatus) {
+  return mapPins.map((pin) => {
+    if (pin.id !== pinId) {
+      return pin;
+    }
+
+    return {
+      ...pin,
+      attendees: (pin.attendees ?? []).map((entry) => {
+        const attendee = normalizeAttendee(entry);
+        if (attendee.plate !== plate) {
+          return attendee;
+        }
+
+        return {
+          ...attendee,
+          tripStatus,
+        };
+      }),
     };
   });
 }

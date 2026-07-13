@@ -11,6 +11,8 @@ import {
   inviteCruiseGuest,
   joinCruiseAttendee,
   rateCruiseAttendee,
+  updateConvoyAttendeeTripStatus,
+  updateConvoyLifecycleStatus,
   saveFirebaseCruiseJoin,
   saveFirebaseMapPin,
   saveFirebaseWashReview,
@@ -259,6 +261,42 @@ export function useMapPins({ initialWorld, user }) {
       return nextPins;
     });
 
+    if (nextPin) {
+      void saveFirebaseMapPin(nextPin);
+    }
+  };
+
+  const setConvoyLifecycleStatus = (lifecycleStatus) => {
+    if (!selectedPin || selectedPin.type !== "meet") {
+      return;
+    }
+
+    let nextPin = null;
+    setMapPins((current) => {
+      const nextPins = updateConvoyLifecycleStatus(current, selectedPin.id, lifecycleStatus);
+      nextPin = nextPins.find((pin) => pin.id === selectedPin.id) ?? null;
+      return nextPins;
+    });
+
+    setConvoyFeedback(`Konvoy durumu "${lifecycleStatus}" olarak guncellendi.`);
+    if (nextPin) {
+      void saveFirebaseMapPin(nextPin);
+    }
+  };
+
+  const setAttendeeTripStatus = (plate, tripStatus) => {
+    if (!selectedPin || selectedPin.type !== "meet") {
+      return;
+    }
+
+    let nextPin = null;
+    setMapPins((current) => {
+      const nextPins = updateConvoyAttendeeTripStatus(current, selectedPin.id, plate, tripStatus);
+      nextPin = nextPins.find((pin) => pin.id === selectedPin.id) ?? null;
+      return nextPins;
+    });
+
+    setConvoyFeedback(`${plate} durumu "${tripStatus}" olarak guncellendi.`);
     if (nextPin) {
       void saveFirebaseMapPin(nextPin);
     }
@@ -536,6 +574,8 @@ export function useMapPins({ initialWorld, user }) {
     resetMapInteractions,
     selectedPin,
     selectedPinId,
+    setAttendeeTripStatus,
+    setConvoyLifecycleStatus,
     setMapPickMode,
     setMapPinForm,
     setMapPins,

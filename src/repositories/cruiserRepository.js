@@ -20,6 +20,8 @@ export {
   approveCruiseRequest,
   declineCruiseRequest,
   rateCruiseAttendee,
+  updateConvoyAttendeeTripStatus,
+  updateConvoyLifecycleStatus,
   syncActiveDriver,
   tickAmbientDrivers,
 } from "./mockCruiserRepository";
