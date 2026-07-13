@@ -54,6 +54,7 @@ export function MapHubScreen({
         pins={mapPins}
         selectedPinId={selectedPinId}
         onSelect={onSelectPin}
+        user={user}
         draftLocation={draftLocation}
         draftRoutePath={mapPinForm.routePoints}
         mapPickMode={mapPickMode}

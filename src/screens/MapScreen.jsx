@@ -1,13 +1,23 @@
 import { useMemo, useState } from "react";
 import { MapCard } from "../components/MapCard";
 import { PinPanel } from "../components/PinPanel";
+import { getConvoyAccessState } from "../utils/meetVisibility";
 
-function buildNavigationSummary(selectedPin, driveHud, isDriving) {
+function buildNavigationSummary(selectedPin, driveHud, isDriving, user) {
   if (selectedPin?.type !== "meet") {
     return {
       title: selectedPin?.name ?? "Serbest surus",
       subtitle: selectedPin ? "Popup icin marker'a dokun" : "Yakindaki markerlari incele",
       eta: isDriving ? "Canli" : "Hazir",
+    };
+  }
+
+  const accessState = getConvoyAccessState(selectedPin, user);
+  if (!accessState.canViewDetails) {
+    return {
+      title: "Restricted convoy",
+      subtitle: "Detaylar guven kurallari nedeniyle gizli",
+      eta: "Locked",
     };
   }
 
@@ -77,9 +87,13 @@ export function MapScreen({
 }) {
   const [activeOverlay, setActiveOverlay] = useState(null);
   const navigation = useMemo(
-    () => buildNavigationSummary(selectedPin, driveHud, isDriving),
-    [selectedPin, driveHud, isDriving],
+    () => buildNavigationSummary(selectedPin, driveHud, isDriving, user),
+    [selectedPin, driveHud, isDriving, user],
   );
+  const overlayTitle =
+    selectedPin?.type === "meet" && !getConvoyAccessState(selectedPin, user).canViewDetails
+      ? "Restricted Convoy"
+      : selectedPin?.name;
 
   return (
     <section className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#050505] px-3 py-3">
@@ -110,13 +124,14 @@ export function MapScreen({
             onSelectPin(pinId);
             setActiveOverlay("details");
           }}
+          user={user}
           draftRoutePath={[]}
           navigationMode
           mapHeight="calc(95vh - 14.5rem)"
         />
 
         {activeOverlay === "details" && selectedPin ? (
-          <OverlayCard title={selectedPin.name} onClose={() => setActiveOverlay(null)}>
+          <OverlayCard title={overlayTitle} onClose={() => setActiveOverlay(null)}>
             <PinPanel
               pin={selectedPin}
               user={user}

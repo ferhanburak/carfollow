@@ -77,6 +77,21 @@ export function validateMapPinForm(form) {
     if (!Number.isFinite(Number(form.capacity)) || Number(form.capacity) < 2) {
       errors.capacity = "Capacity must be at least 2.";
     }
+    if (!["open", "request", "trusted"].includes(form.accessPolicy)) {
+      errors.accessPolicy = "Access policy must be open, request, or trusted.";
+    }
+    if (!["public", "trusted"].includes(form.detailVisibility)) {
+      errors.detailVisibility = "Detail visibility must be public or trusted.";
+    }
+    if (!Number.isFinite(Number(form.minDriverScore)) || Number(form.minDriverScore) < 0 || Number(form.minDriverScore) > 100) {
+      errors.minDriverScore = "Minimum driver score must be between 0 and 100.";
+    }
+    if (!Number.isFinite(Number(form.minHarmonyVotes)) || Number(form.minHarmonyVotes) < 0) {
+      errors.minHarmonyVotes = "Minimum harmony votes must be 0 or greater.";
+    }
+    if (!Number.isFinite(Number(form.maxAlertVotes)) || Number(form.maxAlertVotes) < 0) {
+      errors.maxAlertVotes = "Maximum alert votes must be 0 or greater.";
+    }
     if (Array.isArray(form.routePoints) && form.routePoints.length === 1) {
       errors.routePoints = "Add at least 2 route points or clear the draft route.";
     }

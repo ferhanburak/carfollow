@@ -34,6 +34,11 @@ export const createMapPinForm = (seedPin) => ({
   visibility: seedPin?.visibility ?? "friends",
   capacity: seedPin?.capacity ?? 12,
   invitedPlates: seedPin?.invitedGuests?.map((guest) => guest.plate) ?? [],
+  accessPolicy: seedPin?.accessPolicy ?? "request",
+  detailVisibility: seedPin?.detailVisibility ?? "trusted",
+  minDriverScore: seedPin?.minDriverScore ?? 75,
+  minHarmonyVotes: seedPin?.minHarmonyVotes ?? 5,
+  maxAlertVotes: seedPin?.maxAlertVotes ?? 3,
 });
 
 export const createSpotPhotoForm = () => ({

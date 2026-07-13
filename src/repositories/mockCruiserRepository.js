@@ -1,5 +1,6 @@
 import { initialClans, initialDrivers, initialMapPins, quickProfiles } from "../data/mockData";
 import { normalizeClanState } from "../utils/clanGraph";
+import { getConvoyAccessState } from "../utils/meetVisibility";
 import { applyPartServiceToUser } from "../utils/vehiclePassport";
 import { createDefaultParts, inferVehicleType, normalizeVehicleParts } from "../utils/vehicleParts";
 import { normalizeSocialState } from "../utils/socialGraph";
@@ -271,6 +272,14 @@ export function joinCruiseAttendee(mapPins, pinId, attendee) {
     const isInvited = invitedGuests.some((entry) => entry.plate === attendee.plate);
     const requiresApproval = pin.visibility !== "public" && !isInvited && pin.createdByPlate !== attendee.plate;
     const isFull = currentAttendees.length >= capacity;
+    const accessState = getConvoyAccessState(pin, {
+      plate: attendee.plate,
+      driverScore: attendee.score,
+      harmonyVotes: attendee.harmonyVotes,
+      alertVotes: attendee.alertVotes,
+      friends: [],
+      clan: attendee.clan,
+    });
 
     if (isFull) {
       return {
@@ -278,6 +287,15 @@ export function joinCruiseAttendee(mapPins, pinId, attendee) {
         attendees: currentAttendees,
         pendingRequests,
         convoyStatus: "full",
+      };
+    }
+
+    if (!accessState.canJoin) {
+      return {
+        ...pin,
+        attendees: currentAttendees,
+        pendingRequests,
+        convoyStatus: "restricted",
       };
     }
 

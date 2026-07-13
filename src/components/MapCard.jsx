@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { GoogleMap, MarkerF, PolylineF, useJsApiLoader } from "@react-google-maps/api";
 import { getPinIcon } from "../constants/pins";
+import { getConvoyAccessState } from "../utils/meetVisibility";
 
 const mapContainerStyle = {
   width: "100%",
@@ -75,8 +76,13 @@ function getPinGlyph(type) {
   return getPinIcon(type);
 }
 
-function getActiveRoutePath(selectedPin) {
-  if (selectedPin?.type === "meet" && Array.isArray(selectedPin.routePath) && selectedPin.routePath.length > 1) {
+function getActiveRoutePath(selectedPin, user) {
+  if (
+    selectedPin?.type === "meet" &&
+    getConvoyAccessState(selectedPin, user).canViewDetails &&
+    Array.isArray(selectedPin.routePath) &&
+    selectedPin.routePath.length > 1
+  ) {
     return selectedPin.routePath;
   }
 
@@ -240,6 +246,7 @@ export function MapCard({
   pins,
   selectedPinId,
   onSelect,
+  user,
   draftLocation,
   draftRoutePath,
   mapPickMode,
@@ -290,6 +297,7 @@ export function MapCard({
       selectedPin={selectedPin}
       selectedPinId={selectedPinId}
       onSelect={onSelect}
+      user={user}
       draftLocation={draftLocation}
       draftRoutePath={draftRoutePath}
       mapPickMode={mapPickMode}
@@ -307,6 +315,7 @@ function GoogleMapCard({
   selectedPin,
   selectedPinId,
   onSelect,
+  user,
   draftLocation,
   draftRoutePath,
   mapPickMode,
@@ -340,10 +349,11 @@ function GoogleMapCard({
   const mapCenter = selectedPin
     ? { lat: selectedPin.lat ?? 39.8687, lng: selectedPin.lng ?? 32.7766 }
     : { lat: 39.8687, lng: 32.7766 };
-  const activeRoutePath = getActiveRoutePath(selectedPin);
+  const activeRoutePath = getActiveRoutePath(selectedPin, user);
   const hasMockRoute = activeRoutePath.length > 1;
   const displayedRoutePath = routeState.path.length > 1 ? routeState.path : activeRoutePath;
   const hasDisplayedRoute = displayedRoutePath.length > 1;
+  const convoyAccess = selectedPin?.type === "meet" ? getConvoyAccessState(selectedPin, user) : null;
 
   useEffect(() => {
     setFollowCurrentLocation(Boolean(navigationMode));
@@ -716,9 +726,15 @@ function GoogleMapCard({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Selected Node</p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-100">{selectedPin?.name}</p>
+                  <p className="mt-1 text-sm font-semibold text-neutral-100">
+                    {selectedPin?.type === "meet" && !convoyAccess?.canViewDetails ? "Restricted Convoy" : selectedPin?.name}
+                  </p>
                   <p className="mt-1 text-xs text-neutral-400">
-                    {hasMockRoute ? selectedPin.route : "Tap a cruise meet to preview its live convoy route."}
+                    {selectedPin?.type === "meet" && !convoyAccess?.canViewDetails
+                      ? "Rota ve lokasyon detaylari yalnizca guvenilir suruculere acik."
+                      : hasMockRoute
+                        ? selectedPin.route
+                        : "Tap a cruise meet to preview its live convoy route."}
                   </p>
                   {routeState.source === "fallback" ? (
                     <p className="mt-2 text-[11px] text-amber-300">Google route unavailable, showing mock cruise path.</p>

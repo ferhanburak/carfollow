@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { getMeetVisibilityLabel, getMeetVisibilityOptions } from "../utils/meetVisibility";
+import {
+  getMeetAccessPolicyLabel,
+  getMeetAccessPolicyOptions,
+  getMeetDetailVisibilityLabel,
+  getMeetDetailVisibilityOptions,
+  getMeetVisibilityLabel,
+  getMeetVisibilityOptions,
+} from "../utils/meetVisibility";
 import { CompactField } from "./ui";
 
 const nodeTypes = [
@@ -8,6 +15,8 @@ const nodeTypes = [
   { key: "wash", label: "Wash" },
 ];
 const visibilityOptions = getMeetVisibilityOptions();
+const accessPolicyOptions = getMeetAccessPolicyOptions();
+const detailVisibilityOptions = getMeetDetailVisibilityOptions();
 
 export function MapComposerPanel({
   alwaysOpen = false,
@@ -227,6 +236,78 @@ export function MapComposerPanel({
                   </div>
                   {errors.visibility ? <p className="text-xs text-rose-300">{errors.visibility}</p> : null}
                 </CompactField>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <CompactField label="Join Policy">
+                    <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/8 bg-black/20 p-2">
+                      {accessPolicyOptions.map((policy) => (
+                        <button
+                          key={policy}
+                          type="button"
+                          onClick={() => onFormChange((current) => ({ ...current, accessPolicy: policy }))}
+                          className={`min-h-12 rounded-2xl px-3 text-[11px] font-bold transition ${
+                            form.accessPolicy === policy ? "bg-lime-400 text-black" : "text-neutral-400"
+                          }`}
+                        >
+                          {getMeetAccessPolicyLabel(policy)}
+                        </button>
+                      ))}
+                    </div>
+                    {errors.accessPolicy ? <p className="text-xs text-rose-300">{errors.accessPolicy}</p> : null}
+                  </CompactField>
+
+                  <CompactField label="Detail Access">
+                    <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/8 bg-black/20 p-2">
+                      {detailVisibilityOptions.map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => onFormChange((current) => ({ ...current, detailVisibility: mode }))}
+                          className={`min-h-12 rounded-2xl px-3 text-[11px] font-bold transition ${
+                            form.detailVisibility === mode ? "bg-lime-400 text-black" : "text-neutral-400"
+                          }`}
+                        >
+                          {getMeetDetailVisibilityLabel(mode)}
+                        </button>
+                      ))}
+                    </div>
+                    {errors.detailVisibility ? <p className="text-xs text-rose-300">{errors.detailVisibility}</p> : null}
+                  </CompactField>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <CompactField label="Min Score">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={form.minDriverScore}
+                      onChange={(event) => onFormChange((current) => ({ ...current, minDriverScore: event.target.value }))}
+                      className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
+                    />
+                    {errors.minDriverScore ? <p className="text-xs text-rose-300">{errors.minDriverScore}</p> : null}
+                  </CompactField>
+                  <CompactField label="Min Uyum">
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.minHarmonyVotes}
+                      onChange={(event) => onFormChange((current) => ({ ...current, minHarmonyVotes: event.target.value }))}
+                      className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
+                    />
+                    {errors.minHarmonyVotes ? <p className="text-xs text-rose-300">{errors.minHarmonyVotes}</p> : null}
+                  </CompactField>
+                  <CompactField label="Max Alert">
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.maxAlertVotes}
+                      onChange={(event) => onFormChange((current) => ({ ...current, maxAlertVotes: event.target.value }))}
+                      className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
+                    />
+                    {errors.maxAlertVotes ? <p className="text-xs text-rose-300">{errors.maxAlertVotes}</p> : null}
+                  </CompactField>
+                </div>
 
                 <CompactField label="Invite Friends">
                   <div className="space-y-2 rounded-2xl border border-white/8 bg-black/20 p-3">

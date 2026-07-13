@@ -26,7 +26,7 @@ import {
   validateSpotPhotoForm,
   validateWashForm,
 } from "../utils/validation";
-import { filterVisibleMapPins } from "../utils/meetVisibility";
+import { filterVisibleMapPins, getConvoyAccessState } from "../utils/meetVisibility";
 
 function parseTags(rawTags) {
   return rawTags
@@ -157,6 +157,12 @@ export function useMapPins({ initialWorld, user }) {
       return;
     }
 
+    const accessState = getConvoyAccessState(selectedPin, user);
+    if (!accessState.canJoin) {
+      setConvoyFeedback(accessState.reason || "Bu konvoya katilman host guven kurallari nedeniyle kapali.");
+      return;
+    }
+
     const attendee = createAttendeeRecord(user);
     let nextPin = null;
     setMapPins((current) => {
@@ -167,6 +173,8 @@ export function useMapPins({ initialWorld, user }) {
 
     if (nextPin?.convoyStatus === "full") {
       setConvoyFeedback("Bu konvoy kapasiteye ulasti.");
+    } else if (nextPin?.convoyStatus === "restricted") {
+      setConvoyFeedback("Bu konvoyun minimum guven kurallari seni su an kabul etmiyor.");
     } else if ((nextPin?.pendingRequests ?? []).some((entry) => entry.plate === user.plate)) {
       setConvoyFeedback("Katilim istegin host onayina gonderildi.");
     } else if ((nextPin?.attendees ?? []).some((entry) => entry.plate === user.plate)) {
@@ -374,6 +382,11 @@ export function useMapPins({ initialWorld, user }) {
         capacity: Number(mapPinForm.capacity),
         routePath: mapPinForm.routePoints.length > 1 ? mapPinForm.routePoints : buildMeetRoutePath(lat, lng),
         visibility: mapPinForm.visibility,
+        accessPolicy: mapPinForm.accessPolicy,
+        detailVisibility: mapPinForm.detailVisibility,
+        minDriverScore: Number(mapPinForm.minDriverScore),
+        minHarmonyVotes: Number(mapPinForm.minHarmonyVotes),
+        maxAlertVotes: Number(mapPinForm.maxAlertVotes),
         createdByPlate: user.plate,
         createdByName: user.fullName,
         createdByClan: user.clan ?? "",
