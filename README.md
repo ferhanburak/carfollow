@@ -175,7 +175,7 @@ http://localhost:4173/
 - `npm run seed:firebase` is a legacy prototype migration command and must not be used against production
 - `npm run test` starts Vitest in watch mode
 - `npm run test:run` runs the test suite once
-- `npm run test:emulators` runs Firestore, RTDB, and Storage authorization tests against `demo-cruiser`
+- `npm run test:emulators` runs Auth, Firestore, RTDB, and Storage identity/authorization tests against `demo-cruiser`
 - `npm run lint:functions` validates callable Function syntax
 - `npm run test:functions` runs the backend domain tests
 
@@ -257,7 +257,7 @@ The following checks were run successfully:
 - `npm run build`
 - `npm run test:run` (`57/57` frontend tests)
 - `npm run test:functions` (`6/6` backend domain tests)
-- `npm run test:emulators` (`16/16` Firestore, RTDB, and Storage authorization tests)
+- `npm run test:emulators` (`19/19` Auth, Firestore, RTDB, and Storage identity/authorization tests)
 - `npm run rules:check`
 - local HTTP response from the dev server
 
@@ -273,6 +273,8 @@ The project now includes:
 - custom hooks for auth/session state and world simulation state
 - repository abstraction between hooks and the mock data source
 - Firebase Email/Password Auth linked to a private CRUISER profile
+- emulator-backed account bootstrap coverage for private/public profiles, vehicle docs, passport metadata, parts, and duplicate plates
+- defense-in-depth rule checks that reject anonymous Auth tokens across Firestore, RTDB, and Storage
 - immutable normalized plate claims and public driver profiles
 - stable private vehicle identities and Vehicle Passport metadata
 - idempotent, append-only service and fuel records
@@ -363,7 +365,7 @@ This means first load is lighter, and map/detail code is fetched closer to when 
 
 Suggested improvements for the next iteration:
 
-- complete the Auth and identity security audit with emulator-backed registration tests
+- continue Stage 2 with backend-backed Vehicle/Garage ownership and service workflows
 - implement the Cloud Function ownership-transfer workflow for Vehicle Passports
 - add a resale-safe Vehicle Passport export/report
 - move convoy reputation votes and clan totals to backend-owned aggregates

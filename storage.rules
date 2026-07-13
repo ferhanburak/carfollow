@@ -7,7 +7,11 @@ service firebase.storage {
     }
 
     function isSignedIn() {
-      return request.auth != null;
+      return request.auth != null &&
+        (
+          !request.auth.token.keys().hasAny(['firebase']) ||
+          request.auth.token.firebase.sign_in_provider != 'anonymous'
+        );
     }
 
     function isImageUnderLimit(maxBytes) {

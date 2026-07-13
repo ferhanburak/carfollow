@@ -172,10 +172,14 @@ describe("Firestore security rules", { concurrency: false }, () => {
 
   it("requires authentication for public profile reads", async () => {
     const unauthenticatedDb = testEnvironment.unauthenticatedContext().firestore();
+    const anonymousDb = testEnvironment
+      .authenticatedContext("anonymous-user", { firebase: { sign_in_provider: "anonymous" } })
+      .firestore();
     const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
     const profileReference = publicPath("publicProfiles", OWNER_ID);
 
     await assertFails(getDoc(doc(unauthenticatedDb, profileReference)));
+    await assertFails(getDoc(doc(anonymousDb, profileReference)));
     await assertSucceeds(getDoc(doc(ownerDb, profileReference)));
   });
 
@@ -278,9 +282,13 @@ describe("Realtime Database security rules", { concurrency: false }, () => {
 
   it("requires authentication for presence reads", async () => {
     const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).database();
+    const anonymousDb = testEnvironment
+      .authenticatedContext("anonymous-user", { firebase: { sign_in_provider: "anonymous" } })
+      .database();
     const unauthenticatedDb = testEnvironment.unauthenticatedContext().database();
 
     await assertSucceeds(getDatabaseValue(databaseRef(ownerDb, realtimePath("presence"))));
+    await assertFails(getDatabaseValue(databaseRef(anonymousDb, realtimePath("presence"))));
     await assertFails(getDatabaseValue(databaseRef(unauthenticatedDb, realtimePath("presence"))));
   });
 
@@ -367,6 +375,9 @@ describe("Storage security rules", { concurrency: false }, () => {
   it("allows signed-in reads but blocks anonymous reads", async () => {
     const ownerStorage = testEnvironment.authenticatedContext(OWNER_ID).storage();
     const otherStorage = testEnvironment.authenticatedContext(OTHER_ID).storage();
+    const anonymousStorage = testEnvironment
+      .authenticatedContext("anonymous-user", { firebase: { sign_in_provider: "anonymous" } })
+      .storage();
     const unauthenticatedStorage = testEnvironment.unauthenticatedContext().storage();
     const avatarPath = `artifacts/${APP_ID}/users/${OWNER_ID}/avatars/profile.png`;
 
@@ -374,6 +385,7 @@ describe("Storage security rules", { concurrency: false }, () => {
       contentType: "image/png",
     });
     await assertSucceeds(getBytes(storageRef(otherStorage, avatarPath)));
+    await assertFails(getBytes(storageRef(anonymousStorage, avatarPath)));
     await assertFails(getBytes(storageRef(unauthenticatedStorage, avatarPath)));
   });
 

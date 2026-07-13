@@ -66,14 +66,18 @@ if (!existsSync(firebaseCliScript)) {
 const environment = resolveJavaEnvironment();
 environment.CI = environment.CI ?? "true";
 environment.FIREBASE_CLI_DISABLE_UPDATE_CHECK = "true";
-const testCommand = `"${process.execPath}" --test --test-concurrency=1 tests/firebase/rules.integration.test.mjs`;
+const testFiles = [
+  "tests/firebase/rules.integration.test.mjs",
+  "tests/firebase/auth.identity.integration.test.mjs",
+];
+const testCommand = `"${process.execPath}" --test --test-concurrency=1 ${testFiles.join(" ")}`;
 const result = spawnSync(
   process.execPath,
   [
     firebaseCliScript,
     "emulators:exec",
     "--only",
-    "firestore,database,storage",
+    "auth,firestore,database,storage",
     "--project",
     "demo-cruiser",
     testCommand,

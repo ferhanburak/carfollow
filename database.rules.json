@@ -6,30 +6,30 @@
       "$appId": {
         "realtime": {
           "presence": {
-            ".read": "$appId === 'cruiser-app-prod' && auth != null",
+            ".read": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous'",
             "$userId": {
-              ".write": "$appId === 'cruiser-app-prod' && auth != null && auth.uid === $userId",
+              ".write": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $userId",
               ".validate": "newData.hasChildren(['plate', 'status', 'lastSeen', 'updatedAt', 'firebaseUid']) && newData.child('firebaseUid').val() === auth.uid && newData.child('plate').isString() && newData.child('status').isString() && newData.child('lastSeen').isNumber() && newData.child('updatedAt').isNumber()"
             }
           },
           "telemetry": {
-            ".read": "$appId === 'cruiser-app-prod' && auth != null",
+            ".read": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous'",
             "$userId": {
-              ".write": "$appId === 'cruiser-app-prod' && auth != null && auth.uid === $userId",
+              ".write": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $userId",
               ".validate": "newData.hasChildren(['plate', 'firebaseUid', 'updatedAt']) && newData.child('firebaseUid').val() === auth.uid && newData.child('plate').isString() && newData.child('updatedAt').isNumber() && (!newData.child('speed').exists() || (newData.child('speed').isNumber() && newData.child('speed').val() >= 0 && newData.child('speed').val() <= 400))"
             }
           },
           "directMessages": {
             "threads": {
               "$threadId": {
-                ".read": "$appId === 'cruiser-app-prod' && auth != null && data.child('participantUids').child(auth.uid).val() === true",
-                ".write": "$appId === 'cruiser-app-prod' && auth != null && newData.child('participantUids').child(auth.uid).val() === true && (!data.exists() || data.child('participantUids').child(auth.uid).val() === true)"
+                ".read": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && data.child('participantUids').child(auth.uid).val() === true",
+                ".write": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && newData.child('participantUids').child(auth.uid).val() === true && (!data.exists() || data.child('participantUids').child(auth.uid).val() === true)"
               }
             },
             "userThreads": {
               "$userId": {
-                ".read": "$appId === 'cruiser-app-prod' && auth != null && auth.uid === $userId",
-                ".write": "$appId === 'cruiser-app-prod' && auth != null && auth.uid === $userId"
+                ".read": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $userId",
+                ".write": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $userId"
               }
             }
           }

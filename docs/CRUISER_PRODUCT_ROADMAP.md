@@ -49,7 +49,8 @@ What still needs maturity:
 | Modular frontend structure | Complete | Screens/components separated into maintainable files |
 | Firebase integration baseline | Complete | Firestore + RTDB + rules + app config |
 | Backend foundation / Stage 0 | Complete | Repository boundaries, contracts, rules, isolated emulator suite, and CI quality gates |
-| Firebase authorization tests | Complete | 16 emulator tests covering Firestore, RTDB, and Storage |
+| Auth identity / Stage 1 baseline | Complete | Real e-mail/password accounts, immutable plate claims, private/public profile split, and anonymous-token rejection |
+| Firebase authorization tests | Complete | 19 emulator tests covering Auth, Firestore, RTDB, and Storage |
 | Grid Map node management | Complete | Spot, wash, meet creation flows |
 | Live Map screen | Complete | Separate page with Google Maps |
 | Fuel log | Complete | Idempotent private Firestore records + history + insights |
