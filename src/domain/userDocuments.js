@@ -1,4 +1,4 @@
-export const USER_SCHEMA_VERSION = 1;
+export const USER_SCHEMA_VERSION = 2;
 
 const PRIVATE_SUBCOLLECTION_FIELDS = new Set([
   "conversations",
@@ -8,6 +8,8 @@ const PRIVATE_SUBCOLLECTION_FIELDS = new Set([
   "password",
   "serviceLogs",
   "updatedAt",
+  "vehiclePassport",
+  "vehicles",
 ]);
 
 const PUBLIC_PROFILE_FIELDS = [

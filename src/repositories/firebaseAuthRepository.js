@@ -1,14 +1,21 @@
 import {
   buildPrivateUserProfile,
   buildPublicUserProfile,
-  mergePrivateUserCollections,
   normalizePlate,
 } from "../domain/userDocuments";
+import {
+  buildVehicleDocument,
+  buildVehiclePartDocument,
+  buildVehiclePassportDocument,
+  mergeVehiclePassportBundle,
+  resolvePrimaryVehicleId,
+  vehiclePartDocumentId,
+} from "../domain/vehicleDocuments";
+import { loadFirebaseVehiclePassportBundle } from "./firebaseVehiclePassportRepository";
 import { getFirebaseCoreServices, isFirebaseModeEnabled } from "../services/firebaseClient";
 import {
   PRIVATE_COLLECTIONS,
   PUBLIC_COLLECTIONS,
-  privateUserCollectionPath,
   privateUserDocumentPath,
   publicCollectionPath,
   publicDocumentPath,
@@ -19,25 +26,6 @@ function createCruiserAuthError(code, message, cause) {
   const error = new Error(message, cause ? { cause } : undefined);
   error.code = code;
   return error;
-}
-
-async function loadFirestoreProfileCollections(firestore, userId) {
-  const { collection, getDocs, query } = await import("firebase/firestore");
-  const appId = resolveAppId();
-  const [fuelSnapshot, partsSnapshot, serviceSnapshot] = await Promise.all([
-    getDocs(query(collection(firestore, privateUserCollectionPath(userId, PRIVATE_COLLECTIONS.fuelLogs, appId)))),
-    getDocs(query(collection(firestore, privateUserCollectionPath(userId, PRIVATE_COLLECTIONS.parts, appId)))),
-    getDocs(query(collection(firestore, privateUserCollectionPath(userId, PRIVATE_COLLECTIONS.serviceLogs, appId)))),
-  ]);
-
-  const mapSnapshot = (snapshot) => snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
-  return {
-    fuelLogs: mapSnapshot(fuelSnapshot).sort((left, right) => Number(right.currentKm ?? 0) - Number(left.currentKm ?? 0)),
-    parts: mapSnapshot(partsSnapshot),
-    serviceLogs: mapSnapshot(serviceSnapshot).sort((left, right) =>
-      String(right.serviceDate ?? "").localeCompare(String(left.serviceDate ?? "")),
-    ),
-  };
 }
 
 export function isFirebaseAuthRepositoryEnabled() {
@@ -70,15 +58,24 @@ export async function loadFirebaseAuthenticatedProfile(firebaseUser) {
   }
 
   const { createdAt: _createdAt, updatedAt: _updatedAt, ...profileData } = profileSnapshot.data();
-  const collections = await loadFirestoreProfileCollections(services.firestore, firebaseUser.uid);
-  return mergePrivateUserCollections(
+  const vehicleBundle = await loadFirebaseVehiclePassportBundle(
+    services.firestore,
+    firebaseUser,
     {
       ...profileData,
       id: firebaseUser.uid,
       firebaseUid: firebaseUser.uid,
       email: firebaseUser.email ?? profileData.email ?? "",
     },
-    collections,
+  );
+  return mergeVehiclePassportBundle(
+    {
+      ...profileData,
+      id: firebaseUser.uid,
+      firebaseUid: firebaseUser.uid,
+      email: firebaseUser.email ?? profileData.email ?? "",
+    },
+    vehicleBundle,
   );
 }
 
@@ -90,6 +87,18 @@ async function bootstrapFirebaseProfile(firestore, firebaseUser, user) {
     throw createCruiserAuthError("cruiser/invalid-plate", "A valid vehicle plate is required.");
   }
 
+  const vehicleId = resolvePrimaryVehicleId(user, firebaseUser.uid);
+  const preparedUser = {
+    ...user,
+    id: firebaseUser.uid,
+    firebaseUid: firebaseUser.uid,
+    primaryVehicleId: vehicleId,
+  };
+  const vehicleDocument = buildVehicleDocument(preparedUser, firebaseUser.uid);
+  const passportDocument = buildVehiclePassportDocument(preparedUser, firebaseUser.uid);
+  const preparedParts = (preparedUser.parts ?? []).map((part) =>
+    buildVehiclePartDocument(part, firebaseUser.uid, vehicleId),
+  );
   const claimRef = doc(
     firestore,
     publicDocumentPath(PUBLIC_COLLECTIONS.plateClaims, plateNormalized, appId),
@@ -102,6 +111,14 @@ async function bootstrapFirebaseProfile(firestore, firebaseUser, user) {
     firestore,
     privateUserDocumentPath(firebaseUser.uid, PRIVATE_COLLECTIONS.profile, "current", appId),
   );
+  const vehicleRef = doc(
+    firestore,
+    privateUserDocumentPath(firebaseUser.uid, PRIVATE_COLLECTIONS.vehicles, vehicleId, appId),
+  );
+  const passportRef = doc(
+    firestore,
+    privateUserDocumentPath(firebaseUser.uid, PRIVATE_COLLECTIONS.vehiclePassports, vehicleId, appId),
+  );
 
   await runTransaction(firestore, async (transaction) => {
     const existingClaim = await transaction.get(claimRef);
@@ -113,37 +130,60 @@ async function bootstrapFirebaseProfile(firestore, firebaseUser, user) {
     if (!existingClaim.exists()) {
       transaction.set(claimRef, {
         uid: firebaseUser.uid,
-        plate: user.plate,
+        vehicleId,
+        plate: preparedUser.plate,
         plateNormalized,
         createdAt,
       });
     }
     transaction.set(publicProfileRef, {
-      ...buildPublicUserProfile(user, firebaseUser),
+      ...buildPublicUserProfile(preparedUser, firebaseUser),
       createdAt,
       updatedAt: createdAt,
     });
     transaction.set(privateProfileRef, {
-      ...buildPrivateUserProfile(user, firebaseUser),
+      ...buildPrivateUserProfile(preparedUser, firebaseUser),
       createdAt,
       updatedAt: createdAt,
     });
+    transaction.set(vehicleRef, {
+      ...vehicleDocument,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    transaction.set(passportRef, {
+      ...passportDocument,
+      issuedAt: createdAt,
+      updatedAt: createdAt,
+    });
 
-    for (const part of user.parts ?? []) {
+    for (const part of preparedParts) {
       if (!part?.key) {
         continue;
       }
       const partRef = doc(
         firestore,
-        privateUserDocumentPath(firebaseUser.uid, PRIVATE_COLLECTIONS.parts, part.key, appId),
+        privateUserDocumentPath(
+          firebaseUser.uid,
+          PRIVATE_COLLECTIONS.parts,
+          vehiclePartDocumentId(vehicleId, part.key),
+          appId,
+        ),
       );
       transaction.set(partRef, {
         ...part,
-        userId: firebaseUser.uid,
+        createdAt,
         updatedAt: createdAt,
       });
     }
   });
+
+  return {
+    preparedUser,
+    vehicle: vehicleDocument,
+    passport: passportDocument,
+    parts: preparedParts,
+  };
 }
 
 export async function registerFirebaseAccount({ email, password, user }) {
@@ -161,15 +201,18 @@ export async function registerFirebaseAccount({ email, password, user }) {
       ...user,
       id: credential.user.uid,
       firebaseUid: credential.user.uid,
+      primaryVehicleId: `vehicle-${credential.user.uid}`,
       email: credential.user.email ?? email.trim(),
     };
-    await bootstrapFirebaseProfile(services.firestore, credential.user, nextUser);
-    return mergePrivateUserCollections(
-      buildPrivateUserProfile(nextUser, credential.user),
+    const bootstrap = await bootstrapFirebaseProfile(services.firestore, credential.user, nextUser);
+    return mergeVehiclePassportBundle(
+      buildPrivateUserProfile(bootstrap.preparedUser, credential.user),
       {
-        fuelLogs: nextUser.fuelLogs ?? [],
-        parts: nextUser.parts ?? [],
-        serviceLogs: nextUser.serviceLogs ?? [],
+        vehicle: bootstrap.vehicle,
+        passport: bootstrap.passport,
+        fuelLogs: bootstrap.preparedUser.fuelLogs ?? [],
+        parts: bootstrap.parts,
+        serviceLogs: bootstrap.preparedUser.serviceLogs ?? [],
       },
     );
   } catch (error) {

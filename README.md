@@ -119,11 +119,11 @@ Copy-Item .env.example .env
 VITE_CRUISER_DATA_SOURCE=firebase
 ```
 
-4. Open Firebase Authentication -> `Sign-in method` and enable `Email/Password`.
+4. Open Firebase Authentication -> `Sign-in method`, enable `Email/Password`, and keep `Anonymous` disabled.
 
 CRUISER uses Firebase `uid` as the permanent account identity. E-mail/password is used for secure sign-in, while the vehicle plate remains the public and searchable driver identity. Quick test profiles are available only in mock/test mode and their passwords are never persisted to Firestore or `localStorage`.
 
-5. Open Firebase Storage and click `Get Started` before enabling photo uploads or deploying `storage.rules`.
+5. Initialize Firebase Storage before enabling photo uploads or deploying `storage.rules`.
 
 If this stays `mock`, the app keeps using the local mock-backed repository.
 
@@ -215,17 +215,11 @@ cd D:\carfollow
 npm run rules:check
 ```
 
-To publish the currently configured database rules:
+To publish the currently configured database and Storage rules:
 
 ```powershell
 cd D:\carfollow
-firebase deploy --only firestore:rules,database --project carfollow-75750
-```
-
-After Firebase Storage is initialized, include Storage rules with:
-
-```powershell
-firebase deploy --only storage --project carfollow-75750
+firebase deploy --only firestore:rules,database,storage --project carfollow-75750
 ```
 
 If Firebase CLI returns `401 invalid authentication credentials`, refresh the CLI session first:
@@ -256,6 +250,9 @@ The project now includes:
 - repository abstraction between hooks and the mock data source
 - Firebase Email/Password Auth linked to a private CRUISER profile
 - immutable normalized plate claims and public driver profiles
+- stable private vehicle identities and Vehicle Passport metadata
+- idempotent, append-only service and fuel records
+- atomic updates for odometer, passport counters, and replacement-part state
 - Firebase-backed repository hooks for hydration and persistence
 - local mocked session persistence with `localStorage`
 - centralized Firebase path and document contracts
@@ -271,16 +268,30 @@ The current data flow is intentionally prepared for Firebase migration:
 - repositories encapsulate read/update behavior for app data
 - the active repository can run in `mock` or `firebase` mode
 
-This means the next Firebase step can replace repository internals without rewriting the screens.
+The Garage and Vehicle Passport screens now use the same repository boundary in both mock and Firebase modes.
 
 Current Firebase integration behavior:
 
 - public world data can hydrate from Firestore after authentication
 - account profiles are split into private and public documents
 - plates are reserved atomically through immutable claim documents
-- fuel logs, service logs, and vehicle parts reload from private subcollections
+- fuel logs, service logs, and vehicle parts reload from vehicle-scoped private subcollections
+- legacy accounts automatically receive a stable `vehicleId` and Vehicle Passport on their next authenticated load
+- only a `replacement` service record can reset a part's tracked lifetime
 - active driver telemetry and presence use Firebase `uid` paths in Realtime Database
 - Firebase services can switch between production and the Local Emulator Suite through environment variables
+
+Private Vehicle Passport paths:
+
+```text
+/artifacts/{appId}/users/{userId}/vehicles/{vehicleId}
+/artifacts/{appId}/users/{userId}/vehiclePassports/{vehicleId}
+/artifacts/{appId}/users/{userId}/parts/{vehicleId}--{partKey}
+/artifacts/{appId}/users/{userId}/serviceLogs/{logId}
+/artifacts/{appId}/users/{userId}/fuelLogs/{logId}
+```
+
+All log sorting and deep filtering stays in client memory. Firestore writes use deterministic document IDs and transactions, avoiding duplicate records and complex index requirements.
 
 ## Performance Notes
 
@@ -289,7 +300,7 @@ Recent optimizations in the current build:
 - non-auth screens are lazy-loaded with `React.lazy`
 - pin detail views are split into separate lazy-loaded spot/wash/meet panels
 - Firebase repository imports are loaded on demand
-- Firestore uses the Lite SDK to reduce the production chunk size
+- Firebase feature modules are loaded on demand and split into dedicated production chunks
 
 This means first load is lighter, and map/detail code is fetched closer to when the user actually opens those surfaces.
 
@@ -297,8 +308,9 @@ This means first load is lighter, and map/detail code is fetched closer to when 
 
 Suggested improvements for the next iteration:
 
-- add persistence for map reviews, clan movement, and fuel history beyond the active session
-- add more repository-level tests for update functions
-- persist more of the mock app world, not only the active user session
+- implement the Cloud Function ownership-transfer workflow for Vehicle Passports
+- add a resale-safe Vehicle Passport export/report
+- move leaderboard and achievement progress to backend-owned aggregates
+- add emulator-backed authorization tests when Java is available
 - add route-level architecture only if the SPA grows beyond the current shell
 - upgrade local Node.js to `22.12+` to remove the Vite version warning

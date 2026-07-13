@@ -4,12 +4,25 @@ function clampPercent(value) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function resolveDate(dateValue) {
+  if (dateValue instanceof Date) {
+    return dateValue;
+  }
+  if (typeof dateValue?.toDate === "function") {
+    return dateValue.toDate();
+  }
+  if (Number.isFinite(Number(dateValue?.seconds))) {
+    return new Date(Number(dateValue.seconds) * 1000);
+  }
+  return new Date(dateValue);
+}
+
 export function getDaysSince(dateValue, now = Date.now()) {
   if (!dateValue) {
     return 0;
   }
 
-  const timestamp = new Date(dateValue).getTime();
+  const timestamp = resolveDate(dateValue).getTime();
   if (Number.isNaN(timestamp)) {
     return 0;
   }
@@ -82,11 +95,21 @@ export function buildVehiclePassportSummary(user, now = Date.now()) {
   const criticalParts = partSnapshots.filter((part) => part.snapshot.status === "critical").length;
   const totalServiceSpend = serviceLogs.reduce((sum, log) => sum + Number(log.cost ?? 0), 0);
   const lastServiceLog = [...serviceLogs].sort((left, right) => new Date(right.serviceDate) - new Date(left.serviceDate))[0] ?? null;
+  const persistedPassport = user.vehiclePassport ?? null;
+  const persistedServiceCount = Number(persistedPassport?.serviceLogCount ?? serviceLogs.length);
+  const persistedFuelCount = Number(persistedPassport?.fuelLogCount ?? (user.fuelLogs ?? []).length);
 
   return {
     totalServiceLogs: serviceLogs.length,
     totalServiceSpend,
     lastServiceLog,
+    vehicleId: user.primaryVehicleId ?? persistedPassport?.vehicleId ?? "local-primary",
+    passportStatus: persistedPassport?.status ?? "local",
+    transferState: persistedPassport?.transferState ?? "local",
+    issuedAt: persistedPassport?.issuedAt ?? null,
+    fuelLogCount: (user.fuelLogs ?? []).length,
+    recordIntegrity:
+      persistedServiceCount === serviceLogs.length && persistedFuelCount === (user.fuelLogs ?? []).length,
     healthyParts,
     warningParts,
     criticalParts,
@@ -111,22 +134,39 @@ export function applyPartServiceToUser(user, serviceLog) {
     return user;
   }
 
+  const isReplacement = serviceLog.type === "replacement";
+  const nextServiceLog = {
+    ...serviceLog,
+    vehicleId: serviceLog.vehicleId ?? user.primaryVehicleId,
+  };
+  const currentServiceLogs = user.serviceLogs ?? [];
+
   return {
     ...user,
     odometer: Math.max(Number(user.odometer ?? 0), Number(serviceLog.serviceKm ?? 0)),
     parts: (user.parts ?? []).map((part) =>
-      part.key === serviceLog.partKey
+      isReplacement && part.key === serviceLog.partKey
         ? {
             ...part,
             replacedKm: Number(serviceLog.serviceKm),
             replacedAt: serviceLog.serviceDate,
             lastServiceCost: Number(serviceLog.cost ?? 0),
+            lastServiceLogId: serviceLog.id,
             lastServiceShop: serviceLog.serviceShop,
             notes: serviceLog.notes || part.notes || "",
           }
         : part,
     ),
-    serviceLogs: [serviceLog, ...(user.serviceLogs ?? [])],
+    serviceLogs: [nextServiceLog, ...currentServiceLogs],
+    vehiclePassport: {
+      ...(user.vehiclePassport ?? {}),
+      serviceLogCount: Number(user.vehiclePassport?.serviceLogCount ?? currentServiceLogs.length) + 1,
+      totalServiceSpend:
+        Number(user.vehiclePassport?.totalServiceSpend ?? 0) + Number(serviceLog.cost ?? 0),
+      lastServiceDate: serviceLog.serviceDate,
+      lastMutationId: serviceLog.id,
+      lastMutationType: "service",
+    },
   };
 }
 
@@ -135,7 +175,12 @@ export function formatServiceDate(dateValue) {
     return "--";
   }
 
-  return new Date(dateValue).toLocaleDateString("tr-TR", {
+  const date = resolveDate(dateValue);
+  if (Number.isNaN(date.getTime())) {
+    return "--";
+  }
+
+  return date.toLocaleDateString("tr-TR", {
     day: "2-digit",
     month: "short",
     year: "numeric",

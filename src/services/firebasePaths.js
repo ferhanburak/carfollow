@@ -20,6 +20,8 @@ export const PRIVATE_COLLECTIONS = Object.freeze({
   parts: "parts",
   profile: "profile",
   serviceLogs: "serviceLogs",
+  vehiclePassports: "vehiclePassports",
+  vehicles: "vehicles",
 });
 
 export function resolveAppId() {

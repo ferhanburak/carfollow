@@ -13,19 +13,21 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
   const [serviceLogForm, setServiceLogForm] = useState(createServiceLogForm(user));
   const [serviceLogErrors, setServiceLogErrors] = useState({});
   const [serviceLogFeedback, setServiceLogFeedback] = useState("");
+  const [serviceLogPending, setServiceLogPending] = useState(false);
 
   useEffect(() => {
     setServiceLogForm(createServiceLogForm(user));
     setServiceLogErrors({});
     setServiceLogFeedback("");
+    setServiceLogPending(false);
   }, [user?.id]);
 
   const passportSummary = user ? buildVehiclePassportSummary(user) : null;
   const upcomingMaintenance = user ? getUpcomingMaintenance(user.parts ?? [], user.odometer) : [];
 
-  const commitServiceLog = (draftLog) => {
-    if (!user) {
-      return;
+  const commitServiceLog = async (draftLog) => {
+    if (!user || serviceLogPending) {
+      return null;
     }
 
     const validationErrors = validateServiceLogForm(draftLog, user.odometer);
@@ -44,25 +46,45 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
       cost: Number(draftLog.cost || 0),
       notes: draftLog.notes.trim(),
       receiptImageUrl: draftLog.receiptImageUrl?.trim?.() ?? "",
+      vehicleId: user.primaryVehicleId,
     };
 
-    let nextUserSnapshot = null;
-    setUser((current) => {
-      nextUserSnapshot = appendServiceLog(current, nextLog);
-      return nextUserSnapshot;
-    });
+    const nextUserSnapshot = appendServiceLog(user, nextLog);
+    const servicedPart = nextLog.type === "replacement"
+      ? nextUserSnapshot?.parts?.find((part) => part.key === nextLog.partKey) ?? null
+      : null;
 
-    const servicedPart = nextUserSnapshot?.parts?.find((part) => part.key === nextLog.partKey) ?? null;
-    setServiceLogForm(createServiceLogForm(nextUserSnapshot ?? user));
-    setServiceLogErrors({});
-    setServiceLogFeedback(`${servicedPart?.name ?? "Part"} service saved to Vehicle Passport.`);
-    syncServiceLog?.(nextLog, servicedPart);
-    return nextLog;
+    setServiceLogPending(true);
+    setServiceLogFeedback("Vehicle Passport kaydi guvenli olarak isleniyor...");
+    try {
+      const syncResult = syncServiceLog
+        ? await syncServiceLog(nextLog, servicedPart)
+        : { ok: true, mode: "mock" };
+      if (syncResult?.ok === false) {
+        setServiceLogFeedback(`Kayit tamamlanamadi: ${syncResult.error}`);
+        return null;
+      }
+
+      setUser((current) => {
+        if (!current || current.serviceLogs?.some((log) => log.id === nextLog.id)) {
+          return current;
+        }
+        return appendServiceLog(current, nextLog);
+      });
+      setServiceLogForm(createServiceLogForm(nextUserSnapshot));
+      setServiceLogErrors({});
+      setServiceLogFeedback(
+        `${nextUserSnapshot.parts?.find((part) => part.key === nextLog.partKey)?.name ?? "Part"} kaydi Vehicle Passport'a eklendi.`,
+      );
+      return nextLog;
+    } finally {
+      setServiceLogPending(false);
+    }
   };
 
-  const submitServiceLog = (event) => {
+  const submitServiceLog = async (event) => {
     event.preventDefault();
-    commitServiceLog(serviceLogForm);
+    await commitServiceLog(serviceLogForm);
   };
 
   const primeServiceLogForm = (partKey, type = "inspection") => {
@@ -89,6 +111,7 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
     serviceLogErrors,
     serviceLogFeedback,
     serviceLogForm,
+    serviceLogPending,
     setServiceLogForm,
     submitServiceLog,
     upcomingMaintenance,

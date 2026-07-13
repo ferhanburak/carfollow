@@ -14,15 +14,44 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function ownsPlateClaimAfter(appId, plateNormalized, userId) {
-      return getAfter(
+    function ownsPlateClaimAfter(appId, plateNormalized, userId, vehicleId) {
+      let claim = getAfter(
         /databases/$(database)/documents/artifacts/$(appId)/public/data/plateClaims/$(plateNormalized)
-      ).data.uid == userId;
+      ).data;
+      return claim.uid == userId &&
+        (!claim.keys().hasAny(['vehicleId']) || claim.vehicleId == vehicleId);
+    }
+
+    function vehicleAfter(appId, userId, vehicleId) {
+      return getAfter(
+        /databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/vehicles/$(vehicleId)
+      ).data;
+    }
+
+    function profileAfter(appId, userId) {
+      return getAfter(
+        /databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/profile/current
+      ).data;
+    }
+
+    function passportBefore(appId, userId, vehicleId) {
+      return get(
+        /databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/vehiclePassports/$(vehicleId)
+      ).data;
+    }
+
+    function passportAfter(appId, userId, vehicleId) {
+      return getAfter(
+        /databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/vehiclePassports/$(vehicleId)
+      ).data;
     }
 
     function isValidIdentity(data, userId) {
       return data.id == userId &&
         data.firebaseUid == userId &&
+        data.primaryVehicleId is string &&
+        data.primaryVehicleId.size() >= 8 &&
+        data.primaryVehicleId.size() <= 120 &&
         data.plate is string &&
         data.plate.size() >= 5 &&
         data.plate.size() <= 16 &&
@@ -42,8 +71,7 @@ service cloud.firestore {
     }
 
     function isValidPublicProfile(data, userId) {
-      return isValidIdentity(data, userId) &&
-        data.userId == userId;
+      return isValidIdentity(data, userId) && data.userId == userId;
     }
 
     function isValidPrivateProfile(data, userId) {
@@ -51,6 +79,27 @@ service cloud.firestore {
         data.email is string &&
         data.odometer is number &&
         data.odometer >= 0;
+    }
+
+    function hasConsistentPublicVehicleAfter(appId, userId, data) {
+      let vehicle = vehicleAfter(appId, userId, data.primaryVehicleId);
+      return vehicle.ownerId == userId &&
+        vehicle.vehicleId == data.primaryVehicleId &&
+        vehicle.plateNormalized == data.plateNormalized &&
+        vehicle.model == data.model;
+    }
+
+    function hasConsistentPrivateVehicleAfter(appId, userId, data) {
+      let vehicle = vehicleAfter(appId, userId, data.primaryVehicleId);
+      return vehicle.ownerId == userId &&
+        vehicle.vehicleId == data.primaryVehicleId &&
+        vehicle.plateNormalized == data.plateNormalized &&
+        vehicle.odometer == data.odometer;
+    }
+
+    function keepsPrimaryVehicle(data, previousData) {
+      return !previousData.keys().hasAny(['primaryVehicleId']) ||
+        data.primaryVehicleId == previousData.primaryVehicleId;
     }
 
     function hasInitialReputation(data) {
@@ -66,9 +115,57 @@ service cloud.firestore {
         data.alertVotes == previousData.alertVotes;
     }
 
-    function isValidFuelLog(data, userId) {
-      return data.id is string &&
+    function isValidVehicle(data, userId, vehicleId) {
+      return data.id == vehicleId &&
+        data.vehicleId == vehicleId &&
+        data.ownerId == userId &&
+        data.isPrimary == true &&
+        data.status in ['active', 'archived'] &&
+        data.plate is string &&
+        data.plate.size() >= 5 &&
+        data.plate.size() <= 16 &&
+        data.plateNormalized is string &&
+        data.plateNormalized.size() >= 5 &&
+        data.plateNormalized.size() <= 12 &&
+        data.model is string &&
+        data.model.size() >= 2 &&
+        data.model.size() <= 100 &&
+        data.vehicleType in ['car', 'motorcycle'] &&
+        data.tuningStage is string &&
+        data.horsepower is number &&
+        data.horsepower > 0 &&
+        data.horsepower <= 5000 &&
+        data.odometer is number &&
+        data.odometer >= 0 &&
+        data.garage is string &&
+        data.schemaVersion is int &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function keepsVehicleIdentity(data, previousData) {
+      return data.id == previousData.id &&
+        data.vehicleId == previousData.vehicleId &&
+        data.ownerId == previousData.ownerId &&
+        data.plateNormalized == previousData.plateNormalized &&
+        data.createdAt == previousData.createdAt &&
+        data.odometer >= previousData.odometer;
+    }
+
+    function hasConsistentProfileAfter(appId, userId, vehicleId, odometer) {
+      let profile = profileAfter(appId, userId);
+      return profile.primaryVehicleId == vehicleId && profile.odometer == odometer;
+    }
+
+    function isOwnedVehicleAfter(appId, userId, vehicleId) {
+      let vehicle = vehicleAfter(appId, userId, vehicleId);
+      return vehicle.ownerId == userId && vehicle.vehicleId == vehicleId;
+    }
+
+    function isValidFuelLog(data, userId, documentId) {
+      return data.id == documentId &&
         data.userId == userId &&
+        data.vehicleId is string &&
         data.liters is number &&
         data.liters > 0 &&
         data.liters <= 500 &&
@@ -82,11 +179,32 @@ service cloud.firestore {
         data.createdAt is timestamp;
     }
 
-    function isValidServiceLog(data, userId) {
-      return data.id is string &&
+    function hasAtomicFuelMutation(appId, userId, data) {
+      let vehicle = vehicleAfter(appId, userId, data.vehicleId);
+      let profile = profileAfter(appId, userId);
+      let previousPassport = passportBefore(appId, userId, data.vehicleId);
+      let passport = passportAfter(appId, userId, data.vehicleId);
+      return vehicle.ownerId == userId &&
+        vehicle.odometer >= data.currentKm &&
+        profile.primaryVehicleId == data.vehicleId &&
+        profile.odometer == vehicle.odometer &&
+        passport.ownerId == userId &&
+        passport.lastMutationType == 'fuel' &&
+        passport.lastMutationId == data.id &&
+        passport.lastFuelKm == data.currentKm &&
+        passport.fuelLogCount == previousPassport.fuelLogCount + 1 &&
+        passport.serviceLogCount == previousPassport.serviceLogCount &&
+        passport.totalServiceSpend == previousPassport.totalServiceSpend;
+    }
+
+    function isValidServiceLog(data, userId, documentId) {
+      return data.id == documentId &&
         data.userId == userId &&
+        data.vehicleId is string &&
         data.partKey is string &&
-        data.type is string &&
+        data.partKey.size() >= 1 &&
+        data.partKey.size() <= 80 &&
+        data.type in ['replacement', 'inspection', 'repair'] &&
         data.serviceDate is string &&
         data.serviceKm is number &&
         data.serviceKm >= 0 &&
@@ -95,15 +213,137 @@ service cloud.firestore {
         data.serviceShop.size() <= 160 &&
         data.cost is number &&
         data.cost >= 0 &&
+        data.notes is string &&
+        data.notes.size() <= 1200 &&
+        data.receiptImageUrl is string &&
+        data.receiptImageUrl.size() <= 2048 &&
         data.createdAt is timestamp;
     }
 
-    function isValidPart(data, userId) {
+    function hasAtomicServiceMutation(appId, userId, data) {
+      let vehicle = vehicleAfter(appId, userId, data.vehicleId);
+      let profile = profileAfter(appId, userId);
+      let previousPassport = passportBefore(appId, userId, data.vehicleId);
+      let passport = passportAfter(appId, userId, data.vehicleId);
+      return vehicle.ownerId == userId &&
+        vehicle.odometer >= data.serviceKm &&
+        profile.primaryVehicleId == data.vehicleId &&
+        profile.odometer == vehicle.odometer &&
+        passport.ownerId == userId &&
+        passport.lastMutationType == 'service' &&
+        passport.lastMutationId == data.id &&
+        passport.lastServiceDate == data.serviceDate &&
+        passport.serviceLogCount == previousPassport.serviceLogCount + 1 &&
+        passport.fuelLogCount == previousPassport.fuelLogCount &&
+        passport.totalServiceSpend == previousPassport.totalServiceSpend + data.cost;
+    }
+
+    function hasReplacementPartAfter(appId, userId, data) {
+      let partId = data.vehicleId + '--' + data.partKey;
+      let part = getAfter(
+        /databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/parts/$(partId)
+      ).data;
+      return data.type != 'replacement' ||
+        (
+          part.userId == userId &&
+          part.vehicleId == data.vehicleId &&
+          part.key == data.partKey &&
+          part.lastServiceLogId == data.id &&
+          part.replacedKm == data.serviceKm &&
+          part.replacedAt == data.serviceDate
+        );
+    }
+
+    function isValidPart(data, userId, vehicleId, documentId) {
       return data.key is string &&
+        data.key.size() >= 1 &&
+        data.key.size() <= 80 &&
+        documentId == vehicleId + '--' + data.key &&
+        data.vehicleId == vehicleId &&
         data.userId == userId &&
+        data.name is string &&
+        data.lifeExpectancyKm is number &&
+        data.lifeExpectancyKm >= 0 &&
+        data.lifeExpectancyMonths is number &&
+        data.lifeExpectancyMonths >= 0 &&
         data.replacedKm is number &&
         data.replacedKm >= 0 &&
+        data.replacedAt is string &&
+        data.schemaVersion is int &&
+        data.createdAt is timestamp &&
         data.updatedAt is timestamp;
+    }
+
+    function keepsPartIdentity(data, previousData) {
+      return data.key == previousData.key &&
+        data.vehicleId == previousData.vehicleId &&
+        data.userId == previousData.userId &&
+        data.createdAt == previousData.createdAt;
+    }
+
+    function hasMatchingReplacementAfter(appId, userId, data) {
+      let serviceLog = getAfter(
+        /databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/serviceLogs/$(data.lastServiceLogId)
+      ).data;
+      return data.lastServiceLogId is string &&
+        serviceLog.id == data.lastServiceLogId &&
+        serviceLog.vehicleId == data.vehicleId &&
+        serviceLog.partKey == data.key &&
+        serviceLog.type == 'replacement' &&
+        serviceLog.serviceKm == data.replacedKm &&
+        serviceLog.serviceDate == data.replacedAt;
+    }
+
+    function isValidPassport(data, userId, vehicleId) {
+      return data.id == vehicleId &&
+        data.vehicleId == vehicleId &&
+        data.ownerId == userId &&
+        data.status == 'active' &&
+        data.transferState == 'owned' &&
+        data.serviceLogCount is int &&
+        data.serviceLogCount >= 0 &&
+        data.fuelLogCount is int &&
+        data.fuelLogCount >= 0 &&
+        data.totalServiceSpend is number &&
+        data.totalServiceSpend >= 0 &&
+        data.lastMutationType in ['bootstrap', 'service', 'fuel'] &&
+        data.lastMutationId is string &&
+        data.schemaVersion is int &&
+        data.issuedAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function keepsPassportIdentity(data, previousData) {
+      return data.id == previousData.id &&
+        data.vehicleId == previousData.vehicleId &&
+        data.ownerId == previousData.ownerId &&
+        data.status == previousData.status &&
+        data.transferState == previousData.transferState &&
+        data.issuedAt == previousData.issuedAt;
+    }
+
+    function hasValidServicePassportMutation(appId, userId, data, previousData) {
+      let serviceLog = getAfter(
+        /databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/serviceLogs/$(data.lastMutationId)
+      ).data;
+      return data.lastMutationType == 'service' &&
+        serviceLog.id == data.lastMutationId &&
+        serviceLog.vehicleId == data.vehicleId &&
+        data.serviceLogCount == previousData.serviceLogCount + 1 &&
+        data.fuelLogCount == previousData.fuelLogCount &&
+        data.totalServiceSpend == previousData.totalServiceSpend + serviceLog.cost;
+    }
+
+    function hasValidFuelPassportMutation(appId, userId, data, previousData) {
+      let fuelLog = getAfter(
+        /databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/fuelLogs/$(data.lastMutationId)
+      ).data;
+      return data.lastMutationType == 'fuel' &&
+        fuelLog.id == data.lastMutationId &&
+        fuelLog.vehicleId == data.vehicleId &&
+        data.fuelLogCount == previousData.fuelLogCount + 1 &&
+        data.serviceLogCount == previousData.serviceLogCount &&
+        data.totalServiceSpend == previousData.totalServiceSpend;
     }
 
     match /artifacts/{appId}/public/data/plateClaims/{plateNormalized} {
@@ -111,8 +351,9 @@ service cloud.firestore {
       allow list: if false;
       allow create: if isKnownApp(appId) &&
         isSignedIn() &&
-        request.resource.data.keys().hasOnly(['uid', 'plate', 'plateNormalized', 'createdAt']) &&
+        request.resource.data.keys().hasOnly(['uid', 'vehicleId', 'plate', 'plateNormalized', 'createdAt']) &&
         request.resource.data.uid == request.auth.uid &&
+        request.resource.data.vehicleId is string &&
         request.resource.data.plateNormalized == plateNormalized &&
         request.resource.data.plate is string &&
         request.resource.data.createdAt is timestamp;
@@ -125,13 +366,26 @@ service cloud.firestore {
         isOwner(userId) &&
         isValidPublicProfile(request.resource.data, userId) &&
         hasInitialReputation(request.resource.data) &&
-        ownsPlateClaimAfter(appId, request.resource.data.plateNormalized, userId);
+        ownsPlateClaimAfter(
+          appId,
+          request.resource.data.plateNormalized,
+          userId,
+          request.resource.data.primaryVehicleId
+        ) &&
+        hasConsistentPublicVehicleAfter(appId, userId, request.resource.data);
       allow update: if isKnownApp(appId) &&
         isOwner(userId) &&
         isValidPublicProfile(request.resource.data, userId) &&
         keepsProtectedReputation(request.resource.data, resource.data) &&
+        keepsPrimaryVehicle(request.resource.data, resource.data) &&
         request.resource.data.plateNormalized == resource.data.plateNormalized &&
-        ownsPlateClaimAfter(appId, request.resource.data.plateNormalized, userId);
+        ownsPlateClaimAfter(
+          appId,
+          request.resource.data.plateNormalized,
+          userId,
+          request.resource.data.primaryVehicleId
+        ) &&
+        hasConsistentPublicVehicleAfter(appId, userId, request.resource.data);
       allow delete: if false;
     }
 
@@ -192,34 +446,96 @@ service cloud.firestore {
         isOwner(userId) &&
         isValidPrivateProfile(request.resource.data, userId) &&
         hasInitialReputation(request.resource.data) &&
-        ownsPlateClaimAfter(appId, request.resource.data.plateNormalized, userId);
+        ownsPlateClaimAfter(
+          appId,
+          request.resource.data.plateNormalized,
+          userId,
+          request.resource.data.primaryVehicleId
+        ) &&
+        hasConsistentPrivateVehicleAfter(appId, userId, request.resource.data);
       allow update: if isKnownApp(appId) &&
         isOwner(userId) &&
         isValidPrivateProfile(request.resource.data, userId) &&
         keepsProtectedReputation(request.resource.data, resource.data) &&
+        keepsPrimaryVehicle(request.resource.data, resource.data) &&
         request.resource.data.plateNormalized == resource.data.plateNormalized &&
-        ownsPlateClaimAfter(appId, request.resource.data.plateNormalized, userId);
+        ownsPlateClaimAfter(
+          appId,
+          request.resource.data.plateNormalized,
+          userId,
+          request.resource.data.primaryVehicleId
+        ) &&
+        hasConsistentPrivateVehicleAfter(appId, userId, request.resource.data);
+      allow delete: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/vehicles/{vehicleId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow create: if isKnownApp(appId) &&
+        isOwner(userId) &&
+        isValidVehicle(request.resource.data, userId, vehicleId) &&
+        hasConsistentProfileAfter(appId, userId, vehicleId, request.resource.data.odometer);
+      allow update: if isKnownApp(appId) &&
+        isOwner(userId) &&
+        isValidVehicle(request.resource.data, userId, vehicleId) &&
+        keepsVehicleIdentity(request.resource.data, resource.data) &&
+        hasConsistentProfileAfter(appId, userId, vehicleId, request.resource.data.odometer);
+      allow delete: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/vehiclePassports/{vehicleId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow create: if isKnownApp(appId) &&
+        isOwner(userId) &&
+        isOwnedVehicleAfter(appId, userId, vehicleId) &&
+        isValidPassport(request.resource.data, userId, vehicleId) &&
+        request.resource.data.lastMutationType == 'bootstrap' &&
+        request.resource.data.lastMutationId == 'bootstrap';
+      allow update: if isKnownApp(appId) &&
+        isOwner(userId) &&
+        isOwnedVehicleAfter(appId, userId, vehicleId) &&
+        isValidPassport(request.resource.data, userId, vehicleId) &&
+        keepsPassportIdentity(request.resource.data, resource.data) &&
+        (
+          hasValidServicePassportMutation(appId, userId, request.resource.data, resource.data) ||
+          hasValidFuelPassportMutation(appId, userId, request.resource.data, resource.data)
+        );
       allow delete: if false;
     }
 
     match /artifacts/{appId}/users/{userId}/fuelLogs/{documentId} {
       allow read: if isKnownApp(appId) && isOwner(userId);
-      allow create: if isKnownApp(appId) && isOwner(userId) && isValidFuelLog(request.resource.data, userId);
+      allow create: if isKnownApp(appId) &&
+        isOwner(userId) &&
+        isValidFuelLog(request.resource.data, userId, documentId) &&
+        isOwnedVehicleAfter(appId, userId, request.resource.data.vehicleId) &&
+        hasAtomicFuelMutation(appId, userId, request.resource.data);
       allow update, delete: if false;
     }
 
     match /artifacts/{appId}/users/{userId}/serviceLogs/{documentId} {
       allow read: if isKnownApp(appId) && isOwner(userId);
-      allow create: if isKnownApp(appId) && isOwner(userId) && isValidServiceLog(request.resource.data, userId);
+      allow create: if isKnownApp(appId) &&
+        isOwner(userId) &&
+        isValidServiceLog(request.resource.data, userId, documentId) &&
+        isOwnedVehicleAfter(appId, userId, request.resource.data.vehicleId) &&
+        hasAtomicServiceMutation(appId, userId, request.resource.data) &&
+        hasReplacementPartAfter(appId, userId, request.resource.data);
       allow update, delete: if false;
     }
 
     match /artifacts/{appId}/users/{userId}/parts/{documentId} {
       allow read: if isKnownApp(appId) && isOwner(userId);
-      allow create, update: if isKnownApp(appId) &&
+      allow create: if isKnownApp(appId) &&
         isOwner(userId) &&
-        request.resource.data.key == documentId &&
-        isValidPart(request.resource.data, userId);
+        isValidPart(request.resource.data, userId, request.resource.data.vehicleId, documentId) &&
+        isOwnedVehicleAfter(appId, userId, request.resource.data.vehicleId);
+      allow update: if isKnownApp(appId) &&
+        isOwner(userId) &&
+        isValidPart(request.resource.data, userId, request.resource.data.vehicleId, documentId) &&
+        keepsPartIdentity(request.resource.data, resource.data) &&
+        isOwnedVehicleAfter(appId, userId, request.resource.data.vehicleId) &&
+        hasMatchingReplacementAfter(appId, userId, request.resource.data);
       allow delete: if false;
     }
 

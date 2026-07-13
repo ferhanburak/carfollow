@@ -14,9 +14,11 @@ describe("user document contracts", () => {
     plate: "06 pwa 101",
     password: "never-persist-this",
     model: "Seat Ibiza Cupra",
+    primaryVehicleId: "vehicle-firebase-user-1",
     parts: [{ key: "oil" }],
     fuelLogs: [{ id: "fuel-1" }],
     serviceLogs: [{ id: "service-1" }],
+    vehiclePassport: { vehicleId: "vehicle-1" },
     conversations: { thread: { messages: [] } },
     driverScore: 91,
   };
@@ -34,12 +36,15 @@ describe("user document contracts", () => {
       email: firebaseUser.email,
       plate: "06 PWA 101",
       plateNormalized: "06PWA101",
+      primaryVehicleId: "vehicle-firebase-user-1",
+      schemaVersion: 2,
     });
     expect(profile).not.toHaveProperty("password");
     expect(profile).not.toHaveProperty("parts");
     expect(profile).not.toHaveProperty("fuelLogs");
     expect(profile).not.toHaveProperty("serviceLogs");
     expect(profile).not.toHaveProperty("conversations");
+    expect(profile).not.toHaveProperty("vehiclePassport");
   });
 
   it("builds a public profile without private account fields", () => {

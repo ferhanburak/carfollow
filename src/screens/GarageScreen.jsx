@@ -40,8 +40,10 @@ export function GarageScreen({
   appId,
   firebaseStatus,
   fuelErrors,
+  fuelFeedback,
   fuelForm,
   fuelInsights,
+  fuelPending,
   onFuelFormChange,
   onPrimeServiceLogForm,
   onSubmitFuelLog,
@@ -51,6 +53,7 @@ export function GarageScreen({
   serviceLogErrors,
   serviceLogFeedback,
   serviceLogForm,
+  serviceLogPending,
   upcomingMaintenance,
   user,
 }) {
@@ -58,6 +61,7 @@ export function GarageScreen({
   const safeParts = user.parts ?? [];
   const safeServiceLogs = user.serviceLogs ?? [];
   const safeFuelLogs = user.fuelLogs ?? [];
+  const hasFirebaseSyncError = [firebaseStatus.profile, firebaseStatus.fuel, firebaseStatus.service].includes("error");
   const partsByKey = new Map(safeParts.map((part) => [part.key, part]));
   const [selectedPartKey, setSelectedPartKey] = useState(safeParts[0]?.key ?? null);
   const [historyTypeFilter, setHistoryTypeFilter] = useState("all");
@@ -90,12 +94,14 @@ export function GarageScreen({
             <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Digital Garage</p>
             <h3 className="mt-2 text-xl font-black">{user.fullName}</h3>
             <p className="mt-1 text-sm text-neutral-400">
-              {user.model} • {user.tuningStage} • {user.horsepower} HP
+              {user.model} / {user.tuningStage} / {user.horsepower} HP
             </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-right">
-            <p className="text-[10px] uppercase tracking-[0.24em] text-neutral-500">Garage ID</p>
-            <p className="font-mono text-sm text-lime-300">{user.plate}</p>
+            <p className="text-[10px] uppercase tracking-[0.24em] text-neutral-500">Vehicle ID</p>
+            <p className="max-w-32 truncate font-mono text-xs text-lime-300" title={user.primaryVehicleId}>
+              {user.primaryVehicleId}
+            </p>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -109,7 +115,7 @@ export function GarageScreen({
         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-neutral-400">
           <div className="flex items-center justify-between">
             <span className="uppercase tracking-[0.22em] text-neutral-500">Private Firebase Sync</span>
-            <span className={firebaseStatus.profile === "error" || firebaseStatus.fuel === "error" ? "text-rose-300" : "text-lime-300"}>
+            <span className={hasFirebaseSyncError ? "text-rose-300" : "text-lime-300"}>
               {firebaseStatus.mode}
             </span>
           </div>
@@ -117,7 +123,7 @@ export function GarageScreen({
             Connection: {firebaseStatus.connection}
           </p>
           <p className="mt-2 font-mono text-[11px] text-lime-300">
-            UID: {firebaseStatus.authUid ?? "anonymous session pending"}
+            UID: {firebaseStatus.authUid ?? "authenticated session pending"}
           </p>
           <p className="mt-1">Profile sync: {firebaseStatus.profile} @ {formatSyncTime(firebaseStatus.lastProfileSyncAt)}</p>
           <p className="mt-1">Fuel log sync: {firebaseStatus.fuel} @ {formatSyncTime(firebaseStatus.lastFuelSyncAt)}</p>
@@ -196,12 +202,17 @@ export function GarageScreen({
           <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">Private Log</span>
         </div>
         {serviceLogFeedback ? (
-          <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-200">
+          <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
+            firebaseStatus.service === "error"
+              ? "border-rose-400/20 bg-rose-400/10 text-rose-200"
+              : "border-lime-400/20 bg-lime-400/10 text-lime-200"
+          }`}>
             {serviceLogFeedback}
           </div>
         ) : null}
         <ServiceLogForm
           activePart={activeServicePart}
+          disabled={serviceLogPending}
           errors={serviceLogErrors}
           form={serviceLogForm}
           onChange={onServiceLogFormChange}
@@ -279,6 +290,7 @@ export function GarageScreen({
         </div>
 
         <form className="mt-4 grid grid-cols-2 gap-3" onSubmit={onSubmitFuelLog}>
+          <fieldset className="col-span-2 grid grid-cols-2 gap-3 border-0 p-0" disabled={fuelPending}>
           <CompactField label="Liters">
             <input
               type="number"
@@ -316,11 +328,22 @@ export function GarageScreen({
           </CompactField>
           <button
             type="submit"
-            className="col-span-2 min-h-12 rounded-2xl bg-lime-400 font-bold text-black shadow-[0_0_20px_rgba(163,230,53,0.35)]"
+            className="col-span-2 min-h-12 rounded-2xl bg-lime-400 font-bold text-black shadow-[0_0_20px_rgba(163,230,53,0.35)] disabled:cursor-wait disabled:opacity-60"
           >
-            Receipt Ekle
+            {fuelPending ? "Kaydediliyor..." : "Receipt Ekle"}
           </button>
+          </fieldset>
         </form>
+
+        {fuelFeedback ? (
+          <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
+            firebaseStatus.fuel === "error"
+              ? "border-rose-400/20 bg-rose-400/10 text-rose-200"
+              : "border-lime-400/20 bg-lime-400/10 text-lime-200"
+          }`}>
+            {fuelFeedback}
+          </div>
+        ) : null}
 
         <div className="mt-4 grid grid-cols-3 gap-3">
           <InsightCard label="Total Spend" value={`${formatNumber(fuelInsights.totalSpend)} TL`} />
@@ -345,15 +368,12 @@ export function GarageScreen({
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4 text-xs text-neutral-500">
-        <p className="font-semibold text-neutral-300">Firestore Production Binding Notes</p>
-        <p className="mt-2">
-          Public path: <code>/artifacts/{appId}/public/data/{'{collectionName}'}</code>
+        <p className="font-semibold text-neutral-300">Vehicle Passport Data Ownership</p>
+        <p className="mt-2">Servis, parca ve yakit kayitlari sadece bu Firebase hesabinin UID'si ile okunabilir.</p>
+        <p className="mt-2 break-all font-mono text-[11px] text-lime-300">
+          {appId} / {user.primaryVehicleId}
         </p>
-        <p className="mt-1">
-          Private path: <code>/artifacts/{appId}/users/{'{userId}'}/{'{collectionName}'}</code>
-        </p>
-        <p className="mt-1">Deep filtering ve sorting istemci belleginde yapilacak sekilde tasarlanmistir.</p>
-        <p className="mt-1">Plakadan DM icin dusuk gecikmeli yapi Realtime Database ile ayristirilmalidir.</p>
+        <p className="mt-2">Kayitlar sabit arac kimligine baglidir; sahiplik devri daha sonra guvenli backend akisi ile yapilabilir.</p>
       </div>
     </section>
   );

@@ -45,14 +45,14 @@ What still needs maturity:
 
 | Area | Status | Notes |
 |---|---|---|
-| Authentication UI | Complete | Login, signup, test profiles |
+| Authentication UI | Complete | Firebase e-mail/password; test profiles only in mock mode |
 | Modular frontend structure | Complete | Screens/components separated into maintainable files |
 | Firebase integration baseline | Complete | Firestore + RTDB + rules + app config |
 | Grid Map node management | Complete | Spot, wash, meet creation flows |
 | Live Map screen | Complete | Separate page with Google Maps |
-| Fuel log | Complete | Form + history + insights |
-| Service log | Complete | Manual maintenance logging |
-| Vehicle passport | Complete | Part health, history, ownership-value direction |
+| Fuel log | Complete | Idempotent private Firestore records + history + insights |
+| Service log | Complete | Append-only records with atomic part/odometer updates |
+| Vehicle passport | Complete | Stable vehicle identity, passport metadata, migration, health and history |
 | Individual leaderboard | Complete | Monthly KM ranking |
 | Clan leaderboard | Complete | Collective KM ranking |
 | Friend requests | Complete | Add, incoming, outgoing, withdraw |
@@ -75,7 +75,7 @@ What still needs maturity:
 | Public profile opening from anywhere | Partial | Exists through social view, not yet fully centralized |
 | Social UX flow consistency | Partial | Some actions redirect rather than open unified overlays |
 | Convoy host tooling | Partial | Core gating exists, moderation dashboard still limited |
-| Firebase data ownership boundaries | Partial | Works, but domain separation should be clearer |
+| Social/convoy ownership boundaries | Partial | Vehicle ownership is normalized; social mutations still need Functions |
 
 ### 2.3 Not Yet Implemented
 
@@ -107,7 +107,7 @@ What still needs maturity:
 
 - Some domain actions still live too close to the client.
 - A few large files are growing and should eventually be split again.
-- User, vehicle, and convoy ownership rules are not yet fully normalized for long-term scale.
+- Convoy and clan ownership rules are not yet fully normalized for long-term scale.
 - Social actions are functional, but not yet deeply polished.
 - There is not yet a full backend audit trail for important trust/moderation actions.
 
@@ -223,18 +223,16 @@ Why:
 ### Suggested Firestore Collections
 
 ```text
-/users/{userId}
-/vehicles/{vehicleId}
-/vehiclePassports/{vehicleId}
-/vehicles/{vehicleId}/serviceLogs/{logId}
-/vehicles/{vehicleId}/fuelLogs/{logId}
-/clans/{clanId}
-/clans/{clanId}/members/{userId}
-/convoys/{convoyId}
-/convoys/{convoyId}/members/{userId}
-/mapNodes/{nodeId}
-/friendships/{friendshipId}
-/notifications/{userId}/items/{notificationId}
+/artifacts/{appId}/users/{userId}/profile/current
+/artifacts/{appId}/users/{userId}/vehicles/{vehicleId}
+/artifacts/{appId}/users/{userId}/vehiclePassports/{vehicleId}
+/artifacts/{appId}/users/{userId}/parts/{vehicleId}--{partKey}
+/artifacts/{appId}/users/{userId}/serviceLogs/{logId}
+/artifacts/{appId}/users/{userId}/fuelLogs/{logId}
+/artifacts/{appId}/public/data/clans/{clanId}
+/artifacts/{appId}/public/data/convoys/{convoyId}
+/artifacts/{appId}/public/data/mapPins/{nodeId}
+/artifacts/{appId}/public/data/friendships/{friendshipId}
 ```
 
 ### Suggested RTDB Paths

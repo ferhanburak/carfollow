@@ -2,6 +2,7 @@ import {
   PRIVATE_COLLECTIONS,
   PUBLIC_COLLECTIONS,
   privateUserCollectionPath,
+  privateUserDocumentPath,
   publicCollectionPath,
   realtimePresencePath,
   realtimePresenceUserPath,
@@ -13,6 +14,7 @@ import {
 } from "../services/firebasePaths";
 import { getFirebaseServices, isFirebaseModeEnabled } from "../services/firebaseClient";
 import { buildPrivateUserProfile, buildPublicUserProfile } from "../domain/userDocuments";
+import { buildVehicleDocument, resolvePrimaryVehicleId } from "../domain/vehicleDocuments";
 
 function mapCollectionSnapshot(snapshot) {
   return snapshot.docs.map((item) => ({
@@ -64,6 +66,8 @@ export async function saveFirebaseUserProfile(user) {
   const { doc, serverTimestamp, writeBatch } = await loadFirestoreModule();
   const batch = writeBatch(firestore);
   const updatedAt = serverTimestamp();
+  const vehicleId = resolvePrimaryVehicleId(user, authUser.uid);
+  const vehicleDocument = buildVehicleDocument({ ...user, primaryVehicleId: vehicleId }, authUser.uid);
   // Private path: /artifacts/{appId}/users/{userId}/{collectionName}
   batch.set(
     doc(firestore, privateUserCollectionPath(authUser.uid, PRIVATE_COLLECTIONS.profile, resolveAppId()), "current"),
@@ -81,53 +85,18 @@ export async function saveFirebaseUserProfile(user) {
     },
     { merge: true },
   );
+  batch.update(
+    doc(
+      firestore,
+      privateUserDocumentPath(authUser.uid, PRIVATE_COLLECTIONS.vehicles, vehicleId, resolveAppId()),
+    ),
+    {
+      ...vehicleDocument,
+      lastOdometerSource: "profile",
+      updatedAt,
+    },
+  );
   await batch.commit();
-
-  return {
-    authUid: authUser.uid,
-    syncedAt: Date.now(),
-  };
-}
-
-export async function saveFirebaseFuelLog(nextLog) {
-  const services = await getFirebaseServices();
-  if (!services) {
-    return null;
-  }
-
-  const { firestore, authUser } = services;
-  const { addDoc, collection, serverTimestamp } = await loadFirestoreModule();
-  await addDoc(
-    collection(firestore, privateUserCollectionPath(authUser.uid, PRIVATE_COLLECTIONS.fuelLogs, resolveAppId())),
-    {
-      ...nextLog,
-      userId: authUser.uid,
-      createdAt: serverTimestamp(),
-    },
-  );
-
-  return {
-    authUid: authUser.uid,
-    syncedAt: Date.now(),
-  };
-}
-
-export async function saveFirebaseServiceLog(serviceLog) {
-  const services = await getFirebaseServices();
-  if (!services) {
-    return null;
-  }
-
-  const { firestore, authUser } = services;
-  const { addDoc, collection, serverTimestamp } = await loadFirestoreModule();
-  await addDoc(
-    collection(firestore, privateUserCollectionPath(authUser.uid, PRIVATE_COLLECTIONS.serviceLogs, resolveAppId())),
-    {
-      ...serviceLog,
-      userId: authUser.uid,
-      createdAt: serverTimestamp(),
-    },
-  );
 
   return {
     authUid: authUser.uid,
@@ -391,30 +360,6 @@ export async function saveFirebaseMapPin(pin) {
   );
 
   return {
-    syncedAt: Date.now(),
-  };
-}
-
-export async function saveFirebaseVehiclePart(part) {
-  const services = await getFirebaseServices();
-  if (!services || !part?.key) {
-    return null;
-  }
-
-  const { firestore, authUser } = services;
-  const { doc, serverTimestamp, setDoc } = await loadFirestoreModule();
-  await setDoc(
-    doc(firestore, privateUserCollectionPath(authUser.uid, PRIVATE_COLLECTIONS.parts, resolveAppId()), part.key),
-    {
-      ...part,
-      userId: authUser.uid,
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
-
-  return {
-    authUid: authUser.uid,
     syncedAt: Date.now(),
   };
 }

@@ -5,6 +5,10 @@ import { applyPartServiceToUser } from "../utils/vehiclePassport";
 import { createDefaultParts, inferVehicleType, normalizeVehicleParts } from "../utils/vehicleParts";
 import { normalizeSocialState } from "../utils/socialGraph";
 import { normalizeConversations } from "../utils/socialChat";
+import {
+  buildVehiclePassportDocument,
+  resolvePrimaryVehicleId,
+} from "../domain/vehicleDocuments";
 
 const ambientNodes = ["Eskisehir Yolu", "TEM North", "Mogan Ring", "FSM Koprusu", "Anadolu Otoyolu"];
 const routeNodes = ["Tunel Cikisi", "Sehir Disi Hat", "Viraj Koridoru", "Kuzey Dugumu", "Rolling Spot"];
@@ -97,8 +101,13 @@ export function getQuickProfileByCredentials(plate, password) {
 
 export function createSignedUpUser(signUpForm, identity = {}) {
   const vehicleType = inferVehicleType(signUpForm.model);
-  return {
-    id: identity.id ?? `signup-${Date.now()}`,
+  const id = identity.id ?? `signup-${Date.now()}`;
+  const primaryVehicleId = resolvePrimaryVehicleId(
+    { primaryVehicleId: identity.primaryVehicleId, id },
+    identity.firebaseUid ?? id,
+  );
+  const user = {
+    id,
     ...(identity.firebaseUid ? { firebaseUid: identity.firebaseUid } : {}),
     ...((identity.email ?? signUpForm.email) ? { email: identity.email ?? signUpForm.email } : {}),
     fullName: signUpForm.fullName,
@@ -115,6 +124,7 @@ export function createSignedUpUser(signUpForm, identity = {}) {
     avatar:
       "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=900&q=80",
     vehicleType,
+    primaryVehicleId,
     parts: createDefaultParts(vehicleType, 12000, "2026-07-11"),
     serviceLogs: [],
     fuelLogs: [],
@@ -128,18 +138,52 @@ export function createSignedUpUser(signUpForm, identity = {}) {
     clanInvites: [],
     sentClanInvites: [],
   };
+
+  return {
+    ...user,
+    vehiclePassport: buildVehiclePassportDocument(user, identity.firebaseUid ?? id),
+  };
 }
 
 export function createAuthenticatedUser(profile) {
   const { password: _password, ...safeProfile } = clone(profile);
   const vehicleType = safeProfile.vehicleType ?? inferVehicleType(safeProfile.model);
-  return {
-    ...normalizeClanState(normalizeSocialState(safeProfile)),
+  const ownerId = safeProfile.firebaseUid ?? safeProfile.id;
+  const primaryVehicleId = resolvePrimaryVehicleId(safeProfile, ownerId);
+  const parts = normalizeVehicleParts(safeProfile.parts ?? [], vehicleType).map((part) => ({
+    ...part,
+    userId: part.userId ?? ownerId,
+    vehicleId: part.vehicleId ?? primaryVehicleId,
+  }));
+  const serviceLogs = (safeProfile.serviceLogs ?? []).map((log) => ({
+    ...log,
+    vehicleId: log.vehicleId ?? primaryVehicleId,
+  }));
+  const fuelLogs = (safeProfile.fuelLogs ?? []).map((log) => ({
+    ...log,
+    vehicleId: log.vehicleId ?? primaryVehicleId,
+  }));
+  const normalizedProfile = {
+    ...safeProfile,
     vehicleType,
+    primaryVehicleId,
+    parts,
+    serviceLogs,
+    fuelLogs,
+  };
+
+  return {
+    ...normalizeClanState(normalizeSocialState(normalizedProfile)),
+    vehicleType,
+    primaryVehicleId,
     badges: [...(safeProfile.badges ?? [])],
-    parts: normalizeVehicleParts(safeProfile.parts ?? [], vehicleType),
-    serviceLogs: (safeProfile.serviceLogs ?? []).map((log) => ({ ...log })),
-    fuelLogs: (safeProfile.fuelLogs ?? []).map((log) => ({ ...log })),
+    parts,
+    serviceLogs,
+    fuelLogs,
+    vehiclePassport: {
+      ...buildVehiclePassportDocument(normalizedProfile, ownerId),
+      ...(safeProfile.vehiclePassport ?? {}),
+    },
     monthlyKm: Number(safeProfile.monthlyKm ?? 0),
     driverScore: Number(safeProfile.driverScore ?? 80),
     harmonyVotes: Number(safeProfile.harmonyVotes ?? 0),
@@ -575,10 +619,18 @@ export function rateCruiseAttendee(mapPins, pinId, plate, signal) {
 }
 
 export function appendFuelLog(user, nextLog) {
+  const vehicleId = nextLog.vehicleId ?? user.primaryVehicleId;
   return {
     ...user,
     odometer: Math.max(user.odometer, nextLog.currentKm),
-    fuelLogs: [nextLog, ...user.fuelLogs],
+    fuelLogs: [{ ...nextLog, vehicleId }, ...user.fuelLogs],
+    vehiclePassport: {
+      ...(user.vehiclePassport ?? {}),
+      fuelLogCount: Number(user.vehiclePassport?.fuelLogCount ?? user.fuelLogs.length) + 1,
+      lastFuelKm: Number(nextLog.currentKm),
+      lastMutationId: nextLog.id,
+      lastMutationType: "fuel",
+    },
   };
 }
 

@@ -1,4 +1,5 @@
 import { computeFuelInsights, getPartHealth } from "../utils/garage";
+import { validateServiceLogForm } from "../utils/validation";
 
 describe("garage utilities", () => {
   it("computes fuel insights from descending odometer history", () => {
@@ -19,5 +20,20 @@ describe("garage utilities", () => {
     const part = { replacedKm: 10000, lifeExpectancy: 5000 };
     expect(getPartHealth(part, 12000)).toBe(60);
     expect(getPartHealth(part, 15000)).toBe(0);
+  });
+
+  it("accepts historical service kilometers for passport imports", () => {
+    const errors = validateServiceLogForm(
+      {
+        partKey: "oil",
+        serviceDate: "2025-03-10",
+        serviceKm: 64000,
+        serviceShop: "Apex Garage",
+        cost: 2250,
+      },
+      68420,
+    );
+
+    expect(errors).not.toHaveProperty("serviceKm");
   });
 });

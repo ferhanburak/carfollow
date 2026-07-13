@@ -1,4 +1,5 @@
 import {
+  PRIVATE_COLLECTIONS,
   privateUserCollectionPath,
   privateUserDocumentPath,
   publicCollectionPath,
@@ -25,6 +26,12 @@ describe("firebase path helpers", () => {
     expect(privateUserDocumentPath("user-42", "profile", "current", "demo-app")).toBe(
       "/artifacts/demo-app/users/user-42/profile/current",
     );
+    expect(privateUserDocumentPath("user-42", PRIVATE_COLLECTIONS.vehicles, "vehicle-42", "demo-app")).toBe(
+      "/artifacts/demo-app/users/user-42/vehicles/vehicle-42",
+    );
+    expect(
+      privateUserDocumentPath("user-42", PRIVATE_COLLECTIONS.vehiclePassports, "vehicle-42", "demo-app"),
+    ).toBe("/artifacts/demo-app/users/user-42/vehiclePassports/vehicle-42");
   });
 
   it("creates a realtime dm path from plate values", () => {

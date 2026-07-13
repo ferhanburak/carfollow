@@ -145,8 +145,8 @@ export function validateServiceLogForm(form, odometer) {
   if (!form.serviceDate?.trim()) {
     errors.serviceDate = "Service date is required.";
   }
-  if (!Number.isFinite(serviceKm) || serviceKm < Number(odometer)) {
-    errors.serviceKm = "Service KM cannot be below current odometer.";
+  if (!Number.isFinite(serviceKm) || serviceKm < 0) {
+    errors.serviceKm = "Service KM must be 0 or greater.";
   }
   if (!form.serviceShop?.trim()) {
     errors.serviceShop = "Service shop is required.";

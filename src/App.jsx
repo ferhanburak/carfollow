@@ -86,7 +86,9 @@ function App() {
     drivers,
     firebaseStatus,
     fuelErrors,
+    fuelFeedback,
     fuelInsights,
+    fuelPending,
     friendSearchQuery,
     friendSearchResults,
     hostableConvoys,
@@ -124,6 +126,7 @@ function App() {
     serviceLogErrors,
     serviceLogFeedback,
     serviceLogForm,
+    serviceLogPending,
     setActiveTab,
     setAttendeeTripStatus,
     setClanForm,
@@ -366,8 +369,10 @@ function App() {
                 appId={appId}
                 firebaseStatus={firebaseStatus}
                 fuelErrors={fuelErrors}
+                fuelFeedback={fuelFeedback}
                 fuelForm={fuelForm}
                 fuelInsights={fuelInsights}
+                fuelPending={fuelPending}
                 onFuelFormChange={setFuelForm}
                 onPrimeServiceLogForm={primeServiceLogForm}
                 onServiceLogFormChange={setServiceLogForm}
@@ -377,6 +382,7 @@ function App() {
                 serviceLogErrors={serviceLogErrors}
                 serviceLogFeedback={serviceLogFeedback}
                 serviceLogForm={serviceLogForm}
+                serviceLogPending={serviceLogPending}
                 upcomingMaintenance={upcomingMaintenance}
                 user={user}
               />

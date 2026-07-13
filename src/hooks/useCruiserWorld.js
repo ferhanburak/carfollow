@@ -23,6 +23,8 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   const [initialWorld] = useState(getInitialWorldState);
   const [activeTab, setActiveTab] = useState("map");
   const [fuelErrors, setFuelErrors] = useState({});
+  const [fuelFeedback, setFuelFeedback] = useState("");
+  const [fuelPending, setFuelPending] = useState(false);
   const [clans, setClans] = useState(initialWorld.clans);
   const [drivers, setDrivers] = useState(initialWorld.drivers);
   const tickerRef = useRef(0);
@@ -108,6 +110,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     serviceLogErrors,
     serviceLogFeedback,
     serviceLogForm,
+    serviceLogPending,
     setServiceLogForm,
     submitServiceLog,
     upcomingMaintenance,
@@ -184,10 +187,10 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
 
   const fuelInsights = user ? computeFuelInsights(user.fuelLogs) : { average: 0, costPerFill: 0, totalSpend: 0 };
 
-  const submitFuelLog = (event, nextFuelForm) => {
+  const submitFuelLog = async (event, nextFuelForm) => {
     event.preventDefault();
-    if (!user) {
-      return;
+    if (!user || fuelPending) {
+      return null;
     }
 
     const validationErrors = validateFuelForm(nextFuelForm, user.odometer);
@@ -201,13 +204,32 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
       liters: Number(nextFuelForm.liters),
       price: Number(nextFuelForm.price),
       currentKm: Number(nextFuelForm.currentKm),
-      station: nextFuelForm.station,
+      station: nextFuelForm.station.trim(),
+      vehicleId: user.primaryVehicleId,
     };
 
-    setUser((current) => appendFuelLog(current, nextLog));
-    setFuelForm(createFuelForm(Number(nextFuelForm.currentKm)));
-    setFuelErrors({});
-    syncFuelLog(nextLog);
+    setFuelPending(true);
+    setFuelFeedback("Yakit kaydi Vehicle Passport'a isleniyor...");
+    try {
+      const syncResult = await syncFuelLog(nextLog);
+      if (syncResult?.ok === false) {
+        setFuelFeedback(`Kayit tamamlanamadi: ${syncResult.error}`);
+        return null;
+      }
+
+      setUser((current) => {
+        if (!current || current.fuelLogs?.some((log) => log.id === nextLog.id)) {
+          return current;
+        }
+        return appendFuelLog(current, nextLog);
+      });
+      setFuelForm(createFuelForm(Number(nextFuelForm.currentKm)));
+      setFuelErrors({});
+      setFuelFeedback("Yakit kaydi guvenli olarak kaydedildi.");
+      return nextLog;
+    } finally {
+      setFuelPending(false);
+    }
   };
 
   const toggleDrive = () => {
@@ -244,7 +266,9 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     drivers,
     firebaseStatus,
     fuelErrors,
+    fuelFeedback,
     fuelInsights,
+    fuelPending,
     friendSearchQuery,
     friendSearchResults,
     isDriving,
@@ -281,6 +305,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     serviceLogErrors,
     serviceLogFeedback,
     serviceLogForm,
+    serviceLogPending,
     setActiveTab,
     setAttendeeTripStatus,
     setClanForm,

@@ -72,7 +72,7 @@ export function DriveScreen({ driveHud, drivers, firebaseStatus, isDriving, user
             Connection: {firebaseStatus.connection}
           </p>
           <p className="mt-2 font-mono text-[11px] text-lime-300">
-            UID: {firebaseStatus.authUid ?? "anonymous session pending"}
+            UID: {firebaseStatus.authUid ?? "authenticated session pending"}
           </p>
           <p className="mt-1">Last RTDB push: {formatSyncTime(firebaseStatus.lastTelemetrySyncAt)}</p>
           {firebaseStatus.error ? <p className="mt-2 text-rose-300">{firebaseStatus.error}</p> : null}

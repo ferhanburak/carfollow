@@ -27,6 +27,9 @@ function getAuthErrorMessage(error) {
     "cruiser/firebase-unavailable": "Firebase su anda kullanilamiyor.",
     "cruiser/plate-already-in-use": "Bu plaka baska bir CRUISER hesabinda kayitli.",
     "cruiser/profile-not-found": "Firebase hesabi bulundu fakat CRUISER profili eksik.",
+    "cruiser/vehicle-not-found": "Hesabin aktif arac kaydi bulunamadi.",
+    "cruiser/vehicle-owner-mismatch": "Arac sahipligi bu Firebase hesabi ile eslesmiyor.",
+    "cruiser/vehicle-passport-not-found": "Vehicle Passport kaydi yuklenemedi.",
     "permission-denied": "Firebase guvenlik kurallari bu hesap islemini reddetti.",
   };
 

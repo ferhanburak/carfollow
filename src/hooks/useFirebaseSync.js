@@ -6,7 +6,6 @@ import {
   saveFirebaseFuelLog,
   saveFirebaseServiceLog,
   saveFirebaseUserProfile,
-  saveFirebaseVehiclePart,
 } from "../repositories/cruiserRepository";
 import {
   getFirebaseModeDiagnostics,
@@ -59,6 +58,15 @@ export function useFirebaseSync({
     error: firebaseDiagnostics.enabled ? null : firebaseDiagnostics.message,
   });
   const lastRemoteUserSyncRef = useRef(0);
+  const profileSyncTimerRef = useRef(null);
+
+  useEffect(() => {
+    lastRemoteUserSyncRef.current = 0;
+    if (profileSyncTimerRef.current) {
+      globalThis.clearTimeout(profileSyncTimerRef.current);
+      profileSyncTimerRef.current = null;
+    }
+  }, [user?.firebaseUid]);
 
   useEffect(() => {
     let cancelled = false;
@@ -194,73 +202,88 @@ export function useFirebaseSync({
 
   useEffect(() => {
     if (!user || !isFirebaseRepositoryEnabled()) {
-      return;
+      return undefined;
     }
 
-    const now = Date.now();
-    if (now - lastRemoteUserSyncRef.current < 15000) {
-      return;
+    if (profileSyncTimerRef.current) {
+      globalThis.clearTimeout(profileSyncTimerRef.current);
     }
 
-    lastRemoteUserSyncRef.current = now;
-    setFirebaseStatus((current) => ({ ...current, profile: "syncing", error: null }));
-    void saveFirebaseUserProfile(user)
-      .then((result) => {
-        if (!result) {
+    const elapsed = Date.now() - lastRemoteUserSyncRef.current;
+    const delay = Math.max(0, 15000 - elapsed);
+    const userSnapshot = user;
+    profileSyncTimerRef.current = globalThis.setTimeout(() => {
+      profileSyncTimerRef.current = null;
+      lastRemoteUserSyncRef.current = Date.now();
+      setFirebaseStatus((current) => ({ ...current, profile: "syncing", error: null }));
+      void saveFirebaseUserProfile(userSnapshot)
+        .then((result) => {
+          if (!result) {
+            setFirebaseStatus((current) => ({
+              ...current,
+              profile: "error",
+              error: getLastFirebaseServicesError() || "Profile sync was skipped because Firebase is unavailable.",
+            }));
+            return;
+          }
+
+          setFirebaseStatus((current) => ({
+            ...current,
+            authUid: result.authUid,
+            profile: "synced",
+            lastProfileSyncAt: result.syncedAt,
+          }));
+        })
+        .catch((error) => {
           setFirebaseStatus((current) => ({
             ...current,
             profile: "error",
-            error: getLastFirebaseServicesError() || "Profile sync was skipped because Firebase is unavailable.",
+            error: error instanceof Error ? error.message : "Profile sync failed.",
           }));
-          return;
-        }
+        });
+    }, delay);
 
-        setFirebaseStatus((current) => ({
-          ...current,
-          authUid: result.authUid,
-          profile: "synced",
-          lastProfileSyncAt: result.syncedAt,
-        }));
-      })
-      .catch((error) => {
-        setFirebaseStatus((current) => ({
-          ...current,
-          profile: "error",
-          error: error instanceof Error ? error.message : "Profile sync failed.",
-        }));
-      });
+    return () => {
+      if (profileSyncTimerRef.current) {
+        globalThis.clearTimeout(profileSyncTimerRef.current);
+        profileSyncTimerRef.current = null;
+      }
+    };
   }, [user]);
 
-  const syncFuelLog = (nextLog) => {
-    setFirebaseStatus((current) => ({ ...current, fuel: "syncing", error: null }));
-    void saveFirebaseFuelLog(nextLog)
-      .then((result) => {
-        if (!result) {
-          setFirebaseStatus((current) => ({
-            ...current,
-            fuel: "error",
-            error: getLastFirebaseServicesError() || "Fuel log sync was skipped because Firebase is unavailable.",
-          }));
-          return;
-        }
+  const syncFuelLog = async (nextLog) => {
+    if (!isFirebaseRepositoryEnabled()) {
+      return { ok: true, mode: "mock", syncedAt: Date.now() };
+    }
 
-        setFirebaseStatus((current) => ({
-          ...current,
-          authUid: result.authUid,
-          fuel: "synced",
-          lastFuelSyncAt: result.syncedAt,
-        }));
-      })
-      .catch((error) => {
-        setFirebaseStatus((current) => ({
-          ...current,
-          fuel: "error",
-          error: error instanceof Error ? error.message : "Fuel log sync failed.",
-        }));
-      });
+    setFirebaseStatus((current) => ({ ...current, fuel: "syncing", error: null }));
+    try {
+      const result = await saveFirebaseFuelLog(nextLog);
+      if (!result) {
+        const error = getLastFirebaseServicesError() || "Fuel log sync was skipped because Firebase is unavailable.";
+        setFirebaseStatus((current) => ({ ...current, fuel: "error", error }));
+        return { ok: false, error };
+      }
+
+      setFirebaseStatus((current) => ({
+        ...current,
+        authUid: result.authUid,
+        fuel: "synced",
+        lastFuelSyncAt: result.syncedAt,
+      }));
+      return { ok: true, ...result };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Fuel log sync failed.";
+      setFirebaseStatus((current) => ({ ...current, fuel: "error", error: message }));
+      return { ok: false, error: message };
+    }
   };
 
   const syncTelemetry = (driver) => {
+    if (!isFirebaseRepositoryEnabled()) {
+      return;
+    }
+
     setFirebaseStatus((current) => ({ ...current, telemetry: "syncing", error: null }));
     void saveFirebaseActiveDriver(driver)
       .then((result) => {
@@ -289,37 +312,32 @@ export function useFirebaseSync({
       });
   };
 
-  const syncServiceLog = (serviceLog, part) => {
-    setFirebaseStatus((current) => ({ ...current, service: "syncing", error: null }));
-    void Promise.all([
-      saveFirebaseServiceLog(serviceLog),
-      part ? saveFirebaseVehiclePart(part) : Promise.resolve(null),
-    ])
-      .then(([serviceResult, partResult]) => {
-        const result = serviceResult ?? partResult;
-        if (!result) {
-          setFirebaseStatus((current) => ({
-            ...current,
-            service: "error",
-            error: getLastFirebaseServicesError() || "Service sync was skipped because Firebase is unavailable.",
-          }));
-          return;
-        }
+  const syncServiceLog = async (serviceLog, part) => {
+    if (!isFirebaseRepositoryEnabled()) {
+      return { ok: true, mode: "mock", syncedAt: Date.now() };
+    }
 
-        setFirebaseStatus((current) => ({
-          ...current,
-          authUid: result.authUid,
-          service: "synced",
-          lastServiceSyncAt: result.syncedAt,
-        }));
-      })
-      .catch((error) => {
-        setFirebaseStatus((current) => ({
-          ...current,
-          service: "error",
-          error: error instanceof Error ? error.message : "Service sync failed.",
-        }));
-      });
+    setFirebaseStatus((current) => ({ ...current, service: "syncing", error: null }));
+    try {
+      const result = await saveFirebaseServiceLog(serviceLog, part);
+      if (!result) {
+        const error = getLastFirebaseServicesError() || "Service sync was skipped because Firebase is unavailable.";
+        setFirebaseStatus((current) => ({ ...current, service: "error", error }));
+        return { ok: false, error };
+      }
+
+      setFirebaseStatus((current) => ({
+        ...current,
+        authUid: result.authUid,
+        service: "synced",
+        lastServiceSyncAt: result.syncedAt,
+      }));
+      return { ok: true, ...result };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Service sync failed.";
+      setFirebaseStatus((current) => ({ ...current, service: "error", error: message }));
+      return { ok: false, error: message };
+    }
   };
 
   return {

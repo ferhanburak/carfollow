@@ -2,6 +2,7 @@ import { CompactField } from "../ui";
 
 export function ServiceLogForm({
   activePart,
+  disabled = false,
   errors,
   form,
   onChange,
@@ -12,6 +13,7 @@ export function ServiceLogForm({
 
   return (
     <form className="mt-4 grid grid-cols-2 gap-3" onSubmit={onSubmit}>
+      <fieldset className="col-span-2 grid grid-cols-2 gap-3 border-0 p-0" disabled={disabled}>
       {activePart ? (
         <div className="col-span-2 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-100">
           Secili Parca: <span className="font-semibold">{activePart.name}</span>
@@ -94,10 +96,11 @@ export function ServiceLogForm({
 
       <button
         type="submit"
-        className="col-span-2 min-h-12 rounded-2xl bg-lime-400 font-bold text-black shadow-[0_0_20px_rgba(163,230,53,0.35)]"
+        className="col-span-2 min-h-12 rounded-2xl bg-lime-400 font-bold text-black shadow-[0_0_20px_rgba(163,230,53,0.35)] disabled:cursor-wait disabled:opacity-60"
       >
-        Service Log Ekle
+        {disabled ? "Kaydediliyor..." : "Service Log Ekle"}
       </button>
+      </fieldset>
     </form>
   );
 }

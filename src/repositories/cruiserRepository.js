@@ -35,16 +35,19 @@ export {
   saveFirebaseDirectMessage,
   saveFirebasePresence,
   saveFirebaseTypingState,
-  saveFirebaseFuelLog,
-  saveFirebaseServiceLog,
   saveFirebaseMapPin,
-  saveFirebaseVehiclePart,
   saveFirebaseUserProfile,
   saveFirebaseWashReview,
   subscribeFirebaseDirectMessages,
   subscribeFirebasePresence,
   subscribeFirebaseTyping,
 } from "./firebaseCruiserRepository";
+
+export {
+  loadFirebaseVehiclePassportBundle,
+  saveFirebaseFuelLog,
+  saveFirebaseServiceLog,
+} from "./firebaseVehiclePassportRepository";
 
 export {
   isFirebaseAuthRepositoryEnabled,

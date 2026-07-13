@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyPartServiceToUser,
   buildVehiclePassportSummary,
+  formatServiceDate,
   getPartHealthSnapshot,
   getUpcomingMaintenance,
 } from "./vehiclePassport";
@@ -43,6 +44,7 @@ describe("vehiclePassport utils", () => {
       {
         id: "svc-1",
         partKey: "oil",
+        type: "replacement",
         serviceDate: "2026-07-11",
         serviceKm: 17120,
         cost: 2250,
@@ -56,6 +58,30 @@ describe("vehiclePassport utils", () => {
     expect(nextUser.serviceLogs).toHaveLength(1);
   });
 
+  it("keeps part life unchanged for an inspection record", () => {
+    const nextUser = applyPartServiceToUser(
+      {
+        odometer: 17000,
+        parts: [basePart],
+        serviceLogs: [],
+      },
+      {
+        id: "svc-inspection-1",
+        partKey: "oil",
+        type: "inspection",
+        serviceDate: "2026-07-11",
+        serviceKm: 17120,
+        cost: 350,
+        serviceShop: "Apex Garage",
+        notes: "Oil level checked",
+      },
+    );
+
+    expect(nextUser.parts[0].replacedKm).toBe(basePart.replacedKm);
+    expect(nextUser.parts[0].replacedAt).toBe(basePart.replacedAt);
+    expect(nextUser.serviceLogs).toHaveLength(1);
+  });
+
   it("builds a maintenance summary", () => {
     const summary = buildVehiclePassportSummary({
       odometer: 15000,
@@ -66,5 +92,9 @@ describe("vehiclePassport utils", () => {
     expect(summary.totalServiceLogs).toBe(1);
     expect(summary.totalServiceSpend).toBe(2250);
     expect(summary.maintenanceScore).toBeGreaterThan(0);
+  });
+
+  it("formats hydrated Firestore timestamp values", () => {
+    expect(formatServiceDate({ seconds: 1783728000, nanoseconds: 0 })).not.toBe("--");
   });
 });
