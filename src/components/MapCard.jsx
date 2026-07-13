@@ -76,6 +76,105 @@ function getPinGlyph(type) {
   return getPinIcon(type);
 }
 
+function getLifecycleTone(lifecycleStatus, isSelected = false) {
+  if (isSelected) {
+    return {
+      fill: "#a3e635",
+      stroke: "#ecfccb",
+      badge: "#0f172a",
+      text: "#0a0a0a",
+    };
+  }
+
+  if (lifecycleStatus === "rolling") {
+    return {
+      fill: "#22c55e",
+      stroke: "#dcfce7",
+      badge: "#14532d",
+      text: "#f0fdf4",
+    };
+  }
+
+  if (lifecycleStatus === "delayed") {
+    return {
+      fill: "#f59e0b",
+      stroke: "#fef3c7",
+      badge: "#78350f",
+      text: "#fffbeb",
+    };
+  }
+
+  if (lifecycleStatus === "completed") {
+    return {
+      fill: "#38bdf8",
+      stroke: "#e0f2fe",
+      badge: "#0c4a6e",
+      text: "#f0f9ff",
+    };
+  }
+
+  return {
+    fill: "#171717",
+    stroke: "#fafafa",
+    badge: "#3f6212",
+    text: "#ffffff",
+  };
+}
+
+function createMeetMarkerIcon(pin, isSelected) {
+  const attendees = Array.isArray(pin.attendees) ? pin.attendees.length : 0;
+  const tone = getLifecycleTone(pin.lifecycleStatus ?? "planning", isSelected);
+  const badgeValue = attendees > 9 ? "9+" : String(attendees || 0);
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+      <circle cx="32" cy="32" r="${isSelected ? 18 : 16}" fill="${tone.fill}" stroke="${tone.stroke}" stroke-width="3" />
+      <text x="32" y="38" text-anchor="middle" font-size="${isSelected ? 24 : 22}">🏍️</text>
+      <rect x="39" y="9" rx="10" ry="10" width="18" height="18" fill="${tone.badge}" stroke="${tone.stroke}" stroke-width="2" />
+      <text x="48" y="22" text-anchor="middle" font-size="10" font-family="Arial, sans-serif" font-weight="700" fill="${tone.text}">${badgeValue}</text>
+    </svg>
+  `;
+
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new window.google.maps.Size(isSelected ? 64 : 58, isSelected ? 64 : 58),
+    anchor: new window.google.maps.Point(isSelected ? 32 : 29, isSelected ? 32 : 29),
+  };
+}
+
+function createDefaultMarkerIcon(isSelected) {
+  return {
+    path: window.google.maps.SymbolPath.CIRCLE,
+    fillColor: isSelected ? "#a3e635" : "#171717",
+    fillOpacity: 1,
+    strokeColor: isSelected ? "#d9f99d" : "#fafafa",
+    strokeWeight: 2,
+    scale: isSelected ? 13 : 11,
+  };
+}
+
+function getMarkerIcon(pin, isSelected) {
+  if (typeof window === "undefined" || !window.google?.maps) {
+    return undefined;
+  }
+
+  if (pin.type === "meet") {
+    return createMeetMarkerIcon(pin, isSelected);
+  }
+
+  return createDefaultMarkerIcon(isSelected);
+}
+
+function getMarkerLabel(pin) {
+  if (pin.type === "meet") {
+    return undefined;
+  }
+
+  return {
+    text: getPinGlyph(pin.type),
+    fontSize: "20px",
+  };
+}
+
 function getActiveRoutePath(selectedPin, user) {
   if (
     selectedPin?.type === "meet" &&
@@ -210,6 +309,20 @@ function getDraftWaypointMeta(index, total) {
   };
 }
 
+function getMeetStatusBadge(pin) {
+  const attendees = Array.isArray(pin.attendees) ? pin.attendees.length : 0;
+  const status =
+    pin.lifecycleStatus === "rolling"
+      ? "Live"
+      : pin.lifecycleStatus === "delayed"
+        ? "Delay"
+        : pin.lifecycleStatus === "completed"
+          ? "Done"
+          : "Plan";
+
+  return `${status} · ${attendees}`;
+}
+
 function FallbackGridMap({ pins, selectedPinId, onSelect, fullScreen = false, mapHeight = "18rem" }) {
   return (
     <div
@@ -236,6 +349,11 @@ function FallbackGridMap({ pins, selectedPinId, onSelect, fullScreen = false, ma
           style={{ left: pin.x, top: pin.y }}
         >
           {getPinGlyph(pin.type)}
+          {pin.type === "meet" ? (
+            <span className="absolute -right-1 -top-1 rounded-full border border-white/10 bg-black/85 px-1.5 py-0.5 text-[9px] font-bold text-lime-300">
+              {Array.isArray(pin.attendees) ? pin.attendees.length : 0}
+            </span>
+          ) : null}
         </button>
       ))}
     </div>
@@ -705,19 +823,9 @@ function GoogleMapCard({
                 key={pin.id}
                 position={{ lat: pin.lat, lng: pin.lng }}
                 onClick={() => onSelect(pin.id)}
-                title={pin.name}
-                label={{
-                  text: getPinGlyph(pin.type),
-                  fontSize: "20px",
-                }}
-                icon={{
-                  path: window.google.maps.SymbolPath.CIRCLE,
-                  fillColor: selectedPinId === pin.id ? "#a3e635" : "#171717",
-                  fillOpacity: 1,
-                  strokeColor: selectedPinId === pin.id ? "#d9f99d" : "#fafafa",
-                  strokeWeight: 2,
-                  scale: selectedPinId === pin.id ? 13 : 11,
-                }}
+                title={pin.type === "meet" ? `${pin.name} · ${getMeetStatusBadge(pin)}` : pin.name}
+                label={getMarkerLabel(pin)}
+                icon={getMarkerIcon(pin, selectedPinId === pin.id)}
               />
             ))}
           </GoogleMap>
