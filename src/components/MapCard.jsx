@@ -119,6 +119,17 @@ function interpolatePoint(path, ratio) {
   };
 }
 
+function getBearingDegrees(start, end) {
+  if (!start || !end) {
+    return 0;
+  }
+
+  const y = end.lng - start.lng;
+  const x = end.lat - start.lat;
+  const angle = (Math.atan2(y, x) * 180) / Math.PI;
+  return angle + 90;
+}
+
 function getAttendeeProgressOffset(attendee, index, convoyRatio) {
   if (attendee.tripStatus === "cancelled") {
     return null;
@@ -157,12 +168,16 @@ function getConvoyGhostMarkers(selectedPin, user, driveHud, isDriving) {
         return null;
       }
 
+      const nextPosition = interpolatePoint(selectedPin.routePath, Math.min(1, progress + 0.035)) ?? position;
+
       return {
         id: `${selectedPin.id}-${attendee.plate}`,
         isSelf: attendee.plate === user?.plate,
         plate: attendee.plate,
+        shortPlate: attendee.plate.replaceAll(" ", "").slice(-3),
         tripStatus: attendee.tripStatus ?? "ready",
         position,
+        heading: getBearingDegrees(position, nextPosition),
       };
     })
     .filter(Boolean);
@@ -198,13 +213,15 @@ function createConvoyGhostIcon(marker) {
   }
 
   const tone = getConvoyGhostTone(marker);
-  const badge = marker.plate.slice(-2);
+  const badge = marker.shortPlate;
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="54" height="54" viewBox="0 0 54 54">
-      <circle cx="27" cy="27" r="13" fill="${tone.fill}" stroke="${tone.stroke}" stroke-width="3" />
-      <text x="27" y="31" text-anchor="middle" font-size="15">🚗</text>
-      <rect x="30" y="6" rx="8" ry="8" width="16" height="14" fill="#0a0a0a" fill-opacity="0.88" stroke="${tone.stroke}" stroke-width="1.5" />
-      <text x="38" y="16" text-anchor="middle" font-size="8" font-family="Arial, sans-serif" font-weight="700" fill="${tone.text}">${badge}</text>
+      <g transform="rotate(${marker.heading} 27 27)">
+        <path d="M27 9 L37 35 L27 30 L17 35 Z" fill="${tone.fill}" stroke="${tone.stroke}" stroke-width="3" stroke-linejoin="round" />
+        <circle cx="27" cy="28" r="5" fill="#0a0a0a" fill-opacity="0.28" />
+      </g>
+      <rect x="16" y="36" rx="8" ry="8" width="22" height="12" fill="#0a0a0a" fill-opacity="0.9" stroke="${tone.stroke}" stroke-width="1.5" />
+      <text x="27" y="44.5" text-anchor="middle" font-size="8" font-family="Arial, sans-serif" font-weight="700" fill="${tone.text}">${badge}</text>
     </svg>
   `;
 
@@ -267,7 +284,10 @@ function createMeetMarkerIcon(pin, isSelected) {
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
       <circle cx="32" cy="32" r="${isSelected ? 18 : 16}" fill="${tone.fill}" stroke="${tone.stroke}" stroke-width="3" />
-      <text x="32" y="38" text-anchor="middle" font-size="${isSelected ? 24 : 22}">🏍️</text>
+      <path d="M24 36 h16 l4 -6 h5" fill="none" stroke="#0a0a0a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+      <circle cx="26" cy="39" r="3" fill="#0a0a0a" />
+      <circle cx="40" cy="39" r="3" fill="#0a0a0a" />
+      <path d="M28 28 l5 0 l4 4" fill="none" stroke="#0a0a0a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
       <rect x="39" y="9" rx="10" ry="10" width="18" height="18" fill="${tone.badge}" stroke="${tone.stroke}" stroke-width="2" />
       <text x="48" y="22" text-anchor="middle" font-size="10" font-family="Arial, sans-serif" font-weight="700" fill="${tone.text}">${badgeValue}</text>
     </svg>
