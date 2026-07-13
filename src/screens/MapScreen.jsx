@@ -268,7 +268,9 @@ export function MapScreen({
             setActiveOverlay("details");
           }}
           user={user}
+          driveHud={driveHud}
           draftRoutePath={[]}
+          isDriving={isDriving}
           navigationMode
           mapHeight="calc(95vh - 14.5rem)"
         />

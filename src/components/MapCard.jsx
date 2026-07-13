@@ -76,6 +76,145 @@ function getPinGlyph(type) {
   return getPinIcon(type);
 }
 
+function getConvoyProgressRatio(selectedPin, driveHud, isDriving) {
+  if (!isDriving || !Array.isArray(selectedPin?.routePath) || selectedPin.routePath.length < 2) {
+    return 0;
+  }
+
+  let totalKm = 0;
+  for (let index = 1; index < selectedPin.routePath.length; index += 1) {
+    const start = selectedPin.routePath[index - 1];
+    const end = selectedPin.routePath[index];
+    const latKm = (end.lat - start.lat) * 111.32;
+    const lngKm = (end.lng - start.lng) * 85.39;
+    totalKm += Math.sqrt(latKm ** 2 + lngKm ** 2);
+  }
+
+  if (totalKm <= 0) {
+    return 0;
+  }
+
+  return Math.min(1, (driveHud?.sessionKm ?? 0) / totalKm);
+}
+
+function interpolatePoint(path, ratio) {
+  if (!Array.isArray(path) || path.length === 0) {
+    return null;
+  }
+  if (path.length === 1) {
+    return path[0];
+  }
+
+  const clampedRatio = Math.max(0, Math.min(1, ratio));
+  const scaledIndex = clampedRatio * (path.length - 1);
+  const startIndex = Math.floor(scaledIndex);
+  const endIndex = Math.min(path.length - 1, startIndex + 1);
+  const localRatio = scaledIndex - startIndex;
+  const start = path[startIndex];
+  const end = path[endIndex];
+
+  return {
+    lat: start.lat + (end.lat - start.lat) * localRatio,
+    lng: start.lng + (end.lng - start.lng) * localRatio,
+  };
+}
+
+function getAttendeeProgressOffset(attendee, index, convoyRatio) {
+  if (attendee.tripStatus === "cancelled") {
+    return null;
+  }
+  if (attendee.tripStatus === "arrived") {
+    return 1;
+  }
+  if (attendee.tripStatus === "ready") {
+    return Math.max(0, convoyRatio * 0.18 - 0.06 - index * 0.015);
+  }
+
+  return Math.max(0.04, convoyRatio - index * 0.055);
+}
+
+function getConvoyGhostMarkers(selectedPin, user, driveHud, isDriving) {
+  if (
+    selectedPin?.type !== "meet" ||
+    !getConvoyAccessState(selectedPin, user).canViewDetails ||
+    !Array.isArray(selectedPin.routePath) ||
+    selectedPin.routePath.length < 2
+  ) {
+    return [];
+  }
+
+  const convoyRatio = getConvoyProgressRatio(selectedPin, driveHud, isDriving);
+
+  return (selectedPin.attendees ?? [])
+    .map((attendee, index) => {
+      const progress = getAttendeeProgressOffset(attendee, index, convoyRatio);
+      if (progress == null) {
+        return null;
+      }
+
+      const position = interpolatePoint(selectedPin.routePath, progress);
+      if (!position) {
+        return null;
+      }
+
+      return {
+        id: `${selectedPin.id}-${attendee.plate}`,
+        isSelf: attendee.plate === user?.plate,
+        plate: attendee.plate,
+        tripStatus: attendee.tripStatus ?? "ready",
+        position,
+      };
+    })
+    .filter(Boolean);
+}
+
+function getConvoyGhostTone(marker) {
+  if (marker.tripStatus === "arrived") {
+    return {
+      fill: "#38bdf8",
+      stroke: "#e0f2fe",
+      text: "#f0f9ff",
+    };
+  }
+
+  if (marker.tripStatus === "ready") {
+    return {
+      fill: "#f59e0b",
+      stroke: "#fef3c7",
+      text: "#fffbeb",
+    };
+  }
+
+  return {
+    fill: marker.isSelf ? "#a3e635" : "#22c55e",
+    stroke: marker.isSelf ? "#ecfccb" : "#dcfce7",
+    text: marker.isSelf ? "#0a0a0a" : "#f0fdf4",
+  };
+}
+
+function createConvoyGhostIcon(marker) {
+  if (typeof window === "undefined" || !window.google?.maps) {
+    return undefined;
+  }
+
+  const tone = getConvoyGhostTone(marker);
+  const badge = marker.plate.slice(-2);
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="54" height="54" viewBox="0 0 54 54">
+      <circle cx="27" cy="27" r="13" fill="${tone.fill}" stroke="${tone.stroke}" stroke-width="3" />
+      <text x="27" y="31" text-anchor="middle" font-size="15">🚗</text>
+      <rect x="30" y="6" rx="8" ry="8" width="16" height="14" fill="#0a0a0a" fill-opacity="0.88" stroke="${tone.stroke}" stroke-width="1.5" />
+      <text x="38" y="16" text-anchor="middle" font-size="8" font-family="Arial, sans-serif" font-weight="700" fill="${tone.text}">${badge}</text>
+    </svg>
+  `;
+
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new window.google.maps.Size(40, 40),
+    anchor: new window.google.maps.Point(20, 20),
+  };
+}
+
 function getLifecycleTone(lifecycleStatus, isSelected = false) {
   if (isSelected) {
     return {
@@ -365,8 +504,10 @@ export function MapCard({
   selectedPinId,
   onSelect,
   user,
+  driveHud,
   draftLocation,
   draftRoutePath,
+  isDriving = false,
   mapPickMode,
   onPickLocation,
   fullScreen = false,
@@ -416,8 +557,10 @@ export function MapCard({
       selectedPinId={selectedPinId}
       onSelect={onSelect}
       user={user}
+      driveHud={driveHud}
       draftLocation={draftLocation}
       draftRoutePath={draftRoutePath}
+      isDriving={isDriving}
       mapPickMode={mapPickMode}
       onPickLocation={onPickLocation}
       fullScreen={fullScreen}
@@ -434,8 +577,10 @@ function GoogleMapCard({
   selectedPinId,
   onSelect,
   user,
+  driveHud,
   draftLocation,
   draftRoutePath,
+  isDriving,
   mapPickMode,
   onPickLocation,
   fullScreen,
@@ -472,6 +617,7 @@ function GoogleMapCard({
   const displayedRoutePath = routeState.path.length > 1 ? routeState.path : activeRoutePath;
   const hasDisplayedRoute = displayedRoutePath.length > 1;
   const convoyAccess = selectedPin?.type === "meet" ? getConvoyAccessState(selectedPin, user) : null;
+  const convoyGhostMarkers = getConvoyGhostMarkers(selectedPin, user, driveHud, isDriving);
 
   useEffect(() => {
     setFollowCurrentLocation(Boolean(navigationMode));
@@ -826,6 +972,15 @@ function GoogleMapCard({
                 title={pin.type === "meet" ? `${pin.name} · ${getMeetStatusBadge(pin)}` : pin.name}
                 label={getMarkerLabel(pin)}
                 icon={getMarkerIcon(pin, selectedPinId === pin.id)}
+              />
+            ))}
+            {convoyGhostMarkers.map((marker) => (
+              <MarkerF
+                key={marker.id}
+                position={marker.position}
+                title={`${marker.plate} · ${marker.tripStatus}`}
+                zIndex={996}
+                icon={createConvoyGhostIcon(marker)}
               />
             ))}
           </GoogleMap>
