@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { GoogleMap, MarkerF, PolylineF, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, InfoWindowF, MarkerF, PolylineF, useJsApiLoader } from "@react-google-maps/api";
 import { getPinIcon } from "../constants/pins";
 import { getConvoyAccessState } from "../utils/meetVisibility";
 
@@ -172,8 +172,14 @@ function getConvoyGhostMarkers(selectedPin, user, driveHud, isDriving) {
 
       return {
         id: `${selectedPin.id}-${attendee.plate}`,
+        fullName: attendee.fullName ?? attendee.plate,
         isSelf: attendee.plate === user?.plate,
+        model: attendee.model ?? "Unknown Setup",
         plate: attendee.plate,
+        score: attendee.score ?? 70,
+        harmonyVotes: attendee.harmonyVotes ?? 0,
+        alertVotes: attendee.alertVotes ?? 0,
+        standing: attendee.status ?? "Convoy Ready",
         shortPlate: attendee.plate.replaceAll(" ", "").slice(-3),
         tripStatus: attendee.tripStatus ?? "ready",
         position,
@@ -482,6 +488,20 @@ function getMeetStatusBadge(pin) {
   return `${status} · ${attendees}`;
 }
 
+function getTripStatusLabel(value) {
+  if (value === "enroute") {
+    return "Yolda";
+  }
+  if (value === "arrived") {
+    return "Vardi";
+  }
+  if (value === "cancelled") {
+    return "Iptal";
+  }
+
+  return "Hazir";
+}
+
 function FallbackGridMap({ pins, selectedPinId, onSelect, fullScreen = false, mapHeight = "18rem" }) {
   return (
     <div
@@ -623,6 +643,7 @@ function GoogleMapCard({
     source: "idle",
     error: "",
   });
+  const [selectedGhostMarkerId, setSelectedGhostMarkerId] = useState(null);
   const [followCurrentLocation, setFollowCurrentLocation] = useState(Boolean(navigationMode));
   const { isLoaded, loadError } = useJsApiLoader({
     id: "cruiser-google-maps",
@@ -638,6 +659,7 @@ function GoogleMapCard({
   const hasDisplayedRoute = displayedRoutePath.length > 1;
   const convoyAccess = selectedPin?.type === "meet" ? getConvoyAccessState(selectedPin, user) : null;
   const convoyGhostMarkers = getConvoyGhostMarkers(selectedPin, user, driveHud, isDriving);
+  const selectedGhostMarker = convoyGhostMarkers.find((marker) => marker.id === selectedGhostMarkerId) ?? null;
 
   useEffect(() => {
     setFollowCurrentLocation(Boolean(navigationMode));
@@ -647,6 +669,7 @@ function GoogleMapCard({
     if (previousSelectedPinIdRef.current !== selectedPinId) {
       previousSelectedPinIdRef.current = selectedPinId;
       shouldAutoFrameRouteRef.current = true;
+      setSelectedGhostMarkerId(null);
     }
   }, [selectedPinId]);
 
@@ -1001,8 +1024,41 @@ function GoogleMapCard({
                 title={`${marker.plate} · ${marker.tripStatus}`}
                 zIndex={996}
                 icon={createConvoyGhostIcon(marker)}
+                onClick={() => setSelectedGhostMarkerId(marker.id)}
               />
             ))}
+            {selectedGhostMarker ? (
+              <InfoWindowF
+                position={selectedGhostMarker.position}
+                onCloseClick={() => setSelectedGhostMarkerId(null)}
+                options={{ pixelOffset: new window.google.maps.Size(0, -24) }}
+              >
+                <div className="min-w-[11rem] rounded-2xl bg-[#0d0d0d] p-1 text-white">
+                  <p className="font-mono text-[11px] tracking-[0.18em] text-lime-300">{selectedGhostMarker.plate}</p>
+                  <p className="mt-1 text-sm font-bold text-white">{selectedGhostMarker.fullName}</p>
+                  <p className="text-[11px] text-neutral-400">{selectedGhostMarker.model}</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-neutral-200">
+                      {getTripStatusLabel(selectedGhostMarker.tripStatus)}
+                    </span>
+                    <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-2 py-1 text-[10px] text-lime-200">
+                      Score {selectedGhostMarker.score}
+                    </span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-neutral-300">
+                    <div className="rounded-xl border border-white/8 bg-white/[0.04] px-2 py-1.5">
+                      Uyum {selectedGhostMarker.harmonyVotes}
+                    </div>
+                    <div className="rounded-xl border border-white/8 bg-white/[0.04] px-2 py-1.5">
+                      Alert {selectedGhostMarker.alertVotes}
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-neutral-500">
+                    {selectedGhostMarker.standing}
+                  </p>
+                </div>
+              </InfoWindowF>
+            ) : null}
           </GoogleMap>
           {!fullScreen ? (
             <div className="absolute inset-x-3 bottom-3 z-10 rounded-2xl border border-white/10 bg-black/70 px-4 py-3 backdrop-blur">
