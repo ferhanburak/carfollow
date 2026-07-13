@@ -5,4 +5,7 @@ work-dev.err.log
 .env
 .DS_Store
 firebase-debug.log
+firestore-debug.log
+database-debug.log
+ui-debug.log
 tools/

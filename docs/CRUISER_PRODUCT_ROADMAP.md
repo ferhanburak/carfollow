@@ -4,7 +4,7 @@
 
 - Project: `CRUISER`
 - Repository: `ferhanburak/carfollow`
-- Last updated: `2026-07-13`
+- Last updated: `2026-07-14`
 - Scope: product status, current architecture, backend direction, roadmap, technical debt
 
 ---
@@ -48,6 +48,8 @@ What still needs maturity:
 | Authentication UI | Complete | Firebase e-mail/password; test profiles only in mock mode |
 | Modular frontend structure | Complete | Screens/components separated into maintainable files |
 | Firebase integration baseline | Complete | Firestore + RTDB + rules + app config |
+| Backend foundation / Stage 0 | Complete | Repository boundaries, contracts, rules, isolated emulator suite, and CI quality gates |
+| Firebase authorization tests | Complete | 16 emulator tests covering Firestore, RTDB, and Storage |
 | Grid Map node management | Complete | Spot, wash, meet creation flows |
 | Live Map screen | Complete | Separate page with Google Maps |
 | Fuel log | Complete | Idempotent private Firestore records + history + insights |
@@ -124,6 +126,7 @@ What still needs maturity:
   Still centralizes a lot of orchestration.
 - Domain logic is partly in hooks and partly in repository helpers.
 - Client-side business rules should gradually move to secure backend functions.
+- Firebase CLI currently brings moderate transitive development-only audit advisories that should be reviewed during dependency upgrades.
 
 ---
 

@@ -170,14 +170,27 @@ http://localhost:4173/
 - `npm run build` creates the production build in `dist/`
 - `npm run preview` serves the production build locally
 - `npm run emulators` starts the configured Firebase Local Emulator Suite
+- `npm run setup:java` installs a project-local Temurin 21 JRE on Windows
 - `npm run rules:check` validates Firestore and Realtime Database rules without publishing them
 - `npm run seed:firebase` is a legacy prototype migration command and must not be used against production
 - `npm run test` starts Vitest in watch mode
 - `npm run test:run` runs the test suite once
+- `npm run test:emulators` runs Firestore, RTDB, and Storage authorization tests against `demo-cruiser`
+- `npm run lint:functions` validates callable Function syntax
+- `npm run test:functions` runs the backend domain tests
 
 ## Local Firebase Emulators
 
-Install a Java runtime compatible with the current Firebase Emulator Suite, then set:
+On Windows, install the project-local Java 21 runtime without changing the system Java configuration:
+
+```powershell
+cd D:\carfollow
+.\use-node22.ps1 npm run setup:java
+```
+
+The downloaded runtime stays under the ignored `tools/` directory. On Linux/macOS, configure a Java 21 `JAVA_HOME` instead.
+
+Then set:
 
 ```text
 VITE_CRUISER_DATA_SOURCE=firebase
@@ -194,6 +207,14 @@ npm run dev
 ```
 
 The Emulator UI is available at `http://127.0.0.1:4000`.
+
+Run the complete rules integration suite with one command:
+
+```powershell
+.\use-node22.ps1 npm run test:emulators
+```
+
+This command always uses the isolated `demo-cruiser` project and never reads or writes production Firebase data. The same command runs in GitHub Actions on every push to `main` and every pull request.
 
 ## Legacy Seed Script
 
@@ -234,7 +255,10 @@ The following checks were run successfully:
 
 - `npm install`
 - `npm run build`
-- `npm run test:run`
+- `npm run test:run` (`57/57` frontend tests)
+- `npm run test:functions` (`6/6` backend domain tests)
+- `npm run test:emulators` (`16/16` Firestore, RTDB, and Storage authorization tests)
+- `npm run rules:check`
 - local HTTP response from the dev server
 
 Known limitation during testing:
@@ -256,7 +280,8 @@ The project now includes:
 - Firebase-backed repository hooks for hydration and persistence
 - local mocked session persistence with `localStorage`
 - centralized Firebase path and document contracts
-- automated tests for app render, garage utilities, and Firebase path helpers
+- automated unit, backend-domain, and Firebase authorization integration tests
+- GitHub Actions quality gates for tests, Functions checks, production build, and emulator rules
 - form validation for sign up, fuel log, and wash review flows
 
 ## Data Architecture
@@ -338,9 +363,8 @@ This means first load is lighter, and map/detail code is fetched closer to when 
 
 Suggested improvements for the next iteration:
 
+- complete the Auth and identity security audit with emulator-backed registration tests
 - implement the Cloud Function ownership-transfer workflow for Vehicle Passports
 - add a resale-safe Vehicle Passport export/report
-- add emulator-backed authorization tests when Java is available
 - move convoy reputation votes and clan totals to backend-owned aggregates
 - add route-level architecture only if the SPA grows beyond the current shell
-- upgrade local Node.js to `22.12+` to remove the Vite version warning
