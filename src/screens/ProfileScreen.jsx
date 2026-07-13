@@ -23,6 +23,11 @@ export function ProfileScreen({
     { key: "outgoing", label: "Giden Istek", value: `${user.outgoingRequests?.length ?? 0}` },
     { key: "clan-invites", label: "Klan Daveti", value: `${user.clanInvites?.length ?? 0}` },
   ];
+  const profileHealth = [
+    { key: "completion", label: "Profil", value: `%${profileCompletion}` },
+    { key: "passport", label: "Pasaport", value: passportSummary ? "Hazir" : "Bos" },
+    { key: "badges", label: "Unvan", value: `${user.badges?.length ?? 0}` },
+  ];
 
   return (
     <section className="space-y-4">
@@ -38,6 +43,15 @@ export function ProfileScreen({
           <img src={user.avatar} alt={user.model} className="h-16 w-16 rounded-2xl object-cover" />
         </div>
 
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {profileHealth.map((item) => (
+            <div key={item.key} className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
+              <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-500">{item.label}</p>
+              <p className="mt-1 text-sm font-black text-lime-300">{item.value}</p>
+            </div>
+          ))}
+        </div>
+
         <div className="mt-4 grid grid-cols-2 gap-3">
           <InsightCard label="Profile Ready" value={`%${profileCompletion}`} />
           <InsightCard label="Driver Score" value={`${user.driverScore}/100`} />
@@ -46,11 +60,17 @@ export function ProfileScreen({
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          {(user.badges ?? []).map((badge) => (
-            <span key={badge} className="rounded-full border border-lime-400/25 bg-lime-400/10 px-3 py-2 text-xs text-lime-200">
-              {badge}
-            </span>
-          ))}
+          {(user.badges ?? []).length ? (
+            (user.badges ?? []).map((badge) => (
+              <span key={badge} className="rounded-full border border-lime-400/25 bg-lime-400/10 px-3 py-2 text-xs text-lime-200">
+                {badge}
+              </span>
+            ))
+          ) : (
+            <div className="w-full rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-3 text-sm text-neutral-500">
+              Henuz aktif unvan yok. Profil, surus ve sosyal ilerleme ile ilk badge'lerini acabilirsin.
+            </div>
+          )}
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
@@ -93,7 +113,7 @@ export function ProfileScreen({
           <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">Live Profile</span>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {personalStats.map((stat) => (
             <InsightCard key={stat.key} label={stat.label} value={stat.value} />
           ))}
@@ -153,7 +173,7 @@ export function ProfileScreen({
           <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">Crew Pulse</span>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {socialSummary.map((item) => (
             <InsightCard key={item.key} label={item.label} value={item.value} />
           ))}
@@ -183,7 +203,7 @@ export function ProfileScreen({
           </div>
         ) : null}
 
-        <form className="mt-4 grid grid-cols-2 gap-3" onSubmit={onSubmitProfile}>
+        <form className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={onSubmitProfile}>
           <CompactField label="Full Name">
             <input
               value={profileForm.fullName}

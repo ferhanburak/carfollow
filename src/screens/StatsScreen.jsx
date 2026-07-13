@@ -134,6 +134,13 @@ export function StatsScreen({
   const sortedClans = [...clans].sort((a, b) => b.km - a.km);
   const canInviteToClan = ["owner", "captain"].includes(user.clanRole ?? "member");
   const primaryHostableConvoy = hostableConvoys?.[0] ?? null;
+  const socialSummary = [
+    { key: "friends", label: "Arkadas", value: `${user.friends?.length ?? 0}` },
+    { key: "incoming", label: "Gelen", value: `${user.incomingRequests?.length ?? 0}` },
+    { key: "threads", label: "DM", value: `${conversationList.length}` },
+    { key: "unread", label: "Unread", value: `${totalUnreadCount}` },
+  ];
+  const hasSearchResults = friendSearchResults.length > 0;
 
   const friendPlateSet = useMemo(() => new Set((user.friends ?? []).map((entry) => entry.plate)), [user.friends]);
   const incomingPlateSet = useMemo(() => new Set((user.incomingRequests ?? []).map((entry) => entry.plate)), [user.incomingRequests]);
@@ -149,6 +156,15 @@ export function StatsScreen({
     <section className="space-y-4">
       {showSocial ? (
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
+        <div className="mb-4 grid grid-cols-4 gap-2">
+          {socialSummary.map((item) => (
+            <div key={item.key} className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
+              <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">{item.label}</p>
+              <p className="mt-1 text-sm font-black text-lime-300">{item.value}</p>
+            </div>
+          ))}
+        </div>
+
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Clan Management</p>
@@ -335,7 +351,15 @@ export function StatsScreen({
           </div>
         ) : null}
         <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
-          <p className="text-sm font-semibold">Kullanici Ara</p>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">Kullanici Ara</p>
+              <p className="mt-1 text-xs text-neutral-500">Plaka, model ya da isimle dogrudan surucu bul.</p>
+            </div>
+            <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+              {hasSearchResults ? `${Math.min(friendSearchResults.length, 8)} sonuc` : "Hazir"}
+            </span>
+          </div>
           <input
             value={friendSearchQuery}
             onChange={(event) => onFriendSearchChange(event.target.value)}
@@ -392,6 +416,11 @@ export function StatsScreen({
                 </div>
               </div>
             ))}
+            {!hasSearchResults && friendSearchQuery.trim() ? (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
+                Bu aramaya uyan surucu bulunamadi. Plaka, isim ya da bolgeyi farkli deneyebilirsin.
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -407,7 +436,7 @@ export function StatsScreen({
                       <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
                       <p className="text-xs text-neutral-500">{entry.model}</p>
                     </button>
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <button
                         type="button"
                         onClick={() => approveFriendRequest(entry.plate)}
@@ -445,7 +474,7 @@ export function StatsScreen({
                         <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
                         <p className="text-xs text-neutral-500">{entry.model} / {entry.region}</p>
                       </button>
-                      <div className="flex flex-col gap-2">
+                      <div className="flex min-w-[8.5rem] flex-col gap-2">
                         <button
                           type="button"
                           onClick={() => openConversation(entry)}
@@ -576,7 +605,7 @@ export function StatsScreen({
                       {activeTypingUsers.map((entry) => entry.plate).join(", ")} yaziyor...
                     </p>
                   ) : null}
-                  <div className="mt-4 flex gap-2">
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                     <input
                       value={messageDraft}
                       onChange={(event) => onMessageDraftChange(event.target.value)}
@@ -593,7 +622,7 @@ export function StatsScreen({
                           avatar: activeConversation.participantAvatar,
                         })
                       }
-                      className="min-h-12 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black"
+                      className="min-h-12 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black sm:min-w-[7rem]"
                     >
                       Gonder
                     </button>
@@ -618,6 +647,22 @@ export function StatsScreen({
             <h3 className="mt-2 text-xl font-black">Monthly Driver Kilometers</h3>
           </div>
           <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Solo Rank</div>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
+            <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Senin Rank</p>
+            <p className="mt-1 text-sm font-black text-lime-300">
+              #{individualLeaderboard.find((driver) => driver.plate === user.plate)?.rank ?? "--"}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
+            <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Aylik KM</p>
+            <p className="mt-1 text-sm font-black text-lime-300">{formatNumber(user.monthlyKm ?? 0)}</p>
+          </div>
+          <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
+            <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Skor</p>
+            <p className="mt-1 text-sm font-black text-lime-300">{user.driverScore}/100</p>
+          </div>
         </div>
         <div className="mt-4 space-y-3">
           {individualLeaderboard.map((driver) => (

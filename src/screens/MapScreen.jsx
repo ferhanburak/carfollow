@@ -240,6 +240,16 @@ export function MapScreen({
     selectedPin?.type === "meet" && !getConvoyAccessState(selectedPin, user).canViewDetails
       ? "Restricted Convoy"
       : selectedPin?.name;
+  const liveStatusLabel = isDriving ? "Canli rota acik" : "Harita izleme";
+  const selectedLabel = selectedPin ? selectedPin.name : "Marker secilmedi";
+  const accessLabel =
+    selectedPin?.type === "meet"
+      ? getConvoyAccessState(selectedPin, user).canViewDetails
+        ? "Convoy acik"
+        : "Convoy kilitli"
+      : selectedPin
+        ? "Node secili"
+        : "Serbest mod";
 
   return (
     <section className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#050505] px-3 py-3">
@@ -262,6 +272,21 @@ export function MapScreen({
         </button>
       </div>
 
+      <div className="mb-3 grid grid-cols-3 gap-2">
+        <div className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-3 py-2">
+          <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Durum</p>
+          <p className="mt-1 truncate text-xs font-bold text-white">{liveStatusLabel}</p>
+        </div>
+        <div className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-3 py-2">
+          <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Secili</p>
+          <p className="mt-1 truncate text-xs font-bold text-white">{selectedLabel}</p>
+        </div>
+        <div className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-3 py-2">
+          <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Erisim</p>
+          <p className="mt-1 truncate text-xs font-bold text-white">{accessLabel}</p>
+        </div>
+      </div>
+
       <div className="relative flex-1 min-h-0">
         <MapCard
           pins={mapPins}
@@ -278,7 +303,7 @@ export function MapScreen({
           draftRoutePath={[]}
           isDriving={isDriving}
           navigationMode
-          mapHeight="calc(95vh - 14.5rem)"
+          mapHeight="calc(100vh - 19.5rem)"
         />
 
         {activeOverlay === "details" && selectedPin ? (
@@ -308,6 +333,16 @@ export function MapScreen({
               onWashFormChange={onSetWashForm}
             />
           </OverlayCard>
+        ) : null}
+
+        {!selectedPin ? (
+          <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20 rounded-[1.1rem] border border-white/10 bg-[#090909]/88 px-4 py-3 backdrop-blur">
+            <p className="text-[10px] uppercase tracking-[0.24em] text-lime-400">Harita ipucu</p>
+            <p className="mt-1 text-sm font-semibold text-white">Mini ikonlara dokunarak node detaylarini acabilirsin.</p>
+            <p className="mt-1 text-[11px] text-neutral-400">
+              Konvoy, photo spot ve wash pinleri popup olarak acilir; surus modu aciksa rota durumu canli guncellenir.
+            </p>
+          </div>
         ) : null}
       </div>
 
