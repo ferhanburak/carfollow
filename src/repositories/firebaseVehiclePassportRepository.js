@@ -497,6 +497,14 @@ function sortPassportExports(exports) {
   });
 }
 
+function sortByCreatedAtDescending(records) {
+  return [...records].sort((left, right) => {
+    const leftTime = Number(left.updatedAt?.seconds ?? left.createdAt?.seconds ?? left.requestedAt?.seconds ?? 0);
+    const rightTime = Number(right.updatedAt?.seconds ?? right.createdAt?.seconds ?? right.requestedAt?.seconds ?? 0);
+    return rightTime - leftTime;
+  });
+}
+
 export async function loadFirebaseVehiclePassportExports() {
   const services = await getFirebaseServices();
   if (!services) {
@@ -517,6 +525,39 @@ export async function loadFirebaseVehiclePassportExports() {
   })));
 }
 
+export async function loadFirebaseVehiclePassportTransferState() {
+  const services = await getFirebaseServices();
+  if (!services) {
+    return { auditEvents: [], transfers: [] };
+  }
+
+  const { collection, getDocs, query } = await import("firebase/firestore");
+  const appId = resolveAppId();
+  const [transferSnapshot, auditSnapshot] = await Promise.all([
+    getDocs(query(collection(
+      services.firestore,
+      privateUserCollectionPath(services.authUser.uid, PRIVATE_COLLECTIONS.vehiclePassportTransfers, appId),
+    ))),
+    getDocs(query(collection(
+      services.firestore,
+      privateUserCollectionPath(services.authUser.uid, PRIVATE_COLLECTIONS.vehiclePassportAuditEvents, appId),
+    ))),
+  ]);
+
+  return {
+    transfers: sortByCreatedAtDescending(transferSnapshot.docs.map((item) => ({
+      ...item.data(),
+      id: item.data().id ?? item.id,
+      firestoreId: item.id,
+    }))),
+    auditEvents: sortByCreatedAtDescending(auditSnapshot.docs.map((item) => ({
+      ...item.data(),
+      id: item.data().id ?? item.id,
+      firestoreId: item.id,
+    }))),
+  };
+}
+
 export async function createFirebaseVehiclePassportExport() {
   const services = await getFirebaseServices();
   if (!services?.functions) {
@@ -535,6 +576,52 @@ export async function createFirebaseVehiclePassportExport() {
     throw createRepositoryError(
       String(error?.code ?? "cruiser/passport-export-failed"),
       error instanceof Error ? error.message : "Vehicle Passport export could not be created.",
+      error,
+    );
+  }
+}
+
+export async function requestFirebaseVehiclePassportTransfer({ targetPlate }) {
+  const services = await getFirebaseServices();
+  if (!services?.functions) {
+    throw createRepositoryError(
+      "cruiser/functions-unavailable",
+      "Vehicle Passport transfer service is unavailable.",
+    );
+  }
+
+  const { httpsCallable } = await import("firebase/functions");
+  try {
+    const callable = httpsCallable(services.functions, "requestVehiclePassportTransfer");
+    const result = await callable({ targetPlate });
+    return result.data;
+  } catch (error) {
+    throw createRepositoryError(
+      String(error?.code ?? "cruiser/passport-transfer-failed"),
+      error instanceof Error ? error.message : "Vehicle Passport transfer could not be requested.",
+      error,
+    );
+  }
+}
+
+export async function cancelFirebaseVehiclePassportTransfer({ transferId }) {
+  const services = await getFirebaseServices();
+  if (!services?.functions) {
+    throw createRepositoryError(
+      "cruiser/functions-unavailable",
+      "Vehicle Passport transfer service is unavailable.",
+    );
+  }
+
+  const { httpsCallable } = await import("firebase/functions");
+  try {
+    const callable = httpsCallable(services.functions, "cancelVehiclePassportTransfer");
+    const result = await callable({ transferId });
+    return result.data;
+  } catch (error) {
+    throw createRepositoryError(
+      String(error?.code ?? "cruiser/passport-transfer-cancel-failed"),
+      error instanceof Error ? error.message : "Vehicle Passport transfer could not be cancelled.",
       error,
     );
   }

@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import {
   appendServiceLog,
+  cancelFirebaseVehiclePassportTransfer,
   createFirebaseVehiclePassportExport,
   loadFirebaseVehiclePassportExports,
+  loadFirebaseVehiclePassportTransferState,
+  requestFirebaseVehiclePassportTransfer,
 } from "../repositories/cruiserRepository";
 import { createServiceLogForm } from "../utils/garage";
 import {
@@ -19,6 +22,11 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
   const [passportExportFeedback, setPassportExportFeedback] = useState("");
   const [passportExportPending, setPassportExportPending] = useState(false);
   const [passportExports, setPassportExports] = useState([]);
+  const [passportTransferAuditEvents, setPassportTransferAuditEvents] = useState([]);
+  const [passportTransferFeedback, setPassportTransferFeedback] = useState("");
+  const [passportTransferPending, setPassportTransferPending] = useState(false);
+  const [passportTransferTargetPlate, setPassportTransferTargetPlate] = useState("");
+  const [passportTransfers, setPassportTransfers] = useState([]);
 
   useEffect(() => {
     setServiceLogForm(createServiceLogForm(user));
@@ -28,6 +36,11 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
     setPassportExportFeedback("");
     setPassportExportPending(false);
     setPassportExports([]);
+    setPassportTransferAuditEvents([]);
+    setPassportTransferFeedback("");
+    setPassportTransferPending(false);
+    setPassportTransferTargetPlate("");
+    setPassportTransfers([]);
   }, [user?.id]);
 
   useEffect(() => {
@@ -50,6 +63,32 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
     }
 
     void loadExports();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.firebaseUid, user?.primaryVehicleId]);
+
+  useEffect(() => {
+    if (!user?.firebaseUid) {
+      return;
+    }
+
+    let cancelled = false;
+    async function loadTransferState() {
+      try {
+        const transferState = await loadFirebaseVehiclePassportTransferState();
+        if (!cancelled) {
+          setPassportTransfers(transferState.transfers ?? []);
+          setPassportTransferAuditEvents(transferState.auditEvents ?? []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPassportTransferFeedback(error instanceof Error ? error.message : "Vehicle Passport transfer history could not be loaded.");
+        }
+      }
+    }
+
+    void loadTransferState();
     return () => {
       cancelled = true;
     };
@@ -162,18 +201,117 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
     }
   };
 
+  const requestPassportTransfer = async () => {
+    if (!user || passportTransferPending) {
+      return null;
+    }
+
+    setPassportTransferPending(true);
+    setPassportTransferFeedback("Vehicle Passport transfer istegi backend tarafinda hazirlaniyor...");
+    try {
+      const result = await requestFirebaseVehiclePassportTransfer({
+        targetPlate: passportTransferTargetPlate,
+      });
+      if (result?.transfer) {
+        setPassportTransfers((current) => [result.transfer, ...current.filter((item) => item.id !== result.transfer.id)]);
+      }
+      if (result?.auditEvent) {
+        setPassportTransferAuditEvents((current) => [result.auditEvent, ...current.filter((item) => item.id !== result.auditEvent.id)]);
+      }
+      if (result?.transfer) {
+        setUser((current) => current ? {
+          ...current,
+          vehiclePassport: {
+            ...(current.vehiclePassport ?? {}),
+            transferState: "transfer_requested",
+            pendingTransferId: result.transfer.id,
+            transferTargetUserId: result.transfer.targetUserId,
+            transferTargetPlate: result.transfer.targetPlate,
+            transferRequestedAt: result.transfer.requestedAt,
+          },
+        } : current);
+      }
+      setPassportTransferTargetPlate("");
+      setPassportTransferFeedback("Transfer istegi olusturuldu. Passport pending moduna alindi.");
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Vehicle Passport transfer istegi olusturulamadi.";
+      setPassportTransferFeedback(message);
+      return null;
+    } finally {
+      setPassportTransferPending(false);
+    }
+  };
+
+  const cancelPassportTransfer = async (transferId) => {
+    if (!transferId || passportTransferPending) {
+      return null;
+    }
+
+    setPassportTransferPending(true);
+    setPassportTransferFeedback("Transfer istegi iptal ediliyor...");
+    try {
+      const result = await cancelFirebaseVehiclePassportTransfer({ transferId });
+      if (result?.transfer) {
+        setPassportTransfers((current) => current.map((item) => (
+          item.id === result.transfer.id ? result.transfer : item
+        )));
+      }
+      if (result?.auditEvent) {
+        setPassportTransferAuditEvents((current) => [result.auditEvent, ...current.filter((item) => item.id !== result.auditEvent.id)]);
+      }
+      if (result?.transfer) {
+        setUser((current) => {
+          if (!current) {
+            return current;
+          }
+          const {
+            pendingTransferId: _pendingTransferId,
+            transferTargetUserId: _transferTargetUserId,
+            transferTargetPlate: _transferTargetPlate,
+            transferRequestedAt: _transferRequestedAt,
+            ...passport
+          } = current.vehiclePassport ?? {};
+          return {
+            ...current,
+            vehiclePassport: {
+              ...passport,
+              transferState: "owned",
+            },
+          };
+        });
+      }
+      setPassportTransferFeedback("Transfer istegi iptal edildi. Passport yeniden owned modunda.");
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Vehicle Passport transfer istegi iptal edilemedi.";
+      setPassportTransferFeedback(message);
+      return null;
+    } finally {
+      setPassportTransferPending(false);
+    }
+  };
+
   return {
+    cancelPassportTransfer,
     createPassportExport,
     passportSummary,
     passportExportFeedback,
     passportExportPending,
     passportExports,
+    passportTransferAuditEvents,
+    passportTransferFeedback,
+    passportTransferPending,
+    passportTransferTargetPlate,
+    passportTransfers,
     primeServiceLogForm,
+    requestPassportTransfer,
     serviceLogErrors,
     serviceLogFeedback,
     serviceLogForm,
     serviceLogPending,
     setServiceLogForm,
+    setPassportTransferTargetPlate,
     submitServiceLog,
     upcomingMaintenance,
   };

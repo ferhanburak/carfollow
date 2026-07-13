@@ -37,8 +37,11 @@ vi.mock("firebase/functions", () => ({
 }));
 
 import {
+  cancelFirebaseVehiclePassportTransfer,
   createFirebaseVehiclePassportExport,
   loadFirebaseVehiclePassportExports,
+  loadFirebaseVehiclePassportTransferState,
+  requestFirebaseVehiclePassportTransfer,
   saveFirebaseFuelLog,
   saveFirebaseServiceLog,
 } from "./firebaseVehiclePassportRepository";
@@ -274,5 +277,56 @@ describe("Firebase Vehicle Passport repository", () => {
     const exports = await loadFirebaseVehiclePassportExports();
 
     expect(exports.map((item) => item.id)).toEqual(["newer", "older"]);
+  });
+
+  it("creates and cancels backend-owned Vehicle Passport transfer requests", async () => {
+    mocks.invokeCallable
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          transferId: "passport-transfer-1",
+          transfer: { id: "passport-transfer-1", status: "pending" },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          ok: true,
+          transferId: "passport-transfer-1",
+          transfer: { id: "passport-transfer-1", status: "cancelled" },
+        },
+      });
+
+    const requested = await requestFirebaseVehiclePassportTransfer({ targetPlate: "34 MOTO 410" });
+    const cancelled = await cancelFirebaseVehiclePassportTransfer({ transferId: "passport-transfer-1" });
+
+    expect(mocks.invokeCallable).toHaveBeenNthCalledWith(1, "requestVehiclePassportTransfer", {
+      targetPlate: "34 MOTO 410",
+    });
+    expect(mocks.invokeCallable).toHaveBeenNthCalledWith(2, "cancelVehiclePassportTransfer", {
+      transferId: "passport-transfer-1",
+    });
+    expect(requested.transfer.status).toBe("pending");
+    expect(cancelled.transfer.status).toBe("cancelled");
+  });
+
+  it("loads Vehicle Passport transfer and audit history newest first", async () => {
+    mocks.getDocs
+      .mockResolvedValueOnce({
+        docs: [
+          { id: "older-transfer", data: () => ({ id: "older-transfer", updatedAt: { seconds: 10 } }) },
+          { id: "newer-transfer", data: () => ({ id: "newer-transfer", updatedAt: { seconds: 20 } }) },
+        ],
+      })
+      .mockResolvedValueOnce({
+        docs: [
+          { id: "older-audit", data: () => ({ id: "older-audit", createdAt: { seconds: 10 } }) },
+          { id: "newer-audit", data: () => ({ id: "newer-audit", createdAt: { seconds: 20 } }) },
+        ],
+      });
+
+    const state = await loadFirebaseVehiclePassportTransferState();
+
+    expect(state.transfers.map((item) => item.id)).toEqual(["newer-transfer", "older-transfer"]);
+    expect(state.auditEvents.map((item) => item.id)).toEqual(["newer-audit", "older-audit"]);
   });
 });

@@ -12,6 +12,12 @@ const {
 const {
   buildVehiclePassportExportDocument,
 } = require("./vehiclePassportExport");
+const {
+  buildTransferAuditEventDocument,
+  buildTransferNotificationDocument,
+  buildTransferRequestDocument,
+  normalizePlate,
+} = require("./vehiclePassportTransfer");
 
 admin.initializeApp();
 
@@ -77,6 +83,17 @@ function assertDriveSessionId(sessionId) {
     !/^[0-9A-Za-z_-]+$/.test(sessionId)
   ) {
     throw new HttpsError("invalid-argument", "A valid idempotent sessionId is required.");
+  }
+}
+
+function assertTransferId(transferId) {
+  if (
+    typeof transferId !== "string" ||
+    transferId.length < 12 ||
+    transferId.length > 180 ||
+    !/^[0-9A-Za-z_-]+$/.test(transferId)
+  ) {
+    throw new HttpsError("invalid-argument", "A valid transferId is required.");
   }
 }
 
@@ -419,6 +436,182 @@ exports.createVehiclePassportExport = onCall(async (request) => {
       ok: true,
       exportId,
       export: exportDocument,
+    };
+  });
+
+  return response;
+});
+
+exports.requestVehiclePassportTransfer = onCall(async (request) => {
+  const ownerUserId = requireAuth(request);
+  const targetPlateNormalized = normalizePlate(request.data?.targetPlate);
+  if (!targetPlateNormalized || targetPlateNormalized.length < 5) {
+    throw new HttpsError("invalid-argument", "A valid target plate is required.");
+  }
+
+  const timestamp = admin.firestore.Timestamp.now();
+  let response;
+
+  await db.runTransaction(async (transaction) => {
+    const ownerProfileRef = privateUserDocument(ownerUserId, "profile", "current");
+    const targetClaimRef = publicDocument("plateClaims", targetPlateNormalized);
+    const [ownerProfileSnapshot, targetClaimSnapshot] = await Promise.all([
+      transaction.get(ownerProfileRef),
+      transaction.get(targetClaimRef),
+    ]);
+    const ownerProfile = requireSnapshot(ownerProfileSnapshot, "not-found", "Owner profile not found.");
+    const targetClaim = requireSnapshot(targetClaimSnapshot, "not-found", "Target plate is not registered.");
+    const targetUserId = targetClaim.uid;
+    if (!targetUserId || targetUserId === ownerUserId) {
+      throw new HttpsError("failed-precondition", "Vehicle Passport cannot be transferred to this account.");
+    }
+
+    const vehicleId = ownerProfile.primaryVehicleId;
+    if (!vehicleId) {
+      throw new HttpsError("failed-precondition", "Primary vehicle identity is missing.");
+    }
+
+    const vehicleRef = privateUserDocument(ownerUserId, "vehicles", vehicleId);
+    const passportRef = privateUserDocument(ownerUserId, "vehiclePassports", vehicleId);
+    const targetProfileRef = publicDocument("publicProfiles", targetUserId);
+    const [vehicleSnapshot, passportSnapshot, targetProfileSnapshot] = await Promise.all([
+      transaction.get(vehicleRef),
+      transaction.get(passportRef),
+      transaction.get(targetProfileRef),
+    ]);
+    const vehicle = requireSnapshot(vehicleSnapshot, "not-found", "Primary vehicle not found.");
+    const passport = requireSnapshot(passportSnapshot, "not-found", "Vehicle Passport not found.");
+    const targetProfile = requireSnapshot(targetProfileSnapshot, "not-found", "Target profile not found.");
+    if (vehicle.ownerId !== ownerUserId || passport.ownerId !== ownerUserId || vehicle.vehicleId !== vehicleId) {
+      throw new HttpsError("permission-denied", "Vehicle ownership validation failed.");
+    }
+    if (passport.transferState !== "owned") {
+      throw new HttpsError("failed-precondition", "Vehicle Passport already has an active transfer workflow.");
+    }
+
+    const transferId = `passport-transfer-${vehicleId}-${Date.now()}`;
+    const transferRef = privateUserDocument(ownerUserId, "vehiclePassportTransfers", transferId);
+    const auditEventId = `${transferId}--requested`;
+    const auditRef = privateUserDocument(ownerUserId, "vehiclePassportAuditEvents", auditEventId);
+    const targetNotificationRef = privateUserDocument(targetUserId, "notifications", transferId);
+    const transferDocument = buildTransferRequestDocument({
+      transferId,
+      ownerUserId,
+      ownerProfile,
+      targetUserId,
+      targetProfile,
+      vehicle,
+      passport,
+      requestedAt: timestamp,
+    });
+    const auditDocument = buildTransferAuditEventDocument({
+      eventId: auditEventId,
+      transferId,
+      action: "requested",
+      actorUserId: ownerUserId,
+      actorPlate: ownerProfile.plate,
+      ownerUserId,
+      targetUserId,
+      targetPlate: targetProfile.plate,
+      vehicleId,
+      statusFrom: "owned",
+      statusTo: "transfer_requested",
+      createdAt: timestamp,
+    });
+
+    transaction.set(transferRef, transferDocument);
+    transaction.set(auditRef, auditDocument);
+    transaction.set(targetNotificationRef, buildTransferNotificationDocument({
+      transfer: transferDocument,
+      createdAt: timestamp,
+    }));
+    transaction.update(passportRef, {
+      transferState: "transfer_requested",
+      pendingTransferId: transferId,
+      transferTargetUserId: targetUserId,
+      transferTargetPlate: targetProfile.plate ?? targetClaim.plate ?? "",
+      transferRequestedAt: timestamp,
+      updatedAt: timestamp,
+    });
+
+    response = {
+      ok: true,
+      transferId,
+      transfer: transferDocument,
+      auditEvent: auditDocument,
+    };
+  });
+
+  return response;
+});
+
+exports.cancelVehiclePassportTransfer = onCall(async (request) => {
+  const ownerUserId = requireAuth(request);
+  const { transferId } = request.data ?? {};
+  assertTransferId(transferId);
+  const timestamp = admin.firestore.Timestamp.now();
+  let response;
+
+  await db.runTransaction(async (transaction) => {
+    const transferRef = privateUserDocument(ownerUserId, "vehiclePassportTransfers", transferId);
+    const transferSnapshot = await transaction.get(transferRef);
+    const transfer = requireSnapshot(transferSnapshot, "not-found", "Transfer request not found.");
+    if (transfer.ownerUserId !== ownerUserId || transfer.status !== "pending") {
+      throw new HttpsError("failed-precondition", "Transfer request cannot be cancelled.");
+    }
+
+    const passportRef = privateUserDocument(ownerUserId, "vehiclePassports", transfer.vehicleId);
+    const passportSnapshot = await transaction.get(passportRef);
+    const passport = requireSnapshot(passportSnapshot, "not-found", "Vehicle Passport not found.");
+    if (passport.ownerId !== ownerUserId || passport.pendingTransferId !== transferId) {
+      throw new HttpsError("permission-denied", "Transfer request is not active on this Vehicle Passport.");
+    }
+
+    const auditEventId = `${transferId}--cancelled`;
+    const auditRef = privateUserDocument(ownerUserId, "vehiclePassportAuditEvents", auditEventId);
+    const cancelledTransfer = {
+      ...transfer,
+      status: "cancelled",
+      cancelledAt: timestamp,
+      updatedAt: timestamp,
+    };
+    const auditDocument = buildTransferAuditEventDocument({
+      eventId: auditEventId,
+      transferId,
+      action: "cancelled",
+      actorUserId: ownerUserId,
+      actorPlate: transfer.ownerPlate,
+      ownerUserId,
+      targetUserId: transfer.targetUserId,
+      targetPlate: transfer.targetPlate,
+      vehicleId: transfer.vehicleId,
+      statusFrom: "transfer_requested",
+      statusTo: "owned",
+      createdAt: timestamp,
+    });
+
+    transaction.set(transferRef, cancelledTransfer, { merge: true });
+    transaction.set(auditRef, auditDocument);
+    if (transfer.targetUserId) {
+      transaction.set(privateUserDocument(transfer.targetUserId, "notifications", transferId), {
+        status: "cancelled",
+        updatedAt: timestamp,
+      }, { merge: true });
+    }
+    transaction.update(passportRef, {
+      transferState: "owned",
+      pendingTransferId: admin.firestore.FieldValue.delete(),
+      transferTargetUserId: admin.firestore.FieldValue.delete(),
+      transferTargetPlate: admin.firestore.FieldValue.delete(),
+      transferRequestedAt: admin.firestore.FieldValue.delete(),
+      updatedAt: timestamp,
+    });
+
+    response = {
+      ok: true,
+      transferId,
+      transfer: cancelledTransfer,
+      auditEvent: auditDocument,
     };
   });
 

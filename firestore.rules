@@ -581,6 +581,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /artifacts/{appId}/users/{userId}/vehiclePassportTransfers/{documentId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow write: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/vehiclePassportAuditEvents/{documentId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow write: if false;
+    }
+
     match /artifacts/{appId}/users/{userId}/fuelLogs/{documentId} {
       allow read: if isKnownApp(appId) && isOwner(userId);
       allow create: if isKnownApp(appId) &&

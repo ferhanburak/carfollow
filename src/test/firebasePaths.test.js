@@ -52,5 +52,7 @@ describe("firebase path helpers", () => {
     expect(PUBLIC_COLLECTIONS.individualLeaderboard).toBe("individualLeaderboard");
     expect(PRIVATE_COLLECTIONS.driverStats).toBe("driverStats");
     expect(PRIVATE_COLLECTIONS.driveSessions).toBe("driveSessions");
+    expect(PRIVATE_COLLECTIONS.vehiclePassportTransfers).toBe("vehiclePassportTransfers");
+    expect(PRIVATE_COLLECTIONS.vehiclePassportAuditEvents).toBe("vehiclePassportAuditEvents");
   });
 });
