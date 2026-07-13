@@ -257,7 +257,7 @@ The following checks were run successfully:
 - `npm run build`
 - `npm run test:run` (`57/57` frontend tests)
 - `npm run test:functions` (`6/6` backend domain tests)
-- `npm run test:emulators` (`19/19` Auth, Firestore, RTDB, and Storage identity/authorization tests)
+- `npm run test:emulators` (`24/24` Auth, Firestore, RTDB, and Storage identity/authorization tests)
 - `npm run rules:check`
 - local HTTP response from the dev server
 
@@ -279,6 +279,7 @@ The project now includes:
 - stable private vehicle identities and Vehicle Passport metadata
 - idempotent, append-only service and fuel records
 - atomic updates for odometer, passport counters, and replacement-part state
+- emulator-backed Garage hardening for fuel, service, passport, and replacement-part edge cases
 - Firebase-backed repository hooks for hydration and persistence
 - local mocked session persistence with `localStorage`
 - centralized Firebase path and document contracts

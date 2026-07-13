@@ -32,6 +32,12 @@ service cloud.firestore {
       ).data;
     }
 
+    function vehicleBefore(appId, userId, vehicleId) {
+      return get(
+        /databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/vehicles/$(vehicleId)
+      ).data;
+    }
+
     function profileAfter(appId, userId) {
       return getAfter(
         /databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/profile/current
@@ -229,11 +235,13 @@ service cloud.firestore {
     }
 
     function hasAtomicFuelMutation(appId, userId, data) {
+      let previousVehicle = vehicleBefore(appId, userId, data.vehicleId);
       let vehicle = vehicleAfter(appId, userId, data.vehicleId);
       let profile = profileAfter(appId, userId);
       let previousPassport = passportBefore(appId, userId, data.vehicleId);
       let passport = passportAfter(appId, userId, data.vehicleId);
       return vehicle.ownerId == userId &&
+        data.currentKm >= previousVehicle.odometer &&
         vehicle.odometer >= data.currentKm &&
         profile.primaryVehicleId == data.vehicleId &&
         profile.odometer == vehicle.odometer &&

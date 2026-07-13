@@ -97,6 +97,77 @@ function buildVehicle() {
   };
 }
 
+function buildPassport(overrides = {}) {
+  return {
+    id: VEHICLE_ID,
+    vehicleId: VEHICLE_ID,
+    ownerId: OWNER_ID,
+    status: "active",
+    transferState: "owned",
+    serviceLogCount: 0,
+    fuelLogCount: 0,
+    totalServiceSpend: 0,
+    lastMutationType: "bootstrap",
+    lastMutationId: "bootstrap",
+    schemaVersion: 1,
+    issuedAt: FIXED_TIME,
+    updatedAt: FIXED_TIME,
+    ...overrides,
+  };
+}
+
+function buildFuelLog(overrides = {}) {
+  return {
+    id: "fuel-valid-1",
+    userId: OWNER_ID,
+    vehicleId: VEHICLE_ID,
+    liters: 42,
+    price: 1950,
+    currentKm: 12100,
+    station: "Apex Fuel",
+    createdAt: FIXED_TIME,
+    ...overrides,
+  };
+}
+
+function buildServiceLog(overrides = {}) {
+  return {
+    id: "service-valid-1",
+    userId: OWNER_ID,
+    vehicleId: VEHICLE_ID,
+    partKey: "engine-oil",
+    type: "replacement",
+    serviceDate: "2026-07-14",
+    serviceKm: 12200,
+    serviceShop: "Apex Garage",
+    cost: 3200,
+    notes: "Oil and filter changed.",
+    receiptImageUrl: "",
+    createdAt: FIXED_TIME,
+    ...overrides,
+  };
+}
+
+function buildPart(overrides = {}) {
+  return {
+    key: "engine-oil",
+    vehicleId: VEHICLE_ID,
+    userId: OWNER_ID,
+    name: "Engine Oil",
+    shortLabel: "Oil",
+    zone: "engine",
+    lifeExpectancyKm: 10000,
+    lifeExpectancyMonths: 12,
+    replacedKm: 12200,
+    replacedAt: "2026-07-14",
+    lastServiceLogId: "service-valid-1",
+    schemaVersion: 1,
+    createdAt: FIXED_TIME,
+    updatedAt: FIXED_TIME,
+    ...overrides,
+  };
+}
+
 async function seedFirestoreFixtures() {
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
     const database = context.firestore();
@@ -111,21 +182,7 @@ async function seedFirestoreFixtures() {
     batch.set(doc(database, publicPath("publicProfiles", OWNER_ID)), buildPublicProfile());
     batch.set(doc(database, privatePath(OWNER_ID, "profile", "current")), buildPrivateProfile());
     batch.set(doc(database, privatePath(OWNER_ID, "vehicles", VEHICLE_ID)), buildVehicle());
-    batch.set(doc(database, privatePath(OWNER_ID, "vehiclePassports", VEHICLE_ID)), {
-      id: VEHICLE_ID,
-      vehicleId: VEHICLE_ID,
-      ownerId: OWNER_ID,
-      status: "active",
-      transferState: "owned",
-      serviceLogCount: 0,
-      fuelLogCount: 0,
-      totalServiceSpend: 0,
-      lastMutationType: "bootstrap",
-      lastMutationId: "bootstrap",
-      schemaVersion: 1,
-      issuedAt: FIXED_TIME,
-      updatedAt: FIXED_TIME,
-    });
+    batch.set(doc(database, privatePath(OWNER_ID, "vehiclePassports", VEHICLE_ID)), buildPassport());
     batch.set(doc(database, privatePath(OWNER_ID, "driverStats", "current")), {
       userId: OWNER_ID,
       periodKey: "2026-07",
@@ -257,6 +314,128 @@ describe("Firestore security rules", { concurrency: false }, () => {
     });
 
     await assertFails(batch.commit());
+  });
+
+  it("allows an atomic fuel append that advances profile, vehicle, and passport together", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+    const fuelLog = buildFuelLog();
+    const batch = writeBatch(ownerDb);
+
+    batch.set(doc(ownerDb, privatePath(OWNER_ID, "fuelLogs", fuelLog.id)), fuelLog);
+    batch.update(doc(ownerDb, privatePath(OWNER_ID, "vehicles", VEHICLE_ID)), {
+      odometer: fuelLog.currentKm,
+      lastOdometerSource: "fuel",
+      updatedAt: FIXED_TIME,
+    });
+    batch.update(doc(ownerDb, privatePath(OWNER_ID, "profile", "current")), {
+      odometer: fuelLog.currentKm,
+      updatedAt: FIXED_TIME,
+    });
+    batch.update(doc(ownerDb, privatePath(OWNER_ID, "vehiclePassports", VEHICLE_ID)), {
+      fuelLogCount: 1,
+      lastFuelKm: fuelLog.currentKm,
+      lastMutationId: fuelLog.id,
+      lastMutationType: "fuel",
+      updatedAt: FIXED_TIME,
+    });
+
+    await assertSucceeds(batch.commit());
+  });
+
+  it("blocks fuel records without the matching passport mutation", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+    const fuelLog = buildFuelLog({ id: "fuel-missing-passport" });
+    const batch = writeBatch(ownerDb);
+
+    batch.set(doc(ownerDb, privatePath(OWNER_ID, "fuelLogs", fuelLog.id)), fuelLog);
+    batch.update(doc(ownerDb, privatePath(OWNER_ID, "vehicles", VEHICLE_ID)), {
+      odometer: fuelLog.currentKm,
+      lastOdometerSource: "fuel",
+      updatedAt: FIXED_TIME,
+    });
+    batch.update(doc(ownerDb, privatePath(OWNER_ID, "profile", "current")), {
+      odometer: fuelLog.currentKm,
+      updatedAt: FIXED_TIME,
+    });
+
+    await assertFails(batch.commit());
+  });
+
+  it("blocks backdated fuel records below the current odometer", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+    const fuelLog = buildFuelLog({
+      id: "fuel-backdated",
+      currentKm: 11900,
+    });
+    const batch = writeBatch(ownerDb);
+
+    batch.set(doc(ownerDb, privatePath(OWNER_ID, "fuelLogs", fuelLog.id)), fuelLog);
+    batch.update(doc(ownerDb, privatePath(OWNER_ID, "vehicles", VEHICLE_ID)), {
+      lastOdometerSource: "fuel",
+      updatedAt: FIXED_TIME,
+    });
+    batch.update(doc(ownerDb, privatePath(OWNER_ID, "profile", "current")), {
+      updatedAt: FIXED_TIME,
+    });
+    batch.update(doc(ownerDb, privatePath(OWNER_ID, "vehiclePassports", VEHICLE_ID)), {
+      fuelLogCount: 1,
+      lastFuelKm: fuelLog.currentKm,
+      lastMutationId: fuelLog.id,
+      lastMutationType: "fuel",
+      updatedAt: FIXED_TIME,
+    });
+
+    await assertFails(batch.commit());
+  });
+
+  it("allows an atomic service replacement that refreshes the matching part", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+    const serviceLog = buildServiceLog();
+    const part = buildPart();
+    const batch = writeBatch(ownerDb);
+
+    batch.set(doc(ownerDb, privatePath(OWNER_ID, "serviceLogs", serviceLog.id)), serviceLog);
+    batch.update(doc(ownerDb, privatePath(OWNER_ID, "vehicles", VEHICLE_ID)), {
+      odometer: serviceLog.serviceKm,
+      lastOdometerSource: "service",
+      lastServiceDate: serviceLog.serviceDate,
+      updatedAt: FIXED_TIME,
+    });
+    batch.update(doc(ownerDb, privatePath(OWNER_ID, "profile", "current")), {
+      odometer: serviceLog.serviceKm,
+      updatedAt: FIXED_TIME,
+    });
+    batch.update(doc(ownerDb, privatePath(OWNER_ID, "vehiclePassports", VEHICLE_ID)), {
+      serviceLogCount: 1,
+      totalServiceSpend: serviceLog.cost,
+      lastServiceDate: serviceLog.serviceDate,
+      lastMutationId: serviceLog.id,
+      lastMutationType: "service",
+      updatedAt: FIXED_TIME,
+    });
+    batch.set(doc(ownerDb, privatePath(OWNER_ID, "parts", `${VEHICLE_ID}--${part.key}`)), part);
+
+    await assertSucceeds(batch.commit());
+  });
+
+  it("blocks direct part replacement when no matching service log exists", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+    const partPath = privatePath(OWNER_ID, "parts", `${VEHICLE_ID}--engine-oil`);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), partPath), buildPart({
+        replacedKm: 12000,
+        replacedAt: "2026-06-01",
+        lastServiceLogId: "bootstrap-part",
+      }));
+    });
+
+    await assertFails(updateDoc(doc(ownerDb, partPath), {
+      replacedKm: 13000,
+      replacedAt: "2026-07-20",
+      lastServiceLogId: "missing-service-log",
+      updatedAt: FIXED_TIME,
+    }));
   });
 });
 

@@ -50,12 +50,13 @@ What still needs maturity:
 | Firebase integration baseline | Complete | Firestore + RTDB + rules + app config |
 | Backend foundation / Stage 0 | Complete | Repository boundaries, contracts, rules, isolated emulator suite, and CI quality gates |
 | Auth identity / Stage 1 baseline | Complete | Real e-mail/password accounts, immutable plate claims, private/public profile split, and anonymous-token rejection |
-| Firebase authorization tests | Complete | 19 emulator tests covering Auth, Firestore, RTDB, and Storage |
+| Firebase authorization tests | Complete | 24 emulator tests covering Auth, Firestore, RTDB, Storage, and Garage edge cases |
 | Grid Map node management | Complete | Spot, wash, meet creation flows |
 | Live Map screen | Complete | Separate page with Google Maps |
 | Fuel log | Complete | Idempotent private Firestore records + history + insights |
 | Service log | Complete | Append-only records with atomic part/odometer updates |
 | Vehicle passport | Complete | Stable vehicle identity, passport metadata, migration, health and history |
+| Vehicle/Garage hardening / Stage 2 baseline | Complete | Fuel, service, passport, and replacement-part writes covered by emulator edge-case tests |
 | Individual leaderboard | Complete | Backend-owned monthly KM ranking with client-side sorting |
 | Driver achievements | Complete | Server-calculated progress and persistent earned titles |
 | Secure drive sessions | Complete | Idempotent start/finish Functions with elapsed-time KM clamp |
