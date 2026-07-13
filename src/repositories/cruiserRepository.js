@@ -44,12 +44,9 @@ export {
 } from "./firebaseCruiserRepository";
 
 export {
-  cancelFirebaseVehiclePassportTransfer,
   createFirebaseVehiclePassportExport,
   loadFirebaseVehiclePassportExports,
-  loadFirebaseVehiclePassportTransferState,
   loadFirebaseVehiclePassportBundle,
-  requestFirebaseVehiclePassportTransfer,
   saveFirebaseFuelLog,
   saveFirebaseServiceLog,
 } from "./firebaseVehiclePassportRepository";

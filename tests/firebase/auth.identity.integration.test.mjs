@@ -206,7 +206,6 @@ async function bootstrapCruiserIdentity(firestore, firebaseUser, user) {
       vehicleId,
       ownerId: firebaseUser.uid,
       status: "active",
-      transferState: "owned",
       serviceLogCount: 0,
       fuelLogCount: 0,
       totalServiceSpend: 0,

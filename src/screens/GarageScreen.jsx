@@ -44,12 +44,9 @@ export function GarageScreen({
   fuelForm,
   fuelInsights,
   fuelPending,
-  onCancelPassportTransfer,
   onCreatePassportExport,
   onFuelFormChange,
-  onPassportTransferTargetPlateChange,
   onPrimeServiceLogForm,
-  onRequestPassportTransfer,
   onSubmitFuelLog,
   onServiceLogFormChange,
   onSubmitServiceLog,
@@ -57,11 +54,6 @@ export function GarageScreen({
   passportExportPending,
   passportExports,
   passportSummary,
-  passportTransferAuditEvents,
-  passportTransferFeedback,
-  passportTransferPending,
-  passportTransferTargetPlate,
-  passportTransfers,
   serviceLogErrors,
   serviceLogFeedback,
   serviceLogForm,
@@ -92,7 +84,6 @@ export function GarageScreen({
     [...safeServiceLogs]
       .filter((log) => log.partKey === selectedPartKey)
       .sort((left, right) => new Date(right.serviceDate) - new Date(left.serviceDate))[0] ?? null;
-  const activePassportTransfer = (passportTransfers ?? []).find((item) => item.status === "pending") ?? null;
 
   const handleSelectPart = (partKey) => {
     setSelectedPartKey(partKey);
@@ -149,7 +140,7 @@ export function GarageScreen({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold">Vehicle Passport</p>
-            <p className="text-xs text-neutral-500">Servis gecmisi, saglik skoru ve satis oncesi dogrulanabilir kayitlar.</p>
+            <p className="text-xs text-neutral-500">Servis gecmisi, saglik skoru ve arac gecmisi icin dogrulanabilir kayitlar.</p>
           </div>
           <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.24em] text-lime-300">
             Passport Live
@@ -162,7 +153,7 @@ export function GarageScreen({
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-neutral-500">Backend Export</p>
               <p className="mt-2 text-sm text-neutral-300">
-                Resale Passport snapshot'i Cloud Function ile private kayda donusturulur.
+                Vehicle History snapshot'i Cloud Function ile private kayda donusturulur.
               </p>
             </div>
             <button
@@ -205,99 +196,6 @@ export function GarageScreen({
               <p className="text-xs text-neutral-500">Henuz backend export snapshot'i yok.</p>
             ) : null}
           </div>
-        </div>
-
-        <div className="mt-4 rounded-2xl border border-lime-400/15 bg-[radial-gradient(circle_at_top_right,rgba(163,230,53,0.12),transparent_36%),rgba(0,0,0,0.2)] p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-neutral-500">Ownership Transfer</p>
-              <p className="mt-2 text-sm text-neutral-300">
-                Plakadan hedef kullaniciyi bulur, Passport'u pending moduna alir ve audit trail olusturur.
-              </p>
-            </div>
-            <span className={`rounded-full border px-3 py-2 text-[10px] uppercase tracking-[0.2em] ${
-              activePassportTransfer
-                ? "border-amber-400/30 bg-amber-400/10 text-amber-200"
-                : "border-lime-400/20 bg-lime-400/10 text-lime-200"
-            }`}>
-              {activePassportTransfer ? "Pending" : "Owned"}
-            </span>
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <input
-              value={passportTransferTargetPlate}
-              onChange={(event) => onPassportTransferTargetPlateChange(event.target.value.toUpperCase())}
-              disabled={passportTransferPending || Boolean(activePassportTransfer)}
-              placeholder="34 MOTO 410"
-              className="min-h-12 min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/35 px-4 font-mono text-sm uppercase tracking-[0.18em] text-neutral-100 outline-none transition focus:border-lime-400/50 disabled:opacity-50"
-            />
-            {activePassportTransfer ? (
-              <button
-                type="button"
-                disabled={passportTransferPending}
-                onClick={() => onCancelPassportTransfer(activePassportTransfer.id)}
-                className="min-h-12 shrink-0 rounded-2xl bg-rose-500 px-4 text-xs font-bold text-white shadow-[0_0_18px_rgba(244,63,94,0.25)] disabled:cursor-wait disabled:opacity-60"
-              >
-                Cancel
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={passportTransferPending || !passportTransferTargetPlate?.trim()}
-                onClick={onRequestPassportTransfer}
-                className="min-h-12 shrink-0 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black shadow-[0_0_18px_rgba(163,230,53,0.28)] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Request
-              </button>
-            )}
-          </div>
-
-          {passportTransferFeedback ? (
-            <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
-              passportTransferFeedback.toLowerCase().includes("olusturuldu") ||
-              passportTransferFeedback.toLowerCase().includes("iptal edildi")
-                ? "border-lime-400/20 bg-lime-400/10 text-lime-100"
-                : "border-amber-400/20 bg-amber-400/10 text-amber-100"
-            }`}>
-              {passportTransferFeedback}
-            </div>
-          ) : null}
-
-          <div className="mt-4 space-y-3">
-            {(passportTransfers ?? []).slice(0, 3).map((item) => (
-              <div key={item.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-mono text-[11px] text-lime-300">{item.targetPlate}</p>
-                    <p className="mt-1 text-xs text-neutral-500">
-                      {item.status} / {formatServiceDate(item.updatedAt ?? item.requestedAt)}
-                    </p>
-                  </div>
-                  <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-neutral-300">
-                    {item.model}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {(passportTransfers ?? []).length === 0 ? (
-              <p className="text-xs text-neutral-500">Henuz ownership transfer istegi yok.</p>
-            ) : null}
-          </div>
-
-          {(passportTransferAuditEvents ?? []).length > 0 ? (
-            <div className="mt-4 border-t border-white/10 pt-4">
-              <p className="text-[10px] uppercase tracking-[0.24em] text-neutral-500">Audit Trail</p>
-              <div className="mt-3 space-y-2">
-                {(passportTransferAuditEvents ?? []).slice(0, 4).map((event) => (
-                  <div key={event.id} className="flex items-center justify-between gap-3 text-xs">
-                    <span className="text-neutral-300">{event.action}</span>
-                    <span className="text-neutral-500">{formatServiceDate(event.createdAt)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
 

@@ -356,7 +356,6 @@ service cloud.firestore {
         data.vehicleId == vehicleId &&
         data.ownerId == userId &&
         data.status == 'active' &&
-        data.transferState == 'owned' &&
         data.serviceLogCount is int &&
         data.serviceLogCount >= 0 &&
         data.fuelLogCount is int &&
@@ -375,7 +374,6 @@ service cloud.firestore {
         data.vehicleId == previousData.vehicleId &&
         data.ownerId == previousData.ownerId &&
         data.status == previousData.status &&
-        data.transferState == previousData.transferState &&
         data.issuedAt == previousData.issuedAt;
     }
 
@@ -577,16 +575,6 @@ service cloud.firestore {
     }
 
     match /artifacts/{appId}/users/{userId}/vehiclePassportExports/{documentId} {
-      allow read: if isKnownApp(appId) && isOwner(userId);
-      allow write: if false;
-    }
-
-    match /artifacts/{appId}/users/{userId}/vehiclePassportTransfers/{documentId} {
-      allow read: if isKnownApp(appId) && isOwner(userId);
-      allow write: if false;
-    }
-
-    match /artifacts/{appId}/users/{userId}/vehiclePassportAuditEvents/{documentId} {
       allow read: if isKnownApp(appId) && isOwner(userId);
       allow write: if false;
     }

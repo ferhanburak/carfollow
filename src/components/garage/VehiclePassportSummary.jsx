@@ -3,7 +3,7 @@ import { formatNumber } from "../../utils/garage";
 import { formatServiceDate } from "../../utils/vehiclePassport";
 
 export function VehiclePassportSummary({ summary }) {
-  const report = summary.resaleReport;
+  const report = summary.historyReport;
 
   return (
     <div className="mt-4 space-y-4">
@@ -55,15 +55,15 @@ export function VehiclePassportSummary({ summary }) {
         <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-neutral-500">Resale Passport</p>
-              <p className="mt-2 text-lg font-black text-lime-300">%{report.readinessScore}</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-neutral-500">Vehicle History Report</p>
+              <p className="mt-2 text-lg font-black text-lime-300">%{report.historyScore}</p>
             </div>
             <span className={`rounded-full border px-3 py-2 text-[10px] uppercase tracking-[0.18em] ${
               report.riskFlags.length
                 ? "border-amber-400/20 bg-amber-400/10 text-amber-200"
                 : "border-lime-400/20 bg-lime-400/10 text-lime-200"
             }`}>
-              {report.riskFlags.length ? "Review Needed" : "Sale Ready"}
+              {report.riskFlags.length ? "Review Needed" : "History Clean"}
             </span>
           </div>
 

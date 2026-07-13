@@ -103,7 +103,6 @@ function buildPassport(overrides = {}) {
     vehicleId: VEHICLE_ID,
     ownerId: OWNER_ID,
     status: "active",
-    transferState: "owned",
     serviceLogCount: 0,
     fuelLogCount: 0,
     totalServiceSpend: 0,
@@ -201,30 +200,6 @@ async function seedFirestoreFixtures() {
       generatedAt: FIXED_TIME,
       schemaVersion: 1,
     });
-    batch.set(doc(database, privatePath(OWNER_ID, "vehiclePassportTransfers", "transfer-owner-1")), {
-      id: "transfer-owner-1",
-      ownerUserId: OWNER_ID,
-      targetUserId: OTHER_ID,
-      vehicleId: VEHICLE_ID,
-      targetPlate: "34 TEST 02",
-      status: "pending",
-      requestedAt: FIXED_TIME,
-      updatedAt: FIXED_TIME,
-      schemaVersion: 1,
-    });
-    batch.set(doc(database, privatePath(OWNER_ID, "vehiclePassportAuditEvents", "transfer-owner-1--requested")), {
-      id: "transfer-owner-1--requested",
-      transferId: "transfer-owner-1",
-      action: "requested",
-      actorUserId: OWNER_ID,
-      ownerUserId: OWNER_ID,
-      targetUserId: OTHER_ID,
-      vehicleId: VEHICLE_ID,
-      statusFrom: "owned",
-      statusTo: "transfer_requested",
-      createdAt: FIXED_TIME,
-      schemaVersion: 1,
-    });
     batch.set(doc(database, publicPath("individualLeaderboard", `2026-07__${OWNER_ID}`)), {
       id: `2026-07__${OWNER_ID}`,
       userId: OWNER_ID,
@@ -281,8 +256,6 @@ describe("Firestore security rules", { concurrency: false }, () => {
       privatePath(OWNER_ID, "driverStats", "current"),
       privatePath(OWNER_ID, "driveSessions", "ride-owner-123456"),
       privatePath(OWNER_ID, "vehiclePassportExports", "export-owner-1"),
-      privatePath(OWNER_ID, "vehiclePassportTransfers", "transfer-owner-1"),
-      privatePath(OWNER_ID, "vehiclePassportAuditEvents", "transfer-owner-1--requested"),
     ];
 
     for (const documentPath of protectedPaths) {
@@ -473,11 +446,11 @@ describe("Firestore security rules", { concurrency: false }, () => {
     }));
   });
 
-  it("blocks client-side vehicle passport transfer state changes", async () => {
+  it("blocks client-side vehicle passport status changes", async () => {
     const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
 
     await assertFails(updateDoc(doc(ownerDb, privatePath(OWNER_ID, "vehiclePassports", VEHICLE_ID)), {
-      transferState: "transfer_requested",
+      status: "archived",
       updatedAt: FIXED_TIME,
     }));
   });
@@ -491,32 +464,6 @@ describe("Firestore security rules", { concurrency: false }, () => {
       vehicleId: VEHICLE_ID,
       readinessScore: 100,
       generatedAt: FIXED_TIME,
-      schemaVersion: 1,
-    }));
-  });
-
-  it("blocks client writes to backend-created transfer requests and audit events", async () => {
-    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
-
-    await assertFails(setDoc(doc(ownerDb, privatePath(OWNER_ID, "vehiclePassportTransfers", "manual-transfer")), {
-      id: "manual-transfer",
-      ownerUserId: OWNER_ID,
-      targetUserId: OTHER_ID,
-      vehicleId: VEHICLE_ID,
-      status: "pending",
-      requestedAt: FIXED_TIME,
-      updatedAt: FIXED_TIME,
-      schemaVersion: 1,
-    }));
-    await assertFails(setDoc(doc(ownerDb, privatePath(OWNER_ID, "vehiclePassportAuditEvents", "manual-audit")), {
-      id: "manual-audit",
-      transferId: "manual-transfer",
-      action: "requested",
-      actorUserId: OWNER_ID,
-      ownerUserId: OWNER_ID,
-      targetUserId: OTHER_ID,
-      vehicleId: VEHICLE_ID,
-      createdAt: FIXED_TIME,
       schemaVersion: 1,
     }));
   });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyPartServiceToUser,
-  buildVehicleResaleReport,
+  buildVehicleHistoryReport,
   buildVehiclePassportSummary,
   formatServiceDate,
   getPartHealthSnapshot,
@@ -95,7 +95,7 @@ describe("vehiclePassport utils", () => {
     expect(summary.maintenanceScore).toBeGreaterThan(0);
   });
 
-  it("builds a resale report with documented km coverage and recent services", () => {
+  it("builds a vehicle history report with documented km coverage and recent services", () => {
     const user = {
       odometer: 20000,
       parts: [
@@ -121,22 +121,21 @@ describe("vehiclePassport utils", () => {
       vehiclePassport: {
         serviceLogCount: 2,
         fuelLogCount: 1,
-        transferState: "owned",
         status: "active",
       },
     };
 
     const summary = buildVehiclePassportSummary(user, new Date("2026-07-12").getTime());
-    const report = buildVehicleResaleReport(user, summary);
+    const report = buildVehicleHistoryReport(user, summary);
 
-    expect(report.readinessScore).toBeGreaterThan(70);
+    expect(report.historyScore).toBeGreaterThan(70);
     expect(report.documentedKmCoverage).toBe(98);
     expect(report.documentedParts).toBe(1);
     expect(report.recentServiceLogs.map((log) => log.id)).toEqual(["svc-1", "svc-2"]);
     expect(report.riskFlags).toEqual([]);
   });
 
-  it("flags resale risks when history coverage or integrity is weak", () => {
+  it("flags vehicle history risks when coverage or integrity is weak", () => {
     const user = {
       odometer: 50000,
       parts: [{ ...basePart, replacedKm: 10000, lifeExpectancyKm: 8000 }],
@@ -145,15 +144,14 @@ describe("vehiclePassport utils", () => {
       vehiclePassport: {
         serviceLogCount: 3,
         fuelLogCount: 1,
-        transferState: "owned",
         status: "active",
       },
     };
 
     const summary = buildVehiclePassportSummary(user, new Date("2026-07-12").getTime());
-    const report = buildVehicleResaleReport(user, summary);
+    const report = buildVehicleHistoryReport(user, summary);
 
-    expect(report.readinessScore).toBeLessThan(70);
+    expect(report.historyScore).toBeLessThan(70);
     expect(report.riskFlags).toContain("1 critical part");
     expect(report.riskFlags).toContain("record count mismatch");
     expect(report.riskFlags).toContain("low documented KM coverage");

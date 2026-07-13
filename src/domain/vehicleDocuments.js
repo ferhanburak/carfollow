@@ -88,7 +88,6 @@ export function buildVehiclePassportDocument(user, ownerId = user?.firebaseUid ?
     vehicleId,
     ownerId,
     status: "active",
-    transferState: "owned",
     serviceLogCount: serviceLogs.length,
     fuelLogCount: fuelLogs.length,
     totalServiceSpend: serviceLogs.reduce((sum, log) => sum + numberOrZero(log?.cost), 0),

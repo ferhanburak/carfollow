@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
-  buildResaleReport,
+  buildHistoryReport,
   buildVehiclePassportExportDocument,
 } = require("./vehiclePassportExport");
 
@@ -56,10 +56,10 @@ const serviceLogs = [
   },
 ];
 
-test("builds a backend resale report with documented proof and no risk flags", () => {
-  const report = buildResaleReport({
+test("builds a backend vehicle history report with documented proof and no risk flags", () => {
+  const report = buildHistoryReport({
     profile,
-    passport: { serviceLogCount: 2, fuelLogCount: 1, status: "active", transferState: "owned" },
+    passport: { serviceLogCount: 2, fuelLogCount: 1, status: "active" },
     vehicle,
     parts: healthyParts,
     serviceLogs,
@@ -75,10 +75,10 @@ test("builds a backend resale report with documented proof and no risk flags", (
   assert.ok(report.readinessScore > 70);
 });
 
-test("flags weak resale history and count mismatch", () => {
-  const report = buildResaleReport({
+test("flags weak vehicle history and count mismatch", () => {
+  const report = buildHistoryReport({
     profile: { ...profile, odometer: 50000 },
-    passport: { serviceLogCount: 2, fuelLogCount: 1, status: "active", transferState: "owned" },
+    passport: { serviceLogCount: 2, fuelLogCount: 1, status: "active" },
     vehicle: { ...vehicle, odometer: 50000 },
     parts: [{ ...healthyParts[0], replacedKm: 10000, lifeExpectancyKm: 8000 }],
     serviceLogs: [],
@@ -101,7 +101,7 @@ test("builds an immutable export document shape", () => {
     exportId: "export-1",
     userId: "user-1",
     profile,
-    passport: { serviceLogCount: 2, fuelLogCount: 1, status: "active", transferState: "owned" },
+    passport: { serviceLogCount: 2, fuelLogCount: 1, status: "active" },
     vehicle,
     parts: healthyParts,
     serviceLogs,

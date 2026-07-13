@@ -75,12 +75,11 @@ function buildMaintenanceSummary({ profile = {}, passport = {}, parts = [], serv
         : 100,
     ),
     recordIntegrity: persistedServiceCount === serviceLogs.length && persistedFuelCount === fuelLogs.length,
-    transferState: passport.transferState ?? "unknown",
     passportStatus: passport.status ?? "unknown",
   };
 }
 
-function buildResaleReport({ profile = {}, passport = {}, vehicle = {}, parts = [], serviceLogs = [], fuelLogs = [], now = Date.now() }) {
+function buildHistoryReport({ profile = {}, passport = {}, vehicle = {}, parts = [], serviceLogs = [], fuelLogs = [], now = Date.now() }) {
   const summary = buildMaintenanceSummary({ profile, passport, parts, serviceLogs, fuelLogs, now });
   const odometer = Number(vehicle.odometer ?? profile.odometer ?? 0);
   const latestServiceKm = serviceLogs.reduce((latestKm, log) => Math.max(latestKm, Number(log.serviceKm ?? 0)), 0);
@@ -141,7 +140,7 @@ function buildVehiclePassportExportDocument({
   fuelLogs,
   generatedAt,
 }) {
-  const report = buildResaleReport({ profile, passport, vehicle, parts, serviceLogs, fuelLogs });
+  const report = buildHistoryReport({ profile, passport, vehicle, parts, serviceLogs, fuelLogs });
 
   return {
     id: exportId,
@@ -151,7 +150,6 @@ function buildVehiclePassportExportDocument({
     model: String(vehicle.model ?? profile.model ?? ""),
     odometer: Number(vehicle.odometer ?? profile.odometer ?? 0),
     generatedAt,
-    transferState: passport.transferState ?? "unknown",
     passportStatus: passport.status ?? "unknown",
     serviceLogCount: serviceLogs.length,
     fuelLogCount: fuelLogs.length,
@@ -170,7 +168,7 @@ function buildVehiclePassportExportDocument({
 
 module.exports = {
   EXPORT_SCHEMA_VERSION,
+  buildHistoryReport,
   buildMaintenanceSummary,
-  buildResaleReport,
   buildVehiclePassportExportDocument,
 };

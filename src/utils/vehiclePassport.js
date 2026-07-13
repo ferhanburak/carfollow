@@ -105,7 +105,6 @@ export function buildVehiclePassportSummary(user, now = Date.now()) {
     lastServiceLog,
     vehicleId: user.primaryVehicleId ?? persistedPassport?.vehicleId ?? "local-primary",
     passportStatus: persistedPassport?.status ?? "local",
-    transferState: persistedPassport?.transferState ?? "local",
     issuedAt: persistedPassport?.issuedAt ?? null,
     fuelLogCount: (user.fuelLogs ?? []).length,
     recordIntegrity:
@@ -122,11 +121,11 @@ export function buildVehiclePassportSummary(user, now = Date.now()) {
 
   return {
     ...summary,
-    resaleReport: buildVehicleResaleReport(user, summary),
+    historyReport: buildVehicleHistoryReport(user, summary),
   };
 }
 
-export function buildVehicleResaleReport(user, summary = buildVehiclePassportSummary(user)) {
+export function buildVehicleHistoryReport(user, summary = buildVehiclePassportSummary(user)) {
   const serviceLogs = user.serviceLogs ?? [];
   const fuelLogs = user.fuelLogs ?? [];
   const parts = user.parts ?? [];
@@ -165,12 +164,11 @@ export function buildVehicleResaleReport(user, summary = buildVehiclePassportSum
   ];
 
   return {
-    readinessScore,
+    historyScore: readinessScore,
     documentedKmCoverage,
     documentedParts,
     recentServiceLogs,
     riskFlags,
-    transferState: summary.transferState,
     vehicleId: summary.vehicleId,
   };
 }

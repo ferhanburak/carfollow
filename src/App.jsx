@@ -70,7 +70,6 @@ function App() {
     approveCruiseJoinRequest,
     acceptIncomingClanInvite,
     approveFriendRequest,
-    cancelPassportTransfer,
     chatFeedback,
     clanFeedback,
     clanForm,
@@ -117,11 +116,6 @@ function App() {
     passportExportPending,
     passportExports,
     passportSummary,
-    passportTransferAuditEvents,
-    passportTransferFeedback,
-    passportTransferPending,
-    passportTransferTargetPlate,
-    passportTransfers,
     pickMapLocation,
     profileCompletion,
     profileErrors,
@@ -131,7 +125,6 @@ function App() {
     primeServiceLogForm,
     rateAttendee,
     removeLastDraftRoutePoint,
-    requestPassportTransfer,
     requestFriend,
     resetSessionView,
     revokeClanInvite,
@@ -152,7 +145,6 @@ function App() {
     setMapPinForm,
     setMessageDraft,
     setProfileForm,
-    setPassportTransferTargetPlate,
     setSelectedPinId,
     setServiceLogForm,
     setSpotPhotoForm,
@@ -398,24 +390,16 @@ function App() {
                 fuelForm={fuelForm}
                 fuelInsights={fuelInsights}
                 fuelPending={fuelPending}
-                onCancelPassportTransfer={cancelPassportTransfer}
                 onCreatePassportExport={createPassportExport}
                 onFuelFormChange={setFuelForm}
                 onPrimeServiceLogForm={primeServiceLogForm}
-                onRequestPassportTransfer={requestPassportTransfer}
                 onServiceLogFormChange={setServiceLogForm}
-                onPassportTransferTargetPlateChange={setPassportTransferTargetPlate}
                 onSubmitFuelLog={(event) => submitFuelLog(event, fuelForm)}
                 onSubmitServiceLog={submitServiceLog}
                 passportExportFeedback={passportExportFeedback}
                 passportExportPending={passportExportPending}
                 passportExports={passportExports}
                 passportSummary={passportSummary}
-                passportTransferAuditEvents={passportTransferAuditEvents}
-                passportTransferFeedback={passportTransferFeedback}
-                passportTransferPending={passportTransferPending}
-                passportTransferTargetPlate={passportTransferTargetPlate}
-                passportTransfers={passportTransfers}
                 serviceLogErrors={serviceLogErrors}
                 serviceLogFeedback={serviceLogFeedback}
                 serviceLogForm={serviceLogForm}
