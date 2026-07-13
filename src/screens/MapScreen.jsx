@@ -3,6 +3,51 @@ import { MapCard } from "../components/MapCard";
 import { PinPanel } from "../components/PinPanel";
 import { getConvoyAccessState } from "../utils/meetVisibility";
 
+function toRadians(value) {
+  return (value * Math.PI) / 180;
+}
+
+function getRouteDistanceKm(routePath = []) {
+  if (!Array.isArray(routePath) || routePath.length < 2) {
+    return 0;
+  }
+
+  let totalKm = 0;
+
+  for (let index = 1; index < routePath.length; index += 1) {
+    const start = routePath[index - 1];
+    const end = routePath[index];
+    const latDelta = toRadians(end.lat - start.lat);
+    const lngDelta = toRadians(end.lng - start.lng);
+    const startLat = toRadians(start.lat);
+    const endLat = toRadians(end.lat);
+    const haversine =
+      Math.sin(latDelta / 2) ** 2 +
+      Math.cos(startLat) * Math.cos(endLat) * Math.sin(lngDelta / 2) ** 2;
+    const arc = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+    totalKm += 6371 * arc;
+  }
+
+  return Number(totalKm.toFixed(1));
+}
+
+function getLiveRouteMetrics(selectedPin, driveHud, isDriving) {
+  const totalKm = getRouteDistanceKm(selectedPin?.routePath ?? []);
+  const traveledKm = isDriving ? Math.min(totalKm || driveHud.sessionKm, driveHud.sessionKm) : 0;
+  const remainingKm = totalKm > 0 ? Math.max(0, Number((totalKm - traveledKm).toFixed(1))) : 0;
+  const liveSpeed = Math.max(1, Number(driveHud.speed || 0));
+  const etaMinutes = remainingKm > 0 ? Math.max(1, Math.round((remainingKm / liveSpeed) * 60)) : 0;
+  const progress = totalKm > 0 ? Math.min(100, Math.round((traveledKm / totalKm) * 100)) : 0;
+
+  return {
+    etaMinutes,
+    progress,
+    remainingKm,
+    totalKm,
+    traveledKm: Number(traveledKm.toFixed(1)),
+  };
+}
+
 function buildNavigationSummary(selectedPin, driveHud, isDriving, user) {
   if (selectedPin?.type !== "meet") {
     return {
@@ -25,11 +70,18 @@ function buildNavigationSummary(selectedPin, driveHud, isDriving, user) {
     .split("->")
     .map((item) => item.trim())
     .filter(Boolean);
+  const routeMetrics = getLiveRouteMetrics(selectedPin, driveHud, isDriving);
 
   return {
-    title: stops[1] ? `${stops[1]} yonune devam et` : "Cruise rotasi aktif",
-    subtitle: `${selectedPin.time} · ${selectedPin.attendees.length} katilimci`,
-    eta: `${Math.max(4, Math.round(driveHud.sessionKm) + stops.length * 3)} dk`,
+    title: isDriving
+      ? stops[1]
+        ? `${stops[1]} yonune devam et`
+        : "Cruise rotasi aktif"
+      : selectedPin.name,
+    subtitle: isDriving
+      ? `${driveHud.etaNode} · ${routeMetrics.remainingKm.toFixed(1)} km kaldi`
+      : `${selectedPin.time} · ${selectedPin.attendees.length} katilimci`,
+    eta: isDriving ? `${routeMetrics.etaMinutes || 1} dk` : `${Math.max(4, stops.length * 3)} dk`,
   };
 }
 
@@ -68,7 +120,7 @@ function summarizeTripStatuses(attendees = []) {
   );
 }
 
-function buildConvoyTimeline(pin, user) {
+function buildConvoyTimeline(pin, user, driveHud, isDriving) {
   if (pin?.type !== "meet") {
     return null;
   }
@@ -90,17 +142,25 @@ function buildConvoyTimeline(pin, user) {
 
   const attendees = pin.attendees ?? [];
   const summary = summarizeTripStatuses(attendees);
+  const routeMetrics = getLiveRouteMetrics(pin, driveHud, isDriving);
   const activeCrew = attendees.length - summary.cancelled;
-  const arrivedWeight = summary.arrived;
-  const enrouteWeight = summary.enroute * 0.55;
-  const readyWeight = summary.ready * 0.2;
-  const progress = activeCrew > 0 ? Math.min(100, Math.round(((arrivedWeight + enrouteWeight + readyWeight) / activeCrew) * 100)) : 0;
+  const statusProgress =
+    activeCrew > 0
+      ? Math.min(
+          100,
+          Math.round(((summary.arrived + summary.enroute * 0.55 + summary.ready * 0.2) / activeCrew) * 100),
+        )
+      : 0;
+  const progress = isDriving && routeMetrics.totalKm > 0 ? routeMetrics.progress : statusProgress;
 
   return {
     locked: false,
     title: `${getLifecycleLabel(pin.lifecycleStatus)} · ${attendees.length} surucu`,
-    subtitle: `${pin.route} · ${pin.time}`,
+    subtitle: isDriving
+      ? `${driveHud.etaNode} · ${routeMetrics.remainingKm.toFixed(1)} km kaldi · ETA ${routeMetrics.etaMinutes || 1} dk`
+      : `${pin.route} · ${pin.time}`,
     progress,
+    metrics: routeMetrics,
     segments: [
       { label: "Hazir", value: summary.ready },
       { label: "Yolda", value: summary.enroute },
@@ -169,7 +229,10 @@ export function MapScreen({
     () => buildNavigationSummary(selectedPin, driveHud, isDriving, user),
     [selectedPin, driveHud, isDriving, user],
   );
-  const convoyTimeline = useMemo(() => buildConvoyTimeline(selectedPin, user), [selectedPin, user]);
+  const convoyTimeline = useMemo(
+    () => buildConvoyTimeline(selectedPin, user, driveHud, isDriving),
+    [selectedPin, user, driveHud, isDriving],
+  );
   const overlayTitle =
     selectedPin?.type === "meet" && !getConvoyAccessState(selectedPin, user).canViewDetails
       ? "Restricted Convoy"
@@ -275,6 +338,23 @@ export function MapScreen({
               style={{ width: `${convoyTimeline.progress}%` }}
             />
           </div>
+
+          {!convoyTimeline.locked && convoyTimeline.metrics?.totalKm > 0 ? (
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-2 py-2 text-center">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-500">Toplam</p>
+                <p className="mt-1 text-sm font-black text-white">{convoyTimeline.metrics.totalKm.toFixed(1)} km</p>
+              </div>
+              <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-2 py-2 text-center">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-500">Gidilen</p>
+                <p className="mt-1 text-sm font-black text-white">{convoyTimeline.metrics.traveledKm.toFixed(1)} km</p>
+              </div>
+              <div className="rounded-2xl border border-white/8 bg-white/[0.03] px-2 py-2 text-center">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-500">Kalan</p>
+                <p className="mt-1 text-sm font-black text-white">{convoyTimeline.metrics.remainingKm.toFixed(1)} km</p>
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-3 grid grid-cols-4 gap-2">
             {convoyTimeline.segments.map((segment) => (
