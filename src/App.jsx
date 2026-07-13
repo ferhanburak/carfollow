@@ -78,6 +78,7 @@ function App() {
     convoyFeedback,
     conversationList,
     createNewClan,
+    createPassportExport,
     currentClan,
     declineCruiseJoinRequest,
     declineFriendRequest,
@@ -111,6 +112,9 @@ function App() {
     mapPins,
     messageDraft,
     openConversation,
+    passportExportFeedback,
+    passportExportPending,
+    passportExports,
     passportSummary,
     pickMapLocation,
     profileCompletion,
@@ -386,11 +390,15 @@ function App() {
                 fuelForm={fuelForm}
                 fuelInsights={fuelInsights}
                 fuelPending={fuelPending}
+                onCreatePassportExport={createPassportExport}
                 onFuelFormChange={setFuelForm}
                 onPrimeServiceLogForm={primeServiceLogForm}
                 onServiceLogFormChange={setServiceLogForm}
                 onSubmitFuelLog={(event) => submitFuelLog(event, fuelForm)}
                 onSubmitServiceLog={submitServiceLog}
+                passportExportFeedback={passportExportFeedback}
+                passportExportPending={passportExportPending}
+                passportExports={passportExports}
                 passportSummary={passportSummary}
                 serviceLogErrors={serviceLogErrors}
                 serviceLogFeedback={serviceLogFeedback}

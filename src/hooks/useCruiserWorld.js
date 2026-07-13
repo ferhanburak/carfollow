@@ -126,7 +126,11 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   });
 
   const {
+    createPassportExport,
     passportSummary,
+    passportExportFeedback,
+    passportExportPending,
+    passportExports,
     primeServiceLogForm,
     serviceLogErrors,
     serviceLogFeedback,
@@ -278,6 +282,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     clearDraftRoute,
     convoyFeedback,
     conversationList,
+    createPassportExport,
     createNewClan,
     currentClan,
     declineFriendRequest,
@@ -312,6 +317,9 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     messageDraft,
     openConversation,
     passportSummary,
+    passportExportFeedback,
+    passportExportPending,
+    passportExports,
     pickMapLocation,
     profileCompletion,
     profileErrors,

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   appendServiceLog,
+  createFirebaseVehiclePassportExport,
+  loadFirebaseVehiclePassportExports,
 } from "../repositories/cruiserRepository";
 import { createServiceLogForm } from "../utils/garage";
 import {
@@ -14,13 +16,44 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
   const [serviceLogErrors, setServiceLogErrors] = useState({});
   const [serviceLogFeedback, setServiceLogFeedback] = useState("");
   const [serviceLogPending, setServiceLogPending] = useState(false);
+  const [passportExportFeedback, setPassportExportFeedback] = useState("");
+  const [passportExportPending, setPassportExportPending] = useState(false);
+  const [passportExports, setPassportExports] = useState([]);
 
   useEffect(() => {
     setServiceLogForm(createServiceLogForm(user));
     setServiceLogErrors({});
     setServiceLogFeedback("");
     setServiceLogPending(false);
+    setPassportExportFeedback("");
+    setPassportExportPending(false);
+    setPassportExports([]);
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.firebaseUid) {
+      return;
+    }
+
+    let cancelled = false;
+    async function loadExports() {
+      try {
+        const exports = await loadFirebaseVehiclePassportExports();
+        if (!cancelled) {
+          setPassportExports(exports);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPassportExportFeedback(error instanceof Error ? error.message : "Vehicle Passport export history could not be loaded.");
+        }
+      }
+    }
+
+    void loadExports();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.firebaseUid, user?.primaryVehicleId]);
 
   const passportSummary = user ? buildVehiclePassportSummary(user) : null;
   const upcomingMaintenance = user ? getUpcomingMaintenance(user.parts ?? [], user.odometer) : [];
@@ -105,8 +138,36 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
     setServiceLogFeedback(`${selectedPart?.name ?? "Part"} loaded into service form.`);
   };
 
+  const createPassportExport = async () => {
+    if (!user || passportExportPending) {
+      return null;
+    }
+
+    setPassportExportPending(true);
+    setPassportExportFeedback("Backend Vehicle Passport export hazirlaniyor...");
+    try {
+      const result = await createFirebaseVehiclePassportExport();
+      const nextExport = result?.export;
+      if (nextExport) {
+        setPassportExports((current) => [nextExport, ...current.filter((item) => item.id !== nextExport.id)]);
+      }
+      setPassportExportFeedback("Vehicle Passport export backend tarafinda olusturuldu.");
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Vehicle Passport export olusturulamadi.";
+      setPassportExportFeedback(message);
+      return null;
+    } finally {
+      setPassportExportPending(false);
+    }
+  };
+
   return {
+    createPassportExport,
     passportSummary,
+    passportExportFeedback,
+    passportExportPending,
+    passportExports,
     primeServiceLogForm,
     serviceLogErrors,
     serviceLogFeedback,

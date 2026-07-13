@@ -576,6 +576,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /artifacts/{appId}/users/{userId}/vehiclePassportExports/{documentId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow write: if false;
+    }
+
     match /artifacts/{appId}/users/{userId}/fuelLogs/{documentId} {
       allow read: if isKnownApp(appId) && isOwner(userId);
       allow create: if isKnownApp(appId) &&

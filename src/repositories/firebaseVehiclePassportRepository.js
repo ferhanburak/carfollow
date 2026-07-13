@@ -488,3 +488,54 @@ export async function saveFirebaseServiceLog(serviceLog, servicedPart) {
     syncedAt: Date.now(),
   };
 }
+
+function sortPassportExports(exports) {
+  return [...exports].sort((left, right) => {
+    const leftTime = Number(left.generatedAt?.seconds ?? 0);
+    const rightTime = Number(right.generatedAt?.seconds ?? 0);
+    return rightTime - leftTime;
+  });
+}
+
+export async function loadFirebaseVehiclePassportExports() {
+  const services = await getFirebaseServices();
+  if (!services) {
+    return [];
+  }
+
+  const { collection, getDocs, query } = await import("firebase/firestore");
+  const appId = resolveAppId();
+  const snapshot = await getDocs(query(collection(
+    services.firestore,
+    privateUserCollectionPath(services.authUser.uid, PRIVATE_COLLECTIONS.vehiclePassportExports, appId),
+  )));
+
+  return sortPassportExports(snapshot.docs.map((item) => ({
+    ...item.data(),
+    id: item.data().id ?? item.id,
+    firestoreId: item.id,
+  })));
+}
+
+export async function createFirebaseVehiclePassportExport() {
+  const services = await getFirebaseServices();
+  if (!services?.functions) {
+    throw createRepositoryError(
+      "cruiser/functions-unavailable",
+      "Vehicle Passport export service is unavailable.",
+    );
+  }
+
+  const { httpsCallable } = await import("firebase/functions");
+  try {
+    const callable = httpsCallable(services.functions, "createVehiclePassportExport");
+    const result = await callable({});
+    return result.data;
+  } catch (error) {
+    throw createRepositoryError(
+      String(error?.code ?? "cruiser/passport-export-failed"),
+      error instanceof Error ? error.message : "Vehicle Passport export could not be created.",
+      error,
+    );
+  }
+}

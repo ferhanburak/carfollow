@@ -26,11 +26,15 @@ function buildProps(overrides = {}) {
     fuelForm: createFuelForm(user.odometer),
     fuelInsights: computeFuelInsights(user.fuelLogs),
     fuelPending: false,
+    onCreatePassportExport: vi.fn(),
     onFuelFormChange: vi.fn(),
     onPrimeServiceLogForm: vi.fn(),
     onSubmitFuelLog: vi.fn(),
     onServiceLogFormChange: vi.fn(),
     onSubmitServiceLog: vi.fn(),
+    passportExportFeedback: "",
+    passportExportPending: false,
+    passportExports: [],
     passportSummary: buildVehiclePassportSummary(user),
     serviceLogErrors: {},
     serviceLogFeedback: "",
@@ -50,6 +54,7 @@ describe("GarageScreen", () => {
     expect(screen.getAllByText(props.user.primaryVehicleId)).toHaveLength(2);
     expect(screen.getByText("Records Match")).toBeInTheDocument();
     expect(screen.getByText("Resale Passport")).toBeInTheDocument();
+    expect(screen.getByText("Backend Export")).toBeInTheDocument();
     expect(screen.getByText("Vehicle Passport Data Ownership")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Service Log Ekle" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Receipt Ekle" })).toBeEnabled();

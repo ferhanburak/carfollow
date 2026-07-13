@@ -9,6 +9,9 @@ const {
   isNightTime,
   roundKm,
 } = require("./driverStats");
+const {
+  buildVehiclePassportExportDocument,
+} = require("./vehiclePassportExport");
 
 admin.initializeApp();
 
@@ -21,6 +24,10 @@ function publicCollection(collectionName) {
 
 function privateUserDocument(userId, collectionName, documentId) {
   return db.doc(`artifacts/${APP_ID}/users/${userId}/${collectionName}/${documentId}`);
+}
+
+function privateUserCollection(userId, collectionName) {
+  return db.collection(`artifacts/${APP_ID}/users/${userId}/${collectionName}`);
 }
 
 function publicDocument(collectionName, documentId) {
@@ -350,6 +357,69 @@ exports.refreshDriverStats = onCall(async (request) => {
     });
 
     response = { ok: true, stats, leaderboardEntry };
+  });
+
+  return response;
+});
+
+exports.createVehiclePassportExport = onCall(async (request) => {
+  const userId = requireAuth(request);
+  const exportId = `passport-export-${Date.now()}`;
+  let response;
+
+  await db.runTransaction(async (transaction) => {
+    const profileRef = privateUserDocument(userId, "profile", "current");
+    const profileSnapshot = await transaction.get(profileRef);
+    const profile = requireSnapshot(profileSnapshot, "not-found", "User profile not found.");
+    const vehicleId = profile.primaryVehicleId;
+    if (!vehicleId) {
+      throw new HttpsError("failed-precondition", "Primary vehicle identity is missing.");
+    }
+
+    const vehicleRef = privateUserDocument(userId, "vehicles", vehicleId);
+    const passportRef = privateUserDocument(userId, "vehiclePassports", vehicleId);
+    const exportRef = privateUserDocument(userId, "vehiclePassportExports", exportId);
+    const [vehicleSnapshot, passportSnapshot, partsSnapshot, serviceLogsSnapshot, fuelLogsSnapshot] = await Promise.all([
+      transaction.get(vehicleRef),
+      transaction.get(passportRef),
+      transaction.get(privateUserCollection(userId, "parts")),
+      transaction.get(privateUserCollection(userId, "serviceLogs")),
+      transaction.get(privateUserCollection(userId, "fuelLogs")),
+    ]);
+    const vehicle = requireSnapshot(vehicleSnapshot, "not-found", "Primary vehicle not found.");
+    const passport = requireSnapshot(passportSnapshot, "not-found", "Vehicle Passport not found.");
+    if (vehicle.ownerId !== userId || passport.ownerId !== userId || vehicle.vehicleId !== vehicleId) {
+      throw new HttpsError("permission-denied", "Vehicle ownership validation failed.");
+    }
+
+    const scopedParts = partsSnapshot.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .filter((item) => item.vehicleId === vehicleId);
+    const scopedServiceLogs = serviceLogsSnapshot.docs
+      .map((item) => ({ id: item.data().id ?? item.id, ...item.data() }))
+      .filter((item) => item.vehicleId === vehicleId);
+    const scopedFuelLogs = fuelLogsSnapshot.docs
+      .map((item) => ({ id: item.data().id ?? item.id, ...item.data() }))
+      .filter((item) => item.vehicleId === vehicleId);
+    const generatedAt = admin.firestore.Timestamp.now();
+    const exportDocument = buildVehiclePassportExportDocument({
+      exportId,
+      userId,
+      profile,
+      passport,
+      vehicle,
+      parts: scopedParts,
+      serviceLogs: scopedServiceLogs,
+      fuelLogs: scopedFuelLogs,
+      generatedAt,
+    });
+
+    transaction.set(exportRef, exportDocument);
+    response = {
+      ok: true,
+      exportId,
+      export: exportDocument,
+    };
   });
 
   return response;

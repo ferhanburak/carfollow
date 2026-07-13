@@ -44,6 +44,8 @@ export {
 } from "./firebaseCruiserRepository";
 
 export {
+  createFirebaseVehiclePassportExport,
+  loadFirebaseVehiclePassportExports,
   loadFirebaseVehiclePassportBundle,
   saveFirebaseFuelLog,
   saveFirebaseServiceLog,

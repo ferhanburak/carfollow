@@ -23,6 +23,7 @@ export const PRIVATE_COLLECTIONS = Object.freeze({
   parts: "parts",
   profile: "profile",
   serviceLogs: "serviceLogs",
+  vehiclePassportExports: "vehiclePassportExports",
   vehiclePassports: "vehiclePassports",
   vehicles: "vehicles",
 });

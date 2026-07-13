@@ -50,18 +50,18 @@ What still needs maturity:
 | Firebase integration baseline | Complete | Firestore + RTDB + rules + app config |
 | Backend foundation / Stage 0 | Complete | Repository boundaries, contracts, rules, isolated emulator suite, and CI quality gates |
 | Auth identity / Stage 1 baseline | Complete | Real e-mail/password accounts, immutable plate claims, private/public profile split, and anonymous-token rejection |
-| Firebase authorization tests | Complete | 25 emulator tests covering Auth, Firestore, RTDB, Storage, Garage edge cases, and transfer lockout |
+| Firebase authorization tests | Complete | 26 emulator tests covering Auth, Firestore, RTDB, Storage, Garage edge cases, export immutability, and transfer lockout |
 | Grid Map node management | Complete | Spot, wash, meet creation flows |
 | Live Map screen | Complete | Separate page with Google Maps |
 | Fuel log | Complete | Idempotent private Firestore records + history + insights |
 | Service log | Complete | Append-only records with atomic part/odometer updates |
 | Vehicle passport | Complete | Stable vehicle identity, passport metadata, migration, health and history |
 | Vehicle/Garage hardening / Stage 2 baseline | Complete | Fuel, service, passport, and replacement-part writes covered by emulator edge-case tests |
-| Resale Passport report / Stage 3 baseline | Complete | Readiness score, documented KM coverage, recent service proof, part evidence, and risk flags |
+| Resale Passport report / Stage 3 baseline | Complete | Readiness score, documented KM coverage, recent service proof, part evidence, risk flags, and backend export snapshots |
 | Individual leaderboard | Complete | Backend-owned monthly KM ranking with client-side sorting |
 | Driver achievements | Complete | Server-calculated progress and persistent earned titles |
 | Secure drive sessions | Complete | Idempotent start/finish Functions with elapsed-time KM clamp |
-| Cloud Functions production rollout | Complete | Seven callable Functions deployed to `us-central1` on Node.js 22 |
+| Cloud Functions production rollout | Complete | Eight callable Functions deployed to `us-central1` on Node.js 22 |
 | Clan leaderboard | Complete | Collective KM ranking |
 | Friend requests | Complete | Add, incoming, outgoing, withdraw |
 | Social profile drawer | Complete | Public driver view baseline |
@@ -89,7 +89,7 @@ What still needs maturity:
 
 | Area | Priority | Notes |
 |---|---|---|
-| Vehicle passport PDF/export package | High | Resale report MVP exists; downloadable/shareable transfer package still needed |
+| Vehicle passport share/PDF package | High | Backend export snapshot exists; downloadable PDF/share-token package still needed |
 | Full clan management | High | Roles, members, promote/remove flows |
 | Convoy moderation panel | High | Kick, ban, access audit, host logs |
 | Notification center | Medium | Friend, clan, convoy, DM events |
@@ -250,6 +250,7 @@ Why:
 /artifacts/{appId}/users/{userId}/parts/{vehicleId}--{partKey}
 /artifacts/{appId}/users/{userId}/serviceLogs/{logId}
 /artifacts/{appId}/users/{userId}/fuelLogs/{logId}
+/artifacts/{appId}/users/{userId}/vehiclePassportExports/{exportId}
 /artifacts/{appId}/public/data/clans/{clanId}
 /artifacts/{appId}/public/data/convoys/{convoyId}
 /artifacts/{appId}/public/data/mapPins/{nodeId}
@@ -435,10 +436,10 @@ than from heavy infrastructure expansion.
 
 ## 10. Recommended Next 5 Tasks
 
-1. Create a centralized `public profile overlay` service usable from map, social, leaderboard, and DM.
-2. Move friend request and convoy join approval logic to secure backend functions.
-3. Build a host-focused convoy moderation panel with invite/request/member states.
-4. Design and implement `Vehicle Passport Export` for resale/ownership handoff.
+1. Implement backend-owned `Vehicle Passport` ownership-transfer requests and audit trail.
+2. Add share-token/PDF rendering on top of the backend export snapshot.
+3. Create a centralized `public profile overlay` service usable from map, social, leaderboard, and DM.
+4. Build a host-focused convoy moderation panel with invite/request/member states.
 5. Split large UI files and add focused tests around convoy trust, social actions, and profile actions.
 
 ---

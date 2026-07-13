@@ -193,6 +193,14 @@ async function seedFirestoreFixtures() {
       vehicleId: VEHICLE_ID,
       status: "completed",
     });
+    batch.set(doc(database, privatePath(OWNER_ID, "vehiclePassportExports", "export-owner-1")), {
+      id: "export-owner-1",
+      userId: OWNER_ID,
+      vehicleId: VEHICLE_ID,
+      readinessScore: 84,
+      generatedAt: FIXED_TIME,
+      schemaVersion: 1,
+    });
     batch.set(doc(database, publicPath("individualLeaderboard", `2026-07__${OWNER_ID}`)), {
       id: `2026-07__${OWNER_ID}`,
       userId: OWNER_ID,
@@ -248,6 +256,7 @@ describe("Firestore security rules", { concurrency: false }, () => {
       privatePath(OWNER_ID, "vehicles", VEHICLE_ID),
       privatePath(OWNER_ID, "driverStats", "current"),
       privatePath(OWNER_ID, "driveSessions", "ride-owner-123456"),
+      privatePath(OWNER_ID, "vehiclePassportExports", "export-owner-1"),
     ];
 
     for (const documentPath of protectedPaths) {
@@ -444,6 +453,19 @@ describe("Firestore security rules", { concurrency: false }, () => {
     await assertFails(updateDoc(doc(ownerDb, privatePath(OWNER_ID, "vehiclePassports", VEHICLE_ID)), {
       transferState: "transfer_requested",
       updatedAt: FIXED_TIME,
+    }));
+  });
+
+  it("blocks client writes to backend-created passport export snapshots", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+
+    await assertFails(setDoc(doc(ownerDb, privatePath(OWNER_ID, "vehiclePassportExports", "manual-export")), {
+      id: "manual-export",
+      userId: OWNER_ID,
+      vehicleId: VEHICLE_ID,
+      readinessScore: 100,
+      generatedAt: FIXED_TIME,
+      schemaVersion: 1,
     }));
   });
 });

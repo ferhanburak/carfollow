@@ -44,11 +44,15 @@ export function GarageScreen({
   fuelForm,
   fuelInsights,
   fuelPending,
+  onCreatePassportExport,
   onFuelFormChange,
   onPrimeServiceLogForm,
   onSubmitFuelLog,
   onServiceLogFormChange,
   onSubmitServiceLog,
+  passportExportFeedback,
+  passportExportPending,
+  passportExports,
   passportSummary,
   serviceLogErrors,
   serviceLogFeedback,
@@ -143,6 +147,56 @@ export function GarageScreen({
           </span>
         </div>
         {passportSummary ? <VehiclePassportSummary summary={passportSummary} /> : null}
+
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-neutral-500">Backend Export</p>
+              <p className="mt-2 text-sm text-neutral-300">
+                Resale Passport snapshot'i Cloud Function ile private kayda donusturulur.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={passportExportPending}
+              onClick={onCreatePassportExport}
+              className="min-h-12 shrink-0 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black shadow-[0_0_18px_rgba(163,230,53,0.28)] disabled:cursor-wait disabled:opacity-60"
+            >
+              {passportExportPending ? "Export..." : "Export"}
+            </button>
+          </div>
+
+          {passportExportFeedback ? (
+            <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
+              passportExportFeedback.toLowerCase().includes("olusturuldu")
+                ? "border-lime-400/20 bg-lime-400/10 text-lime-100"
+                : "border-amber-400/20 bg-amber-400/10 text-amber-100"
+            }`}>
+              {passportExportFeedback}
+            </div>
+          ) : null}
+
+          <div className="mt-4 space-y-3">
+            {(passportExports ?? []).slice(0, 3).map((item) => (
+              <div key={item.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-[11px] text-lime-300">{item.id}</p>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {formatServiceDate(item.generatedAt)} / {formatNumber(item.odometer)} KM
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-1 text-xs font-semibold text-lime-200">
+                    %{item.readinessScore}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {(passportExports ?? []).length === 0 ? (
+              <p className="text-xs text-neutral-500">Henuz backend export snapshot'i yok.</p>
+            ) : null}
+          </div>
+        </div>
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
