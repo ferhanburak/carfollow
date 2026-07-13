@@ -1,5 +1,13 @@
-export function validateSignUpForm(form) {
+export function validateSignUpForm(form, options = {}) {
   const errors = {};
+  if (options.requireEmail) {
+    const email = form.email?.trim() ?? "";
+    if (!email) {
+      errors.email = "E-mail is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = "Enter a valid e-mail address.";
+    }
+  }
   if (!form.fullName.trim()) errors.fullName = "Full name is required.";
   if (!form.plate.trim()) errors.plate = "Plate is required.";
   if (!form.password.trim() || form.password.trim().length < 6) {

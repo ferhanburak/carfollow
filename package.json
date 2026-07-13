@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "emulators": "firebase emulators:start --project carfollow-75750",
+    "rules:check": "node scripts/checkFirebaseRules.mjs",
     "seed:firebase": "node scripts/seedFirebase.mjs",
     "test": "vitest",
     "test:run": "vitest run"

@@ -1,5 +1,11 @@
 import "dotenv/config";
 
+if (process.env.CRUISER_ALLOW_LEGACY_SEED !== "true") {
+  throw new Error(
+    "Legacy production seed is disabled. Use the Emulator Suite, or set CRUISER_ALLOW_LEGACY_SEED=true only for an intentional migration.",
+  );
+}
+
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY,
   projectId: process.env.VITE_FIREBASE_PROJECT_ID,

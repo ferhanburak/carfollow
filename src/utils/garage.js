@@ -1,4 +1,5 @@
 export const createSignUpState = () => ({
+  email: "",
   fullName: "",
   plate: "",
   password: "",

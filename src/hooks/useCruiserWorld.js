@@ -20,7 +20,7 @@ import { useSocialGraph } from "./useSocialGraph";
 import { useVehiclePassport } from "./useVehiclePassport";
 
 export function useCruiserWorld(user, setUser, setFuelForm) {
-  const initialWorld = getInitialWorldState();
+  const [initialWorld] = useState(getInitialWorldState);
   const [activeTab, setActiveTab] = useState("map");
   const [fuelErrors, setFuelErrors] = useState({});
   const [clans, setClans] = useState(initialWorld.clans);

@@ -119,9 +119,11 @@ Copy-Item .env.example .env
 VITE_CRUISER_DATA_SOURCE=firebase
 ```
 
-4. Enable Firebase Authentication -> `Sign-in method` -> `Anonymous`.
+4. Open Firebase Authentication -> `Sign-in method` and enable `Email/Password`.
 
-If Anonymous Auth is disabled, Firebase mode will log a warning and private user sync will stay inactive. The Firebase REST API typically returns `CONFIGURATION_NOT_FOUND` in that case.
+CRUISER uses Firebase `uid` as the permanent account identity. E-mail/password is used for secure sign-in, while the vehicle plate remains the public and searchable driver identity. Quick test profiles are available only in mock/test mode and their passwords are never persisted to Firestore or `localStorage`.
+
+5. Open Firebase Storage and click `Get Started` before enabling photo uploads or deploying `storage.rules`.
 
 If this stays `mock`, the app keeps using the local mock-backed repository.
 
@@ -167,24 +169,35 @@ http://localhost:4173/
 - `npm run dev` starts the development server
 - `npm run build` creates the production build in `dist/`
 - `npm run preview` serves the production build locally
-- `npm run seed:firebase` seeds Firestore and Realtime Database using the current `.env`
+- `npm run emulators` starts the configured Firebase Local Emulator Suite
+- `npm run rules:check` validates Firestore and Realtime Database rules without publishing them
+- `npm run seed:firebase` is a legacy prototype migration command and must not be used against production
 - `npm run test` starts Vitest in watch mode
 - `npm run test:run` runs the test suite once
 
-## Seed Firebase
+## Local Firebase Emulators
 
-After Firestore and Realtime Database are created and your rules are published, run:
+Install a Java runtime compatible with the current Firebase Emulator Suite, then set:
+
+```text
+VITE_CRUISER_DATA_SOURCE=firebase
+VITE_USE_FIREBASE_EMULATORS=true
+VITE_FIREBASE_EMULATOR_HOST=127.0.0.1
+```
+
+Start the backend emulators and Vite in separate terminals:
 
 ```powershell
 cd D:\carfollow
-npm run seed:firebase
+npm run emulators
+npm run dev
 ```
 
-This seeds:
+The Emulator UI is available at `http://127.0.0.1:4000`.
 
-- Firestore public collections under `/artifacts/{appId}/public/data/...`
-- Firestore private user collections under `/artifacts/{appId}/users/{userId}/...`
-- Realtime Database telemetry and DM seed nodes
+## Legacy Seed Script
+
+The original prototype seed script remains in the repository for migration reference. It writes through REST and is not the production provisioning path for the authenticated schema. Do not run it against production after strict rules are enabled; a dedicated emulator/Admin seed will replace it in the next backend phase.
 
 ## Firebase Rules
 
@@ -195,11 +208,24 @@ This repo now includes deploy-ready Firebase rule files:
 - `firebase.json`
 - `.firebaserc`
 
-To publish them:
+Validate Firestore and Realtime Database rules first:
+
+```powershell
+cd D:\carfollow
+npm run rules:check
+```
+
+To publish the currently configured database rules:
 
 ```powershell
 cd D:\carfollow
 firebase deploy --only firestore:rules,database --project carfollow-75750
+```
+
+After Firebase Storage is initialized, include Storage rules with:
+
+```powershell
+firebase deploy --only storage --project carfollow-75750
 ```
 
 If Firebase CLI returns `401 invalid authentication credentials`, refresh the CLI session first:
@@ -228,9 +254,11 @@ The project now includes:
 - screen-level components separated from orchestration logic
 - custom hooks for auth/session state and world simulation state
 - repository abstraction between hooks and the mock data source
+- Firebase Email/Password Auth linked to a private CRUISER profile
+- immutable normalized plate claims and public driver profiles
 - Firebase-backed repository hooks for hydration and persistence
 - local mocked session persistence with `localStorage`
-- Firebase path helper functions for future production binding
+- centralized Firebase path and document contracts
 - automated tests for app render, garage utilities, and Firebase path helpers
 - form validation for sign up, fuel log, and wash review flows
 
@@ -247,11 +275,12 @@ This means the next Firebase step can replace repository internals without rewri
 
 Current Firebase integration behavior:
 
-- public world data can hydrate from Firestore when Firebase mode is enabled
-- user profiles can sync to private Firestore paths
-- fuel logs and wash reviews can be written to Firestore
-- active driver telemetry can be mirrored to Firebase Realtime Database
-- Firestore calls use the lighter `firebase/firestore/lite` client for smaller production bundles
+- public world data can hydrate from Firestore after authentication
+- account profiles are split into private and public documents
+- plates are reserved atomically through immutable claim documents
+- fuel logs, service logs, and vehicle parts reload from private subcollections
+- active driver telemetry and presence use Firebase `uid` paths in Realtime Database
+- Firebase services can switch between production and the Local Emulator Suite through environment variables
 
 ## Performance Notes
 

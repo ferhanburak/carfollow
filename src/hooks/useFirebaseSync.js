@@ -74,6 +74,17 @@ export function useFirebaseSync({
         return;
       }
 
+      if (!user) {
+        setFirebaseStatus((current) => ({
+          ...current,
+          mode: "firebase",
+          connection: "awaiting-auth",
+          authUid: null,
+          error: null,
+        }));
+        return;
+      }
+
       try {
         const services = await getFirebaseServices();
         if (cancelled) {
@@ -116,13 +127,19 @@ export function useFirebaseSync({
     return () => {
       cancelled = true;
     };
-  }, [firebaseDiagnostics.connection, firebaseDiagnostics.enabled, firebaseDiagnostics.message, firebaseDiagnostics.mode]);
+  }, [
+    firebaseDiagnostics.connection,
+    firebaseDiagnostics.enabled,
+    firebaseDiagnostics.message,
+    firebaseDiagnostics.mode,
+    user?.firebaseUid,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function hydrateFromFirebase() {
-      if (!isFirebaseRepositoryEnabled()) {
+      if (!user || !isFirebaseRepositoryEnabled()) {
         return;
       }
 
@@ -164,7 +181,16 @@ export function useFirebaseSync({
     return () => {
       cancelled = true;
     };
-  }, [initialWorld.clans, initialWorld.drivers, initialWorld.mapPins, setClans, setDrivers, setMapPins, setSelectedPinId]);
+  }, [
+    initialWorld.clans,
+    initialWorld.drivers,
+    initialWorld.mapPins,
+    setClans,
+    setDrivers,
+    setMapPins,
+    setSelectedPinId,
+    user?.firebaseUid,
+  ]);
 
   useEffect(() => {
     if (!user || !isFirebaseRepositoryEnabled()) {

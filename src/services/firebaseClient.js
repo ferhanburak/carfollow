@@ -22,17 +22,10 @@ let firebaseApp;
 let firestoreDb;
 let realtimeDb;
 let firebaseAuth;
+let firebaseFunctions;
+let firebaseStorage;
+let firebaseInitializationPromise;
 let lastFirebaseServicesError = "";
-
-async function ensureAnonymousSession(auth) {
-  if (auth.currentUser) {
-    return auth.currentUser;
-  }
-
-  const { signInAnonymously } = await import("firebase/auth");
-  const credential = await signInAnonymously(auth);
-  return credential.user;
-}
 
 export function getCruiserDataSourceMode() {
   if (import.meta.env.MODE === "test") {
@@ -40,6 +33,10 @@ export function getCruiserDataSourceMode() {
   }
 
   return import.meta.env.VITE_CRUISER_DATA_SOURCE ?? "mock";
+}
+
+export function isFirebaseEmulatorEnabled() {
+  return import.meta.env.VITE_USE_FIREBASE_EMULATORS === "true";
 }
 
 export function isFirebaseConfigured() {
@@ -72,13 +69,16 @@ export function getFirebaseModeDiagnostics() {
     };
   }
 
+  const useEmulators = isFirebaseEmulatorEnabled();
   return {
     mode: "firebase",
     enabled: true,
-    connection: hasRealtimeDatabaseConfig(config) ? "configured" : "partial",
-    message: hasRealtimeDatabaseConfig(config)
-      ? "Firebase is configured and ready to authenticate."
-      : "Firestore is configured, but Realtime Database URL is missing.",
+    connection: useEmulators ? "emulator" : hasRealtimeDatabaseConfig(config) ? "configured" : "partial",
+    message: useEmulators
+      ? "Firebase Local Emulator Suite is enabled."
+      : hasRealtimeDatabaseConfig(config)
+        ? "Firebase is configured and ready to authenticate."
+        : "Firestore is configured, but Realtime Database URL is missing.",
   };
 }
 
@@ -86,42 +86,98 @@ export function getLastFirebaseServicesError() {
   return lastFirebaseServicesError;
 }
 
-export async function getFirebaseServices() {
+async function initializeFirebaseServices() {
   if (!isFirebaseModeEnabled()) {
     return null;
   }
 
-  if (!firebaseApp) {
-    const config = readFirebaseConfig();
-    const [{ initializeApp }, { getFirestore }, { getDatabase }, { getAuth }] = await Promise.all([
-      import("firebase/app"),
-      import("firebase/firestore/lite"),
-      import("firebase/database"),
-      import("firebase/auth"),
-    ]);
-    firebaseApp = initializeApp(config);
-    firestoreDb = getFirestore(firebaseApp);
-    realtimeDb = hasRealtimeDatabaseConfig(config) ? getDatabase(firebaseApp) : null;
-    firebaseAuth = getAuth(firebaseApp);
-  }
-
-  try {
-    const authUser = await ensureAnonymousSession(firebaseAuth);
-    lastFirebaseServicesError = "";
-
+  if (firebaseApp) {
     return {
       app: firebaseApp,
       auth: firebaseAuth,
-      authUser,
       firestore: firestoreDb,
       database: realtimeDb,
+      functions: firebaseFunctions,
+      storage: firebaseStorage,
     };
+  }
+
+  if (!firebaseInitializationPromise) {
+    firebaseInitializationPromise = (async () => {
+      const config = readFirebaseConfig();
+      const [appModule, firestoreModule, databaseModule, authModule, functionsModule, storageModule] =
+        await Promise.all([
+          import("firebase/app"),
+          import("firebase/firestore"),
+          import("firebase/database"),
+          import("firebase/auth"),
+          import("firebase/functions"),
+          import("firebase/storage"),
+        ]);
+
+      firebaseApp = appModule.getApps().length ? appModule.getApp() : appModule.initializeApp(config);
+      firestoreDb = firestoreModule.getFirestore(firebaseApp);
+      realtimeDb = hasRealtimeDatabaseConfig(config) ? databaseModule.getDatabase(firebaseApp) : null;
+      firebaseAuth = authModule.getAuth(firebaseApp);
+      firebaseFunctions = functionsModule.getFunctions(firebaseApp, "us-central1");
+      firebaseStorage = config.storageBucket ? storageModule.getStorage(firebaseApp) : null;
+
+      if (isFirebaseEmulatorEnabled() && !globalThis.__CRUISER_FIREBASE_EMULATORS_CONNECTED__) {
+        const host = import.meta.env.VITE_FIREBASE_EMULATOR_HOST ?? "127.0.0.1";
+        authModule.connectAuthEmulator(firebaseAuth, `http://${host}:9099`, { disableWarnings: true });
+        firestoreModule.connectFirestoreEmulator(firestoreDb, host, 8080);
+        functionsModule.connectFunctionsEmulator(firebaseFunctions, host, 5001);
+        if (realtimeDb) {
+          databaseModule.connectDatabaseEmulator(realtimeDb, host, 9000);
+        }
+        if (firebaseStorage) {
+          storageModule.connectStorageEmulator(firebaseStorage, host, 9199);
+        }
+        globalThis.__CRUISER_FIREBASE_EMULATORS_CONNECTED__ = true;
+      }
+
+      return {
+        app: firebaseApp,
+        auth: firebaseAuth,
+        firestore: firestoreDb,
+        database: realtimeDb,
+        functions: firebaseFunctions,
+        storage: firebaseStorage,
+      };
+    })();
+  }
+
+  try {
+    const services = await firebaseInitializationPromise;
+    lastFirebaseServicesError = "";
+    return services;
   } catch (error) {
-    lastFirebaseServicesError =
-      error instanceof Error
-        ? error.message
-        : "Firebase anonymous auth is not ready. Enable Anonymous sign-in in Firebase Auth.";
-    console.warn("Firebase anonymous auth is not ready. Enable Anonymous sign-in in Firebase Auth.", error);
+    firebaseInitializationPromise = null;
+    lastFirebaseServicesError = error instanceof Error ? error.message : "Firebase could not be initialized.";
+    console.warn("Firebase could not be initialized.", error);
     return null;
   }
+}
+
+export async function getFirebaseCoreServices() {
+  return initializeFirebaseServices();
+}
+
+export async function getFirebaseServices() {
+  const services = await initializeFirebaseServices();
+  if (!services) {
+    return null;
+  }
+
+  const authUser = services.auth.currentUser;
+  if (!authUser) {
+    lastFirebaseServicesError = "Firebase authentication is required for this operation.";
+    return null;
+  }
+
+  lastFirebaseServicesError = "";
+  return {
+    ...services,
+    authUser,
+  };
 }

@@ -45,3 +45,12 @@ export {
   subscribeFirebasePresence,
   subscribeFirebaseTyping,
 } from "./firebaseCruiserRepository";
+
+export {
+  isFirebaseAuthRepositoryEnabled,
+  loadFirebaseAuthenticatedProfile,
+  registerFirebaseAccount,
+  signInFirebaseAccount,
+  signOutFirebaseAccount,
+  subscribeFirebaseAuthState,
+} from "./firebaseAuthRepository";

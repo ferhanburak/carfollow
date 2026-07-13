@@ -3,6 +3,7 @@ import { CompactField, InsightCard } from "../components/ui";
 import { buildAchievementProgress, buildPersonalStats } from "../utils/socialStats";
 
 export function ProfileScreen({
+  onLogout,
   onOpenService,
   onOpenStats,
   passportSummary,
@@ -281,6 +282,20 @@ export function ProfileScreen({
             Profili Guncelle
           </button>
         </form>
+      </div>
+
+      <div className="rounded-[1.75rem] border border-rose-400/15 bg-rose-500/5 p-4">
+        <p className="text-sm font-semibold text-neutral-100">Account Session</p>
+        <p className="mt-1 text-xs text-neutral-500">
+          Bu cihazdaki CRUISER oturumunu guvenli sekilde kapat.
+        </p>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="mt-4 min-h-12 w-full rounded-2xl border border-rose-400/30 bg-rose-500/10 font-semibold text-rose-200 transition hover:bg-rose-500/15"
+        >
+          Oturumu Kapat
+        </button>
       </div>
     </section>
   );

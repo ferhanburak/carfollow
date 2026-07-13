@@ -10,95 +10,226 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isPublicReadCollection(collectionName) {
-      return collectionName in ['mapPins', 'clans', 'drivers', 'washReviews', 'cruiseAttendees'];
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isPublicWriteCollection(collectionName) {
-      return collectionName in ['washReviews', 'cruiseAttendees'];
+    function ownsPlateClaimAfter(appId, plateNormalized, userId) {
+      return getAfter(
+        /databases/$(database)/documents/artifacts/$(appId)/public/data/plateClaims/$(plateNormalized)
+      ).data.uid == userId;
     }
 
-    function isValidReview() {
-      return request.resource.data.keys().hasOnly([
-        'pinId',
-        'author',
-        'foam',
-        'water',
-        'allowsBuckets',
-        'shadowDrying',
-        'note'
-      ]) &&
-      request.resource.data.pinId is string &&
-      request.resource.data.author is string &&
-      request.resource.data.foam is int &&
-      request.resource.data.foam >= 1 &&
-      request.resource.data.foam <= 5 &&
-      request.resource.data.water is int &&
-      request.resource.data.water >= 1 &&
-      request.resource.data.water <= 5 &&
-      request.resource.data.allowsBuckets is bool &&
-      request.resource.data.shadowDrying is bool &&
-      request.resource.data.note is string &&
-      request.resource.data.note.size() >= 5 &&
-      request.resource.data.note.size() <= 280;
+    function isValidIdentity(data, userId) {
+      return data.id == userId &&
+        data.firebaseUid == userId &&
+        data.plate is string &&
+        data.plate.size() >= 5 &&
+        data.plate.size() <= 16 &&
+        data.plateNormalized is string &&
+        data.plateNormalized.size() >= 5 &&
+        data.plateNormalized.size() <= 12 &&
+        data.fullName is string &&
+        data.fullName.size() >= 2 &&
+        data.fullName.size() <= 80 &&
+        data.model is string &&
+        data.model.size() >= 2 &&
+        data.model.size() <= 100 &&
+        data.horsepower is number &&
+        data.horsepower > 0 &&
+        data.horsepower <= 5000 &&
+        data.schemaVersion is int;
     }
 
-    function isValidCruiseJoin() {
-      return request.resource.data.keys().hasOnly(['pinId', 'plate', 'joinedAt']) &&
-      request.resource.data.pinId is string &&
-      request.resource.data.plate is string &&
-      request.resource.data.joinedAt is int;
+    function isValidPublicProfile(data, userId) {
+      return isValidIdentity(data, userId) &&
+        data.userId == userId;
     }
 
-    function isValidProfile(userId) {
-      return request.resource.data.id is string &&
-      request.resource.data.firebaseUid == userId &&
-      request.resource.data.plate is string &&
-      request.resource.data.fullName is string &&
-      request.resource.data.model is string &&
-      request.resource.data.tuningStage is string &&
-      request.resource.data.horsepower is int &&
-      request.resource.data.garage is string &&
-      request.resource.data.odometer is int;
+    function isValidPrivateProfile(data, userId) {
+      return isValidIdentity(data, userId) &&
+        data.email is string &&
+        data.odometer is number &&
+        data.odometer >= 0;
     }
 
-    function isValidFuelLog() {
-      return request.resource.data.keys().hasOnly(['id', 'liters', 'price', 'currentKm', 'station']) &&
-      request.resource.data.id is string &&
-      request.resource.data.liters is int &&
-      request.resource.data.liters > 0 &&
-      request.resource.data.price is int &&
-      request.resource.data.price > 0 &&
-      request.resource.data.currentKm is int &&
-      request.resource.data.currentKm > 0 &&
-      request.resource.data.station is string &&
-      request.resource.data.station.size() > 0;
+    function hasInitialReputation(data) {
+      return data.driverScore == 80 &&
+        data.harmonyVotes == 1 &&
+        data.alertVotes == 0 &&
+        data.monthlyKm == 0;
+    }
+
+    function keepsProtectedReputation(data, previousData) {
+      return data.driverScore == previousData.driverScore &&
+        data.harmonyVotes == previousData.harmonyVotes &&
+        data.alertVotes == previousData.alertVotes;
+    }
+
+    function isValidFuelLog(data, userId) {
+      return data.id is string &&
+        data.userId == userId &&
+        data.liters is number &&
+        data.liters > 0 &&
+        data.liters <= 500 &&
+        data.price is number &&
+        data.price > 0 &&
+        data.currentKm is number &&
+        data.currentKm >= 0 &&
+        data.station is string &&
+        data.station.size() >= 1 &&
+        data.station.size() <= 120 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidServiceLog(data, userId) {
+      return data.id is string &&
+        data.userId == userId &&
+        data.partKey is string &&
+        data.type is string &&
+        data.serviceDate is string &&
+        data.serviceKm is number &&
+        data.serviceKm >= 0 &&
+        data.serviceShop is string &&
+        data.serviceShop.size() >= 1 &&
+        data.serviceShop.size() <= 160 &&
+        data.cost is number &&
+        data.cost >= 0 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidPart(data, userId) {
+      return data.key is string &&
+        data.userId == userId &&
+        data.replacedKm is number &&
+        data.replacedKm >= 0 &&
+        data.updatedAt is timestamp;
+    }
+
+    match /artifacts/{appId}/public/data/plateClaims/{plateNormalized} {
+      allow get: if isKnownApp(appId) && isSignedIn();
+      allow list: if false;
+      allow create: if isKnownApp(appId) &&
+        isSignedIn() &&
+        request.resource.data.keys().hasOnly(['uid', 'plate', 'plateNormalized', 'createdAt']) &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.plateNormalized == plateNormalized &&
+        request.resource.data.plate is string &&
+        request.resource.data.createdAt is timestamp;
+      allow update, delete: if false;
+    }
+
+    match /artifacts/{appId}/public/data/publicProfiles/{userId} {
+      allow read: if isKnownApp(appId) && isSignedIn();
+      allow create: if isKnownApp(appId) &&
+        isOwner(userId) &&
+        isValidPublicProfile(request.resource.data, userId) &&
+        hasInitialReputation(request.resource.data) &&
+        ownsPlateClaimAfter(appId, request.resource.data.plateNormalized, userId);
+      allow update: if isKnownApp(appId) &&
+        isOwner(userId) &&
+        isValidPublicProfile(request.resource.data, userId) &&
+        keepsProtectedReputation(request.resource.data, resource.data) &&
+        request.resource.data.plateNormalized == resource.data.plateNormalized &&
+        ownsPlateClaimAfter(appId, request.resource.data.plateNormalized, userId);
+      allow delete: if false;
+    }
+
+    match /artifacts/{appId}/public/data/mapPins/{documentId} {
+      allow read: if isKnownApp(appId) && isSignedIn();
+      allow create: if isKnownApp(appId) &&
+        isSignedIn() &&
+        request.resource.data.id == documentId &&
+        request.resource.data.createdByUid == request.auth.uid;
+      allow update: if isKnownApp(appId) &&
+        isSignedIn() &&
+        resource.data.createdByUid == request.auth.uid &&
+        request.resource.data.createdByUid == resource.data.createdByUid;
+      allow delete: if false;
+    }
+
+    match /artifacts/{appId}/public/data/washReviews/{documentId} {
+      allow read: if isKnownApp(appId) && isSignedIn();
+      allow create: if isKnownApp(appId) &&
+        isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.pinId is string &&
+        request.resource.data.author is string &&
+        request.resource.data.foam is number &&
+        request.resource.data.foam >= 1 &&
+        request.resource.data.foam <= 5 &&
+        request.resource.data.water is number &&
+        request.resource.data.water >= 1 &&
+        request.resource.data.water <= 5 &&
+        request.resource.data.note is string &&
+        request.resource.data.note.size() >= 1 &&
+        request.resource.data.note.size() <= 280 &&
+        request.resource.data.createdAt is timestamp;
+      allow update, delete: if false;
+    }
+
+    match /artifacts/{appId}/public/data/cruiseAttendees/{documentId} {
+      allow read: if isKnownApp(appId) && isSignedIn();
+      allow create, update: if isKnownApp(appId) &&
+        isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.pinId is string &&
+        request.resource.data.plate is string &&
+        request.resource.data.joinedAt is timestamp;
+      allow delete: if false;
     }
 
     match /artifacts/{appId}/public/data/{collectionName}/{documentId} {
-      allow read: if isKnownApp(appId) && isPublicReadCollection(collectionName);
-      allow create, update: if isKnownApp(appId) &&
-        isPublicWriteCollection(collectionName) &&
-        (
-          (collectionName == 'washReviews' && isValidReview()) ||
-          (collectionName == 'cruiseAttendees' && isValidCruiseJoin())
-        );
+      allow read: if isKnownApp(appId) &&
+        isSignedIn() &&
+        collectionName in ['clans', 'drivers', 'convoys'];
+      allow write: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/profile/current {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow create: if isKnownApp(appId) &&
+        isOwner(userId) &&
+        isValidPrivateProfile(request.resource.data, userId) &&
+        hasInitialReputation(request.resource.data) &&
+        ownsPlateClaimAfter(appId, request.resource.data.plateNormalized, userId);
+      allow update: if isKnownApp(appId) &&
+        isOwner(userId) &&
+        isValidPrivateProfile(request.resource.data, userId) &&
+        keepsProtectedReputation(request.resource.data, resource.data) &&
+        request.resource.data.plateNormalized == resource.data.plateNormalized &&
+        ownsPlateClaimAfter(appId, request.resource.data.plateNormalized, userId);
       allow delete: if false;
     }
 
-    match /artifacts/{appId}/users/{userId}/{collectionName}/{documentId} {
-      allow read: if isKnownApp(appId) &&
-        isSignedIn() &&
-        request.auth.uid == userId &&
-        collectionName in ['profile', 'fuelLogs'];
+    match /artifacts/{appId}/users/{userId}/fuelLogs/{documentId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow create: if isKnownApp(appId) && isOwner(userId) && isValidFuelLog(request.resource.data, userId);
+      allow update, delete: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/serviceLogs/{documentId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow create: if isKnownApp(appId) && isOwner(userId) && isValidServiceLog(request.resource.data, userId);
+      allow update, delete: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/parts/{documentId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
       allow create, update: if isKnownApp(appId) &&
-        isSignedIn() &&
-        request.auth.uid == userId &&
-        (
-          (collectionName == 'profile' && documentId == 'current' && isValidProfile(userId)) ||
-          (collectionName == 'fuelLogs' && isValidFuelLog())
-        );
+        isOwner(userId) &&
+        request.resource.data.key == documentId &&
+        isValidPart(request.resource.data, userId);
       allow delete: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/notifications/{documentId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

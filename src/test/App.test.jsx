@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../App";
 
@@ -40,6 +40,20 @@ describe("App", () => {
     expect(screen.getByText("CRUISER // Ankara Bati")).toBeInTheDocument();
     expect(await screen.findByText("CRUISER MAP")).toBeInTheDocument();
     expect((await screen.findAllByText("Mogan Lake Sunset")).length).toBeGreaterThan(0);
+  });
+
+  it("does not persist quick profile passwords in the local session", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
+
+    await waitFor(() => {
+      const persistedSession = window.localStorage.getItem("cruiser-app-state");
+      expect(persistedSession).toBeTruthy();
+      expect(persistedSession).not.toContain("seat1907");
+      expect(persistedSession).not.toContain('"password"');
+    });
   });
 
   it("switches to the driving screen when the start ride button is pressed", async () => {

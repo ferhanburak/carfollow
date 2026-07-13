@@ -1,5 +1,27 @@
 const FALLBACK_APP_ID = "cruiser-app-prod";
 
+export const PUBLIC_COLLECTIONS = Object.freeze({
+  clans: "clans",
+  clanInvites: "clanInvites",
+  convoyMembers: "convoyMembers",
+  convoys: "convoys",
+  cruiseAttendees: "cruiseAttendees",
+  drivers: "drivers",
+  friendships: "friendships",
+  mapPins: "mapPins",
+  plateClaims: "plateClaims",
+  publicProfiles: "publicProfiles",
+  washReviews: "washReviews",
+});
+
+export const PRIVATE_COLLECTIONS = Object.freeze({
+  fuelLogs: "fuelLogs",
+  notifications: "notifications",
+  parts: "parts",
+  profile: "profile",
+  serviceLogs: "serviceLogs",
+});
+
 export function resolveAppId() {
   return typeof __app_id !== "undefined" ? __app_id : FALLBACK_APP_ID;
 }
@@ -10,6 +32,19 @@ export function publicCollectionPath(collectionName, resolvedAppId = resolveAppI
 
 export function privateUserCollectionPath(userId, collectionName, resolvedAppId = resolveAppId()) {
   return `/artifacts/${resolvedAppId}/users/${userId}/${collectionName}`;
+}
+
+export function publicDocumentPath(collectionName, documentId, resolvedAppId = resolveAppId()) {
+  return `${publicCollectionPath(collectionName, resolvedAppId)}/${documentId}`;
+}
+
+export function privateUserDocumentPath(
+  userId,
+  collectionName,
+  documentId,
+  resolvedAppId = resolveAppId(),
+) {
+  return `${privateUserCollectionPath(userId, collectionName, resolvedAppId)}/${documentId}`;
 }
 
 export function realtimeDmPath(plate) {
@@ -28,10 +63,26 @@ export function realtimeDmThreadTypingPath(threadId, resolvedAppId = resolveAppI
   return `${realtimeDmThreadPath(threadId, resolvedAppId)}/typing`;
 }
 
+export function realtimeDmUserThreadsPath(userId, resolvedAppId = resolveAppId()) {
+  return `artifacts/${resolvedAppId}/realtime/directMessages/userThreads/${userId}`;
+}
+
 export function realtimePresencePath(resolvedAppId = resolveAppId()) {
   return `artifacts/${resolvedAppId}/realtime/presence`;
 }
 
 export function realtimePresencePlatePath(plate, resolvedAppId = resolveAppId()) {
   return `${realtimePresencePath(resolvedAppId)}/${plate.replaceAll(" ", "_")}`;
+}
+
+export function realtimePresenceUserPath(userId, resolvedAppId = resolveAppId()) {
+  return `${realtimePresencePath(resolvedAppId)}/${userId}`;
+}
+
+export function realtimeTelemetryPath(resolvedAppId = resolveAppId()) {
+  return `artifacts/${resolvedAppId}/realtime/telemetry`;
+}
+
+export function realtimeTelemetryUserPath(userId, resolvedAppId = resolveAppId()) {
+  return `${realtimeTelemetryPath(resolvedAppId)}/${userId}`;
 }

@@ -41,12 +41,15 @@ function ScreenLoader() {
 function App() {
   const [publicProfile, setPublicProfile] = useState(null);
   const {
+    authError,
     authMode,
     authTab,
     fuelForm,
     handleLogin,
+    handleLogout,
     handleQuickLogin,
     handleSignUp,
+    isFirebaseAuth,
     loginForm,
     quickProfiles,
     setAuthTab,
@@ -158,8 +161,10 @@ function App() {
   if (authMode !== "authenticated" || !user) {
     return (
       <AuthScreen
+        authError={authError}
         authMode={authMode}
         authTab={authTab}
+        isFirebaseAuth={isFirebaseAuth}
         loginForm={loginForm}
         onAuthTabChange={setAuthTab}
         onLogin={(event) => handleLogin(event, { onAuthenticated: resetSessionView })}
@@ -379,6 +384,7 @@ function App() {
 
             {activeTab === "profile" ? (
               <ProfileScreen
+                onLogout={handleLogout}
                 onProfileFormChange={setProfileForm}
                 onOpenService={() => setActiveTab("garage")}
                 onOpenStats={() => setActiveTab("social")}

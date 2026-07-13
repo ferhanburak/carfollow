@@ -95,13 +95,14 @@ export function getQuickProfileByCredentials(plate, password) {
   );
 }
 
-export function createSignedUpUser(signUpForm) {
+export function createSignedUpUser(signUpForm, identity = {}) {
   const vehicleType = inferVehicleType(signUpForm.model);
   return {
-    id: `signup-${Date.now()}`,
+    id: identity.id ?? `signup-${Date.now()}`,
+    ...(identity.firebaseUid ? { firebaseUid: identity.firebaseUid } : {}),
+    ...((identity.email ?? signUpForm.email) ? { email: identity.email ?? signUpForm.email } : {}),
     fullName: signUpForm.fullName,
     plate: signUpForm.plate.toUpperCase(),
-    password: signUpForm.password,
     model: signUpForm.model,
     tuningStage: signUpForm.tuningStage,
     horsepower: Number(signUpForm.horsepower || 0),
@@ -130,19 +131,20 @@ export function createSignedUpUser(signUpForm) {
 }
 
 export function createAuthenticatedUser(profile) {
-  const vehicleType = profile.vehicleType ?? inferVehicleType(profile.model);
+  const { password: _password, ...safeProfile } = clone(profile);
+  const vehicleType = safeProfile.vehicleType ?? inferVehicleType(safeProfile.model);
   return {
-    ...normalizeClanState(normalizeSocialState(clone(profile))),
+    ...normalizeClanState(normalizeSocialState(safeProfile)),
     vehicleType,
-    badges: [...(profile.badges ?? [])],
-    parts: normalizeVehicleParts(profile.parts ?? [], vehicleType),
-    serviceLogs: (profile.serviceLogs ?? []).map((log) => ({ ...log })),
-    fuelLogs: (profile.fuelLogs ?? []).map((log) => ({ ...log })),
-    monthlyKm: Number(profile.monthlyKm ?? 0),
-    driverScore: Number(profile.driverScore ?? 80),
-    harmonyVotes: Number(profile.harmonyVotes ?? 0),
-    alertVotes: Number(profile.alertVotes ?? 0),
-    conversations: normalizeConversations(profile),
+    badges: [...(safeProfile.badges ?? [])],
+    parts: normalizeVehicleParts(safeProfile.parts ?? [], vehicleType),
+    serviceLogs: (safeProfile.serviceLogs ?? []).map((log) => ({ ...log })),
+    fuelLogs: (safeProfile.fuelLogs ?? []).map((log) => ({ ...log })),
+    monthlyKm: Number(safeProfile.monthlyKm ?? 0),
+    driverScore: Number(safeProfile.driverScore ?? 80),
+    harmonyVotes: Number(safeProfile.harmonyVotes ?? 0),
+    alertVotes: Number(safeProfile.alertVotes ?? 0),
+    conversations: normalizeConversations(safeProfile),
   };
 }
 
