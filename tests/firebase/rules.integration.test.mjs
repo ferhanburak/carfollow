@@ -437,6 +437,15 @@ describe("Firestore security rules", { concurrency: false }, () => {
       updatedAt: FIXED_TIME,
     }));
   });
+
+  it("blocks client-side vehicle passport transfer state changes", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+
+    await assertFails(updateDoc(doc(ownerDb, privatePath(OWNER_ID, "vehiclePassports", VEHICLE_ID)), {
+      transferState: "transfer_requested",
+      updatedAt: FIXED_TIME,
+    }));
+  });
 });
 
 describe("Realtime Database security rules", { concurrency: false }, () => {

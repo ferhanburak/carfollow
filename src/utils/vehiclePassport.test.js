@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyPartServiceToUser,
+  buildVehicleResaleReport,
   buildVehiclePassportSummary,
   formatServiceDate,
   getPartHealthSnapshot,
@@ -92,6 +93,71 @@ describe("vehiclePassport utils", () => {
     expect(summary.totalServiceLogs).toBe(1);
     expect(summary.totalServiceSpend).toBe(2250);
     expect(summary.maintenanceScore).toBeGreaterThan(0);
+  });
+
+  it("builds a resale report with documented km coverage and recent services", () => {
+    const user = {
+      odometer: 20000,
+      parts: [
+        {
+          ...basePart,
+          replacedKm: 18000,
+          replacedAt: "2026-06-01",
+        },
+        {
+          key: "brake",
+          name: "Brake Pads",
+          replacedKm: 18000,
+          replacedAt: "2026-06-01",
+          lifeExpectancyKm: 30000,
+          lifeExpectancyMonths: 36,
+        },
+      ],
+      fuelLogs: [{ id: "fuel-1", currentKm: 19000 }],
+      serviceLogs: [
+        { id: "svc-1", partKey: "oil", type: "replacement", serviceDate: "2026-07-11", serviceKm: 19500, cost: 2250 },
+        { id: "svc-2", partKey: "brake", type: "inspection", serviceDate: "2026-05-11", serviceKm: 18200, cost: 450 },
+      ],
+      vehiclePassport: {
+        serviceLogCount: 2,
+        fuelLogCount: 1,
+        transferState: "owned",
+        status: "active",
+      },
+    };
+
+    const summary = buildVehiclePassportSummary(user, new Date("2026-07-12").getTime());
+    const report = buildVehicleResaleReport(user, summary);
+
+    expect(report.readinessScore).toBeGreaterThan(70);
+    expect(report.documentedKmCoverage).toBe(98);
+    expect(report.documentedParts).toBe(1);
+    expect(report.recentServiceLogs.map((log) => log.id)).toEqual(["svc-1", "svc-2"]);
+    expect(report.riskFlags).toEqual([]);
+  });
+
+  it("flags resale risks when history coverage or integrity is weak", () => {
+    const user = {
+      odometer: 50000,
+      parts: [{ ...basePart, replacedKm: 10000, lifeExpectancyKm: 8000 }],
+      fuelLogs: [{ id: "fuel-1", currentKm: 12000 }],
+      serviceLogs: [],
+      vehiclePassport: {
+        serviceLogCount: 3,
+        fuelLogCount: 1,
+        transferState: "owned",
+        status: "active",
+      },
+    };
+
+    const summary = buildVehiclePassportSummary(user, new Date("2026-07-12").getTime());
+    const report = buildVehicleResaleReport(user, summary);
+
+    expect(report.readinessScore).toBeLessThan(70);
+    expect(report.riskFlags).toContain("1 critical part");
+    expect(report.riskFlags).toContain("record count mismatch");
+    expect(report.riskFlags).toContain("low documented KM coverage");
+    expect(report.riskFlags).toContain("no service history");
   });
 
   it("formats hydrated Firestore timestamp values", () => {

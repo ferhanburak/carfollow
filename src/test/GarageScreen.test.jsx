@@ -49,6 +49,7 @@ describe("GarageScreen", () => {
 
     expect(screen.getAllByText(props.user.primaryVehicleId)).toHaveLength(2);
     expect(screen.getByText("Records Match")).toBeInTheDocument();
+    expect(screen.getByText("Resale Passport")).toBeInTheDocument();
     expect(screen.getByText("Vehicle Passport Data Ownership")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Service Log Ekle" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Receipt Ekle" })).toBeEnabled();

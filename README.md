@@ -255,9 +255,9 @@ The following checks were run successfully:
 
 - `npm install`
 - `npm run build`
-- `npm run test:run` (`57/57` frontend tests)
+- `npm run test:run` (`59/59` frontend tests)
 - `npm run test:functions` (`6/6` backend domain tests)
-- `npm run test:emulators` (`24/24` Auth, Firestore, RTDB, and Storage identity/authorization tests)
+- `npm run test:emulators` (`25/25` Auth, Firestore, RTDB, and Storage identity/authorization tests)
 - `npm run rules:check`
 - local HTTP response from the dev server
 
@@ -277,6 +277,7 @@ The project now includes:
 - defense-in-depth rule checks that reject anonymous Auth tokens across Firestore, RTDB, and Storage
 - immutable normalized plate claims and public driver profiles
 - stable private vehicle identities and Vehicle Passport metadata
+- resale Passport report scoring for documented KM coverage, recent proof, part evidence, and risk flags
 - idempotent, append-only service and fuel records
 - atomic updates for odometer, passport counters, and replacement-part state
 - emulator-backed Garage hardening for fuel, service, passport, and replacement-part edge cases

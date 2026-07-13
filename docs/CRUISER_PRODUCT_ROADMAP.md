@@ -50,13 +50,14 @@ What still needs maturity:
 | Firebase integration baseline | Complete | Firestore + RTDB + rules + app config |
 | Backend foundation / Stage 0 | Complete | Repository boundaries, contracts, rules, isolated emulator suite, and CI quality gates |
 | Auth identity / Stage 1 baseline | Complete | Real e-mail/password accounts, immutable plate claims, private/public profile split, and anonymous-token rejection |
-| Firebase authorization tests | Complete | 24 emulator tests covering Auth, Firestore, RTDB, Storage, and Garage edge cases |
+| Firebase authorization tests | Complete | 25 emulator tests covering Auth, Firestore, RTDB, Storage, Garage edge cases, and transfer lockout |
 | Grid Map node management | Complete | Spot, wash, meet creation flows |
 | Live Map screen | Complete | Separate page with Google Maps |
 | Fuel log | Complete | Idempotent private Firestore records + history + insights |
 | Service log | Complete | Append-only records with atomic part/odometer updates |
 | Vehicle passport | Complete | Stable vehicle identity, passport metadata, migration, health and history |
 | Vehicle/Garage hardening / Stage 2 baseline | Complete | Fuel, service, passport, and replacement-part writes covered by emulator edge-case tests |
+| Resale Passport report / Stage 3 baseline | Complete | Readiness score, documented KM coverage, recent service proof, part evidence, and risk flags |
 | Individual leaderboard | Complete | Backend-owned monthly KM ranking with client-side sorting |
 | Driver achievements | Complete | Server-calculated progress and persistent earned titles |
 | Secure drive sessions | Complete | Idempotent start/finish Functions with elapsed-time KM clamp |
@@ -88,7 +89,7 @@ What still needs maturity:
 
 | Area | Priority | Notes |
 |---|---|---|
-| Vehicle passport export / resale report | High | Major product differentiator |
+| Vehicle passport PDF/export package | High | Resale report MVP exists; downloadable/shareable transfer package still needed |
 | Full clan management | High | Roles, members, promote/remove flows |
 | Convoy moderation panel | High | Kick, ban, access audit, host logs |
 | Notification center | Medium | Friend, clan, convoy, DM events |

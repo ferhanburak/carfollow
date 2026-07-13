@@ -99,7 +99,7 @@ export function buildVehiclePassportSummary(user, now = Date.now()) {
   const persistedServiceCount = Number(persistedPassport?.serviceLogCount ?? serviceLogs.length);
   const persistedFuelCount = Number(persistedPassport?.fuelLogCount ?? (user.fuelLogs ?? []).length);
 
-  return {
+  const summary = {
     totalServiceLogs: serviceLogs.length,
     totalServiceSpend,
     lastServiceLog,
@@ -118,6 +118,60 @@ export function buildVehiclePassportSummary(user, now = Date.now()) {
         ? (partSnapshots.reduce((sum, part) => sum + part.snapshot.health, 0) / partSnapshots.length)
         : 100,
     ),
+  };
+
+  return {
+    ...summary,
+    resaleReport: buildVehicleResaleReport(user, summary),
+  };
+}
+
+export function buildVehicleResaleReport(user, summary = buildVehiclePassportSummary(user)) {
+  const serviceLogs = user.serviceLogs ?? [];
+  const fuelLogs = user.fuelLogs ?? [];
+  const parts = user.parts ?? [];
+  const latestServiceKm = serviceLogs.reduce(
+    (latestKm, log) => Math.max(latestKm, Number(log.serviceKm ?? 0)),
+    0,
+  );
+  const latestFuelKm = fuelLogs.reduce(
+    (latestKm, log) => Math.max(latestKm, Number(log.currentKm ?? 0)),
+    0,
+  );
+  const odometer = Number(user.odometer ?? 0);
+  const verifiedKm = Math.max(latestServiceKm, latestFuelKm);
+  const documentedKmCoverage = odometer > 0 ? clampPercent((verifiedKm / odometer) * 100) : 0;
+  const recentServiceLogs = [...serviceLogs]
+    .sort((left, right) => new Date(right.serviceDate) - new Date(left.serviceDate))
+    .slice(0, 3);
+  const replacedPartKeys = new Set(
+    serviceLogs
+      .filter((log) => log.type === "replacement")
+      .map((log) => log.partKey)
+      .filter(Boolean),
+  );
+  const documentedParts = parts.filter((part) => replacedPartKeys.has(part.key)).length;
+  const readinessScore = clampPercent(
+    summary.maintenanceScore * 0.45 +
+      (summary.recordIntegrity ? 20 : 0) +
+      documentedKmCoverage * 0.2 +
+      (parts.length ? (documentedParts / parts.length) * 15 : 15),
+  );
+  const riskFlags = [
+    ...(summary.criticalParts > 0 ? [`${summary.criticalParts} critical part${summary.criticalParts > 1 ? "s" : ""}`] : []),
+    ...(!summary.recordIntegrity ? ["record count mismatch"] : []),
+    ...(documentedKmCoverage < 70 ? ["low documented KM coverage"] : []),
+    ...(serviceLogs.length === 0 ? ["no service history"] : []),
+  ];
+
+  return {
+    readinessScore,
+    documentedKmCoverage,
+    documentedParts,
+    recentServiceLogs,
+    riskFlags,
+    transferState: summary.transferState,
+    vehicleId: summary.vehicleId,
   };
 }
 
