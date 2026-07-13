@@ -130,7 +130,7 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(screen.getByRole("button", { name: /Stats/i }));
+    await user.click(screen.getByRole("button", { name: /Social/i }));
     await user.click((await screen.findAllByRole("button", { name: /35 SRT 908/i }))[0]);
     await user.click(screen.getByRole("button", { name: "Detayli Profili Ac" }));
 

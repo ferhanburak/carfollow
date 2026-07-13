@@ -534,7 +534,8 @@ export const navItems = [
   { key: "map", label: "Harita", icon: "Grid" },
   { key: "liveMap", label: "Live Map", icon: "Map" },
   { key: "drive", label: "Surus", icon: "HUD" },
-  { key: "clans", label: "Stats", icon: "Rank" },
+  { key: "social", label: "Social", icon: "Crew" },
+  { key: "leaderboard", label: "Leaders", icon: "Rank" },
   { key: "profile", label: "Profil", icon: "ID" },
   { key: "garage", label: "Servis", icon: "Wrench" },
 ];

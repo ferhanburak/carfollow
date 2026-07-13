@@ -302,7 +302,7 @@ function App() {
               />
             ) : null}
 
-            {activeTab === "clans" ? (
+            {activeTab === "social" || activeTab === "leaderboard" ? (
               <StatsScreen
                 activeConversation={activeConversation}
                 activeConversationId={activeConversationId}
@@ -337,6 +337,7 @@ function App() {
                 totalUnreadCount={totalUnreadCount}
                 user={safeUser ?? user}
                 withdrawFriendRequest={withdrawFriendRequest}
+                mode={activeTab === "leaderboard" ? "leaderboard" : "social"}
               />
             ) : null}
 
@@ -365,7 +366,7 @@ function App() {
               <ProfileScreen
                 onProfileFormChange={setProfileForm}
                 onOpenService={() => setActiveTab("garage")}
-                onOpenStats={() => setActiveTab("clans")}
+                onOpenStats={() => setActiveTab("social")}
                 onSubmitProfile={submitProfile}
                 passportSummary={passportSummary}
                 profileCompletion={profileCompletion}
@@ -387,7 +388,7 @@ function App() {
           }`}
         >
           <div
-            className={`grid grid-cols-6 gap-2 border border-white/10 bg-[#111111]/95 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur ${
+            className={`grid grid-cols-7 gap-2 border border-white/10 bg-[#111111]/95 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur ${
               activeTab === "liveMap" ? "rounded-[1.35rem] p-1.5" : "rounded-[1.8rem] p-2"
             }`}
           >

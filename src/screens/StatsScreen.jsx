@@ -185,6 +185,7 @@ export function StatsScreen({
   totalUnreadCount,
   user,
   withdrawFriendRequest,
+  mode = "social",
 }) {
   const [profileDrawer, setProfileDrawer] = useState(null);
   const [expandedProfile, setExpandedProfile] = useState(null);
@@ -260,9 +261,12 @@ export function StatsScreen({
   const expandedPresence = expandedProfile ? presenceMap?.[expandedProfile.plate] : null;
   const expandedStats = expandedProfile ? buildDrawerStats(expandedProfile, user) : [];
   const expandedReputation = expandedProfile ? resolveDrawerReputation(expandedProfile) : null;
+  const showSocial = mode === "social";
+  const showLeaderboard = mode === "leaderboard";
 
   return (
     <section className="space-y-4">
+      {showSocial ? (
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -431,7 +435,9 @@ export function StatsScreen({
           </div>
         </div>
       </div>
+      ) : null}
 
+      {showSocial ? (
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -721,7 +727,9 @@ export function StatsScreen({
           </div>
         </div>
       </div>
+      ) : null}
 
+      {showLeaderboard ? (
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -758,7 +766,9 @@ export function StatsScreen({
           ))}
         </div>
       </div>
+      ) : null}
 
+      {showLeaderboard ? (
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -791,7 +801,9 @@ export function StatsScreen({
           ))}
         </div>
       </div>
+      ) : null}
 
+      {showLeaderboard ? (
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <p className="text-sm font-semibold">Active Drivers on the Highway</p>
         <div className="mt-4 space-y-3">
@@ -814,6 +826,7 @@ export function StatsScreen({
           ))}
         </div>
       </div>
+      ) : null}
 
       {profileDrawer ? (
         <div className="fixed inset-0 z-40 flex items-end bg-black/50 px-3 pb-3 pt-14 backdrop-blur-[2px]">
