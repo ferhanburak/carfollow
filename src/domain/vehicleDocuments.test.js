@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildVehicleDocument,
+  buildVehicleProfilePatch,
   buildVehiclePartDocument,
   buildVehiclePassportDocument,
   dedupeVehicleParts,
@@ -46,6 +47,15 @@ describe("vehicle document contracts", () => {
       fuelLogCount: 1,
       totalServiceSpend: 2250,
     });
+  });
+
+  it("keeps odometer and ownership out of routine vehicle profile patches", () => {
+    const patch = buildVehicleProfilePatch(user);
+
+    expect(patch).toMatchObject({ model: user.model, horsepower: user.horsepower });
+    expect(patch).not.toHaveProperty("odometer");
+    expect(patch).not.toHaveProperty("ownerId");
+    expect(patch).not.toHaveProperty("plateNormalized");
   });
 
   it("uses vehicle-scoped part ids and prefers migrated part records", () => {

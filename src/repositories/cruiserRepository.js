@@ -50,6 +50,13 @@ export {
 } from "./firebaseVehiclePassportRepository";
 
 export {
+  finishFirebaseDriveSession,
+  loadFirebaseDriverStatsState,
+  loadFirebaseIndividualLeaderboard,
+  startFirebaseDriveSession,
+} from "./firebaseDriverStatsRepository";
+
+export {
   isFirebaseAuthRepositoryEnabled,
   loadFirebaseAuthenticatedProfile,
   registerFirebaseAccount,

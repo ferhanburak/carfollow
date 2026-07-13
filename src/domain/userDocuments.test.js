@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPrivateUserProfile,
+  buildPrivateUserProfilePatch,
   buildPublicUserProfile,
+  buildPublicUserProfilePatch,
   mergePrivateUserCollections,
   normalizePlate,
 } from "./userDocuments";
@@ -58,6 +60,27 @@ describe("user document contracts", () => {
     });
     expect(profile).not.toHaveProperty("email");
     expect(profile).not.toHaveProperty("password");
+  });
+
+  it("omits backend-owned counters from routine profile patches", () => {
+    const source = {
+      ...user,
+      monthlyKm: 842,
+      monthlyKmPeriod: "2026-07",
+      achievementBadges: ["Gece Savascisi"],
+      driverStats: { monthlyKm: 842 },
+      odometer: 68420,
+    };
+    const privatePatch = buildPrivateUserProfilePatch(source, firebaseUser);
+    const publicPatch = buildPublicUserProfilePatch(source, firebaseUser);
+
+    expect(privatePatch).not.toHaveProperty("monthlyKm");
+    expect(privatePatch).not.toHaveProperty("odometer");
+    expect(privatePatch).not.toHaveProperty("driverStats");
+    expect(privatePatch).not.toHaveProperty("badges");
+    expect(publicPatch).not.toHaveProperty("monthlyKm");
+    expect(publicPatch).not.toHaveProperty("achievementBadges");
+    expect(publicPatch).not.toHaveProperty("badges");
   });
 
   it("hydrates normalized private collections", () => {

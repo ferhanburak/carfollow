@@ -114,6 +114,8 @@ export function StatsScreen({
   hostableConvoys,
   inviteDriverToMeet,
   inviteFriendToClan,
+  individualLeaderboardEntries,
+  driverStatsStatus,
   messageDraft,
   onClanFormChange,
   onFriendSearchChange,
@@ -130,7 +132,9 @@ export function StatsScreen({
   withdrawFriendRequest,
   mode = "social",
 }) {
-  const individualLeaderboard = buildIndividualLeaderboard(user, individualDriverSeed);
+  const individualLeaderboard = Array.isArray(individualLeaderboardEntries)
+    ? individualLeaderboardEntries
+    : buildIndividualLeaderboard(user, individualDriverSeed);
   const sortedClans = [...clans].sort((a, b) => b.km - a.km);
   const canInviteToClan = ["owner", "captain"].includes(user.clanRole ?? "member");
   const primaryHostableConvoy = hostableConvoys?.[0] ?? null;
@@ -646,8 +650,19 @@ export function StatsScreen({
             <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Individual Leaderboard</p>
             <h3 className="mt-2 text-xl font-black">Monthly Driver Kilometers</h3>
           </div>
-          <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Solo Rank</div>
+          <div className={`rounded-2xl border px-3 py-2 text-xs ${
+            driverStatsStatus?.mode === "firebase" && driverStatsStatus?.state !== "error"
+              ? "border-lime-400/20 bg-lime-400/10 text-lime-300"
+              : "border-white/10 text-neutral-400"
+          }`}>
+            {driverStatsStatus?.mode === "firebase" ? "Backend Verified" : "Demo Ranking"}
+          </div>
         </div>
+        {driverStatsStatus?.error ? (
+          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-xs text-amber-100">
+            {driverStatsStatus.error}
+          </div>
+        ) : null}
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
             <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Senin Rank</p>
@@ -667,7 +682,7 @@ export function StatsScreen({
         <div className="mt-4 space-y-3">
           {individualLeaderboard.map((driver) => (
             <div
-              key={`${driver.plate}-individual`}
+              key={driver.userId ?? `${driver.plate}-individual`}
               className={`rounded-2xl border p-4 ${
                 driver.plate === user.plate ? "border-lime-400/30 bg-lime-400/10" : "border-white/8 bg-black/20"
               }`}
@@ -685,7 +700,10 @@ export function StatsScreen({
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-black text-lime-300">{formatNumber(driver.monthlyKm)} KM</p>
-                  <p className="text-xs text-neutral-500">Score {driver.driverScore} / {driver.clan}</p>
+                  <p className="text-xs text-neutral-500">
+                    Score {driver.driverScore} / {driver.clan ?? "Independent"}
+                  </p>
+                  {driver.verified ? <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-lime-400">Verified</p> : null}
                 </div>
               </button>
             </div>

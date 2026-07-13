@@ -196,6 +196,8 @@ function OverlayCard({ children, title, onClose }) {
 export function MapScreen({
   convoyFeedback,
   driveHud,
+  driveSessionPending,
+  driveSessionStatus,
   isDriving,
   joinCruise,
   likeGalleryImage,
@@ -262,20 +264,23 @@ export function MapScreen({
         <button
           type="button"
           onClick={toggleDrive}
-          className={`min-h-9 rounded-[0.95rem] px-3 text-[11px] font-bold transition ${
+          disabled={driveSessionPending}
+          className={`min-h-12 rounded-[0.95rem] px-3 text-[11px] font-bold transition ${
             isDriving
               ? "bg-rose-500 text-white shadow-[0_0_18px_rgba(244,63,94,0.36)]"
               : "bg-lime-400 text-black shadow-[0_0_18px_rgba(163,230,53,0.3)]"
-          }`}
+          } disabled:cursor-wait disabled:opacity-60`}
         >
-          {isDriving ? "Durdur" : "Baslat"}
+          {driveSessionPending ? "Isleniyor" : isDriving ? "Durdur" : "Baslat"}
         </button>
       </div>
 
       <div className="mb-3 grid grid-cols-3 gap-2">
         <div className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-3 py-2">
           <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Durum</p>
-          <p className="mt-1 truncate text-xs font-bold text-white">{liveStatusLabel}</p>
+          <p className="mt-1 truncate text-xs font-bold text-white">
+            {driveSessionStatus === "error" ? "Backend hatasi" : liveStatusLabel}
+          </p>
         </div>
         <div className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-3 py-2">
           <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Secili</p>

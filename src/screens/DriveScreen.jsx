@@ -28,7 +28,16 @@ function getConnectionTone(connection) {
   return "text-rose-300";
 }
 
-export function DriveScreen({ driveHud, drivers, firebaseStatus, isDriving, user }) {
+export function DriveScreen({
+  driveHud,
+  driveSessionFeedback,
+  driveSessionPending,
+  driveSessionStatus,
+  drivers,
+  firebaseStatus,
+  isDriving,
+  user,
+}) {
   return (
     <section className="space-y-4">
       <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(160deg,#171717,#0b0b0b)] p-5 shadow-[inset_0_0_24px_rgba(163,230,53,0.05)]">
@@ -58,6 +67,24 @@ export function DriveScreen({ driveHud, drivers, firebaseStatus, isDriving, user
           </div>
           <p className="mt-3 text-sm text-neutral-400">
             Surus aktifken kilometre sayaci ve bakim bilesen omru es zamanli guncellenir.
+          </p>
+        </div>
+
+        <div className={`mt-4 rounded-2xl border p-4 text-sm ${
+          driveSessionStatus === "error"
+            ? "border-rose-400/20 bg-rose-400/10 text-rose-100"
+            : driveSessionStatus === "active"
+              ? "border-lime-400/20 bg-lime-400/10 text-lime-100"
+              : "border-white/10 bg-black/20 text-neutral-300"
+        }`}>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs uppercase tracking-[0.22em]">Secure Drive Session</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.16em]">
+              {driveSessionPending ? "processing" : driveSessionStatus}
+            </span>
+          </div>
+          <p className="mt-2 text-xs opacity-80">
+            {driveSessionFeedback || "Surusu baslattiginda sunucu kontrollu oturum durumu burada gorunur."}
           </p>
         </div>
 

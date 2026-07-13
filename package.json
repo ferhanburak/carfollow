@@ -11,7 +11,9 @@
     "rules:check": "node scripts/checkFirebaseRules.mjs",
     "seed:firebase": "node scripts/seedFirebase.mjs",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:functions": "npm --prefix functions test",
+    "lint:functions": "npm --prefix functions run lint"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",

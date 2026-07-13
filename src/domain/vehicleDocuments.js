@@ -67,6 +67,17 @@ export function buildVehicleDocument(user, ownerId = user?.firebaseUid ?? user?.
   };
 }
 
+export function buildVehicleProfilePatch(user) {
+  return {
+    garage: String(user?.garage ?? ""),
+    horsepower: numberOrZero(user?.horsepower),
+    model: String(user?.model ?? ""),
+    tuningStage: String(user?.tuningStage ?? "Stock"),
+    vehicleType: user?.vehicleType === "motorcycle" ? "motorcycle" : "car",
+    schemaVersion: VEHICLE_SCHEMA_VERSION,
+  };
+}
+
 export function buildVehiclePassportDocument(user, ownerId = user?.firebaseUid ?? user?.id) {
   const vehicleId = resolvePrimaryVehicleId(user, ownerId);
   const serviceLogs = user?.serviceLogs ?? [];

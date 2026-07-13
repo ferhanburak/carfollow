@@ -13,8 +13,8 @@ import {
   resolveAppId,
 } from "../services/firebasePaths";
 import { getFirebaseServices, isFirebaseModeEnabled } from "../services/firebaseClient";
-import { buildPrivateUserProfile, buildPublicUserProfile } from "../domain/userDocuments";
-import { buildVehicleDocument, resolvePrimaryVehicleId } from "../domain/vehicleDocuments";
+import { buildPrivateUserProfilePatch, buildPublicUserProfilePatch } from "../domain/userDocuments";
+import { buildVehicleProfilePatch, resolvePrimaryVehicleId } from "../domain/vehicleDocuments";
 
 function mapCollectionSnapshot(snapshot) {
   return snapshot.docs.map((item) => ({
@@ -67,12 +67,11 @@ export async function saveFirebaseUserProfile(user) {
   const batch = writeBatch(firestore);
   const updatedAt = serverTimestamp();
   const vehicleId = resolvePrimaryVehicleId(user, authUser.uid);
-  const vehicleDocument = buildVehicleDocument({ ...user, primaryVehicleId: vehicleId }, authUser.uid);
   // Private path: /artifacts/{appId}/users/{userId}/{collectionName}
   batch.set(
     doc(firestore, privateUserCollectionPath(authUser.uid, PRIVATE_COLLECTIONS.profile, resolveAppId()), "current"),
     {
-      ...buildPrivateUserProfile(user, authUser),
+      ...buildPrivateUserProfilePatch(user, authUser),
       updatedAt,
     },
     { merge: true },
@@ -80,7 +79,7 @@ export async function saveFirebaseUserProfile(user) {
   batch.set(
     doc(firestore, publicCollectionPath(PUBLIC_COLLECTIONS.publicProfiles, resolveAppId()), authUser.uid),
     {
-      ...buildPublicUserProfile(user, authUser),
+      ...buildPublicUserProfilePatch(user, authUser),
       updatedAt,
     },
     { merge: true },
@@ -91,8 +90,7 @@ export async function saveFirebaseUserProfile(user) {
       privateUserDocumentPath(authUser.uid, PRIVATE_COLLECTIONS.vehicles, vehicleId, resolveAppId()),
     ),
     {
-      ...vehicleDocument,
-      lastOdometerSource: "profile",
+      ...buildVehicleProfilePatch(user),
       updatedAt,
     },
   );

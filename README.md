@@ -278,6 +278,9 @@ Current Firebase integration behavior:
 - fuel logs, service logs, and vehicle parts reload from vehicle-scoped private subcollections
 - legacy accounts automatically receive a stable `vehicleId` and Vehicle Passport on their next authenticated load
 - only a `replacement` service record can reset a part's tracked lifetime
+- secure drive sessions clamp reported distance against server elapsed time
+- monthly individual rankings and achievement progress are written by callable Cloud Functions
+- backend-owned mileage, achievements, and badges are excluded from routine client profile patches
 - active driver telemetry and presence use Firebase `uid` paths in Realtime Database
 - Firebase services can switch between production and the Local Emulator Suite through environment variables
 
@@ -289,9 +292,36 @@ Private Vehicle Passport paths:
 /artifacts/{appId}/users/{userId}/parts/{vehicleId}--{partKey}
 /artifacts/{appId}/users/{userId}/serviceLogs/{logId}
 /artifacts/{appId}/users/{userId}/fuelLogs/{logId}
+/artifacts/{appId}/users/{userId}/driverStats/current
+/artifacts/{appId}/users/{userId}/driveSessions/{sessionId}
+/artifacts/{appId}/public/data/individualLeaderboard/{periodKey}__{userId}
 ```
 
 All log sorting and deep filtering stays in client memory. Firestore writes use deterministic document IDs and transactions, avoiding duplicate records and complex index requirements.
+
+Secure driver statistics use three callable Functions:
+
+```text
+refreshDriverStats
+startDriveSession
+finishDriveSession
+```
+
+Install and validate the Functions package with:
+
+```powershell
+.\use-node22.ps1 npm --prefix functions install
+.\use-node22.ps1 npm run lint:functions
+.\use-node22.ps1 npm run test:functions
+```
+
+The callable backend is deployed to `us-central1` on Node.js 22. Redeploy it with:
+
+```powershell
+firebase deploy --only functions --project carfollow-75750
+```
+
+Artifact Registry automatically removes Cloud Functions container images older than seven days to limit storage costs.
 
 ## Performance Notes
 
@@ -310,7 +340,7 @@ Suggested improvements for the next iteration:
 
 - implement the Cloud Function ownership-transfer workflow for Vehicle Passports
 - add a resale-safe Vehicle Passport export/report
-- move leaderboard and achievement progress to backend-owned aggregates
 - add emulator-backed authorization tests when Java is available
+- move convoy reputation votes and clan totals to backend-owned aggregates
 - add route-level architecture only if the SPA grows beyond the current shell
 - upgrade local Node.js to `22.12+` to remove the Vite version warning

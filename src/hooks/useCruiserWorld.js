@@ -12,6 +12,7 @@ import {
 import { validateFuelForm } from "../utils/validation";
 import { useDirectMessages } from "./useDirectMessages";
 import { useDriveSession } from "./useDriveSession";
+import { useDriverStats } from "./useDriverStats";
 import { useFirebaseSync } from "./useFirebaseSync";
 import { useClanGraph } from "./useClanGraph";
 import { useMapPins } from "./useMapPins";
@@ -95,13 +96,33 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setDrivers,
   });
 
-  const { driveHud, isDriving, resetDriveSession, toggleDrive: toggleDriveSession } = useDriveSession({
+  const {
+    driverStatsStatus,
+    finishDriveSession,
+    individualLeaderboard,
+    serverOwnedDriverStats,
+    startDriveSession,
+  } = useDriverStats({ user, setUser });
+
+  const {
+    driveHud,
+    driveSessionFeedback,
+    driveSessionId,
+    driveSessionPending,
+    driveSessionStatus,
+    isDriving,
+    resetDriveSession,
+    toggleDrive: toggleDriveSession,
+  } = useDriveSession({
     user,
     setUser,
     setClans,
     setDrivers,
     setMapPins,
     onTelemetrySync: syncTelemetry,
+    onSessionStart: startDriveSession,
+    onSessionFinish: finishDriveSession,
+    serverOwnedDriverStats,
   });
 
   const {
@@ -263,7 +284,12 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     declineIncomingClanInvite,
     declineCruiseJoinRequest,
     driveHud,
+    driveSessionFeedback,
+    driveSessionId,
+    driveSessionPending,
+    driveSessionStatus,
     drivers,
+    driverStatsStatus,
     firebaseStatus,
     fuelErrors,
     fuelFeedback,
@@ -272,6 +298,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     friendSearchQuery,
     friendSearchResults,
     isDriving,
+    individualLeaderboard,
     joinCruise,
     likeGalleryImage,
     likePin,

@@ -1,5 +1,14 @@
 const admin = require("firebase-admin");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
+const {
+  DRIVE_KM_PER_SECOND,
+  applyCompletedDriveToStats,
+  buildDriverStatsDocument,
+  buildLeaderboardEntry,
+  calculateAcceptedDriveKm,
+  isNightTime,
+  roundKm,
+} = require("./driverStats");
 
 admin.initializeApp();
 
@@ -12,6 +21,10 @@ function publicCollection(collectionName) {
 
 function privateUserDocument(userId, collectionName, documentId) {
   return db.doc(`artifacts/${APP_ID}/users/${userId}/${collectionName}/${documentId}`);
+}
+
+function publicDocument(collectionName, documentId) {
+  return publicCollection(collectionName).doc(documentId);
 }
 
 function requireAuth(request) {
@@ -40,6 +53,76 @@ function buildPairId(leftId, rightId) {
 
 function buildScopedMemberId(scopeId, userId) {
   return `${scopeId}__${userId}`;
+}
+
+function requireSnapshot(snapshot, code, message) {
+  if (!snapshot.exists) {
+    throw new HttpsError(code, message);
+  }
+  return snapshot.data();
+}
+
+function assertDriveSessionId(sessionId) {
+  if (
+    typeof sessionId !== "string" ||
+    sessionId.length < 12 ||
+    sessionId.length > 180 ||
+    !/^[0-9A-Za-z_-]+$/.test(sessionId)
+  ) {
+    throw new HttpsError("invalid-argument", "A valid idempotent sessionId is required.");
+  }
+}
+
+function driverAggregateRefs(userId, vehicleId) {
+  return {
+    profileRef: privateUserDocument(userId, "profile", "current"),
+    publicProfileRef: publicDocument("publicProfiles", userId),
+    statsRef: privateUserDocument(userId, "driverStats", "current"),
+    vehicleRef: privateUserDocument(userId, "vehicles", vehicleId),
+    passportRef: privateUserDocument(userId, "vehiclePassports", vehicleId),
+  };
+}
+
+function writeDriverAggregate(transaction, {
+  userId,
+  profile,
+  stats,
+  statsExists,
+  timestamp,
+  profileExtras = {},
+  statsExtras = {},
+}) {
+  const refs = driverAggregateRefs(userId, profile.primaryVehicleId);
+  const leaderboardEntry = buildLeaderboardEntry({ userId, profile, stats });
+  const profileStats = {
+    monthlyKm: stats.monthlyKm,
+    monthlyKmPeriod: stats.periodKey,
+    achievementBadges: stats.achievementBadges,
+    badges: [...new Set([...(profile.badges ?? []), ...(stats.achievementBadges ?? [])])],
+    driverStatsUpdatedAt: timestamp,
+  };
+
+  transaction.set(refs.statsRef, {
+    ...stats,
+    ...statsExtras,
+    ...(statsExists ? {} : { createdAt: timestamp }),
+    updatedAt: timestamp,
+  }, { merge: true });
+  transaction.set(refs.profileRef, {
+    ...profileStats,
+    ...profileExtras,
+    updatedAt: timestamp,
+  }, { merge: true });
+  transaction.set(refs.publicProfileRef, {
+    ...profileStats,
+    updatedAt: timestamp,
+  }, { merge: true });
+  transaction.set(publicDocument("individualLeaderboard", leaderboardEntry.id), {
+    ...leaderboardEntry,
+    updatedAt: timestamp,
+  }, { merge: true });
+
+  return leaderboardEntry;
 }
 
 function assertConvoyTrust(convoy, requester) {
@@ -227,4 +310,268 @@ exports.inviteClanMember = onCall(async (request) => {
   });
 
   return { ok: true, clanId, targetUserId };
+});
+
+exports.refreshDriverStats = onCall(async (request) => {
+  const userId = requireAuth(request);
+  let response;
+
+  await db.runTransaction(async (transaction) => {
+    const profileRef = privateUserDocument(userId, "profile", "current");
+    const profileSnapshot = await transaction.get(profileRef);
+    const profile = requireSnapshot(profileSnapshot, "not-found", "User profile not found.");
+    const vehicleId = profile.primaryVehicleId;
+    if (!vehicleId) {
+      throw new HttpsError("failed-precondition", "Primary vehicle identity is missing.");
+    }
+
+    const refs = driverAggregateRefs(userId, vehicleId);
+    const [vehicleSnapshot, passportSnapshot, statsSnapshot] = await Promise.all([
+      transaction.get(refs.vehicleRef),
+      transaction.get(refs.passportRef),
+      transaction.get(refs.statsRef),
+    ]);
+    const vehicle = requireSnapshot(vehicleSnapshot, "not-found", "Primary vehicle not found.");
+    const passport = requireSnapshot(passportSnapshot, "not-found", "Vehicle Passport not found.");
+    const stats = buildDriverStatsDocument({
+      existingStats: statsSnapshot.exists ? statsSnapshot.data() : {},
+      profile: { ...profile, id: userId, firebaseUid: userId },
+      passport,
+      vehicle,
+      now: new Date(),
+    });
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const leaderboardEntry = writeDriverAggregate(transaction, {
+      userId,
+      profile,
+      stats,
+      statsExists: statsSnapshot.exists,
+      timestamp,
+    });
+
+    response = { ok: true, stats, leaderboardEntry };
+  });
+
+  return response;
+});
+
+exports.startDriveSession = onCall(async (request) => {
+  const userId = requireAuth(request);
+  const { sessionId } = request.data ?? {};
+  assertDriveSessionId(sessionId);
+  let response;
+
+  await db.runTransaction(async (transaction) => {
+    const profileRef = privateUserDocument(userId, "profile", "current");
+    const profileSnapshot = await transaction.get(profileRef);
+    const profile = requireSnapshot(profileSnapshot, "not-found", "User profile not found.");
+    const vehicleId = profile.primaryVehicleId;
+    if (!vehicleId) {
+      throw new HttpsError("failed-precondition", "Primary vehicle identity is missing.");
+    }
+
+    const refs = driverAggregateRefs(userId, vehicleId);
+    const requestedSessionRef = privateUserDocument(userId, "driveSessions", sessionId);
+    const [vehicleSnapshot, passportSnapshot, statsSnapshot, requestedSessionSnapshot] = await Promise.all([
+      transaction.get(refs.vehicleRef),
+      transaction.get(refs.passportRef),
+      transaction.get(refs.statsRef),
+      transaction.get(requestedSessionRef),
+    ]);
+    const vehicle = requireSnapshot(vehicleSnapshot, "not-found", "Primary vehicle not found.");
+    const passport = requireSnapshot(passportSnapshot, "not-found", "Vehicle Passport not found.");
+    const existingStats = statsSnapshot.exists ? statsSnapshot.data() : {};
+
+    if (requestedSessionSnapshot.exists) {
+      const existingSession = requestedSessionSnapshot.data();
+      if (existingSession.userId !== userId || existingSession.vehicleId !== vehicleId) {
+        throw new HttpsError("permission-denied", "Drive session ownership does not match.");
+      }
+      response = {
+        ok: true,
+        resumed: existingSession.status === "active",
+        sessionId,
+        status: existingSession.status,
+        stats: existingStats,
+      };
+      return;
+    }
+
+    if (existingStats.activeSessionId && existingStats.activeSessionId !== sessionId) {
+      const activeSessionRef = privateUserDocument(userId, "driveSessions", existingStats.activeSessionId);
+      const activeSessionSnapshot = await transaction.get(activeSessionRef);
+      if (activeSessionSnapshot.exists && activeSessionSnapshot.data().status === "active") {
+        response = {
+          ok: true,
+          resumed: true,
+          sessionId: existingStats.activeSessionId,
+          status: "active",
+          stats: existingStats,
+        };
+        return;
+      }
+    }
+
+    const now = new Date();
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const stats = {
+      ...buildDriverStatsDocument({
+        existingStats,
+        profile: { ...profile, id: userId, firebaseUid: userId },
+        passport,
+        vehicle,
+        now,
+      }),
+      activeSessionId: sessionId,
+    };
+
+    transaction.set(requestedSessionRef, {
+      id: sessionId,
+      userId,
+      vehicleId,
+      status: "active",
+      startOdometer: roundKm(vehicle.odometer),
+      acceptedKm: 0,
+      reportedKm: 0,
+      serverKmRate: DRIVE_KM_PER_SECOND,
+      periodKey: stats.periodKey,
+      startedAt: timestamp,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+    const leaderboardEntry = writeDriverAggregate(transaction, {
+      userId,
+      profile,
+      stats,
+      statsExists: statsSnapshot.exists,
+      timestamp,
+      statsExtras: { activeSessionStartedAt: timestamp },
+    });
+
+    response = {
+      ok: true,
+      resumed: false,
+      sessionId,
+      status: "active",
+      stats,
+      leaderboardEntry,
+    };
+  });
+
+  return response;
+});
+
+exports.finishDriveSession = onCall(async (request) => {
+  const userId = requireAuth(request);
+  const { sessionId, reportedKm } = request.data ?? {};
+  assertDriveSessionId(sessionId);
+  if (!Number.isFinite(Number(reportedKm)) || Number(reportedKm) < 0) {
+    throw new HttpsError("invalid-argument", "reportedKm must be a positive number or zero.");
+  }
+  let response;
+
+  await db.runTransaction(async (transaction) => {
+    const sessionRef = privateUserDocument(userId, "driveSessions", sessionId);
+    const profileRef = privateUserDocument(userId, "profile", "current");
+    const [sessionSnapshot, profileSnapshot] = await Promise.all([
+      transaction.get(sessionRef),
+      transaction.get(profileRef),
+    ]);
+    const session = requireSnapshot(sessionSnapshot, "not-found", "Drive session not found.");
+    const profile = requireSnapshot(profileSnapshot, "not-found", "User profile not found.");
+    if (session.userId !== userId || session.vehicleId !== profile.primaryVehicleId) {
+      throw new HttpsError("permission-denied", "Drive session ownership does not match.");
+    }
+
+    const refs = driverAggregateRefs(userId, session.vehicleId);
+    const [vehicleSnapshot, passportSnapshot, statsSnapshot] = await Promise.all([
+      transaction.get(refs.vehicleRef),
+      transaction.get(refs.passportRef),
+      transaction.get(refs.statsRef),
+    ]);
+    const vehicle = requireSnapshot(vehicleSnapshot, "not-found", "Primary vehicle not found.");
+    const passport = requireSnapshot(passportSnapshot, "not-found", "Vehicle Passport not found.");
+    const existingStats = statsSnapshot.exists ? statsSnapshot.data() : {};
+
+    if (session.status === "completed") {
+      response = {
+        ok: true,
+        duplicate: true,
+        sessionId,
+        acceptedKm: Number(session.acceptedKm ?? 0),
+        rejectedKm: Number(session.rejectedKm ?? 0),
+        odometer: Number(session.endOdometer ?? vehicle.odometer ?? 0),
+        stats: existingStats,
+        leaderboardEntry: buildLeaderboardEntry({ userId, profile, stats: existingStats }),
+      };
+      return;
+    }
+    if (session.status !== "active") {
+      throw new HttpsError("failed-precondition", "Drive session is not active.");
+    }
+
+    const finishedAt = new Date();
+    const distance = calculateAcceptedDriveKm({
+      reportedKm: Number(reportedKm),
+      startedAt: session.startedAt,
+      finishedAt,
+    });
+    const nextOdometer = roundKm(Math.max(
+      Number(vehicle.odometer ?? 0),
+      Number(session.startOdometer ?? vehicle.odometer ?? 0) + distance.acceptedKm,
+    ));
+    const stats = applyCompletedDriveToStats({
+      existingStats,
+      profile: { ...profile, id: userId, firebaseUid: userId, odometer: nextOdometer },
+      passport,
+      vehicle: { ...vehicle, odometer: nextOdometer },
+      acceptedKm: distance.acceptedKm,
+      isNight: isNightTime(session.startedAt),
+      now: finishedAt,
+    });
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+
+    transaction.update(sessionRef, {
+      status: "completed",
+      reportedKm: roundKm(reportedKm),
+      acceptedKm: distance.acceptedKm,
+      rejectedKm: distance.rejectedKm,
+      elapsedSeconds: distance.elapsedSeconds,
+      endOdometer: nextOdometer,
+      completedAt: timestamp,
+      updatedAt: timestamp,
+    });
+    transaction.update(refs.vehicleRef, {
+      odometer: nextOdometer,
+      lastOdometerSource: "drive",
+      lastDriveSessionId: sessionId,
+      updatedAt: timestamp,
+    });
+    const leaderboardEntry = writeDriverAggregate(transaction, {
+      userId,
+      profile,
+      stats,
+      statsExists: statsSnapshot.exists,
+      timestamp,
+      profileExtras: { odometer: nextOdometer },
+      statsExtras: {
+        activeSessionId: null,
+        activeSessionStartedAt: null,
+        lastCompletedSessionId: sessionId,
+      },
+    });
+
+    response = {
+      ok: true,
+      duplicate: false,
+      sessionId,
+      acceptedKm: distance.acceptedKm,
+      rejectedKm: distance.rejectedKm,
+      odometer: nextOdometer,
+      stats,
+      leaderboardEntry,
+    };
+  });
+
+  return response;
 });

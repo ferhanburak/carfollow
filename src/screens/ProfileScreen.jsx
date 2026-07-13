@@ -15,6 +15,7 @@ export function ProfileScreen({
   user,
   onProfileFormChange,
   onSubmitProfile,
+  driverStatsStatus,
 }) {
   const achievementProgress = buildAchievementProgress(user);
   const personalStats = buildPersonalStats(user);
@@ -128,6 +129,20 @@ export function ProfileScreen({
             <p className="text-xs text-neutral-500">Unvanlari nasil kazanacagini ve ne kadar kaldigini net gor.</p>
           </div>
           <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">{(user.badges ?? []).length} aktif unvan</span>
+        </div>
+
+        <div className={`mt-4 rounded-2xl border px-4 py-3 text-xs ${
+          driverStatsStatus?.state === "error" || driverStatsStatus?.state === "degraded"
+            ? "border-amber-400/20 bg-amber-400/10 text-amber-100"
+            : "border-lime-400/20 bg-lime-400/10 text-lime-100"
+        }`}>
+          <div className="flex items-center justify-between gap-3">
+            <span>Achievement source</span>
+            <span className="font-semibold uppercase tracking-[0.16em]">
+              {driverStatsStatus?.mode === "firebase" ? driverStatsStatus.state : "demo"}
+            </span>
+          </div>
+          {driverStatsStatus?.error ? <p className="mt-2 text-amber-200">{driverStatsStatus.error}</p> : null}
         </div>
 
         <div className="mt-4 space-y-3">

@@ -12,6 +12,20 @@ const PRIVATE_SUBCOLLECTION_FIELDS = new Set([
   "vehicles",
 ]);
 
+const SERVER_OWNED_PROFILE_FIELDS = new Set([
+  "achievementBadges",
+  "achievementProgress",
+  "badges",
+  "completedDriveSessions",
+  "driverStats",
+  "driverStatsUpdatedAt",
+  "lifetimeVerifiedKm",
+  "monthlyKm",
+  "monthlyKmPeriod",
+  "monthlyNightKm",
+  "odometer",
+]);
+
 const PUBLIC_PROFILE_FIELDS = [
   "alertVotes",
   "avatar",
@@ -93,6 +107,22 @@ export function buildPublicUserProfile(user, firebaseUser) {
     plateNormalized: normalizePlate(source.plate),
     schemaVersion: USER_SCHEMA_VERSION,
   };
+}
+
+function omitServerOwnedFields(document) {
+  const patch = { ...document };
+  for (const field of SERVER_OWNED_PROFILE_FIELDS) {
+    delete patch[field];
+  }
+  return patch;
+}
+
+export function buildPrivateUserProfilePatch(user, firebaseUser) {
+  return omitServerOwnedFields(buildPrivateUserProfile(user, firebaseUser));
+}
+
+export function buildPublicUserProfilePatch(user, firebaseUser) {
+  return omitServerOwnedFields(buildPublicUserProfile(user, firebaseUser));
 }
 
 export function mergePrivateUserCollections(profile, collections = {}) {

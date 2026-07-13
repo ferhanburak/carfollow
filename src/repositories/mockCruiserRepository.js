@@ -270,11 +270,13 @@ function resolveTripStatus(attendee, progressRatio, index, hostPlate) {
   return "ready";
 }
 
-export function incrementUserOdometer(user) {
+export function incrementUserOdometer(user, { incrementMonthlyKm = true } = {}) {
   return {
     ...user,
     odometer: Number((user.odometer + 0.4).toFixed(1)),
-    monthlyKm: Number(((user.monthlyKm ?? 0) + 0.4).toFixed(1)),
+    monthlyKm: incrementMonthlyKm
+      ? Number(((user.monthlyKm ?? 0) + 0.4).toFixed(1))
+      : Number(user.monthlyKm ?? 0),
   };
 }
 

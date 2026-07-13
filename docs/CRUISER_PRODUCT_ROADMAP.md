@@ -53,7 +53,10 @@ What still needs maturity:
 | Fuel log | Complete | Idempotent private Firestore records + history + insights |
 | Service log | Complete | Append-only records with atomic part/odometer updates |
 | Vehicle passport | Complete | Stable vehicle identity, passport metadata, migration, health and history |
-| Individual leaderboard | Complete | Monthly KM ranking |
+| Individual leaderboard | Complete | Backend-owned monthly KM ranking with client-side sorting |
+| Driver achievements | Complete | Server-calculated progress and persistent earned titles |
+| Secure drive sessions | Complete | Idempotent start/finish Functions with elapsed-time KM clamp |
+| Cloud Functions production rollout | Complete | Seven callable Functions deployed to `us-central1` on Node.js 22 |
 | Clan leaderboard | Complete | Collective KM ranking |
 | Friend requests | Complete | Add, incoming, outgoing, withdraw |
 | Social profile drawer | Complete | Public driver view baseline |
@@ -75,7 +78,7 @@ What still needs maturity:
 | Public profile opening from anywhere | Partial | Exists through social view, not yet fully centralized |
 | Social UX flow consistency | Partial | Some actions redirect rather than open unified overlays |
 | Convoy host tooling | Partial | Core gating exists, moderation dashboard still limited |
-| Social/convoy ownership boundaries | Partial | Vehicle ownership is normalized; social mutations still need Functions |
+| Social/convoy ownership boundaries | Partial | Core friend, clan invite, and convoy request mutations use Functions; remaining lifecycle mutations still need migration |
 
 ### 2.3 Not Yet Implemented
 
@@ -157,6 +160,18 @@ The frontend should not be the final authority for:
 - clan membership changes
 - ownership transfers
 - moderation decisions
+- monthly leaderboard kilometers
+- achievement unlocks
+
+Implemented backend-owned driver paths:
+
+```text
+/artifacts/{appId}/users/{userId}/driverStats/current
+/artifacts/{appId}/users/{userId}/driveSessions/{sessionId}
+/artifacts/{appId}/public/data/individualLeaderboard/{periodKey}__{userId}
+```
+
+`startDriveSession` creates one idempotent active session. `finishDriveSession` limits accepted distance using server elapsed time, updates the vehicle odometer, monthly/lifetime totals, achievements, and the public leaderboard in one Admin SDK transaction.
 
 ## 4.3 Recommended Layering
 

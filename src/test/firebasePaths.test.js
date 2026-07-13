@@ -1,5 +1,6 @@
 import {
   PRIVATE_COLLECTIONS,
+  PUBLIC_COLLECTIONS,
   privateUserCollectionPath,
   privateUserDocumentPath,
   publicCollectionPath,
@@ -45,5 +46,11 @@ describe("firebase path helpers", () => {
     expect(realtimeTelemetryUserPath("firebase-user-1", "demo-app")).toBe(
       "artifacts/demo-app/realtime/telemetry/firebase-user-1",
     );
+  });
+
+  it("defines backend-owned driver stats collections", () => {
+    expect(PUBLIC_COLLECTIONS.individualLeaderboard).toBe("individualLeaderboard");
+    expect(PRIVATE_COLLECTIONS.driverStats).toBe("driverStats");
+    expect(PRIVATE_COLLECTIONS.driveSessions).toBe("driveSessions");
   });
 });

@@ -83,7 +83,11 @@ function App() {
     declineFriendRequest,
     declineIncomingClanInvite,
     driveHud,
+    driveSessionFeedback,
+    driveSessionPending,
+    driveSessionStatus,
     drivers,
+    driverStatsStatus,
     firebaseStatus,
     fuelErrors,
     fuelFeedback,
@@ -93,6 +97,7 @@ function App() {
     friendSearchResults,
     hostableConvoys,
     isDriving,
+    individualLeaderboard,
     inviteDriverToMeet,
     joinCruise,
     likeGalleryImage,
@@ -200,13 +205,14 @@ function App() {
               <button
                 type="button"
                 onClick={toggleDrive}
+                disabled={driveSessionPending}
                 className={`min-h-12 min-w-12 rounded-2xl px-4 text-sm font-bold transition ${
                   isDriving
                     ? "bg-rose-500 text-white shadow-[0_0_24px_rgba(244,63,94,0.5)]"
                     : "bg-lime-400 text-black shadow-[0_0_24px_rgba(163,230,53,0.38)]"
-                }`}
+                } disabled:cursor-wait disabled:opacity-60`}
               >
-                {isDriving ? "Surusu Durdur" : "Suruse Basla"}
+                {driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}
               </button>
             </div>
             <div className="relative mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-3">
@@ -277,6 +283,8 @@ function App() {
             {activeTab === "liveMap" ? (
               <MapScreen
                 driveHud={driveHud}
+                driveSessionPending={driveSessionPending}
+                driveSessionStatus={driveSessionStatus}
                 isDriving={isDriving}
                 joinCruise={joinCruise}
                 likeGalleryImage={likeGalleryImage}
@@ -317,6 +325,9 @@ function App() {
             {activeTab === "drive" ? (
               <DriveScreen
                 driveHud={driveHud}
+                driveSessionFeedback={driveSessionFeedback}
+                driveSessionPending={driveSessionPending}
+                driveSessionStatus={driveSessionStatus}
                 drivers={drivers}
                 firebaseStatus={firebaseStatus}
                 isDriving={isDriving}
@@ -353,6 +364,8 @@ function App() {
                 openConversation={openConversation}
                 presenceMap={presenceMap}
                 inviteFriendToClan={inviteFriendToClan}
+                individualLeaderboardEntries={individualLeaderboard}
+                driverStatsStatus={driverStatsStatus}
                 requestFriend={requestFriend}
                 revokeClanInvite={revokeClanInvite}
                 sendMessage={sendMessage}
@@ -393,7 +406,7 @@ function App() {
                 onLogout={handleLogout}
                 onProfileFormChange={setProfileForm}
                 onOpenService={() => setActiveTab("garage")}
-                onOpenStats={() => setActiveTab("social")}
+                onOpenStats={() => setActiveTab("leaderboard")}
                 onSubmitProfile={submitProfile}
                 passportSummary={passportSummary}
                 profileCompletion={profileCompletion}
@@ -402,6 +415,7 @@ function App() {
                 profileForm={profileForm}
                 tuningOptions={tuningOptions}
                 user={user}
+                driverStatsStatus={driverStatsStatus}
               />
             ) : null}
           </Suspense>

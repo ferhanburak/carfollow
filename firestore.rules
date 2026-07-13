@@ -106,13 +106,22 @@ service cloud.firestore {
       return data.driverScore == 80 &&
         data.harmonyVotes == 1 &&
         data.alertVotes == 0 &&
-        data.monthlyKm == 0;
+        data.monthlyKm == 0 &&
+        data.badges is list &&
+        data.badges.size() == 2 &&
+        data.badges.hasAll(['Yeni Uye', 'Garajda Aktif']) &&
+        data.get('achievementBadges', []).size() == 0;
     }
 
     function keepsProtectedReputation(data, previousData) {
       return data.driverScore == previousData.driverScore &&
         data.harmonyVotes == previousData.harmonyVotes &&
-        data.alertVotes == previousData.alertVotes;
+        data.alertVotes == previousData.alertVotes &&
+        data.get('badges', []) == previousData.get('badges', []) &&
+        data.get('monthlyKm', 0) == previousData.get('monthlyKm', 0) &&
+        data.get('monthlyKmPeriod', '') == previousData.get('monthlyKmPeriod', '') &&
+        data.get('achievementBadges', []) == previousData.get('achievementBadges', []) &&
+        data.get('driverStatsUpdatedAt', null) == previousData.get('driverStatsUpdatedAt', null);
     }
 
     function isValidVehicle(data, userId, vehicleId) {
@@ -150,6 +159,42 @@ service cloud.firestore {
         data.plateNormalized == previousData.plateNormalized &&
         data.createdAt == previousData.createdAt &&
         data.odometer >= previousData.odometer;
+    }
+
+    function hasFuelOdometerMutation(appId, userId, vehicleId, data, previousData) {
+      let previousPassport = passportBefore(appId, userId, vehicleId);
+      let passport = passportAfter(appId, userId, vehicleId);
+      let fuelLog = getAfter(
+        /databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/fuelLogs/$(passport.lastMutationId)
+      ).data;
+      return data.lastOdometerSource == 'fuel' &&
+        passport.lastMutationType == 'fuel' &&
+        passport.lastMutationId != previousPassport.lastMutationId &&
+        fuelLog.id == passport.lastMutationId &&
+        fuelLog.vehicleId == vehicleId &&
+        fuelLog.currentKm > previousData.odometer &&
+        data.odometer == fuelLog.currentKm;
+    }
+
+    function hasServiceOdometerMutation(appId, userId, vehicleId, data, previousData) {
+      let previousPassport = passportBefore(appId, userId, vehicleId);
+      let passport = passportAfter(appId, userId, vehicleId);
+      let serviceLog = getAfter(
+        /databases/$(database)/documents/artifacts/$(appId)/users/$(userId)/serviceLogs/$(passport.lastMutationId)
+      ).data;
+      return data.lastOdometerSource == 'service' &&
+        passport.lastMutationType == 'service' &&
+        passport.lastMutationId != previousPassport.lastMutationId &&
+        serviceLog.id == passport.lastMutationId &&
+        serviceLog.vehicleId == vehicleId &&
+        serviceLog.serviceKm > previousData.odometer &&
+        data.odometer == serviceLog.serviceKm;
+    }
+
+    function hasValidClientOdometerMutation(appId, userId, vehicleId, data, previousData) {
+      return data.odometer == previousData.odometer ||
+        hasFuelOdometerMutation(appId, userId, vehicleId, data, previousData) ||
+        hasServiceOdometerMutation(appId, userId, vehicleId, data, previousData);
     }
 
     function hasConsistentProfileAfter(appId, userId, vehicleId, odometer) {
@@ -389,6 +434,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /artifacts/{appId}/public/data/individualLeaderboard/{documentId} {
+      allow read: if isKnownApp(appId) && isSignedIn();
+      allow write: if false;
+    }
+
     match /artifacts/{appId}/public/data/mapPins/{documentId} {
       allow read: if isKnownApp(appId) && isSignedIn();
       allow create: if isKnownApp(appId) &&
@@ -479,8 +529,19 @@ service cloud.firestore {
         isOwner(userId) &&
         isValidVehicle(request.resource.data, userId, vehicleId) &&
         keepsVehicleIdentity(request.resource.data, resource.data) &&
+        hasValidClientOdometerMutation(appId, userId, vehicleId, request.resource.data, resource.data) &&
         hasConsistentProfileAfter(appId, userId, vehicleId, request.resource.data.odometer);
       allow delete: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/driverStats/{documentId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow write: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/driveSessions/{documentId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow write: if false;
     }
 
     match /artifacts/{appId}/users/{userId}/vehiclePassports/{vehicleId} {

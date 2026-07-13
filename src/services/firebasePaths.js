@@ -7,6 +7,7 @@ export const PUBLIC_COLLECTIONS = Object.freeze({
   convoys: "convoys",
   cruiseAttendees: "cruiseAttendees",
   drivers: "drivers",
+  individualLeaderboard: "individualLeaderboard",
   friendships: "friendships",
   mapPins: "mapPins",
   plateClaims: "plateClaims",
@@ -15,6 +16,8 @@ export const PUBLIC_COLLECTIONS = Object.freeze({
 });
 
 export const PRIVATE_COLLECTIONS = Object.freeze({
+  driverStats: "driverStats",
+  driveSessions: "driveSessions",
   fuelLogs: "fuelLogs",
   notifications: "notifications",
   parts: "parts",

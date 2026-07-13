@@ -3,7 +3,7 @@ const ACHIEVEMENT_CATALOG = [
     key: "night-warrior",
     title: "Gece Savascisi",
     description: "Aylik 500 KM gece surus ritmini yakala.",
-    progress: (user) => ({ current: Number(user.monthlyKm ?? 0), target: 500, unit: "KM" }),
+    progress: (user) => ({ current: Number(user.monthlyNightKm ?? 0), target: 500, unit: "KM" }),
   },
   {
     key: "asphalt-weeper",
@@ -36,6 +36,17 @@ function clampPercent(value) {
 }
 
 export function buildAchievementProgress(user) {
+  const serverProgress = user?.achievementProgress ?? user?.driverStats?.achievements;
+  if (Array.isArray(serverProgress) && serverProgress.length > 0) {
+    return serverProgress.map((achievement) => ({
+      ...achievement,
+      current: Number(achievement.current ?? 0),
+      target: Number(achievement.target ?? 0),
+      percent: clampPercent(achievement.percent ?? 0),
+      unlocked: Boolean(achievement.unlocked),
+    }));
+  }
+
   return ACHIEVEMENT_CATALOG.map((achievement) => {
     const progress = achievement.progress(user);
     const percent = progress.target ? clampPercent((progress.current / progress.target) * 100) : 0;
@@ -61,6 +72,9 @@ export function buildPersonalStats(user) {
 
   return [
     { key: "monthly-km", label: "Bireysel Aylik KM", value: `${Math.round(Number(user.monthlyKm ?? 0)).toLocaleString("tr-TR")} KM` },
+    { key: "night-km", label: "Aylik Gece KM", value: `${Math.round(Number(user.monthlyNightKm ?? 0)).toLocaleString("tr-TR")} KM` },
+    { key: "verified-km", label: "Onayli Toplam", value: `${Math.round(Number(user.lifetimeVerifiedKm ?? 0)).toLocaleString("tr-TR")} KM` },
+    { key: "drive-sessions", label: "Onayli Surus", value: `${Number(user.completedDriveSessions ?? 0)}` },
     { key: "driver-score", label: "Surucu Skoru", value: `${Number(user.driverScore ?? 0)}/100` },
     { key: "service-logs", label: "Servis Kaydi", value: `${serviceLogs.length}` },
     { key: "fuel-logs", label: "Yakit Fisi", value: `${fuelLogs.length}` },
