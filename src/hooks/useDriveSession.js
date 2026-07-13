@@ -1,12 +1,13 @@
 import { startTransition, useEffect, useState } from "react";
 import {
+  advanceConvoySimulation,
   buildDriveTickState,
   incrementClanKm,
   incrementUserOdometer,
   syncActiveDriver,
 } from "../repositories/cruiserRepository";
 
-export function useDriveSession({ user, setUser, setClans, setDrivers, onTelemetrySync }) {
+export function useDriveSession({ user, setUser, setClans, setDrivers, setMapPins, onTelemetrySync }) {
   const [isDriving, setIsDriving] = useState(false);
   const [driveHud, setDriveHud] = useState({ speed: 0, sessionKm: 0, etaNode: "Hazir" });
 
@@ -17,7 +18,11 @@ export function useDriveSession({ user, setUser, setClans, setDrivers, onTelemet
 
     const driveTimer = window.setInterval(() => {
       startTransition(() => {
-        setDriveHud((current) => buildDriveTickState(current));
+        setDriveHud((current) => {
+          const nextDriveHud = buildDriveTickState(current);
+          setMapPins?.((currentPins) => advanceConvoySimulation(currentPins, nextDriveHud, user));
+          return nextDriveHud;
+        });
 
         setUser((current) => {
           if (!current) {
@@ -33,7 +38,7 @@ export function useDriveSession({ user, setUser, setClans, setDrivers, onTelemet
     }, 1000);
 
     return () => window.clearInterval(driveTimer);
-  }, [isDriving, setClans, setDrivers, setUser, user]);
+  }, [isDriving, setClans, setDrivers, setMapPins, setUser, user]);
 
   const toggleDrive = () => {
     setIsDriving((current) => !current);

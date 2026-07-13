@@ -173,12 +173,103 @@ export function buildDriveTickState(driveHud) {
   };
 }
 
+function getRouteDistanceKm(routePath = []) {
+  if (!Array.isArray(routePath) || routePath.length < 2) {
+    return 0;
+  }
+
+  let totalKm = 0;
+  for (let index = 1; index < routePath.length; index += 1) {
+    const start = routePath[index - 1];
+    const end = routePath[index];
+    const latKm = (end.lat - start.lat) * 111.32;
+    const avgLatRadians = ((start.lat + end.lat) / 2) * (Math.PI / 180);
+    const lngKm = (end.lng - start.lng) * (111.32 * Math.cos(avgLatRadians));
+    totalKm += Math.sqrt(latKm ** 2 + lngKm ** 2);
+  }
+
+  return Number(totalKm.toFixed(1));
+}
+
+function resolveLifecycleStatus(progressRatio) {
+  if (progressRatio >= 0.98) {
+    return "completed";
+  }
+  if (progressRatio >= 0.45) {
+    return "rolling";
+  }
+  if (progressRatio >= 0.2) {
+    return "delayed";
+  }
+
+  return "planning";
+}
+
+function resolveTripStatus(attendee, progressRatio, index, hostPlate) {
+  const normalizedAttendee = normalizeAttendee(attendee);
+  if (normalizedAttendee.tripStatus === "cancelled") {
+    return "cancelled";
+  }
+
+  const isHost = normalizedAttendee.plate === hostPlate;
+  const offset = index * 0.08;
+
+  if (progressRatio >= Math.max(0.82, 0.72 + offset)) {
+    return "arrived";
+  }
+  if (progressRatio >= Math.max(0.2, 0.08 + offset) || isHost) {
+    return "enroute";
+  }
+
+  return "ready";
+}
+
 export function incrementUserOdometer(user) {
   return {
     ...user,
     odometer: Number((user.odometer + 0.4).toFixed(1)),
     monthlyKm: Number(((user.monthlyKm ?? 0) + 0.4).toFixed(1)),
   };
+}
+
+export function advanceConvoySimulation(mapPins, driveHud, user) {
+  if (!user) {
+    return mapPins;
+  }
+
+  return mapPins.map((pin) => {
+    if (pin.type !== "meet") {
+      return pin;
+    }
+
+    const attendees = (pin.attendees ?? []).map(normalizeAttendee);
+    const involvesUser =
+      pin.createdByPlate === user.plate || attendees.some((attendee) => attendee.plate === user.plate);
+
+    if (!involvesUser) {
+      return pin;
+    }
+
+    const totalKm = Math.max(1, getRouteDistanceKm(pin.routePath));
+    const progressRatio = Math.min(1, (driveHud.sessionKm ?? 0) / totalKm);
+    const lifecycleStatus = resolveLifecycleStatus(progressRatio);
+
+    return {
+      ...pin,
+      lifecycleStatus,
+      attendees: attendees.map((attendee, index) => ({
+        ...attendee,
+        tripStatus:
+          attendee.plate === user.plate
+            ? progressRatio >= 0.98
+              ? "arrived"
+              : progressRatio >= 0.08
+                ? "enroute"
+                : "ready"
+            : resolveTripStatus(attendee, progressRatio, index, pin.createdByPlate),
+      })),
+    };
+  });
 }
 
 export function incrementClanKm(clans, clanName) {

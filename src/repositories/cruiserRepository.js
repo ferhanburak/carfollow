@@ -4,6 +4,7 @@ export {
   appendMapPin,
   appendSpotPhoto,
   appendWashReview,
+  advanceConvoySimulation,
   buildDriveTickState,
   createAttendeeRecord,
   createAuthenticatedUser,
