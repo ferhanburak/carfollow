@@ -176,6 +176,7 @@ export function StatsScreen({
   onClanFormChange,
   onFriendSearchChange,
   onMessageDraftChange,
+  onOpenPublicProfile,
   openConversation,
   presenceMap,
   requestFriend,
@@ -203,6 +204,11 @@ export function StatsScreen({
   };
 
   const openExpandedProfile = (profile) => {
+    if (onOpenPublicProfile) {
+      onOpenPublicProfile(profile);
+      setProfileDrawer(null);
+      return;
+    }
     setExpandedProfile(profile);
     setProfileDrawer(null);
   };

@@ -1,5 +1,6 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { appId, navItems, tuningOptions } from "./data/mockData";
+import { PublicDriverProfileOverlay } from "./components/PublicDriverProfileOverlay";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
 import { AuthScreen } from "./screens/AuthScreen";
@@ -38,6 +39,7 @@ function ScreenLoader() {
 }
 
 function App() {
+  const [publicProfile, setPublicProfile] = useState(null);
   const {
     authMode,
     authTab,
@@ -277,10 +279,7 @@ function App() {
                   openConversation(profile);
                   setActiveTab("social");
                 }}
-                onGhostOpenProfile={(profile) => {
-                  setFriendSearchQuery(profile.plate ?? "");
-                  setActiveTab("social");
-                }}
+                onGhostOpenProfile={(profile) => setPublicProfile({ ...profile, source: "live-map" })}
                 onGhostRequestFriend={(profile) => requestFriend(profile)}
                 onSelectPin={setSelectedPinId}
                 onApproveCruiseJoinRequest={approveCruiseJoinRequest}
@@ -342,6 +341,7 @@ function App() {
                 onClanFormChange={setClanForm}
                 onFriendSearchChange={setFriendSearchQuery}
                 onMessageDraftChange={setMessageDraft}
+                onOpenPublicProfile={(profile) => setPublicProfile(profile)}
                 openConversation={openConversation}
                 presenceMap={presenceMap}
                 inviteFriendToClan={inviteFriendToClan}
@@ -433,6 +433,21 @@ function App() {
           </div>
         </nav>
       </div>
+      <PublicDriverProfileOverlay
+        hostableConvoy={hostableConvoys?.[0] ?? null}
+        onClose={() => setPublicProfile(null)}
+        onInviteFriendToClan={inviteFriendToClan}
+        onInviteToConvoy={inviteDriverToMeet}
+        onOpenConversation={(profile) => {
+          openConversation(profile);
+          setActiveTab("social");
+          setPublicProfile(null);
+        }}
+        onRequestFriend={(profile) => requestFriend(profile)}
+        presence={publicProfile ? presenceMap?.[publicProfile.plate] : null}
+        profile={publicProfile}
+        user={safeUser ?? user}
+      />
     </main>
   );
 }
