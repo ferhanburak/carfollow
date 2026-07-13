@@ -202,6 +202,9 @@ export function MapScreen({
   likePin,
   loadSpotPhotoFile,
   mapPins,
+  onGhostOpenConversation,
+  onGhostOpenProfile,
+  onGhostRequestFriend,
   onApproveCruiseJoinRequest,
   onDeclineCruiseJoinRequest,
   onSelectPin,
@@ -267,6 +270,9 @@ export function MapScreen({
             onSelectPin(pinId);
             setActiveOverlay("details");
           }}
+          onOpenDriverConversation={onGhostOpenConversation}
+          onOpenDriverProfile={onGhostOpenProfile}
+          onRequestFriend={onGhostRequestFriend}
           user={user}
           driveHud={driveHud}
           draftRoutePath={[]}

@@ -273,6 +273,15 @@ function App() {
                 likePin={likePin}
                 loadSpotPhotoFile={loadSpotPhotoFile}
                 mapPins={mapPins}
+                onGhostOpenConversation={(profile) => {
+                  openConversation(profile);
+                  setActiveTab("social");
+                }}
+                onGhostOpenProfile={(profile) => {
+                  setFriendSearchQuery(profile.plate ?? "");
+                  setActiveTab("social");
+                }}
+                onGhostRequestFriend={(profile) => requestFriend(profile)}
                 onSelectPin={setSelectedPinId}
                 onApproveCruiseJoinRequest={approveCruiseJoinRequest}
                 onDeclineCruiseJoinRequest={declineCruiseJoinRequest}

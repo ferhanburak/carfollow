@@ -502,6 +502,26 @@ function getTripStatusLabel(value) {
   return "Hazir";
 }
 
+function getFriendshipStatus(user, plate) {
+  if (!user || !plate) {
+    return "none";
+  }
+  if (user.plate === plate) {
+    return "self";
+  }
+  if ((user.friends ?? []).some((entry) => entry.plate === plate)) {
+    return "friend";
+  }
+  if ((user.incomingRequests ?? []).some((entry) => entry.plate === plate)) {
+    return "incoming";
+  }
+  if ((user.outgoingRequests ?? []).some((entry) => entry.plate === plate)) {
+    return "outgoing";
+  }
+
+  return "none";
+}
+
 function FallbackGridMap({ pins, selectedPinId, onSelect, fullScreen = false, mapHeight = "18rem" }) {
   return (
     <div
@@ -543,6 +563,9 @@ export function MapCard({
   pins,
   selectedPinId,
   onSelect,
+  onOpenDriverConversation,
+  onOpenDriverProfile,
+  onRequestFriend,
   user,
   driveHud,
   draftLocation,
@@ -596,6 +619,9 @@ export function MapCard({
       selectedPin={selectedPin}
       selectedPinId={selectedPinId}
       onSelect={onSelect}
+      onOpenDriverConversation={onOpenDriverConversation}
+      onOpenDriverProfile={onOpenDriverProfile}
+      onRequestFriend={onRequestFriend}
       user={user}
       driveHud={driveHud}
       draftLocation={draftLocation}
@@ -616,6 +642,9 @@ function GoogleMapCard({
   selectedPin,
   selectedPinId,
   onSelect,
+  onOpenDriverConversation,
+  onOpenDriverProfile,
+  onRequestFriend,
   user,
   driveHud,
   draftLocation,
@@ -660,6 +689,7 @@ function GoogleMapCard({
   const convoyAccess = selectedPin?.type === "meet" ? getConvoyAccessState(selectedPin, user) : null;
   const convoyGhostMarkers = getConvoyGhostMarkers(selectedPin, user, driveHud, isDriving);
   const selectedGhostMarker = convoyGhostMarkers.find((marker) => marker.id === selectedGhostMarkerId) ?? null;
+  const selectedGhostFriendship = selectedGhostMarker ? getFriendshipStatus(user, selectedGhostMarker.plate) : "none";
 
   useEffect(() => {
     setFollowCurrentLocation(Boolean(navigationMode));
@@ -1056,6 +1086,39 @@ function GoogleMapCard({
                   <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-neutral-500">
                     {selectedGhostMarker.standing}
                   </p>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onOpenDriverProfile?.(selectedGhostMarker)}
+                      className="min-h-10 rounded-xl border border-white/10 bg-white/5 px-2 text-[10px] font-semibold text-neutral-200"
+                    >
+                      Profili Ac
+                    </button>
+                    <button
+                      type="button"
+                      disabled={selectedGhostFriendship !== "none"}
+                      onClick={() => onRequestFriend?.(selectedGhostMarker)}
+                      className="min-h-10 rounded-xl bg-lime-400 px-2 text-[10px] font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {selectedGhostFriendship === "friend"
+                        ? "Arkadas"
+                        : selectedGhostFriendship === "incoming"
+                          ? "Bekliyor"
+                          : selectedGhostFriendship === "outgoing"
+                            ? "Gonderildi"
+                            : selectedGhostFriendship === "self"
+                              ? "Sen"
+                              : "Arkadas Ekle"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={selectedGhostFriendship === "self"}
+                      onClick={() => onOpenDriverConversation?.(selectedGhostMarker)}
+                      className="min-h-10 rounded-xl border border-lime-400/20 bg-lime-400/10 px-2 text-[10px] font-semibold text-lime-200 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      DM Gonder
+                    </button>
+                  </div>
                 </div>
               </InfoWindowF>
             ) : null}
