@@ -672,12 +672,48 @@ describe("Realtime Database security rules", { concurrency: false }, () => {
       },
     };
 
-    await assertSucceeds(setDatabaseValue(databaseRef(ownerDb, threadPath), thread));
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDatabaseValue(databaseRef(context.database(), threadPath), thread);
+    });
     await assertSucceeds(getDatabaseValue(databaseRef(otherDb, threadPath)));
     await assertFails(getDatabaseValue(databaseRef(strangerDb, threadPath)));
+    await assertFails(setDatabaseValue(databaseRef(ownerDb, `${threadPath}/messages/owner-injected`), {
+      senderUid: OWNER_ID,
+      body: "client bypass",
+      createdAt: 1720958400001,
+    }));
     await assertFails(updateDatabaseValue(databaseRef(strangerDb, threadPath), {
       "messages/injected": { senderUid: STRANGER_ID, text: "blocked" },
     }));
+  });
+
+  it("allows participants to publish only their own typing and read receipts", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).database();
+    const otherDb = testEnvironment.authenticatedContext(OTHER_ID).database();
+    const threadPath = realtimePath("directMessages/threads/thread-owner-other");
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDatabaseValue(databaseRef(context.database(), threadPath), {
+        participantUids: { [OWNER_ID]: true, [OTHER_ID]: true },
+        createdAt: 1720958400000,
+        updatedAt: 1720958400000,
+      });
+    });
+    await assertSucceeds(setDatabaseValue(databaseRef(ownerDb, `${threadPath}/typing/${OWNER_ID}`), {
+      userId: OWNER_ID,
+      firebaseUid: OWNER_ID,
+      plate: "06 TEST 01",
+      status: "typing",
+      updatedAt: 1720958400001,
+    }));
+    await assertFails(setDatabaseValue(databaseRef(otherDb, `${threadPath}/typing/${OWNER_ID}`), {
+      userId: OWNER_ID,
+      firebaseUid: OTHER_ID,
+      plate: "34 TEST 34",
+      status: "typing",
+      updatedAt: 1720958400001,
+    }));
+    await assertSucceeds(setDatabaseValue(databaseRef(ownerDb, `${threadPath}/readBy/${OWNER_ID}`), 1720958400002));
+    await assertFails(setDatabaseValue(databaseRef(otherDb, `${threadPath}/readBy/${OWNER_ID}`), 1720958400002));
   });
 
   it("isolates per-user DM indexes", async () => {
@@ -685,8 +721,11 @@ describe("Realtime Database security rules", { concurrency: false }, () => {
     const otherDb = testEnvironment.authenticatedContext(OTHER_ID).database();
     const indexPath = realtimePath(`directMessages/userThreads/${OWNER_ID}/thread-owner-other`);
 
-    await assertSucceeds(setDatabaseValue(databaseRef(ownerDb, indexPath), true));
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDatabaseValue(databaseRef(context.database(), indexPath), { threadId: "thread-owner-other" });
+    });
     await assertSucceeds(getDatabaseValue(databaseRef(ownerDb, realtimePath(`directMessages/userThreads/${OWNER_ID}`))));
+    await assertFails(setDatabaseValue(databaseRef(ownerDb, indexPath), true));
     await assertFails(setDatabaseValue(databaseRef(otherDb, indexPath), true));
   });
 });

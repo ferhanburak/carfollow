@@ -682,6 +682,7 @@ export function StatsScreen({
                     type="button"
                     onClick={() =>
                       openConversation({
+                        userId: conversation.participantUserId,
                         plate: conversation.participantPlate,
                         fullName: conversation.participantName,
                         model: conversation.participantModel,
@@ -766,6 +767,7 @@ export function StatsScreen({
                       type="button"
                       onClick={() =>
                         sendMessage({
+                          userId: activeConversation.participantUserId,
                           plate: activeConversation.participantPlate,
                           fullName: activeConversation.participantName,
                           model: activeConversation.participantModel,

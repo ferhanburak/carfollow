@@ -46,10 +46,17 @@ const {
   presentConvoy,
   projectDriver,
 } = require("./convoy");
+const {
+  buildDirectMessage,
+  buildDirectMessageThreadId,
+  buildThreadMetadata,
+  sanitizeMessageBody,
+} = require("./directMessages");
 
 admin.initializeApp();
 
 const db = admin.firestore();
+const realtimeDb = admin.database();
 const APP_ID = process.env.CRUISER_APP_ID || "cruiser-app-prod";
 
 function publicCollection(collectionName) {
@@ -255,6 +262,46 @@ function assertConvoyTrust(convoy, requester) {
   }
 }
 
+async function requireMessagingConnection(actorUserId, targetUserId) {
+  const [actor, target, friendship, actorBlock, targetBlock] = await Promise.all([
+    getUserProfile(actorUserId),
+    getUserProfile(targetUserId),
+    friendshipDocument(actorUserId, targetUserId).get(),
+    blockedDriverDocument(actorUserId, targetUserId).get(),
+    blockedDriverDocument(targetUserId, actorUserId).get(),
+  ]);
+  if (!friendship.exists || friendship.data().status !== "accepted") {
+    throw new HttpsError("permission-denied", "Direct messages require an active friendship.");
+  }
+  if (actorBlock.exists || targetBlock.exists) {
+    throw new HttpsError("permission-denied", "Direct messages are unavailable for this driver.");
+  }
+  return { actor, target };
+}
+
+async function ensureDirectMessageThreadState(actorUserId, targetUserId) {
+  const { actor, target } = await requireMessagingConnection(actorUserId, targetUserId);
+  const threadId = buildDirectMessageThreadId(actorUserId, targetUserId);
+  const rootPath = `artifacts/${APP_ID}/realtime/directMessages`;
+  const threadRef = realtimeDb.ref(`${rootPath}/threads/${threadId}`);
+  const existing = await threadRef.get();
+  const timestamp = Date.now();
+  const metadata = buildThreadMetadata({ threadId, leftProfile: actor, rightProfile: target, timestamp });
+  const createdAt = existing.exists() ? Number(existing.child("createdAt").val() ?? timestamp) : timestamp;
+  const updates = {
+    [`threads/${threadId}/id`]: threadId,
+    [`threads/${threadId}/participantUids`]: metadata.participantUids,
+    [`threads/${threadId}/participantProfiles`]: metadata.participantProfiles,
+    [`threads/${threadId}/schemaVersion`]: metadata.schemaVersion,
+    [`threads/${threadId}/createdAt`]: createdAt,
+    [`threads/${threadId}/updatedAt`]: timestamp,
+    [`userThreads/${actorUserId}/${threadId}`]: { threadId, counterpartUid: targetUserId, updatedAt: timestamp },
+    [`userThreads/${targetUserId}/${threadId}`]: { threadId, counterpartUid: actorUserId, updatedAt: timestamp },
+  };
+  await realtimeDb.ref(rootPath).update(updates);
+  return { actor, target, threadId, rootPath, timestamp };
+}
+
 async function migrateLegacyConvoyPins() {
   const legacySnapshot = await publicCollection("mapPins").where("type", "==", "meet").get();
   for (const item of legacySnapshot.docs.slice(0, 50)) {
@@ -336,6 +383,37 @@ exports.requestFriendship = onCall(async (request) => {
   });
 
   return { ok: true, friendshipId, migrated: outcome === "migrated" };
+});
+
+exports.ensureDirectMessageThread = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const targetUserId = requireTargetUserId(request, actorUserId);
+  const state = await ensureDirectMessageThreadState(actorUserId, targetUserId);
+  return { ok: true, threadId: state.threadId };
+});
+
+exports.sendDirectMessage = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const targetUserId = requireTargetUserId(request, actorUserId);
+  let body;
+  try {
+    body = sanitizeMessageBody(request.data?.body);
+  } catch (error) {
+    throw new HttpsError("invalid-argument", error.message);
+  }
+  const state = await ensureDirectMessageThreadState(actorUserId, targetUserId);
+  const messageRef = realtimeDb.ref(`${state.rootPath}/threads/${state.threadId}/messages`).push();
+  const timestamp = Date.now();
+  const message = buildDirectMessage({ messageId: messageRef.key, senderProfile: state.actor, body, timestamp });
+  await realtimeDb.ref(state.rootPath).update({
+    [`threads/${state.threadId}/messages/${message.id}`]: message,
+    [`threads/${state.threadId}/lastMessage`]: message,
+    [`threads/${state.threadId}/updatedAt`]: timestamp,
+    [`threads/${state.threadId}/readBy/${actorUserId}`]: timestamp,
+    [`userThreads/${actorUserId}/${state.threadId}/updatedAt`]: timestamp,
+    [`userThreads/${targetUserId}/${state.threadId}/updatedAt`]: timestamp,
+  });
+  return { ok: true, threadId: state.threadId, messageId: message.id, createdAt: timestamp };
 });
 
 exports.respondFriendship = onCall(async (request) => {

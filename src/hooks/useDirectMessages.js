@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  saveFirebaseDirectMessage,
-  saveFirebasePresence,
+  ensureFirebaseDirectMessageThread,
+  initializeFirebasePresence,
+  isFirebaseMessagingRepositoryEnabled,
+  markFirebaseConversationRead,
+  saveFirebasePresenceState,
   saveFirebaseTypingState,
+  sendFirebaseDirectMessage,
   subscribeFirebaseDirectMessages,
   subscribeFirebasePresence,
   subscribeFirebaseTyping,
@@ -12,7 +16,6 @@ import {
   buildConversationId,
   buildConversationList,
   markConversationRead,
-  mergeConversations,
   normalizeConversations,
 } from "../utils/socialChat";
 
@@ -23,14 +26,15 @@ export function useDirectMessages({ user, setUser }) {
   const [firebaseConversations, setFirebaseConversations] = useState({});
   const [presenceMap, setPresenceMap] = useState({});
   const [typingMap, setTypingMap] = useState({});
+  const firebaseMessagingEnabled = isFirebaseMessagingRepositoryEnabled();
 
   const normalizedConversations = useMemo(() => {
     if (!user) {
       return {};
     }
 
-    return mergeConversations(normalizeConversations(user), firebaseConversations);
-  }, [firebaseConversations, user]);
+    return firebaseMessagingEnabled ? firebaseConversations : normalizeConversations(user);
+  }, [firebaseConversations, firebaseMessagingEnabled, user]);
   const allowedConversationPlates = useMemo(() => {
     const blockedPlates = new Set((user?.blockedDrivers ?? []).map((entry) => entry.plate));
     return new Set(
@@ -78,14 +82,14 @@ export function useDirectMessages({ user, setUser }) {
     let unsubscribe = () => {};
 
     async function bindRealtimeThreads() {
-      if (!user?.plate) {
+      if (!firebaseMessagingEnabled || !user?.firebaseUid) {
         if (!cancelled) {
           setFirebaseConversations({});
         }
         return;
       }
 
-      unsubscribe = await subscribeFirebaseDirectMessages(user.plate, (threads) => {
+      unsubscribe = await subscribeFirebaseDirectMessages((threads) => {
         if (!cancelled) {
           setFirebaseConversations(threads);
         }
@@ -98,13 +102,14 @@ export function useDirectMessages({ user, setUser }) {
       cancelled = true;
       unsubscribe();
     };
-  }, [user?.plate]);
+  }, [firebaseMessagingEnabled, user?.firebaseUid]);
 
   useEffect(() => {
     let cancelled = false;
     let unsubscribe = () => {};
 
     async function bindPresence() {
+      if (!firebaseMessagingEnabled) return;
       unsubscribe = await subscribeFirebasePresence(trackedPresencePlates, (presence) => {
         if (!cancelled) {
           setPresenceMap(presence);
@@ -118,14 +123,14 @@ export function useDirectMessages({ user, setUser }) {
       cancelled = true;
       unsubscribe();
     };
-  }, [trackedPresencePlates]);
+  }, [firebaseMessagingEnabled, trackedPresencePlates]);
 
   useEffect(() => {
     let cancelled = false;
     let unsubscribe = () => {};
 
     async function bindTyping() {
-      if (!activeConversationId) {
+      if (!firebaseMessagingEnabled || !activeConversationId) {
         if (!cancelled) {
           setTypingMap({});
         }
@@ -145,50 +150,37 @@ export function useDirectMessages({ user, setUser }) {
       cancelled = true;
       unsubscribe();
     };
-  }, [activeConversationId]);
+  }, [activeConversationId, firebaseMessagingEnabled]);
 
   useEffect(() => {
-    if (!user?.plate) {
+    if (!firebaseMessagingEnabled || !user?.plate || !user?.firebaseUid) {
       return undefined;
     }
 
-    let heartbeatId = null;
-
-    const publishPresence = (status) => {
-      void saveFirebasePresence(user.plate, {
-        status,
-        lastSeen: Date.now(),
-      });
-    };
+    let disconnectCleanup = () => {};
+    let cancelled = false;
+    const profile = { plate: user.plate };
+    void initializeFirebasePresence(profile).then((cleanup) => {
+      if (cancelled) cleanup();
+      else disconnectCleanup = cleanup;
+    });
 
     const handleVisibilityChange = () => {
-      publishPresence(typeof document !== "undefined" && document.hidden ? "away" : "online");
+      void saveFirebasePresenceState(profile, typeof document !== "undefined" && document.hidden ? "away" : "online");
     };
-    const handleBeforeUnload = () => {
-      publishPresence("offline");
-    };
-
-    publishPresence(typeof document !== "undefined" && document.hidden ? "away" : "online");
-    heartbeatId = window.setInterval(() => {
-      publishPresence(typeof document !== "undefined" && document.hidden ? "away" : "online");
-    }, 30000);
 
     if (typeof document !== "undefined") {
       document.addEventListener("visibilitychange", handleVisibilityChange);
     }
-    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      if (heartbeatId) {
-        window.clearInterval(heartbeatId);
-      }
+      cancelled = true;
       if (typeof document !== "undefined") {
         document.removeEventListener("visibilitychange", handleVisibilityChange);
       }
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      publishPresence("offline");
+      disconnectCleanup();
     };
-  }, [user?.plate]);
+  }, [firebaseMessagingEnabled, user?.firebaseUid, user?.plate]);
 
   const activeConversationCandidate = activeConversationId
     ? normalizedConversations[activeConversationId] ?? null
@@ -222,47 +214,60 @@ export function useDirectMessages({ user, setUser }) {
       return;
     }
 
-    setUser((current) => markConversationRead(current, activeConversationId, Number(lastForeignMessage.createdAt ?? Date.now())));
-  }, [activeConversation, activeConversationId, setUser, user?.plate]);
+    if (firebaseMessagingEnabled) {
+      void markFirebaseConversationRead(activeConversationId);
+    } else {
+      setUser((current) => markConversationRead(current, activeConversationId, Number(lastForeignMessage.createdAt ?? Date.now())));
+    }
+  }, [activeConversation, activeConversationId, firebaseMessagingEnabled, setUser, user?.plate]);
 
   useEffect(() => {
-    if (!user?.plate || !activeConversationId) {
+    if (!firebaseMessagingEnabled || !user?.plate || !activeConversationId) {
       return undefined;
     }
 
     const isTyping = Boolean(messageDraft.trim());
-    void saveFirebaseTypingState(activeConversationId, user.plate, {
-      status: isTyping ? "typing" : "idle",
-      updatedAt: Date.now(),
-    });
+    const profile = { plate: user.plate };
+    void saveFirebaseTypingState(activeConversationId, profile, isTyping ? "typing" : "idle");
 
     if (!isTyping) {
       return undefined;
     }
 
     const timeoutId = window.setTimeout(() => {
-      void saveFirebaseTypingState(activeConversationId, user.plate, {
-        status: "idle",
-        updatedAt: Date.now(),
-      });
+      void saveFirebaseTypingState(activeConversationId, profile, "idle");
     }, 2200);
 
     return () => window.clearTimeout(timeoutId);
-  }, [activeConversationId, messageDraft, user?.plate]);
+  }, [activeConversationId, firebaseMessagingEnabled, messageDraft, user?.plate]);
 
-  const openConversation = (friend) => {
+  const openConversation = async (friend) => {
     if (!(user.friends ?? []).some((entry) => entry.plate === friend?.plate)) {
       setChatFeedback("Sohbet acmak icin once arkadas olmalisiniz.");
       return false;
     }
-    const nextConversationId = buildConversationId(user.plate, friend.plate);
+    const targetUserId = friend.userId ?? friend.id;
+    let nextConversationId = buildConversationId(user.plate, friend.plate);
+    if (firebaseMessagingEnabled) {
+      if (!targetUserId) {
+        setChatFeedback("Surucu kimligi bulunamadi.");
+        return false;
+      }
+      try {
+        const result = await ensureFirebaseDirectMessageThread(targetUserId);
+        nextConversationId = result.threadId;
+      } catch (error) {
+        setChatFeedback(error instanceof Error ? error.message : "Sohbet acilamadi.");
+        return false;
+      }
+    }
     setActiveConversationId(nextConversationId);
-    setUser((current) => markConversationRead(current, nextConversationId));
+    if (!firebaseMessagingEnabled) setUser((current) => markConversationRead(current, nextConversationId));
     setChatFeedback(`${friend.fullName} ile sohbet hazir.`);
     return true;
   };
 
-  const sendMessage = (friend) => {
+  const sendMessage = async (friend) => {
     if (!friend || !messageDraft.trim() || !user) {
       return false;
     }
@@ -272,38 +277,26 @@ export function useDirectMessages({ user, setUser }) {
     }
 
     const trimmedMessage = messageDraft.trim();
-    const threadId = buildConversationId(user.plate, friend.plate);
-    const nextMessage = {
-      id: `msg-${Date.now()}`,
-      authorPlate: user.plate,
-      authorName: user.fullName,
-      body: trimmedMessage,
-      createdAt: Date.now(),
-    };
-
-    setUser((current) => appendDirectMessage(current, friend, trimmedMessage));
-    void saveFirebaseDirectMessage(
-      threadId,
-      [user.plate, friend.plate].sort((left, right) => left.localeCompare(right)),
-      [
-        {
-          plate: user.plate,
-          fullName: user.fullName,
-          model: user.model,
-          avatar: user.avatar ?? "",
-        },
-        {
-          plate: friend.plate,
-          fullName: friend.fullName,
-          model: friend.model,
-          avatar: friend.avatar ?? "",
-        },
-      ],
-      nextMessage,
-    );
+    const targetUserId = friend.userId ?? friend.id;
+    const threadId = firebaseMessagingEnabled ? null : buildConversationId(user.plate, friend.plate);
+    if (firebaseMessagingEnabled) {
+      if (!targetUserId) {
+        setChatFeedback("Surucu kimligi bulunamadi.");
+        return false;
+      }
+      try {
+        const result = await sendFirebaseDirectMessage(targetUserId, trimmedMessage);
+        setActiveConversationId(result.threadId);
+      } catch (error) {
+        setChatFeedback(error instanceof Error ? error.message : "Mesaj gonderilemedi.");
+        return false;
+      }
+    } else {
+      setUser((current) => appendDirectMessage(current, friend, trimmedMessage));
+    }
     setChatFeedback(`${friend.fullName} sohbetine yeni mesaj eklendi.`);
     setMessageDraft("");
-    setActiveConversationId(threadId);
+    if (!firebaseMessagingEnabled) setActiveConversationId(threadId);
     return true;
   };
 

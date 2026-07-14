@@ -9,7 +9,7 @@
             ".read": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous'",
             "$userId": {
               ".write": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $userId",
-              ".validate": "newData.hasChildren(['plate', 'status', 'lastSeen', 'updatedAt', 'firebaseUid']) && newData.child('firebaseUid').val() === auth.uid && newData.child('plate').isString() && newData.child('status').isString() && newData.child('lastSeen').isNumber() && newData.child('updatedAt').isNumber()"
+              ".validate": "newData.hasChildren(['plate', 'status', 'lastSeen', 'updatedAt', 'firebaseUid']) && newData.child('firebaseUid').val() === auth.uid && newData.child('plate').isString() && newData.child('plate').val().length <= 24 && (newData.child('status').val() === 'online' || newData.child('status').val() === 'away' || newData.child('status').val() === 'offline') && newData.child('lastSeen').isNumber() && newData.child('updatedAt').isNumber()"
             }
           },
           "telemetry": {
@@ -23,13 +23,25 @@
             "threads": {
               "$threadId": {
                 ".read": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && data.child('participantUids').child(auth.uid).val() === true",
-                ".write": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && newData.child('participantUids').child(auth.uid).val() === true && (!data.exists() || data.child('participantUids').child(auth.uid).val() === true)"
+                ".write": false,
+                "typing": {
+                  "$userId": {
+                    ".write": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $userId && root.child('artifacts').child($appId).child('realtime').child('directMessages').child('threads').child($threadId).child('participantUids').child(auth.uid).val() === true",
+                    ".validate": "!newData.exists() || (newData.hasChildren(['userId', 'firebaseUid', 'plate', 'status', 'updatedAt']) && newData.child('userId').val() === auth.uid && newData.child('firebaseUid').val() === auth.uid && newData.child('plate').isString() && newData.child('status').val() === 'typing' && newData.child('updatedAt').isNumber())"
+                  }
+                },
+                "readBy": {
+                  "$userId": {
+                    ".write": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $userId && root.child('artifacts').child($appId).child('realtime').child('directMessages').child('threads').child($threadId).child('participantUids').child(auth.uid).val() === true",
+                    ".validate": "newData.isNumber()"
+                  }
+                }
               }
             },
             "userThreads": {
               "$userId": {
                 ".read": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $userId",
-                ".write": "$appId === 'cruiser-app-prod' && auth != null && auth.token.firebase.sign_in_provider !== 'anonymous' && auth.uid === $userId"
+                ".write": false
               }
             }
           }

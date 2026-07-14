@@ -32,16 +32,24 @@ export {
   loadFirebaseWorldState,
   saveFirebaseActiveDriver,
   saveFirebaseCruiseJoin,
-  saveFirebaseDirectMessage,
-  saveFirebasePresence,
-  saveFirebaseTypingState,
   saveFirebaseMapPin,
   saveFirebaseUserProfile,
   saveFirebaseWashReview,
+} from "./firebaseCruiserRepository";
+
+export {
+  ensureFirebaseDirectMessageThread,
+  initializeFirebasePresence,
+  isFirebaseMessagingRepositoryEnabled,
+  markFirebaseConversationRead,
+  normalizeFirebaseMessageThread,
+  saveFirebasePresenceState,
+  saveFirebaseTypingState,
+  sendFirebaseDirectMessage,
   subscribeFirebaseDirectMessages,
   subscribeFirebasePresence,
   subscribeFirebaseTyping,
-} from "./firebaseCruiserRepository";
+} from "./firebaseMessagingRepository";
 
 export {
   blockFirebaseDriver,
