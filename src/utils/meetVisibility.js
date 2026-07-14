@@ -102,6 +102,19 @@ export function getConvoyAccessState(pin, user) {
     };
   }
 
+  if (typeof pin.backendCanViewDetails === "boolean") {
+    const canViewDetails = pin.backendCanViewDetails;
+    const canJoin = Boolean(pin.backendCanJoin);
+    return {
+      canViewCard: true,
+      canViewDetails,
+      canJoin,
+      isLocked: !canViewDetails,
+      reason: pin.backendAccessReason || (canViewDetails ? "" : "Bu konvoyun kesin konum, saat ve rota detaylari hesabina acik degil."),
+      isTrusted: canViewDetails || canJoin,
+    };
+  }
+
   const canViewBase = hasBaseVisibilityAccess(pin, user);
   const isHost = Boolean(user?.plate) && pin.createdByPlate === user.plate;
   const attendees = pin.attendees ?? [];

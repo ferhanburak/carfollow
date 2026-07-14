@@ -13,14 +13,22 @@ import {
   rateCruiseAttendee,
   updateConvoyAttendeeTripStatus,
   updateConvoyLifecycleStatus,
-  saveFirebaseCruiseJoin,
   saveFirebaseMapPin,
   addFirebaseMapSpotPhoto,
+  createFirebaseConvoy,
   createFirebaseMapNode,
+  inviteFirebaseConvoyMember,
   isFirebaseMapRepositoryEnabled,
+  loadFirebaseAccessibleConvoys,
+  mergeFirebaseConvoys,
+  rateFirebaseConvoyMember,
+  requestFirebaseConvoyJoin,
+  respondFirebaseConvoyJoin,
   submitFirebaseWashReview,
   subscribeFirebaseMapState,
   toggleFirebaseMapLike,
+  updateFirebaseConvoyLifecycle,
+  updateFirebaseConvoyTripStatus,
 } from "../repositories/cruiserRepository";
 import { getPinIcon } from "../constants/pins";
 import {
@@ -119,6 +127,12 @@ export function useMapPins({ initialWorld, user }) {
     return () => unsubscribe();
   }, [firebaseMapEnabled, user?.firebaseUid]);
 
+  const refreshFirebaseConvoys = async () => {
+    const convoys = await loadFirebaseAccessibleConvoys();
+    setMapPins((current) => mergeFirebaseConvoys(current, convoys));
+    return convoys;
+  };
+
   const likePin = async () => {
     if (!selectedPin) {
       return;
@@ -193,7 +207,7 @@ export function useMapPins({ initialWorld, user }) {
     setWashFeedback("Review added successfully.");
   };
 
-  const joinCruise = () => {
+  const joinCruise = async () => {
     if (!user || !selectedPin || selectedPin.type !== "meet") {
       return;
     }
@@ -204,6 +218,16 @@ export function useMapPins({ initialWorld, user }) {
       return;
     }
 
+    if (firebaseMapEnabled) {
+      try {
+        await requestFirebaseConvoyJoin(selectedPin.id);
+        await refreshFirebaseConvoys();
+        setConvoyFeedback(selectedPin.accessPolicy === "open" ? "Konvoya katilim onaylandi." : "Katilim istegin host onayina gonderildi.");
+      } catch (error) {
+        setConvoyFeedback(error instanceof Error ? error.message : "Katilim istegi kaydedilemedi.");
+      }
+      return;
+    }
     const attendee = createAttendeeRecord(user);
     let nextPin = null;
     setMapPins((current) => {
@@ -222,17 +246,25 @@ export function useMapPins({ initialWorld, user }) {
       setConvoyFeedback("Konvoya katilim onaylandi.");
     }
 
-    void saveFirebaseCruiseJoin(selectedPin.id, user.plate);
-    if (nextPin) {
-      void saveFirebaseMapPin(nextPin);
-    }
   };
 
-  const approveCruiseJoinRequest = (plate) => {
+  const approveCruiseJoinRequest = async (plate) => {
     if (!selectedPin || selectedPin.type !== "meet") {
       return;
     }
 
+    if (firebaseMapEnabled) {
+      const request = (selectedPin.pendingRequests ?? []).find((entry) => entry.plate === plate);
+      if (!request?.userId) return;
+      try {
+        await respondFirebaseConvoyJoin(selectedPin.id, request.userId, "approved");
+        await refreshFirebaseConvoys();
+        setConvoyFeedback(`${plate} konvoya kabul edildi.`);
+      } catch (error) {
+        setConvoyFeedback(error instanceof Error ? error.message : "Katilim istegi onaylanamadi.");
+      }
+      return;
+    }
     let nextPin = null;
     setMapPins((current) => {
       const nextPins = approveCruiseRequest(current, selectedPin.id, plate);
@@ -251,11 +283,23 @@ export function useMapPins({ initialWorld, user }) {
     }
   };
 
-  const declineCruiseJoinRequest = (plate) => {
+  const declineCruiseJoinRequest = async (plate) => {
     if (!selectedPin || selectedPin.type !== "meet") {
       return;
     }
 
+    if (firebaseMapEnabled) {
+      const request = (selectedPin.pendingRequests ?? []).find((entry) => entry.plate === plate);
+      if (!request?.userId) return;
+      try {
+        await respondFirebaseConvoyJoin(selectedPin.id, request.userId, "declined");
+        await refreshFirebaseConvoys();
+        setConvoyFeedback(`${plate} icin katilim istegi reddedildi.`);
+      } catch (error) {
+        setConvoyFeedback(error instanceof Error ? error.message : "Katilim istegi reddedilemedi.");
+      }
+      return;
+    }
     let nextPin = null;
     setMapPins((current) => {
       const nextPins = declineCruiseRequest(current, selectedPin.id, plate);
@@ -270,11 +314,21 @@ export function useMapPins({ initialWorld, user }) {
     }
   };
 
-  const inviteDriverToMeet = (pinId, profile) => {
+  const inviteDriverToMeet = async (pinId, profile) => {
     if (!profile) {
       return;
     }
 
+    if (firebaseMapEnabled) {
+      try {
+        await inviteFirebaseConvoyMember(pinId, profile.userId ?? profile.id);
+        await refreshFirebaseConvoys();
+        setConvoyFeedback(`${profile.fullName} aktif konvoya davet edildi.`);
+      } catch (error) {
+        setConvoyFeedback(error instanceof Error ? error.message : "Konvoy daveti gonderilemedi.");
+      }
+      return;
+    }
     let nextPin = null;
     setMapPins((current) => {
       const nextPins = inviteCruiseGuest(current, pinId, profile);
@@ -288,11 +342,23 @@ export function useMapPins({ initialWorld, user }) {
     }
   };
 
-  const rateAttendee = (plate, signal) => {
+  const rateAttendee = async (plate, signal) => {
     if (!selectedPin || selectedPin.type !== "meet") {
       return;
     }
 
+    if (firebaseMapEnabled) {
+      const attendee = (selectedPin.attendees ?? []).find((entry) => entry.plate === plate);
+      if (!attendee?.userId) return;
+      try {
+        await rateFirebaseConvoyMember(selectedPin.id, attendee.userId, signal);
+        await refreshFirebaseConvoys();
+        setConvoyFeedback(`${plate} icin surucu geri bildirimi kaydedildi.`);
+      } catch (error) {
+        setConvoyFeedback(error instanceof Error ? error.message : "Surucu geri bildirimi kaydedilemedi.");
+      }
+      return;
+    }
     let nextPin = null;
     setMapPins((current) => {
       const nextPins = rateCruiseAttendee(current, selectedPin.id, plate, signal);
@@ -305,11 +371,21 @@ export function useMapPins({ initialWorld, user }) {
     }
   };
 
-  const setConvoyLifecycleStatus = (lifecycleStatus) => {
+  const setConvoyLifecycleStatus = async (lifecycleStatus) => {
     if (!selectedPin || selectedPin.type !== "meet") {
       return;
     }
 
+    if (firebaseMapEnabled) {
+      try {
+        await updateFirebaseConvoyLifecycle(selectedPin.id, lifecycleStatus);
+        await refreshFirebaseConvoys();
+        setConvoyFeedback(`Konvoy durumu "${lifecycleStatus}" olarak guncellendi.`);
+      } catch (error) {
+        setConvoyFeedback(error instanceof Error ? error.message : "Konvoy durumu guncellenemedi.");
+      }
+      return;
+    }
     let nextPin = null;
     setMapPins((current) => {
       const nextPins = updateConvoyLifecycleStatus(current, selectedPin.id, lifecycleStatus);
@@ -323,11 +399,21 @@ export function useMapPins({ initialWorld, user }) {
     }
   };
 
-  const setAttendeeTripStatus = (plate, tripStatus) => {
+  const setAttendeeTripStatus = async (plate, tripStatus) => {
     if (!selectedPin || selectedPin.type !== "meet") {
       return;
     }
 
+    if (firebaseMapEnabled) {
+      try {
+        await updateFirebaseConvoyTripStatus(selectedPin.id, tripStatus);
+        await refreshFirebaseConvoys();
+        setConvoyFeedback(`${plate} durumu "${tripStatus}" olarak guncellendi.`);
+      } catch (error) {
+        setConvoyFeedback(error instanceof Error ? error.message : "Surus durumu guncellenemedi.");
+      }
+      return;
+    }
     let nextPin = null;
     setMapPins((current) => {
       const nextPins = updateConvoyAttendeeTripStatus(current, selectedPin.id, plate, tripStatus);
@@ -470,6 +556,7 @@ export function useMapPins({ initialWorld, user }) {
         invitedGuests: (user.friends ?? [])
           .filter((friend) => (mapPinForm.invitedPlates ?? []).includes(friend.plate))
           .map((friend) => ({
+            userId: friend.userId ?? friend.id,
             plate: friend.plate,
             fullName: friend.fullName,
             model: friend.model,
@@ -502,11 +589,21 @@ export function useMapPins({ initialWorld, user }) {
       };
     }
 
-    if (firebaseMapEnabled && newPin.type !== "meet") {
+    if (firebaseMapEnabled) {
       try {
-        const result = await createFirebaseMapNode(newPin);
-        setSelectedPinId(result.pinId);
-        setMapPinForm(createMapPinForm(newPin));
+        const result = newPin.type === "meet" ? await createFirebaseConvoy(newPin) : await createFirebaseMapNode(newPin);
+        const createdId = result.convoyId ?? result.pinId;
+        if (newPin.type === "meet") await refreshFirebaseConvoys();
+        setSelectedPinId(createdId);
+        setMapPinForm({
+          ...createMapPinForm(newPin),
+          type: newPin.type,
+          lat: newPin.lat,
+          lng: newPin.lng,
+          routePoints: [],
+        });
+        setMapDraftLocation({ lat: newPin.lat, lng: newPin.lng, source: "created" });
+        setMapPickMode("node");
         setMapPinErrors({});
         setMapPinFeedback(`${newPin.name} added to the live map.`);
       } catch (error) {

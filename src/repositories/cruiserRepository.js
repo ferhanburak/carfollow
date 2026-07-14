@@ -87,11 +87,20 @@ export {
 export {
   addFirebaseMapSpotPhoto,
   buildFirebaseMapState,
+  createFirebaseConvoy,
   createFirebaseMapNode,
+  inviteFirebaseConvoyMember,
   isFirebaseMapRepositoryEnabled,
+  loadFirebaseAccessibleConvoys,
+  mergeFirebaseConvoys,
+  rateFirebaseConvoyMember,
+  requestFirebaseConvoyJoin,
+  respondFirebaseConvoyJoin,
   submitFirebaseWashReview,
   subscribeFirebaseMapState,
   toggleFirebaseMapLike,
+  updateFirebaseConvoyLifecycle,
+  updateFirebaseConvoyTripStatus,
 } from "./firebaseMapRepository";
 
 export {

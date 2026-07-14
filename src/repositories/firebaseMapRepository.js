@@ -20,6 +20,10 @@ export function buildFirebaseMapState({ pins = [], photos = [], reviews = [] }) 
   };
 }
 
+export function mergeFirebaseConvoys(pins, convoys) {
+  return [...pins.filter((pin) => pin.type !== "meet"), ...convoys];
+}
+
 export function isFirebaseMapRepositoryEnabled() { return isFirebaseModeEnabled(); }
 
 export async function subscribeFirebaseMapState(onStateChange, onError = () => {}) {
@@ -29,10 +33,22 @@ export async function subscribeFirebaseMapState(onStateChange, onError = () => {
   const appId = resolveAppId();
   const snapshots = { pins: [], photos: [], reviews: [] };
   const loaded = { pins: false, photos: false, reviews: false };
-  const emit = () => { if (Object.values(loaded).every(Boolean)) onStateChange(buildFirebaseMapState(snapshots)); };
+  let refreshSequence = 0;
+  const emit = async () => {
+    if (!Object.values(loaded).every(Boolean)) return;
+    const sequence = ++refreshSequence;
+    try {
+      const convoys = await loadFirebaseAccessibleConvoys();
+      if (sequence !== refreshSequence) return;
+      onStateChange(buildFirebaseMapState({ ...snapshots, pins: mergeFirebaseConvoys(snapshots.pins, convoys) }));
+    } catch (error) {
+      onError(error);
+      onStateChange(buildFirebaseMapState(snapshots));
+    }
+  };
   const subscribe = (key, collectionName) => onSnapshot(
     collection(services.firestore, publicCollectionPath(collectionName, appId)),
-    (snapshot) => { snapshots[key] = toItems(snapshot); loaded[key] = true; emit(); }, onError,
+    (snapshot) => { snapshots[key] = toItems(snapshot); loaded[key] = true; void emit(); }, onError,
   );
   const unsubscribers = [
     subscribe("pins", PUBLIC_COLLECTIONS.mapPins),
@@ -53,6 +69,18 @@ async function callMapFunction(name, data) {
 export const createFirebaseMapNode = (pin) => callMapFunction("createMapNode", { pin });
 export const submitFirebaseWashReview = (review) => callMapFunction("submitWashReview", review);
 export const toggleFirebaseMapLike = (data) => callMapFunction("toggleMapLike", data);
+export const createFirebaseConvoy = (pin) => callMapFunction("createConvoy", { pin });
+export const requestFirebaseConvoyJoin = (convoyId) => callMapFunction("requestConvoyJoin", { convoyId });
+export const respondFirebaseConvoyJoin = (convoyId, memberUserId, decision) => callMapFunction("respondConvoyJoinRequest", { convoyId, memberUserId, decision });
+export const inviteFirebaseConvoyMember = (convoyId, targetUserId) => callMapFunction("inviteConvoyMember", { convoyId, targetUserId });
+export const updateFirebaseConvoyLifecycle = (convoyId, lifecycleStatus) => callMapFunction("updateConvoyLifecycle", { convoyId, lifecycleStatus });
+export const updateFirebaseConvoyTripStatus = (convoyId, tripStatus) => callMapFunction("updateConvoyTripStatus", { convoyId, tripStatus });
+export const rateFirebaseConvoyMember = (convoyId, targetUserId, signal) => callMapFunction("rateConvoyMember", { convoyId, targetUserId, signal });
+
+export async function loadFirebaseAccessibleConvoys() {
+  const response = await callMapFunction("listAccessibleConvoys", {});
+  return Array.isArray(response?.convoys) ? response.convoys : [];
+}
 
 export async function uploadFirebaseMapSpotPhoto(pinId, file) {
   const services = await getFirebaseServices();

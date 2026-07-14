@@ -591,7 +591,7 @@ describe("Firestore security rules", { concurrency: false }, () => {
     }));
   });
 
-  it("keeps spot, wash, reviews, photos, and likes callable-only while preserving legacy meet drafts", async () => {
+  it("keeps every map and convoy mutation callable-only", async () => {
     const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
     const basePin = {
       id: "node-1", name: "Test node", lat: 39.9, lng: 32.8,
@@ -599,10 +599,13 @@ describe("Firestore security rules", { concurrency: false }, () => {
     };
     await assertFails(setDoc(doc(ownerDb, publicPath("mapPins", "node-1")), { ...basePin, type: "spot" }));
     await assertFails(setDoc(doc(ownerDb, publicPath("mapPins", "wash-1")), { ...basePin, id: "wash-1", type: "wash" }));
-    await assertSucceeds(setDoc(doc(ownerDb, publicPath("mapPins", "meet-1")), { ...basePin, id: "meet-1", type: "meet" }));
+    await assertFails(setDoc(doc(ownerDb, publicPath("mapPins", "meet-1")), { ...basePin, id: "meet-1", type: "meet" }));
     await assertFails(setDoc(doc(ownerDb, publicPath("washReviews", "wash-1__owner")), { pinId: "wash-1", userId: OWNER_ID }));
     await assertFails(setDoc(doc(ownerDb, publicPath("mapSpotPhotos", "photo-1")), { pinId: "node-1", userId: OWNER_ID }));
     await assertFails(setDoc(doc(ownerDb, publicPath("mapLikes", "like-1")), { pinId: "node-1", userId: OWNER_ID }));
+    await assertFails(setDoc(doc(ownerDb, publicPath("convoys", "convoy-1")), { hostUserId: OWNER_ID, route: "private" }));
+    await assertFails(setDoc(doc(ownerDb, publicPath("convoyMembers", "convoy-1__owner")), { convoyId: "convoy-1", userId: OWNER_ID }));
+    await assertFails(getDoc(doc(ownerDb, publicPath("convoys", "convoy-1"))));
   });
 });
 

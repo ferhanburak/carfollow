@@ -5,6 +5,7 @@ export const PUBLIC_COLLECTIONS = Object.freeze({
   clanMembers: "clanMembers",
   clanInvites: "clanInvites",
   convoyMembers: "convoyMembers",
+  convoyRatings: "convoyRatings",
   convoys: "convoys",
   cruiseAttendees: "cruiseAttendees",
   drivers: "drivers",

@@ -35,6 +35,17 @@ const {
   buildWashRating,
   buildWashReviewDocument,
 } = require("./map");
+const {
+  LIFECYCLE_STATUSES,
+  TRIP_STATUSES,
+  buildConvoyDocument,
+  buildConvoyMemberDocument,
+  buildPublicMapSummary,
+  canSeeConvoy,
+  meetsTrust,
+  presentConvoy,
+  projectDriver,
+} = require("./convoy");
 
 admin.initializeApp();
 
@@ -244,6 +255,39 @@ function assertConvoyTrust(convoy, requester) {
   }
 }
 
+async function migrateLegacyConvoyPins() {
+  const legacySnapshot = await publicCollection("mapPins").where("type", "==", "meet").get();
+  for (const item of legacySnapshot.docs.slice(0, 50)) {
+    const legacy = { id: item.id, ...item.data() };
+    const convoyRef = publicDocument("convoys", item.id);
+    const existing = await convoyRef.get();
+    if (existing.exists) {
+      if (typeof legacy.backendCanViewDetails === "boolean") continue;
+      if (existing.data().visibility === "public") await item.ref.set(buildPublicMapSummary(existing.data()));
+      else await item.ref.delete();
+      continue;
+    }
+    if (!legacy.createdByUid) {
+      await item.ref.delete();
+      continue;
+    }
+    try {
+      const host = await getUserProfile(legacy.createdByUid);
+      const timestamp = admin.firestore.FieldValue.serverTimestamp();
+      const convoy = buildConvoyDocument({ convoyId: item.id, pin: legacy, host, invitedProfiles: [], timestamp });
+      const batch = db.batch();
+      batch.set(convoyRef, convoy);
+      batch.set(publicDocument("convoyMembers", buildScopedMemberId(convoy.id, legacy.createdByUid)), buildConvoyMemberDocument({ convoy, profile: host, timestamp }));
+      if (convoy.visibility === "public") batch.set(item.ref, buildPublicMapSummary(convoy));
+      else batch.delete(item.ref);
+      await batch.commit();
+    } catch (_error) {
+      // Malformed legacy events are removed so they cannot leak route details.
+      await item.ref.delete();
+    }
+  }
+}
+
 exports.requestFriendship = onCall(async (request) => {
   const requesterUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, requesterUserId);
@@ -407,6 +451,60 @@ exports.unblockDriver = onCall(async (request) => {
   return { ok: true, targetUserId };
 });
 
+exports.createConvoy = onCall(async (request) => {
+  const hostUserId = requireAuth(request);
+  const host = await getUserProfile(hostUserId);
+  const pin = request.data?.pin ?? request.data;
+  const inviteUserIds = Array.from(new Set((pin?.invitedGuests ?? []).map((guest) => String(guest?.userId ?? "")).filter(Boolean))).slice(0, 20);
+  const inviteProfiles = [];
+  for (const targetUserId of inviteUserIds) {
+    const friendship = await friendshipDocument(hostUserId, targetUserId).get();
+    if (friendship.exists && friendship.data().status === "accepted") inviteProfiles.push(await getUserProfile(targetUserId));
+  }
+  const convoyRef = publicCollection("convoys").doc();
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+  let convoy;
+  try {
+    convoy = buildConvoyDocument({ convoyId: convoyRef.id, pin, host, invitedProfiles: inviteProfiles, timestamp });
+  } catch (error) {
+    throw new HttpsError("invalid-argument", error.message);
+  }
+  const batch = db.batch();
+  batch.set(convoyRef, convoy);
+  batch.set(publicDocument("convoyMembers", buildScopedMemberId(convoy.id, hostUserId)), buildConvoyMemberDocument({ convoy, profile: host, timestamp }));
+  if (convoy.visibility === "public") batch.set(publicDocument("mapPins", convoy.id), buildPublicMapSummary(convoy));
+  await batch.commit();
+  return { ok: true, convoyId: convoy.id };
+});
+
+exports.listAccessibleConvoys = onCall(async (request) => {
+  const userId = requireAuth(request);
+  await migrateLegacyConvoyPins();
+  const profile = await getUserProfile(userId);
+  const [convoysSnapshot, membersSnapshot, friendshipsSnapshot] = await Promise.all([
+    publicCollection("convoys").get(),
+    publicCollection("convoyMembers").get(),
+    publicCollection("friendships").where("participantIds", "array-contains", userId).get(),
+  ]);
+  const friendUserIds = new Set(friendshipsSnapshot.docs
+    .filter((item) => item.data().status === "accepted")
+    .flatMap((item) => item.data().participantIds ?? [])
+    .filter((id) => id !== userId));
+  const membersByConvoy = new Map();
+  membersSnapshot.docs.forEach((item) => {
+    const member = item.data();
+    membersByConvoy.set(member.convoyId, [...(membersByConvoy.get(member.convoyId) ?? []), member]);
+  });
+  const convoys = convoysSnapshot.docs.map((item) => ({ id: item.id, ...item.data() })).flatMap((convoy) => {
+    const members = membersByConvoy.get(convoy.id) ?? [];
+    const membership = members.find((member) => member.userId === userId) ?? null;
+    return canSeeConvoy(convoy, profile, friendUserIds, membership)
+      ? [presentConvoy(convoy, profile, membership, members)]
+      : [];
+  });
+  return { ok: true, convoys };
+});
+
 exports.requestConvoyJoin = onCall(async (request) => {
   const requesterUserId = requireAuth(request);
   const { convoyId } = request.data ?? {};
@@ -427,24 +525,24 @@ exports.requestConvoyJoin = onCall(async (request) => {
     if (!convoySnapshot.exists) {
       throw new HttpsError("not-found", "Convoy not found.");
     }
-    if (existingMember.exists) {
+    if (existingMember.exists && ["approved", "pending"].includes(existingMember.data().membershipStatus)) {
       throw new HttpsError("already-exists", "User is already part of this convoy flow.");
     }
 
     const convoy = convoySnapshot.data();
+    if (convoy.lifecycleStatus !== "planning") throw new HttpsError("failed-precondition", "This convoy no longer accepts drivers.");
+    if (Number(convoy.approvedCount ?? 0) >= Number(convoy.capacity ?? 0)) throw new HttpsError("resource-exhausted", "Convoy capacity is full.");
+    const friendSnapshot = await transaction.get(friendshipDocument(requesterUserId, convoy.hostUserId));
+    const friendIds = new Set(friendSnapshot.exists && friendSnapshot.data().status === "accepted" ? [convoy.hostUserId] : []);
+    if (!canSeeConvoy(convoy, requester, friendIds, null)) throw new HttpsError("permission-denied", "This convoy is not visible to your account.");
     assertConvoyTrust(convoy, requester);
-    transaction.set(memberRef, {
-      convoyId,
-      userId: requesterUserId,
-      plate: requester.plate ?? "",
-      fullName: requester.fullName ?? "",
-      status: convoy.accessPolicy === "open" ? "approved" : "pending",
-      tripStatus: "ready",
-      scoreSnapshot: Number(requester.driverScore ?? 0),
-      harmonyVotesSnapshot: Number(requester.harmonyVotes ?? 0),
-      alertVotesSnapshot: Number(requester.alertVotes ?? 0),
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    const invited = (convoy.invitedUserIds ?? []).includes(requesterUserId);
+    const status = invited || convoy.accessPolicy === "open" ? "approved" : "pending";
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    transaction.set(memberRef, buildConvoyMemberDocument({ convoy, profile: requester, status, timestamp }));
+    transaction.update(convoyRef, {
+      [status === "approved" ? "approvedCount" : "pendingCount"]: admin.firestore.FieldValue.increment(1),
+      updatedAt: timestamp,
     });
   });
 
@@ -473,18 +571,116 @@ exports.respondConvoyJoinRequest = onCall(async (request) => {
     if (convoySnapshot.data().hostUserId !== actorUserId) {
       throw new HttpsError("permission-denied", "Only the convoy host can moderate requests.");
     }
-    if (!memberSnapshot.exists) {
+    if (!memberSnapshot.exists || memberSnapshot.data().membershipStatus !== "pending") {
       throw new HttpsError("not-found", "Member request not found.");
     }
-
-    transaction.update(memberRef, {
-      status: decision,
-      reviewedByUserId: actorUserId,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    const convoy = convoySnapshot.data();
+    if (decision === "approved" && Number(convoy.approvedCount ?? 0) >= Number(convoy.capacity ?? 0)) {
+      throw new HttpsError("resource-exhausted", "Convoy capacity is full.");
+    }
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    if (decision === "declined") transaction.delete(memberRef);
+    else transaction.update(memberRef, { membershipStatus: "approved", reviewedByUserId: actorUserId, updatedAt: timestamp });
+    transaction.update(convoyRef, {
+      pendingCount: admin.firestore.FieldValue.increment(-1),
+      ...(decision === "approved" ? { approvedCount: admin.firestore.FieldValue.increment(1) } : {}),
+      updatedAt: timestamp,
     });
   });
 
   return { ok: true, convoyId, memberUserId, decision };
+});
+
+exports.inviteConvoyMember = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const { convoyId, targetUserId } = request.data ?? {};
+  if (!convoyId || !targetUserId || targetUserId === actorUserId) throw new HttpsError("invalid-argument", "A valid convoy and driver are required.");
+  const [target, friendship] = await Promise.all([getUserProfile(targetUserId), friendshipDocument(actorUserId, targetUserId).get()]);
+  if (!friendship.exists || friendship.data().status !== "accepted") throw new HttpsError("permission-denied", "Only friends can be invited to a convoy.");
+  const convoyRef = publicDocument("convoys", convoyId);
+  await db.runTransaction(async (transaction) => {
+    const convoySnapshot = await transaction.get(convoyRef);
+    const convoy = requireSnapshot(convoySnapshot, "not-found", "Convoy not found.");
+    if (convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can invite drivers.");
+    if (convoy.lifecycleStatus !== "planning") throw new HttpsError("failed-precondition", "Invites are closed for this convoy.");
+    if ((convoy.invitedUserIds ?? []).includes(targetUserId)) return;
+    transaction.update(convoyRef, {
+      invitedUserIds: admin.firestore.FieldValue.arrayUnion(targetUserId),
+      invitedGuests: [...(convoy.invitedGuests ?? []), projectDriver(target)],
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+  return { ok: true, convoyId, targetUserId };
+});
+
+exports.updateConvoyLifecycle = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const { convoyId, lifecycleStatus } = request.data ?? {};
+  if (!convoyId || !LIFECYCLE_STATUSES.includes(lifecycleStatus)) throw new HttpsError("invalid-argument", "A valid convoy status is required.");
+  const convoyRef = publicDocument("convoys", convoyId);
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(convoyRef);
+    const convoy = requireSnapshot(snapshot, "not-found", "Convoy not found.");
+    if (convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can update convoy status.");
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    transaction.update(convoyRef, { lifecycleStatus, updatedAt: timestamp });
+    if (convoy.visibility === "public") transaction.set(publicDocument("mapPins", convoyId), buildPublicMapSummary({ ...convoy, lifecycleStatus, updatedAt: timestamp }), { merge: true });
+  });
+  return { ok: true, convoyId, lifecycleStatus };
+});
+
+exports.updateConvoyTripStatus = onCall(async (request) => {
+  const userId = requireAuth(request);
+  const { convoyId, tripStatus } = request.data ?? {};
+  if (!convoyId || !TRIP_STATUSES.includes(tripStatus)) throw new HttpsError("invalid-argument", "A valid trip status is required.");
+  const memberRef = publicDocument("convoyMembers", buildScopedMemberId(convoyId, userId));
+  const member = requireSnapshot(await memberRef.get(), "not-found", "Convoy membership not found.");
+  if (member.membershipStatus !== "approved") throw new HttpsError("permission-denied", "Only approved convoy members can update trip status.");
+  await memberRef.update({ tripStatus, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  return { ok: true, convoyId, tripStatus };
+});
+
+exports.rateConvoyMember = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const { convoyId, targetUserId, signal } = request.data ?? {};
+  if (!convoyId || !targetUserId || targetUserId === actorUserId || !["harmony", "alert"].includes(signal)) {
+    throw new HttpsError("invalid-argument", "A valid convoy rating is required.");
+  }
+  const convoyRef = publicDocument("convoys", convoyId);
+  const actorMemberRef = publicDocument("convoyMembers", buildScopedMemberId(convoyId, actorUserId));
+  const targetMemberRef = publicDocument("convoyMembers", buildScopedMemberId(convoyId, targetUserId));
+  const ratingRef = publicDocument("convoyRatings", `${convoyId}__${actorUserId}__${targetUserId}`);
+  const targetPrivateRef = privateUserDocument(targetUserId, "profile", "current");
+  const targetPublicRef = publicDocument("publicProfiles", targetUserId);
+  await db.runTransaction(async (transaction) => {
+    const [convoySnapshot, actorMember, targetMember, existingRating, targetProfileSnapshot] = await Promise.all([
+      transaction.get(convoyRef), transaction.get(actorMemberRef), transaction.get(targetMemberRef), transaction.get(ratingRef), transaction.get(targetPrivateRef),
+    ]);
+    const convoy = requireSnapshot(convoySnapshot, "not-found", "Convoy not found.");
+    if (convoy.lifecycleStatus !== "completed") throw new HttpsError("failed-precondition", "Ratings open after the convoy is completed.");
+    if (!actorMember.exists || actorMember.data().membershipStatus !== "approved" || !targetMember.exists || targetMember.data().membershipStatus !== "approved") {
+      throw new HttpsError("permission-denied", "Only approved participants can rate each other.");
+    }
+    if (existingRating.exists) throw new HttpsError("already-exists", "You already rated this driver for this convoy.");
+    const profile = requireSnapshot(targetProfileSnapshot, "not-found", "Driver profile not found.");
+    const scoreDelta = signal === "harmony" ? 3 : -8;
+    const nextScore = Math.min(100, Math.max(0, Number(profile.driverScore ?? 0) + scoreDelta));
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const reputationPatch = {
+      driverScore: nextScore,
+      harmonyVotes: Number(profile.harmonyVotes ?? 0) + (signal === "harmony" ? 1 : 0),
+      alertVotes: Number(profile.alertVotes ?? 0) + (signal === "alert" ? 1 : 0),
+      updatedAt: timestamp,
+    };
+    const standing = reputationPatch.alertVotes > 2 || nextScore < 55
+      ? "Watchlist"
+      : reputationPatch.harmonyVotes >= 5 || nextScore >= 85 ? "Uyumlu" : "Convoy Ready";
+    transaction.set(ratingRef, { id: ratingRef.id, convoyId, actorUserId, targetUserId, signal, createdAt: timestamp });
+    transaction.set(targetPrivateRef, reputationPatch, { merge: true });
+    transaction.set(targetPublicRef, reputationPatch, { merge: true });
+    transaction.update(targetMemberRef, { score: nextScore, status: standing, ...reputationPatch });
+  });
+  return { ok: true, convoyId, targetUserId, signal };
 });
 
 exports.createClan = onCall(async (request) => {

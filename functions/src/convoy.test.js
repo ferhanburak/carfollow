@@ -1,0 +1,52 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const {
+  buildConvoyDocument,
+  buildConvoyMemberDocument,
+  buildPublicMapSummary,
+  canSeeConvoy,
+  presentConvoy,
+} = require("./convoy");
+
+const host = { id: "host", plate: "06 HOST 06", fullName: "Host", clanId: "clan-1", clan: "Apex", driverScore: 90, harmonyVotes: 8 };
+const guest = { id: "guest", plate: "34 GUEST 34", fullName: "Guest", driverScore: 80, harmonyVotes: 6, alertVotes: 0 };
+
+function createConvoy(overrides = {}) {
+  return buildConvoyDocument({
+    convoyId: "convoy-1", host, invitedProfiles: [], timestamp: "now",
+    pin: { name: "Night Run", lat: 39.9, lng: 32.8, route: "Ankara route", routePath: [], time: "22:30", capacity: 8, visibility: "public", accessPolicy: "request", detailVisibility: "trusted", minDriverScore: 75, minHarmonyVotes: 5, maxAlertVotes: 2, ...overrides },
+  });
+}
+
+test("restricted public summary removes exact route and rounds coordinates", () => {
+  const summary = buildPublicMapSummary(createConvoy());
+  assert.equal(summary.route, "Restricted route");
+  assert.equal(summary.time, "Restricted");
+  assert.equal(summary.lat, 40);
+  assert.equal(summary.backendCanViewDetails, false);
+});
+
+test("trusted visible driver receives exact details while low-score driver receives a locked projection", () => {
+  const convoy = createConvoy();
+  const trusted = presentConvoy(convoy, guest, null, []);
+  const locked = presentConvoy(convoy, { ...guest, id: "low", driverScore: 40 }, null, []);
+  assert.equal(trusted.route, "Ankara route");
+  assert.equal(trusted.backendCanJoin, true);
+  assert.equal(locked.route, "Restricted route");
+  assert.equal(locked.backendCanJoin, false);
+});
+
+test("friends and clan visibility are evaluated from server-owned relationships", () => {
+  const friendsConvoy = createConvoy({ visibility: "friends" });
+  const clanConvoy = createConvoy({ visibility: "clan" });
+  assert.equal(canSeeConvoy(friendsConvoy, guest, new Set(["host"])), true);
+  assert.equal(canSeeConvoy(friendsConvoy, guest, new Set()), false);
+  assert.equal(canSeeConvoy(clanConvoy, { ...guest, clanId: "clan-1" }, new Set()), true);
+});
+
+test("member documents preserve identity and reputation snapshots", () => {
+  const member = buildConvoyMemberDocument({ convoy: createConvoy(), profile: guest, status: "pending", timestamp: "now" });
+  assert.equal(member.id, "convoy-1__guest");
+  assert.equal(member.membershipStatus, "pending");
+  assert.equal(member.scoreSnapshot, 80);
+});

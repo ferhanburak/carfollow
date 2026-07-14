@@ -454,19 +454,7 @@ service cloud.firestore {
 
     match /artifacts/{appId}/public/data/mapPins/{documentId} {
       allow read: if isKnownApp(appId) && isSignedIn();
-      // Convoys are still migrated in Stage 7. Spots and washes are callable-only.
-      allow create: if isKnownApp(appId) &&
-        isSignedIn() &&
-        request.resource.data.type == 'meet' &&
-        request.resource.data.id == documentId &&
-        request.resource.data.createdByUid == request.auth.uid;
-      allow update: if isKnownApp(appId) &&
-        isSignedIn() &&
-        resource.data.type == 'meet' &&
-        request.resource.data.type == 'meet' &&
-        resource.data.createdByUid == request.auth.uid &&
-        request.resource.data.createdByUid == resource.data.createdByUid;
-      allow delete: if false;
+      allow write: if false;
     }
 
     match /artifacts/{appId}/public/data/washReviews/{documentId} {
@@ -485,14 +473,21 @@ service cloud.firestore {
     }
 
     match /artifacts/{appId}/public/data/cruiseAttendees/{documentId} {
-      allow read: if isKnownApp(appId) && isSignedIn();
-      allow create, update: if isKnownApp(appId) &&
-        isSignedIn() &&
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.pinId is string &&
-        request.resource.data.plate is string &&
-        request.resource.data.joinedAt is timestamp;
-      allow delete: if false;
+      allow read, write: if false;
+    }
+
+    // Exact convoy details, memberships and ratings are projected only through
+    // callable Functions so restricted routes cannot be queried from clients.
+    match /artifacts/{appId}/public/data/convoys/{documentId} {
+      allow read, write: if false;
+    }
+
+    match /artifacts/{appId}/public/data/convoyMembers/{documentId} {
+      allow read, write: if false;
+    }
+
+    match /artifacts/{appId}/public/data/convoyRatings/{documentId} {
+      allow read, write: if false;
     }
 
     match /artifacts/{appId}/public/data/friendships/{documentId} {
@@ -517,7 +512,7 @@ service cloud.firestore {
     match /artifacts/{appId}/public/data/{collectionName}/{documentId} {
       allow read: if isKnownApp(appId) &&
         isSignedIn() &&
-        collectionName in ['clans', 'drivers', 'convoys'];
+        collectionName in ['clans', 'drivers'];
       allow write: if false;
     }
 
