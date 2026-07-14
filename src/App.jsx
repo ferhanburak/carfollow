@@ -74,6 +74,7 @@ function App() {
     chatFeedback,
     clanFeedback,
     clanForm,
+    clanPendingKey,
     clans,
     clearDraftRoute,
     convoyFeedback,
@@ -81,6 +82,7 @@ function App() {
     createNewClan,
     createPassportExport,
     currentClan,
+    currentClanMembers,
     declineCruiseJoinRequest,
     declineFriendRequest,
     declineIncomingClanInvite,
@@ -101,6 +103,7 @@ function App() {
     isDriving,
     individualLeaderboard,
     inviteDriverToMeet,
+    leaveCurrentClan,
     joinCruise,
     likeGalleryImage,
     likePin,
@@ -128,6 +131,7 @@ function App() {
     removeLastDraftRoutePoint,
     requestFriend,
     removeFriendship,
+    removeClanMember,
     resetSessionView,
     revokeClanInvite,
     safeUser,
@@ -170,7 +174,9 @@ function App() {
     washFeedback,
     washForm,
     inviteFriendToClan,
+    transferClanOwnership,
     unblockDriver,
+    updateClanMemberRole,
     withdrawFriendRequest,
   } = useCruiserWorld(user, setUser, setFuelForm);
 
@@ -354,10 +360,12 @@ function App() {
                 chatFeedback={chatFeedback}
                 clanFeedback={clanFeedback}
                 clanForm={clanForm}
+                clanPendingKey={clanPendingKey}
                 clans={clans}
                 conversationList={conversationList}
                 createNewClan={createNewClan}
                 currentClan={currentClan}
+                currentClanMembers={currentClanMembers}
                 declineFriendRequest={declineFriendRequest}
                 declineIncomingClanInvite={declineIncomingClanInvite}
                 drivers={drivers}
@@ -365,6 +373,7 @@ function App() {
                 friendSearchResults={friendSearchResults}
                 hostableConvoys={hostableConvoys}
                 inviteDriverToMeet={inviteDriverToMeet}
+                leaveCurrentClan={leaveCurrentClan}
                 messageDraft={messageDraft}
                 onClanFormChange={setClanForm}
                 onFriendSearchChange={setFriendSearchQuery}
@@ -377,13 +386,16 @@ function App() {
                 driverStatsStatus={driverStatsStatus}
                 requestFriend={requestFriend}
                 removeFriendship={removeFriendship}
+                removeClanMember={removeClanMember}
                 revokeClanInvite={revokeClanInvite}
                 sendMessage={sendMessage}
                 socialFeedback={socialFeedback}
                 socialPendingKey={socialPendingKey}
                 totalUnreadCount={totalUnreadCount}
+                transferClanOwnership={transferClanOwnership}
                 user={safeUser ?? user}
                 unblockDriver={unblockDriver}
+                updateClanMemberRole={updateClanMemberRole}
                 withdrawFriendRequest={withdrawFriendRequest}
                 mode={activeTab === "leaderboard" ? "leaderboard" : "social"}
               />

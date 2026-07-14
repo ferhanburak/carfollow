@@ -331,6 +331,68 @@ describe("Firestore security rules", { concurrency: false }, () => {
     }));
   });
 
+  it("allows scoped clan reads but blocks every direct clan mutation", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+    const otherDb = testEnvironment.authenticatedContext(OTHER_ID).firestore();
+    const strangerDb = testEnvironment.authenticatedContext(STRANGER_ID).firestore();
+    const clanId = "clan-owner";
+    const clanPath = publicPath("clans", clanId);
+    const memberPath = publicPath("clanMembers", `${clanId}__${OWNER_ID}`);
+    const invitePath = publicPath("clanInvites", `${clanId}__${OTHER_ID}`);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const database = context.firestore();
+      await setDoc(doc(database, clanPath), {
+        id: clanId,
+        name: "Owner Clan",
+        tag: "OWN",
+        memberCount: 1,
+      });
+      await setDoc(doc(database, memberPath), {
+        id: `${clanId}__${OWNER_ID}`,
+        clanId,
+        userId: OWNER_ID,
+        role: "owner",
+      });
+      await setDoc(doc(database, invitePath), {
+        id: `${clanId}__${OTHER_ID}`,
+        clanId,
+        targetUserId: OTHER_ID,
+        invitedByUserId: OWNER_ID,
+        status: "pending",
+      });
+    });
+
+    await assertSucceeds(getDoc(doc(ownerDb, clanPath)));
+    await assertSucceeds(getDocs(collection(ownerDb, `artifacts/${APP_ID}/public/data/clanMembers`)));
+    await assertSucceeds(getDocs(query(
+      collection(otherDb, `artifacts/${APP_ID}/public/data/clanInvites`),
+      where("targetUserId", "==", OTHER_ID),
+    )));
+    await assertFails(getDoc(doc(strangerDb, invitePath)));
+    await assertFails(getDocs(collection(otherDb, `artifacts/${APP_ID}/public/data/clanInvites`)));
+    await assertFails(setDoc(doc(ownerDb, clanPath), { id: clanId, name: "Manual Clan" }));
+    await assertFails(setDoc(doc(ownerDb, memberPath), { clanId, userId: OWNER_ID, role: "owner" }));
+    await assertFails(setDoc(doc(otherDb, invitePath), { clanId, targetUserId: OTHER_ID, status: "pending" }));
+  });
+
+  it("blocks client-side clan membership changes on profiles", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+
+    await assertFails(updateDoc(doc(ownerDb, publicPath("publicProfiles", OWNER_ID)), {
+      clan: "Manual Clan",
+      clanId: "manual-clan",
+      clanRole: "owner",
+      updatedAt: FIXED_TIME,
+    }));
+    await assertFails(updateDoc(doc(ownerDb, privatePath(OWNER_ID, "profile", "current")), {
+      clan: "Manual Clan",
+      clanId: "manual-clan",
+      clanRole: "owner",
+      updatedAt: FIXED_TIME,
+    }));
+  });
+
   it("blocks client writes to driver stats and individual leaderboard", async () => {
     const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
     await assertFails(setDoc(doc(ownerDb, privatePath(OWNER_ID, "driverStats", "manual")), {

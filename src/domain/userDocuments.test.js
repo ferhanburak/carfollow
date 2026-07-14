@@ -26,6 +26,8 @@ describe("user document contracts", () => {
     incomingRequests: [{ userId: "incoming-1" }],
     outgoingRequests: [{ userId: "outgoing-1" }],
     blockedDrivers: [{ userId: "blocked-1" }],
+    clanInvites: [{ id: "clan-invite-1" }],
+    sentClanInvites: [{ id: "clan-invite-2" }],
     driverScore: 91,
   };
 
@@ -54,6 +56,8 @@ describe("user document contracts", () => {
     expect(profile).not.toHaveProperty("incomingRequests");
     expect(profile).not.toHaveProperty("outgoingRequests");
     expect(profile).not.toHaveProperty("blockedDrivers");
+    expect(profile).not.toHaveProperty("clanInvites");
+    expect(profile).not.toHaveProperty("sentClanInvites");
     expect(profile).not.toHaveProperty("vehiclePassport");
   });
 
@@ -78,6 +82,9 @@ describe("user document contracts", () => {
       achievementBadges: ["Gece Savascisi"],
       driverStats: { monthlyKm: 842 },
       odometer: 68420,
+      clan: "Manual Clan",
+      clanId: "manual-clan",
+      clanRole: "owner",
     };
     const privatePatch = buildPrivateUserProfilePatch(source, firebaseUser);
     const publicPatch = buildPublicUserProfilePatch(source, firebaseUser);
@@ -89,6 +96,9 @@ describe("user document contracts", () => {
     expect(publicPatch).not.toHaveProperty("monthlyKm");
     expect(publicPatch).not.toHaveProperty("achievementBadges");
     expect(publicPatch).not.toHaveProperty("badges");
+    expect(privatePatch).not.toHaveProperty("clan");
+    expect(privatePatch).not.toHaveProperty("clanId");
+    expect(publicPatch).not.toHaveProperty("clanRole");
   });
 
   it("hydrates normalized private collections", () => {

@@ -18,6 +18,17 @@ const {
   buildFriendshipMigrationDocument,
   buildPairId,
 } = require("./social");
+const {
+  buildClanDocument,
+  buildClanInviteDocument,
+  buildClanMemberDocument,
+  canInviteClanMember,
+  canManageClanMember,
+  isClanRole,
+  normalizeClanName,
+  normalizeClanTag,
+  sanitizeClanText,
+} = require("./clan");
 
 admin.initializeApp();
 
@@ -86,6 +97,59 @@ function friendshipDocument(leftUserId, rightUserId) {
 
 function blockedDriverDocument(ownerUserId, targetUserId) {
   return privateUserDocument(ownerUserId, "blockedUsers", targetUserId);
+}
+
+function clanMemberDocument(clanId, userId) {
+  return publicDocument("clanMembers", buildScopedMemberId(clanId, userId));
+}
+
+function clanInviteDocument(clanId, userId) {
+  return publicDocument("clanInvites", buildScopedMemberId(clanId, userId));
+}
+
+function setProfileClanState(transaction, userId, { clan, clanId, clanRole, timestamp }) {
+  const patch = { clan: clan ?? null, clanId: clanId ?? null, clanRole: clanRole ?? null, updatedAt: timestamp };
+  transaction.set(privateUserDocument(userId, "profile", "current"), patch, { merge: true });
+  transaction.set(publicDocument("publicProfiles", userId), patch, { merge: true });
+}
+
+function assertClanId(clanId) {
+  if (typeof clanId !== "string" || clanId.length < 1 || clanId.length > 160 || clanId.includes("/")) {
+    throw new HttpsError("invalid-argument", "A valid clanId is required.");
+  }
+}
+
+function assertClanIdentity(name, tag) {
+  const safeName = sanitizeClanText(name, 48);
+  const safeTag = normalizeClanTag(tag);
+  if (safeName.length < 3 || safeName.length > 48 || safeName.includes("/")) {
+    throw new HttpsError("invalid-argument", "Clan name must contain 3-48 valid characters.");
+  }
+  if (!/^[A-Z0-9]{2,6}$/.test(safeTag)) {
+    throw new HttpsError("invalid-argument", "Clan tag must contain 2-6 letters or numbers.");
+  }
+  return { name: safeName, tag: safeTag };
+}
+
+function assertClanRole(role) {
+  if (!isClanRole(role) || role === "owner") {
+    throw new HttpsError("invalid-argument", "Role must be captain or member.");
+  }
+  return role;
+}
+
+function getClanMemberRole(snapshot, userId) {
+  const member = requireSnapshot(snapshot, "permission-denied", "Clan membership is required.");
+  if (member.userId !== userId || !isClanRole(member.role)) {
+    throw new HttpsError("permission-denied", "Clan membership could not be verified.");
+  }
+  return member.role;
+}
+
+function isAcceptedFriendship(friendship, leftUserId, rightUserId) {
+  return friendship?.status === "accepted" &&
+    (friendship.participantIds ?? []).includes(leftUserId) &&
+    (friendship.participantIds ?? []).includes(rightUserId);
 }
 
 function requireSnapshot(snapshot, code, message) {
@@ -417,51 +481,305 @@ exports.respondConvoyJoinRequest = onCall(async (request) => {
   return { ok: true, convoyId, memberUserId, decision };
 });
 
-exports.inviteClanMember = onCall(async (request) => {
-  const actorUserId = requireAuth(request);
-  const { clanId, targetUserId } = request.data ?? {};
-
-  if (!clanId || !targetUserId) {
-    throw new HttpsError("invalid-argument", "clanId and targetUserId are required.");
+exports.createClan = onCall(async (request) => {
+  const ownerUserId = requireAuth(request);
+  const { name, tag, description } = request.data ?? {};
+  const identity = assertClanIdentity(name, tag);
+  const owner = await getUserProfile(ownerUserId);
+  if (owner.clanId) {
+    throw new HttpsError("failed-precondition", "Leave your current clan before creating a new one.");
   }
 
-  const [actor, target, clanSnapshot] = await Promise.all([
-    getUserProfile(actorUserId),
-    getUserProfile(targetUserId),
-    publicCollection("clans").doc(clanId).get(),
-  ]);
-  if (!clanSnapshot.exists) {
-    throw new HttpsError("not-found", "Clan not found.");
-  }
+  const clanRef = publicCollection("clans").doc();
+  const nameClaimRef = publicDocument("clanNameClaims", normalizeClanName(identity.name));
+  const tagClaimRef = publicDocument("clanTagClaims", identity.tag.toLowerCase());
+  const memberRef = clanMemberDocument(clanRef.id, ownerUserId);
 
-  const clan = clanSnapshot.data();
-  if (![clan.ownerUserId, clan.createdByUserId].includes(actorUserId)) {
-    throw new HttpsError("permission-denied", "Only the clan owner can invite members in this phase.");
-  }
-
-  const inviteRef = publicCollection("clanInvites").doc(buildScopedMemberId(clanId, targetUserId));
   await db.runTransaction(async (transaction) => {
-    const existingInvite = await transaction.get(inviteRef);
-    if (existingInvite.exists) {
-      throw new HttpsError("already-exists", "Invite already exists.");
+    const [nameClaim, tagClaim] = await Promise.all([transaction.get(nameClaimRef), transaction.get(tagClaimRef)]);
+    if (nameClaim.exists || tagClaim.exists) {
+      throw new HttpsError("already-exists", "Clan name or tag is already in use.");
     }
 
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const clan = buildClanDocument({ clanId: clanRef.id, owner, ...identity, description, timestamp });
+    transaction.set(clanRef, clan);
+    transaction.set(memberRef, buildClanMemberDocument({ clanId: clanRef.id, profile: owner, role: "owner", timestamp }));
+    transaction.set(nameClaimRef, { clanId: clanRef.id, createdAt: timestamp });
+    transaction.set(tagClaimRef, { clanId: clanRef.id, createdAt: timestamp });
+    setProfileClanState(transaction, ownerUserId, {
+      clan: clan.name,
+      clanId: clanRef.id,
+      clanRole: "owner",
+      timestamp,
+    });
+  });
+
+  return { ok: true, clanId: clanRef.id };
+});
+
+exports.inviteClanMember = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const targetUserId = requireTargetUserId(request, actorUserId);
+  const { clanId } = request.data ?? {};
+  assertClanId(clanId);
+
+  const [actor, target] = await Promise.all([getUserProfile(actorUserId), getUserProfile(targetUserId)]);
+  const clanRef = publicCollection("clans").doc(clanId);
+  const actorMemberRef = clanMemberDocument(clanId, actorUserId);
+  const targetMemberRef = clanMemberDocument(clanId, targetUserId);
+  const inviteRef = clanInviteDocument(clanId, targetUserId);
+  const friendshipRef = friendshipDocument(actorUserId, targetUserId);
+  const actorBlockRef = blockedDriverDocument(actorUserId, targetUserId);
+  const targetBlockRef = blockedDriverDocument(targetUserId, actorUserId);
+
+  await db.runTransaction(async (transaction) => {
+    const [clanSnapshot, actorMember, targetMember, invite, friendship, actorBlock, targetBlock] = await Promise.all([
+      transaction.get(clanRef),
+      transaction.get(actorMemberRef),
+      transaction.get(targetMemberRef),
+      transaction.get(inviteRef),
+      transaction.get(friendshipRef),
+      transaction.get(actorBlockRef),
+      transaction.get(targetBlockRef),
+    ]);
+    const clan = requireSnapshot(clanSnapshot, "not-found", "Clan not found.");
+    const actorRole = getClanMemberRole(actorMember, actorUserId);
+    if (!canInviteClanMember(actorRole)) {
+      throw new HttpsError("permission-denied", "Only an owner or captain can invite members.");
+    }
+    if (target.clanId || targetMember.exists) {
+      throw new HttpsError("failed-precondition", "This driver already belongs to a clan.");
+    }
+    if (invite.exists) {
+      throw new HttpsError("already-exists", "An active invite already exists for this driver.");
+    }
+    if (!isAcceptedFriendship(friendship.data(), actorUserId, targetUserId) || actorBlock.exists || targetBlock.exists) {
+      throw new HttpsError("permission-denied", "Clan invites can only be sent to unblocked friends.");
+    }
+
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
     transaction.set(inviteRef, {
-      clanId,
-      clanName: clan.name ?? "",
-      targetUserId,
-      targetPlate: target.plate ?? "",
-      targetName: target.fullName ?? "",
-      invitedByUserId: actorUserId,
-      invitedByPlate: actor.plate ?? "",
-      invitedByName: actor.fullName ?? "",
-      status: "pending",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      ...buildClanInviteDocument({ clan, inviter: actor, target, timestamp }),
+      invitedByRole: actorRole,
     });
   });
 
   return { ok: true, clanId, targetUserId };
+});
+
+exports.respondClanInvite = onCall(async (request) => {
+  const targetUserId = requireAuth(request);
+  const { clanId, decision } = request.data ?? {};
+  assertClanId(clanId);
+  if (!["accepted", "declined"].includes(decision)) {
+    throw new HttpsError("invalid-argument", "Decision must be accepted or declined.");
+  }
+
+  const target = await getUserProfile(targetUserId);
+  const clanRef = publicCollection("clans").doc(clanId);
+  const inviteRef = clanInviteDocument(clanId, targetUserId);
+  const memberRef = clanMemberDocument(clanId, targetUserId);
+
+  await db.runTransaction(async (transaction) => {
+    const [clanSnapshot, inviteSnapshot, memberSnapshot] = await Promise.all([
+      transaction.get(clanRef),
+      transaction.get(inviteRef),
+      transaction.get(memberRef),
+    ]);
+    const clan = requireSnapshot(clanSnapshot, "not-found", "Clan not found.");
+    const invite = requireSnapshot(inviteSnapshot, "not-found", "Clan invite not found.");
+    if (invite.targetUserId !== targetUserId || invite.status !== "pending") {
+      throw new HttpsError("permission-denied", "Only the invite recipient can respond.");
+    }
+    if (decision === "declined") {
+      transaction.delete(inviteRef);
+      return;
+    }
+    if (target.clanId || memberSnapshot.exists) {
+      throw new HttpsError("failed-precondition", "Leave your current clan before accepting this invite.");
+    }
+
+    const inviterMemberRef = clanMemberDocument(clanId, invite.invitedByUserId);
+    const friendshipRef = friendshipDocument(invite.invitedByUserId, targetUserId);
+    const targetBlockRef = blockedDriverDocument(targetUserId, invite.invitedByUserId);
+    const inviterBlockRef = blockedDriverDocument(invite.invitedByUserId, targetUserId);
+    const [inviterMember, friendship, targetBlock, inviterBlock] = await Promise.all([
+      transaction.get(inviterMemberRef),
+      transaction.get(friendshipRef),
+      transaction.get(targetBlockRef),
+      transaction.get(inviterBlockRef),
+    ]);
+    if (!canInviteClanMember(getClanMemberRole(inviterMember, invite.invitedByUserId))) {
+      throw new HttpsError("failed-precondition", "The inviter no longer has clan invite permission.");
+    }
+    if (!isAcceptedFriendship(friendship.data(), invite.invitedByUserId, targetUserId) || targetBlock.exists || inviterBlock.exists) {
+      throw new HttpsError("permission-denied", "This clan invite is no longer eligible.");
+    }
+
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const memberCount = Number(clan.memberCount ?? clan.members ?? 0) + 1;
+    transaction.set(memberRef, buildClanMemberDocument({ clanId, profile: target, role: "member", timestamp }));
+    transaction.update(clanRef, { memberCount, members: memberCount, updatedAt: timestamp });
+    transaction.delete(inviteRef);
+    setProfileClanState(transaction, targetUserId, { clan: clan.name, clanId, clanRole: "member", timestamp });
+  });
+
+  return { ok: true, clanId, decision };
+});
+
+exports.cancelClanInvite = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const { clanId, targetUserId } = request.data ?? {};
+  assertClanId(clanId);
+  requireTargetUserId({ data: { targetUserId } }, actorUserId);
+
+  const actorMemberRef = clanMemberDocument(clanId, actorUserId);
+  const inviteRef = clanInviteDocument(clanId, targetUserId);
+  await db.runTransaction(async (transaction) => {
+    const [actorMember, invite] = await Promise.all([transaction.get(actorMemberRef), transaction.get(inviteRef)]);
+    if (!canInviteClanMember(getClanMemberRole(actorMember, actorUserId))) {
+      throw new HttpsError("permission-denied", "Only an owner or captain can cancel an invite.");
+    }
+    requireSnapshot(invite, "not-found", "Clan invite not found.");
+    transaction.delete(inviteRef);
+  });
+
+  return { ok: true, clanId, targetUserId };
+});
+
+exports.updateClanMemberRole = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const { clanId, targetUserId, role } = request.data ?? {};
+  assertClanId(clanId);
+  requireTargetUserId({ data: { targetUserId } }, actorUserId);
+  const nextRole = assertClanRole(role);
+  const clanRef = publicCollection("clans").doc(clanId);
+  const actorMemberRef = clanMemberDocument(clanId, actorUserId);
+  const targetMemberRef = clanMemberDocument(clanId, targetUserId);
+
+  await db.runTransaction(async (transaction) => {
+    const [clanSnapshot, actorMember, targetMember] = await Promise.all([
+      transaction.get(clanRef), transaction.get(actorMemberRef), transaction.get(targetMemberRef),
+    ]);
+    const clan = requireSnapshot(clanSnapshot, "not-found", "Clan not found.");
+    const actorRole = getClanMemberRole(actorMember, actorUserId);
+    const targetRole = getClanMemberRole(targetMember, targetUserId);
+    if (actorRole !== "owner" || targetRole === "owner") {
+      throw new HttpsError("permission-denied", "Only the owner can update member roles.");
+    }
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    transaction.update(targetMemberRef, { role: nextRole, updatedAt: timestamp });
+    setProfileClanState(transaction, targetUserId, {
+      clan: clan.name,
+      clanId,
+      clanRole: nextRole,
+      timestamp,
+    });
+  });
+
+  return { ok: true, clanId, targetUserId, role: nextRole };
+});
+
+exports.removeClanMember = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const { clanId, targetUserId } = request.data ?? {};
+  assertClanId(clanId);
+  requireTargetUserId({ data: { targetUserId } }, actorUserId);
+  const clanRef = publicCollection("clans").doc(clanId);
+  const actorMemberRef = clanMemberDocument(clanId, actorUserId);
+  const targetMemberRef = clanMemberDocument(clanId, targetUserId);
+
+  await db.runTransaction(async (transaction) => {
+    const [clanSnapshot, actorMember, targetMember] = await Promise.all([
+      transaction.get(clanRef), transaction.get(actorMemberRef), transaction.get(targetMemberRef),
+    ]);
+    const clan = requireSnapshot(clanSnapshot, "not-found", "Clan not found.");
+    const actorRole = getClanMemberRole(actorMember, actorUserId);
+    const targetRole = getClanMemberRole(targetMember, targetUserId);
+    if (!canManageClanMember(actorRole, targetRole)) {
+      throw new HttpsError("permission-denied", "Your role cannot remove this member.");
+    }
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const memberCount = Math.max(1, Number(clan.memberCount ?? clan.members ?? 1) - 1);
+    transaction.delete(targetMemberRef);
+    transaction.update(clanRef, { memberCount, members: memberCount, updatedAt: timestamp });
+    setProfileClanState(transaction, targetUserId, { clan: null, clanId: null, clanRole: null, timestamp });
+  });
+
+  return { ok: true, clanId, targetUserId };
+});
+
+exports.transferClanOwnership = onCall(async (request) => {
+  const ownerUserId = requireAuth(request);
+  const { clanId, targetUserId } = request.data ?? {};
+  assertClanId(clanId);
+  requireTargetUserId({ data: { targetUserId } }, ownerUserId);
+  const clanRef = publicCollection("clans").doc(clanId);
+  const ownerMemberRef = clanMemberDocument(clanId, ownerUserId);
+  const targetMemberRef = clanMemberDocument(clanId, targetUserId);
+
+  await db.runTransaction(async (transaction) => {
+    const [clanSnapshot, ownerMember, targetMember] = await Promise.all([
+      transaction.get(clanRef), transaction.get(ownerMemberRef), transaction.get(targetMemberRef),
+    ]);
+    const clan = requireSnapshot(clanSnapshot, "not-found", "Clan not found.");
+    if (getClanMemberRole(ownerMember, ownerUserId) !== "owner" || clan.ownerUserId !== ownerUserId) {
+      throw new HttpsError("permission-denied", "Only the clan owner can transfer ownership.");
+    }
+    const targetRole = getClanMemberRole(targetMember, targetUserId);
+    if (targetRole === "owner") {
+      throw new HttpsError("failed-precondition", "This driver already owns the clan.");
+    }
+
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const nextOwner = targetMember.data();
+    transaction.update(ownerMemberRef, { role: "captain", updatedAt: timestamp });
+    transaction.update(targetMemberRef, { role: "owner", updatedAt: timestamp });
+    transaction.update(clanRef, {
+      ownerUserId: targetUserId,
+      ownerPlate: nextOwner.plate,
+      ownerName: nextOwner.fullName,
+      captainPlate: nextOwner.plate,
+      updatedAt: timestamp,
+    });
+    setProfileClanState(transaction, ownerUserId, { clan: clan.name, clanId, clanRole: "captain", timestamp });
+    setProfileClanState(transaction, targetUserId, { clan: clan.name, clanId, clanRole: "owner", timestamp });
+  });
+
+  return { ok: true, clanId, ownerUserId: targetUserId };
+});
+
+exports.leaveClan = onCall(async (request) => {
+  const userId = requireAuth(request);
+  const { clanId } = request.data ?? {};
+  assertClanId(clanId);
+  const clanRef = publicCollection("clans").doc(clanId);
+  const memberRef = clanMemberDocument(clanId, userId);
+
+  await db.runTransaction(async (transaction) => {
+    const [clanSnapshot, memberSnapshot] = await Promise.all([transaction.get(clanRef), transaction.get(memberRef)]);
+    const clan = requireSnapshot(clanSnapshot, "not-found", "Clan not found.");
+    const role = getClanMemberRole(memberSnapshot, userId);
+    const memberCount = Number(clan.memberCount ?? clan.members ?? 1);
+    if (role === "owner" && memberCount > 1) {
+      throw new HttpsError("failed-precondition", "Transfer ownership before leaving a clan with other members.");
+    }
+
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    transaction.delete(memberRef);
+    if (role === "owner") {
+      transaction.delete(clanRef);
+      transaction.delete(publicDocument("clanNameClaims", clan.nameNormalized));
+      transaction.delete(publicDocument("clanTagClaims", clan.tagNormalized));
+    } else {
+      const nextCount = Math.max(1, memberCount - 1);
+      transaction.update(clanRef, { memberCount: nextCount, members: nextCount, updatedAt: timestamp });
+    }
+    setProfileClanState(transaction, userId, { clan: null, clanId: null, clanRole: null, timestamp });
+  });
+
+  return { ok: true, clanId };
 });
 
 exports.refreshDriverStats = onCall(async (request) => {

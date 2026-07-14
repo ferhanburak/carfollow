@@ -2,6 +2,7 @@ export const USER_SCHEMA_VERSION = 2;
 
 const PRIVATE_SUBCOLLECTION_FIELDS = new Set([
   "blockedDrivers",
+  "clanInvites",
   "conversations",
   "createdAt",
   "fuelLogs",
@@ -11,6 +12,7 @@ const PRIVATE_SUBCOLLECTION_FIELDS = new Set([
   "parts",
   "password",
   "serviceLogs",
+  "sentClanInvites",
   "updatedAt",
   "vehiclePassport",
   "vehicles",
@@ -21,6 +23,9 @@ const SERVER_OWNED_PROFILE_FIELDS = new Set([
   "achievementProgress",
   "badges",
   "completedDriveSessions",
+  "clan",
+  "clanId",
+  "clanRole",
   "driverStats",
   "driverStatsUpdatedAt",
   "lifetimeVerifiedKm",

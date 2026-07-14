@@ -2,6 +2,7 @@ const FALLBACK_APP_ID = "cruiser-app-prod";
 
 export const PUBLIC_COLLECTIONS = Object.freeze({
   clans: "clans",
+  clanMembers: "clanMembers",
   clanInvites: "clanInvites",
   convoyMembers: "convoyMembers",
   convoys: "convoys",

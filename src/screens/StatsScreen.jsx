@@ -103,10 +103,12 @@ export function StatsScreen({
   chatFeedback,
   clanFeedback,
   clanForm,
+  clanPendingKey,
   clans,
   conversationList,
   createNewClan,
   currentClan,
+  currentClanMembers = [],
   declineFriendRequest,
   declineIncomingClanInvite,
   drivers,
@@ -116,6 +118,7 @@ export function StatsScreen({
   inviteDriverToMeet,
   inviteFriendToClan,
   individualLeaderboardEntries,
+  leaveCurrentClan,
   driverStatsStatus,
   messageDraft,
   onClanFormChange,
@@ -125,14 +128,17 @@ export function StatsScreen({
   openConversation,
   presenceMap,
   requestFriend,
+  removeClanMember,
   removeFriendship,
   revokeClanInvite,
   sendMessage,
   socialFeedback,
   socialPendingKey,
   totalUnreadCount,
+  transferClanOwnership,
   user,
   unblockDriver,
+  updateClanMemberRole,
   withdrawFriendRequest,
   mode = "social",
 }) {
@@ -141,6 +147,7 @@ export function StatsScreen({
     : buildIndividualLeaderboard(user, individualDriverSeed);
   const sortedClans = [...clans].sort((a, b) => b.km - a.km);
   const canInviteToClan = ["owner", "captain"].includes(user.clanRole ?? "member");
+  const isClanPending = Boolean(clanPendingKey);
   const primaryHostableConvoy = hostableConvoys?.[0] ?? null;
   const socialSummary = [
     { key: "friends", label: "Arkadas", value: `${user.friends?.length ?? 0}` },
@@ -191,6 +198,76 @@ export function StatsScreen({
           </div>
         ) : null}
 
+        {currentClan ? (
+          <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">Klan Kadrosu</p>
+                <p className="mt-1 text-xs text-neutral-500">Roller ve uye yetkileri sunucu tarafinda dogrulaniyor.</p>
+              </div>
+              <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
+                {currentClanMembers.length || currentClan.members} uye
+              </span>
+            </div>
+            <div className="mt-4 space-y-3">
+              {currentClanMembers.length ? currentClanMembers.map((member) => {
+                const isSelf = member.userId === (user.userId ?? user.firebaseUid ?? user.id);
+                const canManageMember = !isSelf && (
+                  user.clanRole === "owner" ? member.role !== "owner" : user.clanRole === "captain" && member.role === "member"
+                );
+                return (
+                  <div key={member.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <button type="button" onClick={() => onOpenPublicProfile?.(member)} className="min-w-0 text-left">
+                        <p className="font-mono text-xs tracking-[0.14em] text-lime-300">{member.plate}</p>
+                        <p className="mt-1 text-sm font-semibold">{member.fullName}{isSelf ? " (Sen)" : ""}</p>
+                        <p className="text-xs text-neutral-500">{member.model || "CRUISER driver"} / {member.region || "Unknown"}</p>
+                      </button>
+                      <span className="rounded-lg border border-white/10 bg-black/20 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-neutral-300">{member.role}</span>
+                    </div>
+                    {canManageMember ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {user.clanRole === "owner" ? (
+                          <button
+                            type="button"
+                            disabled={isClanPending}
+                            onClick={() => updateClanMemberRole(member, member.role === "captain" ? "member" : "captain")}
+                            className="min-h-12 rounded-xl border border-lime-400/25 bg-lime-400/10 px-3 py-2 text-xs font-semibold text-lime-200 disabled:opacity-50"
+                          >
+                            {member.role === "captain" ? "Uye Yap" : "Kaptan Yap"}
+                          </button>
+                        ) : null}
+                        {user.clanRole === "owner" ? (
+                          <button
+                            type="button"
+                            disabled={isClanPending}
+                            onClick={() => transferClanOwnership(member)}
+                            className="min-h-12 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-100 disabled:opacity-50"
+                          >
+                            Sahipligi Devret
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          disabled={isClanPending}
+                          onClick={() => removeClanMember(member)}
+                          className="min-h-12 rounded-xl border border-rose-400/25 bg-rose-400/10 px-3 py-2 text-xs font-semibold text-rose-100 disabled:opacity-50"
+                        >
+                          Cikar
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }) : (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
+                  Uye listesi Firebase senkronizasyonu ile yuklenecek.
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
+
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
             <div className="flex items-start justify-between gap-3">
@@ -216,6 +293,14 @@ export function StatsScreen({
                   </div>
                 </div>
                 <p className="mt-3 text-xs text-lime-100/80">{currentClan.description}</p>
+                <button
+                  type="button"
+                  disabled={isClanPending}
+                  onClick={leaveCurrentClan}
+                  className="mt-4 min-h-12 w-full rounded-xl border border-rose-400/25 bg-rose-400/10 px-3 py-2 text-xs font-semibold text-rose-100 disabled:opacity-50"
+                >
+                  Klandan Ayril
+                </button>
               </div>
             ) : (
               <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
@@ -226,7 +311,7 @@ export function StatsScreen({
 
           <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
             <p className="text-sm font-semibold">Yeni Klan Kur</p>
-            <p className="mt-1 text-xs text-neutral-500">Mevcut klanindaysan yeni klan kurunca lider olarak yeni ekibe gecersin.</p>
+            <p className="mt-1 text-xs text-neutral-500">Yeni klan kurmak icin once mevcut klanindan ayrilmalisin.</p>
             <div className="mt-4 space-y-3">
               <input
                 value={clanForm.name}
@@ -251,7 +336,8 @@ export function StatsScreen({
               <button
                 type="button"
                 onClick={createNewClan}
-                className="min-h-12 w-full rounded-2xl bg-lime-400 px-4 py-3 text-sm font-bold text-black"
+                disabled={Boolean(currentClan) || isClanPending}
+                className="min-h-12 w-full rounded-2xl bg-lime-400 px-4 py-3 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Klani Kur
               </button>

@@ -131,7 +131,10 @@ service cloud.firestore {
         data.get('monthlyKm', 0) == previousData.get('monthlyKm', 0) &&
         data.get('monthlyKmPeriod', '') == previousData.get('monthlyKmPeriod', '') &&
         data.get('achievementBadges', []) == previousData.get('achievementBadges', []) &&
-        data.get('driverStatsUpdatedAt', null) == previousData.get('driverStatsUpdatedAt', null);
+        data.get('driverStatsUpdatedAt', null) == previousData.get('driverStatsUpdatedAt', null) &&
+        data.get('clan', null) == previousData.get('clan', null) &&
+        data.get('clanId', null) == previousData.get('clanId', null) &&
+        data.get('clanRole', null) == previousData.get('clanRole', null);
     }
 
     function isValidVehicle(data, userId, vehicleId) {
@@ -497,6 +500,18 @@ service cloud.firestore {
       allow read: if isKnownApp(appId) &&
         isSignedIn() &&
         request.auth.uid in resource.data.participantIds;
+      allow write: if false;
+    }
+
+    match /artifacts/{appId}/public/data/clanInvites/{documentId} {
+      allow read: if isKnownApp(appId) &&
+        isSignedIn() &&
+        (resource.data.targetUserId == request.auth.uid || resource.data.invitedByUserId == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /artifacts/{appId}/public/data/clanMembers/{documentId} {
+      allow read: if isKnownApp(appId) && isSignedIn();
       allow write: if false;
     }
 

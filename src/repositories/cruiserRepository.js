@@ -56,6 +56,20 @@ export {
 } from "./firebaseSocialRepository";
 
 export {
+  buildFirebaseClanState,
+  cancelFirebaseClanInvite,
+  createFirebaseClan,
+  inviteFirebaseClanMember,
+  isFirebaseClanRepositoryEnabled,
+  leaveFirebaseClan,
+  removeFirebaseClanMember,
+  respondFirebaseClanInvite,
+  subscribeFirebaseClanState,
+  transferFirebaseClanOwnership,
+  updateFirebaseClanMemberRole,
+} from "./firebaseClanRepository";
+
+export {
   createFirebaseVehiclePassportExport,
   loadFirebaseVehiclePassportExports,
   loadFirebaseVehiclePassportBundle,
