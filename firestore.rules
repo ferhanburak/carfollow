@@ -452,6 +452,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /artifacts/{appId}/public/data/clanLeaderboard/{documentId} {
+      allow read: if isKnownApp(appId) && isSignedIn();
+      allow write: if false;
+    }
+
     match /artifacts/{appId}/public/data/mapPins/{documentId} {
       allow read: if isKnownApp(appId) && isSignedIn();
       allow write: if false;

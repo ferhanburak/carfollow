@@ -56,6 +56,85 @@ function clampPercent(value) {
   return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
 }
 
+function addUtcMonths(date, months) {
+  const nextDate = new Date(date);
+  nextDate.setUTCMonth(nextDate.getUTCMonth() + Math.max(0, Number(months) || 0));
+  return nextDate;
+}
+
+function buildPartLifeSnapshot(part = {}, odometer = 0, now = new Date()) {
+  const currentOdometer = roundKm(odometer);
+  const replacedKm = roundKm(part.replacedKm);
+  const lifeExpectancyKm = Math.max(0, Number(part.lifeExpectancyKm ?? part.lifeExpectancy) || 0);
+  const usedKm = roundKm(Math.max(0, currentOdometer - replacedKm));
+  const remainingKm = roundKm(Math.max(0, lifeExpectancyKm - usedKm));
+  const kmHealthPercent = lifeExpectancyKm > 0
+    ? clampPercent((remainingKm / lifeExpectancyKm) * 100)
+    : 100;
+
+  const replacedAt = new Date(`${String(part.replacedAt ?? "").slice(0, 10)}T00:00:00.000Z`);
+  const lifeExpectancyMonths = Math.max(0, Number(part.lifeExpectancyMonths) || 0);
+  const hasTimeLimit = lifeExpectancyMonths > 0 && Number.isFinite(replacedAt.getTime());
+  const dueDate = hasTimeLimit ? addUtcMonths(replacedAt, lifeExpectancyMonths) : null;
+  const totalLifeMs = hasTimeLimit ? Math.max(1, dueDate.getTime() - replacedAt.getTime()) : 0;
+  const remainingTimeMs = hasTimeLimit ? Math.max(0, dueDate.getTime() - toDate(now).getTime()) : 0;
+  const timeHealthPercent = hasTimeLimit
+    ? clampPercent((remainingTimeMs / totalLifeMs) * 100)
+    : 100;
+  const healthPercent = Math.min(kmHealthPercent, timeHealthPercent);
+  const status = healthPercent <= 0
+    ? "overdue"
+    : healthPercent < 20 ? "critical" : healthPercent < 50 ? "due-soon" : "healthy";
+
+  return {
+    healthPercent,
+    kmHealthPercent,
+    timeHealthPercent,
+    usedKm,
+    remainingKm,
+    dueDate: dueDate?.toISOString().slice(0, 10) ?? null,
+    healthStatus: status,
+    healthOdometer: currentOdometer,
+    healthPeriodKey: getMonthKey(now),
+  };
+}
+
+function applyCompletedDriveToClan({ clan = {}, member = {}, acceptedKm = 0, periodKey }) {
+  const safePeriodKey = String(periodKey ?? getMonthKey());
+  const previousClanKm = clan.monthlyKmPeriod === safePeriodKey
+    ? roundKm(clan.monthlyKm ?? clan.km)
+    : 0;
+  const previousMemberKm = member.monthlyKmPeriod === safePeriodKey
+    ? roundKm(member.monthlyKm)
+    : 0;
+  const monthlyKm = roundKm(previousClanKm + acceptedKm);
+  const memberMonthlyKm = roundKm(previousMemberKm + acceptedKm);
+  const clanId = String(clan.id ?? member.clanId ?? "");
+
+  return {
+    clanPatch: {
+      monthlyKm,
+      monthlyKmPeriod: safePeriodKey,
+      // Legacy screens still read `km`; keep it as the current monthly total.
+      km: monthlyKm,
+    },
+    memberPatch: {
+      monthlyKm: memberMonthlyKm,
+      monthlyKmPeriod: safePeriodKey,
+    },
+    leaderboardEntry: {
+      id: `${safePeriodKey}__${clanId}`,
+      clanId,
+      periodKey: safePeriodKey,
+      name: String(clan.name ?? ""),
+      tag: String(clan.tag ?? ""),
+      memberCount: Math.max(0, Number(clan.memberCount ?? clan.members ?? 0)),
+      monthlyKm,
+      schemaVersion: STATS_SCHEMA_VERSION,
+    },
+  };
+}
+
 function uniqueStrings(values) {
   return [...new Set((values ?? []).filter(Boolean).map(String))];
 }
@@ -233,9 +312,11 @@ module.exports = {
   MAX_SESSION_SECONDS,
   STATS_SCHEMA_VERSION,
   applyCompletedDriveToStats,
+  applyCompletedDriveToClan,
   buildAchievementProgress,
   buildDriverStatsDocument,
   buildLeaderboardEntry,
+  buildPartLifeSnapshot,
   calculateAcceptedDriveKm,
   getMonthKey,
   isNightTime,

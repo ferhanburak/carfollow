@@ -208,6 +208,12 @@ async function seedFirestoreFixtures() {
       periodKey: "2026-07",
       monthlyKm: 12.4,
     });
+    batch.set(doc(database, publicPath("clanLeaderboard", "2026-07__clan-owner")), {
+      id: "2026-07__clan-owner",
+      clanId: "clan-owner",
+      periodKey: "2026-07",
+      monthlyKm: 42.4,
+    });
     batch.set(doc(database, publicPath("friendships", `${OTHER_ID}__${OWNER_ID}`)), {
       id: `${OTHER_ID}__${OWNER_ID}`,
       requesterUserId: OWNER_ID,
@@ -393,13 +399,24 @@ describe("Firestore security rules", { concurrency: false }, () => {
     }));
   });
 
-  it("blocks client writes to driver stats and individual leaderboard", async () => {
+  it("allows signed leaderboard reads and blocks all client aggregate writes", async () => {
     const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+    await assertSucceeds(getDoc(doc(ownerDb, publicPath("individualLeaderboard", `2026-07__${OWNER_ID}`))));
+    await assertSucceeds(getDoc(doc(ownerDb, publicPath("clanLeaderboard", "2026-07__clan-owner"))));
     await assertFails(setDoc(doc(ownerDb, privatePath(OWNER_ID, "driverStats", "manual")), {
       monthlyKm: 9999,
     }));
+    await assertFails(setDoc(doc(ownerDb, privatePath(OWNER_ID, "driveSessions", "ride-manual-123456")), {
+      userId: OWNER_ID,
+      status: "completed",
+      acceptedKm: 9999,
+    }));
     await assertFails(setDoc(doc(ownerDb, publicPath("individualLeaderboard", "manual-entry")), {
       userId: OWNER_ID,
+      monthlyKm: 9999,
+    }));
+    await assertFails(setDoc(doc(ownerDb, publicPath("clanLeaderboard", "manual-entry")), {
+      clanId: "clan-owner",
       monthlyKm: 9999,
     }));
   });

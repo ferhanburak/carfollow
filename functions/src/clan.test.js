@@ -32,6 +32,7 @@ test("buildClanDocument seeds an owner-led public clan summary", () => {
     name: "Ankara Apex",
     tag: "apex",
     description: "Gece rotalari",
+    periodKey: "2026-07",
     timestamp,
   });
 
@@ -39,6 +40,8 @@ test("buildClanDocument seeds an owner-led public clan summary", () => {
   assert.equal(clan.memberCount, 1);
   assert.equal(clan.members, 1);
   assert.equal(clan.tag, "APEX");
+  assert.equal(clan.monthlyKm, 0);
+  assert.equal(clan.monthlyKmPeriod, "2026-07");
 });
 
 test("member and invite documents expose only community-safe profile data", () => {

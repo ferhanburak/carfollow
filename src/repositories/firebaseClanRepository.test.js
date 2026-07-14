@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getDriverStatsPeriod } from "../domain/driverStats";
 import { buildFirebaseClanState } from "./firebaseClanRepository";
 
 describe("buildFirebaseClanState", () => {
@@ -23,5 +24,24 @@ describe("buildFirebaseClanState", () => {
     expect(state.clanInvites[0]).toMatchObject({ fromName: "Captain", fromPlate: "06 CAP 01", createdAt: 300 });
     expect(state.sentClanInvites[0]).toMatchObject({ id: "invite-out", createdAt: 400 });
     expect(state.clans.map((clan) => clan.id)).toEqual(["clan-2", "clan-1"]);
+  });
+
+  it("uses only the current server-owned monthly clan leaderboard entry", () => {
+    const periodKey = getDriverStatsPeriod();
+    const state = buildFirebaseClanState({
+      clans: [
+        { id: "clan-1", name: "Apex", memberCount: 2, monthlyKmPeriod: "old-period", monthlyKm: 900 },
+        { id: "clan-2", name: "Night", memberCount: 4, monthlyKmPeriod: periodKey, monthlyKm: 80 },
+      ],
+      leaderboardEntries: [
+        { id: `${periodKey}__clan-1`, clanId: "clan-1", periodKey, monthlyKm: 125.2 },
+        { id: `old-period__clan-2`, clanId: "clan-2", periodKey: "old-period", monthlyKm: 9999 },
+      ],
+    });
+
+    expect(state.clans.map((clan) => [clan.id, clan.km])).toEqual([
+      ["clan-1", 125.2],
+      ["clan-2", 80],
+    ]);
   });
 });

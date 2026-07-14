@@ -77,10 +77,12 @@ export async function loadFirebaseDriverStatsState() {
   }
 
   let stats = null;
+  let partHealth = [];
   const warnings = [];
   try {
     const refreshed = await callDriverFunction("refreshDriverStats");
     stats = refreshed?.stats ?? null;
+    partHealth = refreshed?.partHealth ?? [];
   } catch (error) {
     warnings.push(error.message);
     try {
@@ -100,6 +102,7 @@ export async function loadFirebaseDriverStatsState() {
   return {
     authUid: services.authUser.uid,
     stats,
+    partHealth,
     leaderboardEntries,
     warning: warnings.filter(Boolean).join(" "),
     syncedAt: Date.now(),

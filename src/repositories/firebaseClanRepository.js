@@ -1,4 +1,5 @@
 import { getFirebaseServices, isFirebaseModeEnabled } from "../services/firebaseClient";
+import { getDriverStatsPeriod } from "../domain/driverStats";
 import { PUBLIC_COLLECTIONS, publicCollectionPath, resolveAppId } from "../services/firebasePaths";
 
 function toMillis(value) {
@@ -9,9 +10,19 @@ function sortNewest(items, timestampField = "createdAt") {
   return [...items].sort((left, right) => toMillis(right[timestampField]) - toMillis(left[timestampField]));
 }
 
-function normalizeClan(clan) {
+function normalizeClan(clan, leaderboardEntry, periodKey) {
+  const currentMonthlyKm = Number(
+    leaderboardEntry?.monthlyKm ?? (
+      clan.monthlyKmPeriod === periodKey
+        ? clan.monthlyKm
+        : clan.monthlyKmPeriod ? 0 : clan.km
+    ) ?? 0,
+  );
   return {
     ...clan,
+    km: currentMonthlyKm,
+    monthlyKm: currentMonthlyKm,
+    monthlyKmPeriod: periodKey,
     members: Number(clan.memberCount ?? clan.members ?? 0),
     memberCount: Number(clan.memberCount ?? clan.members ?? 0),
   };
@@ -26,9 +37,24 @@ function normalizeInvite(invite) {
   };
 }
 
-export function buildFirebaseClanState({ clans = [], memberships = [], incomingInvites = [], outgoingInvites = [], members = [] }) {
+export function buildFirebaseClanState({
+  clans = [],
+  leaderboardEntries = [],
+  memberships = [],
+  incomingInvites = [],
+  outgoingInvites = [],
+  members = [],
+}) {
   const membership = memberships[0] ?? null;
-  const normalizedClans = clans.map(normalizeClan).sort((left, right) => Number(right.km ?? 0) - Number(left.km ?? 0));
+  const periodKey = getDriverStatsPeriod();
+  const leaderboardByClan = new Map(
+    leaderboardEntries
+      .filter((entry) => entry.periodKey === periodKey && entry.clanId)
+      .map((entry) => [entry.clanId, entry]),
+  );
+  const normalizedClans = clans
+    .map((clan) => normalizeClan(clan, leaderboardByClan.get(clan.id), periodKey))
+    .sort((left, right) => Number(right.km ?? 0) - Number(left.km ?? 0));
   const currentClan = membership
     ? normalizedClans.find((clan) => clan.id === membership.clanId) ?? null
     : null;
@@ -60,8 +86,22 @@ export async function subscribeFirebaseClanState(onStateChange, onError = () => 
   const { collection, onSnapshot, query, where } = await import("firebase/firestore");
   const appId = resolveAppId();
   const collectionRef = (name) => collection(firestore, publicCollectionPath(name, appId));
-  const snapshots = { clans: [], memberships: [], incomingInvites: [], outgoingInvites: [], members: [] };
-  const loaded = { clans: false, memberships: false, incomingInvites: false, outgoingInvites: false, members: false };
+  const snapshots = {
+    clans: [],
+    leaderboardEntries: [],
+    memberships: [],
+    incomingInvites: [],
+    outgoingInvites: [],
+    members: [],
+  };
+  const loaded = {
+    clans: false,
+    leaderboardEntries: false,
+    memberships: false,
+    incomingInvites: false,
+    outgoingInvites: false,
+    members: false,
+  };
   let unsubscribeMembers = () => {};
   let subscribedClanId = "";
 
@@ -103,6 +143,7 @@ export async function subscribeFirebaseClanState(onStateChange, onError = () => 
 
   const unsubscribers = [
     bind("clans", collectionRef(PUBLIC_COLLECTIONS.clans)),
+    bind("leaderboardEntries", collectionRef(PUBLIC_COLLECTIONS.clanLeaderboard)),
     bind(
       "memberships",
       query(collectionRef(PUBLIC_COLLECTIONS.clanMembers), where("userId", "==", authUser.uid)),

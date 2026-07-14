@@ -26,6 +26,18 @@ function getDriverStatsError(error, fallback) {
   return messages[error?.code] ?? (error instanceof Error ? error.message : fallback);
 }
 
+function mergePartHealthIntoUser(user, partHealth) {
+  if (!user || !Array.isArray(partHealth) || partHealth.length === 0) {
+    return user;
+  }
+
+  const healthByKey = new Map(partHealth.filter((part) => part?.key).map((part) => [part.key, part]));
+  return {
+    ...user,
+    parts: (user.parts ?? []).map((part) => ({ ...part, ...(healthByKey.get(part.key) ?? {}) })),
+  };
+}
+
 export function useDriverStats({ user, setUser }) {
   const serverOwned = isFirebaseRepositoryEnabled();
   const [leaderboardEntries, setLeaderboardEntries] = useState([]);
@@ -59,7 +71,10 @@ export function useDriverStats({ user, setUser }) {
             if (!current || (current.firebaseUid ?? current.id) !== result.authUid) {
               return current;
             }
-            return mergeDriverStatsIntoUser(current, result.stats);
+            return mergePartHealthIntoUser(
+              mergeDriverStatsIntoUser(current, result.stats),
+              result.partHealth,
+            );
           });
         }
         setDriverStatsStatus({
@@ -141,7 +156,10 @@ export function useDriverStats({ user, setUser }) {
       const result = await finishFirebaseDriveSession(sessionId, reportedKm);
       setUser((current) => {
         const merged = mergeDriverStatsIntoUser(current, result?.stats);
-        return merged ? { ...merged, odometer: Number(result?.odometer ?? merged.odometer ?? 0) } : merged;
+        const authoritativeUser = merged
+          ? { ...merged, odometer: Number(result?.odometer ?? merged.odometer ?? 0) }
+          : merged;
+        return mergePartHealthIntoUser(authoritativeUser, result?.partHealth);
       });
       if (result?.leaderboardEntry) {
         setLeaderboardEntries((current) => [

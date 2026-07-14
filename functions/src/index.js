@@ -2,10 +2,13 @@ const admin = require("firebase-admin");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const {
   DRIVE_KM_PER_SECOND,
+  applyCompletedDriveToClan,
   applyCompletedDriveToStats,
   buildDriverStatsDocument,
   buildLeaderboardEntry,
+  buildPartLifeSnapshot,
   calculateAcceptedDriveKm,
+  getMonthKey,
   isNightTime,
   roundKm,
 } = require("./driverStats");
@@ -782,9 +785,16 @@ exports.createClan = onCall(async (request) => {
     }
 
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
-    const clan = buildClanDocument({ clanId: clanRef.id, owner, ...identity, description, timestamp });
+    const periodKey = getMonthKey(new Date());
+    const clan = buildClanDocument({ clanId: clanRef.id, owner, ...identity, description, periodKey, timestamp });
     transaction.set(clanRef, clan);
-    transaction.set(memberRef, buildClanMemberDocument({ clanId: clanRef.id, profile: owner, role: "owner", timestamp }));
+    transaction.set(memberRef, buildClanMemberDocument({
+      clanId: clanRef.id,
+      profile: owner,
+      role: "owner",
+      periodKey,
+      timestamp,
+    }));
     transaction.set(nameClaimRef, { clanId: clanRef.id, createdAt: timestamp });
     transaction.set(tagClaimRef, { clanId: clanRef.id, createdAt: timestamp });
     setProfileClanState(transaction, ownerUserId, {
@@ -899,7 +909,13 @@ exports.respondClanInvite = onCall(async (request) => {
 
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
     const memberCount = Number(clan.memberCount ?? clan.members ?? 0) + 1;
-    transaction.set(memberRef, buildClanMemberDocument({ clanId, profile: target, role: "member", timestamp }));
+    transaction.set(memberRef, buildClanMemberDocument({
+      clanId,
+      profile: target,
+      role: "member",
+      periodKey: getMonthKey(new Date()),
+      timestamp,
+    }));
     transaction.update(clanRef, { memberCount, members: memberCount, updatedAt: timestamp });
     transaction.delete(inviteRef);
     setProfileClanState(transaction, targetUserId, { clan: clan.name, clanId, clanRole: "member", timestamp });
@@ -1076,10 +1092,12 @@ exports.refreshDriverStats = onCall(async (request) => {
     }
 
     const refs = driverAggregateRefs(userId, vehicleId);
-    const [vehicleSnapshot, passportSnapshot, statsSnapshot] = await Promise.all([
+    const partsQuery = privateUserCollection(userId, "parts").where("vehicleId", "==", vehicleId);
+    const [vehicleSnapshot, passportSnapshot, statsSnapshot, partsSnapshot] = await Promise.all([
       transaction.get(refs.vehicleRef),
       transaction.get(refs.passportRef),
       transaction.get(refs.statsRef),
+      transaction.get(partsQuery),
     ]);
     const vehicle = requireSnapshot(vehicleSnapshot, "not-found", "Primary vehicle not found.");
     const passport = requireSnapshot(passportSnapshot, "not-found", "Vehicle Passport not found.");
@@ -1091,6 +1109,11 @@ exports.refreshDriverStats = onCall(async (request) => {
       now: new Date(),
     });
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const partHealth = partsSnapshot.docs.map((partDocument) => {
+      const health = buildPartLifeSnapshot(partDocument.data(), vehicle.odometer, new Date());
+      transaction.set(partDocument.ref, { ...health, healthCalculatedAt: timestamp, updatedAt: timestamp }, { merge: true });
+      return { id: partDocument.id, key: partDocument.data().key, ...health };
+    });
     const leaderboardEntry = writeDriverAggregate(transaction, {
       userId,
       profile,
@@ -1099,7 +1122,7 @@ exports.refreshDriverStats = onCall(async (request) => {
       timestamp,
     });
 
-    response = { ok: true, stats, leaderboardEntry };
+    response = { ok: true, stats, leaderboardEntry, partHealth };
   });
 
   return response;
@@ -1297,16 +1320,23 @@ exports.finishDriveSession = onCall(async (request) => {
     }
 
     const refs = driverAggregateRefs(userId, session.vehicleId);
-    const [vehicleSnapshot, passportSnapshot, statsSnapshot] = await Promise.all([
+    const partsQuery = privateUserCollection(userId, "parts").where("vehicleId", "==", session.vehicleId);
+    const [vehicleSnapshot, passportSnapshot, statsSnapshot, partsSnapshot] = await Promise.all([
       transaction.get(refs.vehicleRef),
       transaction.get(refs.passportRef),
       transaction.get(refs.statsRef),
+      transaction.get(partsQuery),
     ]);
     const vehicle = requireSnapshot(vehicleSnapshot, "not-found", "Primary vehicle not found.");
     const passport = requireSnapshot(passportSnapshot, "not-found", "Vehicle Passport not found.");
     const existingStats = statsSnapshot.exists ? statsSnapshot.data() : {};
 
     if (session.status === "completed") {
+      const partHealth = partsSnapshot.docs.map((partDocument) => ({
+        id: partDocument.id,
+        key: partDocument.data().key,
+        ...buildPartLifeSnapshot(partDocument.data(), vehicle.odometer, new Date()),
+      }));
       response = {
         ok: true,
         duplicate: true,
@@ -1316,6 +1346,7 @@ exports.finishDriveSession = onCall(async (request) => {
         odometer: Number(session.endOdometer ?? vehicle.odometer ?? 0),
         stats: existingStats,
         leaderboardEntry: buildLeaderboardEntry({ userId, profile, stats: existingStats }),
+        partHealth,
       };
       return;
     }
@@ -1342,7 +1373,57 @@ exports.finishDriveSession = onCall(async (request) => {
       isNight: isNightTime(session.startedAt),
       now: finishedAt,
     });
+    let clanContext = null;
+    if (profile.clanId) {
+      const clanRef = publicDocument("clans", profile.clanId);
+      const memberRef = clanMemberDocument(profile.clanId, userId);
+      const [clanSnapshot, memberSnapshot] = await Promise.all([
+        transaction.get(clanRef),
+        transaction.get(memberRef),
+      ]);
+      if (
+        clanSnapshot.exists &&
+        memberSnapshot.exists &&
+        memberSnapshot.data().userId === userId &&
+        memberSnapshot.data().clanId === profile.clanId
+      ) {
+        clanContext = {
+          clanRef,
+          clan: clanSnapshot.data(),
+          memberRef,
+          member: memberSnapshot.data(),
+        };
+      }
+    }
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const partHealth = partsSnapshot.docs.map((partDocument) => {
+      const health = buildPartLifeSnapshot(partDocument.data(), nextOdometer, finishedAt);
+      transaction.set(partDocument.ref, {
+        ...health,
+        healthCalculatedAt: timestamp,
+        lastDriveSessionId: sessionId,
+        updatedAt: timestamp,
+      }, { merge: true });
+      return { id: partDocument.id, key: partDocument.data().key, ...health };
+    });
+    let clanLeaderboardEntry = null;
+
+    if (clanContext) {
+      const clanAggregate = applyCompletedDriveToClan({
+        clan: { id: clanContext.clanRef.id, ...clanContext.clan },
+        member: clanContext.member,
+        acceptedKm: distance.acceptedKm,
+        periodKey: stats.periodKey,
+      });
+      transaction.update(clanContext.clanRef, { ...clanAggregate.clanPatch, updatedAt: timestamp });
+      transaction.update(clanContext.memberRef, { ...clanAggregate.memberPatch, updatedAt: timestamp });
+      transaction.set(
+        publicDocument("clanLeaderboard", clanAggregate.leaderboardEntry.id),
+        { ...clanAggregate.leaderboardEntry, updatedAt: timestamp },
+        { merge: true },
+      );
+      clanLeaderboardEntry = clanAggregate.leaderboardEntry;
+    }
 
     transaction.update(sessionRef, {
       status: "completed",
@@ -1357,6 +1438,11 @@ exports.finishDriveSession = onCall(async (request) => {
     transaction.update(refs.vehicleRef, {
       odometer: nextOdometer,
       lastOdometerSource: "drive",
+      lastDriveSessionId: sessionId,
+      updatedAt: timestamp,
+    });
+    transaction.update(refs.passportRef, {
+      odometerSnapshot: nextOdometer,
       lastDriveSessionId: sessionId,
       updatedAt: timestamp,
     });
@@ -1383,6 +1469,8 @@ exports.finishDriveSession = onCall(async (request) => {
       odometer: nextOdometer,
       stats,
       leaderboardEntry,
+      clanLeaderboardEntry,
+      partHealth,
     };
   });
 

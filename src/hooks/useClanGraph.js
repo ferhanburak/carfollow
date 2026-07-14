@@ -66,8 +66,12 @@ export function useClanGraph({ clans, setClans, user, setUser }) {
         }
         setFirebaseClanState(state);
         setClans((current) => {
-          const nextSignature = state.clans.map((clan) => `${clan.id}|${clan.updatedAt ?? ""}|${clan.memberCount}`).join("~");
-          const currentSignature = current.map((clan) => `${clan.id}|${clan.updatedAt ?? ""}|${clan.memberCount ?? clan.members}`).join("~");
+          const nextSignature = state.clans
+            .map((clan) => `${clan.id}|${clan.monthlyKmPeriod}|${clan.monthlyKm}|${clan.memberCount}`)
+            .join("~");
+          const currentSignature = current
+            .map((clan) => `${clan.id}|${clan.monthlyKmPeriod ?? ""}|${clan.monthlyKm ?? clan.km}|${clan.memberCount ?? clan.members}`)
+            .join("~");
           return nextSignature === currentSignature ? current : state.clans;
         });
         setUser((current) => {

@@ -52,7 +52,10 @@ beforeEach(() => {
 describe("Firebase driver stats repository", () => {
   it("refreshes private stats and reads the public leaderboard", async () => {
     mocks.invokeCallable.mockResolvedValue({
-      data: { stats: { userId: "user-1", monthlyKm: 24.8 } },
+      data: {
+        stats: { userId: "user-1", monthlyKm: 24.8 },
+        partHealth: [{ key: "oil", healthPercent: 74 }],
+      },
     });
     mocks.getDocs.mockResolvedValue({
       docs: [{
@@ -65,6 +68,7 @@ describe("Firebase driver stats repository", () => {
 
     expect(mocks.invokeCallable).toHaveBeenCalledWith("refreshDriverStats", {});
     expect(state.stats.monthlyKm).toBe(24.8);
+    expect(state.partHealth).toEqual([{ key: "oil", healthPercent: 74 }]);
     expect(state.leaderboardEntries).toHaveLength(1);
     expect(state.warning).toBe("");
   });

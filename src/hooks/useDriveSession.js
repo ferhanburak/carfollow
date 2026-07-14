@@ -54,7 +54,9 @@ export function useDriveSession({
           });
         });
 
-        setClans((current) => incrementClanKm(current, userRef.current?.clan));
+        if (!serverOwnedDriverStats) {
+          setClans((current) => incrementClanKm(current, userRef.current?.clan));
+        }
         setDrivers((current) => syncActiveDriver(current, userRef.current));
       });
     }, 1000);

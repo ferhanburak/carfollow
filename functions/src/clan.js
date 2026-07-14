@@ -30,7 +30,7 @@ function projectClanProfile(profile, fallbackUserId = "") {
   };
 }
 
-function buildClanDocument({ clanId, owner, name, tag, description, timestamp }) {
+function buildClanDocument({ clanId, owner, name, tag, description, periodKey = "", timestamp }) {
   const ownerProfile = projectClanProfile(owner);
   const safeName = sanitizeClanText(name, 48);
   const safeTag = normalizeClanTag(tag);
@@ -51,6 +51,8 @@ function buildClanDocument({ clanId, owner, name, tag, description, timestamp })
     // Legacy UI reads `members`; keep it in sync until leaderboard migration is complete.
     members: 1,
     km: 0,
+    monthlyKm: 0,
+    monthlyKmPeriod: String(periodKey),
     visibility: "public",
     schemaVersion: CLAN_SCHEMA_VERSION,
     createdAt: timestamp,
@@ -58,7 +60,7 @@ function buildClanDocument({ clanId, owner, name, tag, description, timestamp })
   };
 }
 
-function buildClanMemberDocument({ clanId, profile, role, timestamp }) {
+function buildClanMemberDocument({ clanId, profile, role, periodKey = "", timestamp }) {
   const member = projectClanProfile(profile);
   return {
     id: `${clanId}__${member.userId}`,
@@ -66,6 +68,9 @@ function buildClanMemberDocument({ clanId, profile, role, timestamp }) {
     userId: member.userId,
     role,
     ...member,
+    // Only kilometers driven after joining count toward this clan.
+    monthlyKm: 0,
+    monthlyKmPeriod: String(periodKey),
     schemaVersion: CLAN_SCHEMA_VERSION,
     joinedAt: timestamp,
     updatedAt: timestamp,

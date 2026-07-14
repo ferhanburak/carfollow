@@ -4,6 +4,7 @@ export const PUBLIC_COLLECTIONS = Object.freeze({
   clans: "clans",
   clanMembers: "clanMembers",
   clanInvites: "clanInvites",
+  clanLeaderboard: "clanLeaderboard",
   convoyMembers: "convoyMembers",
   convoyRatings: "convoyRatings",
   convoys: "convoys",

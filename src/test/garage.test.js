@@ -22,6 +22,16 @@ describe("garage utilities", () => {
     expect(getPartHealth(part, 15000)).toBe(0);
   });
 
+  it("uses the stricter calendar lifetime for maintenance health", () => {
+    const part = {
+      replacedKm: 10000,
+      lifeExpectancyKm: 50000,
+      replacedAt: "2025-01-01",
+      lifeExpectancyMonths: 12,
+    };
+    expect(getPartHealth(part, 12000, new Date("2026-07-01T00:00:00.000Z"))).toBe(0);
+  });
+
   it("accepts historical service kilometers for passport imports", () => {
     const errors = validateServiceLogForm(
       {

@@ -52,6 +52,7 @@ describe("firebase path helpers", () => {
 
   it("defines backend-owned driver stats collections", () => {
     expect(PUBLIC_COLLECTIONS.individualLeaderboard).toBe("individualLeaderboard");
+    expect(PUBLIC_COLLECTIONS.clanLeaderboard).toBe("clanLeaderboard");
     expect(PRIVATE_COLLECTIONS.driverStats).toBe("driverStats");
     expect(PRIVATE_COLLECTIONS.driveSessions).toBe("driveSessions");
   });

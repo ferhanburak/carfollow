@@ -71,14 +71,32 @@ export function formatNumber(value) {
   return new Intl.NumberFormat("tr-TR").format(Math.round(value * 10) / 10);
 }
 
-export function getPartHealth(part, odometer) {
+export function getPartHealth(part, odometer, now = new Date()) {
+  if (
+    Number.isFinite(Number(part.healthPercent)) &&
+    Math.abs(Number(part.healthOdometer ?? -1) - Number(odometer)) < 0.05
+  ) {
+    return Math.max(0, Math.min(100, Math.round(Number(part.healthPercent))));
+  }
+
   const used = Math.max(odometer - part.replacedKm, 0);
   const lifeExpectancy = Number(part.lifeExpectancyKm ?? part.lifeExpectancy ?? 0);
-  if (!lifeExpectancy) {
-    return 100;
+  const kmPercent = lifeExpectancy
+    ? Math.max(0, 100 - (used / lifeExpectancy) * 100)
+    : 100;
+  const replacedAt = new Date(`${String(part.replacedAt ?? "").slice(0, 10)}T00:00:00.000Z`);
+  const lifeExpectancyMonths = Math.max(0, Number(part.lifeExpectancyMonths ?? 0));
+  let timePercent = 100;
+
+  if (lifeExpectancyMonths && Number.isFinite(replacedAt.getTime())) {
+    const dueAt = new Date(replacedAt);
+    dueAt.setUTCMonth(dueAt.getUTCMonth() + lifeExpectancyMonths);
+    const totalLife = Math.max(1, dueAt.getTime() - replacedAt.getTime());
+    const remainingLife = Math.max(0, dueAt.getTime() - new Date(now).getTime());
+    timePercent = (remainingLife / totalLife) * 100;
   }
-  const percent = Math.max(0, 100 - (used / lifeExpectancy) * 100);
-  return Math.round(percent);
+
+  return Math.round(Math.max(0, Math.min(100, kmPercent, timePercent)));
 }
 
 export function computeFuelInsights(logs) {
