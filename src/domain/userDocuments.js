@@ -1,9 +1,13 @@
 export const USER_SCHEMA_VERSION = 2;
 
 const PRIVATE_SUBCOLLECTION_FIELDS = new Set([
+  "blockedDrivers",
   "conversations",
   "createdAt",
   "fuelLogs",
+  "friends",
+  "incomingRequests",
+  "outgoingRequests",
   "parts",
   "password",
   "serviceLogs",

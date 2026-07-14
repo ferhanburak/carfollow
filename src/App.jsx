@@ -70,6 +70,7 @@ function App() {
     approveCruiseJoinRequest,
     acceptIncomingClanInvite,
     approveFriendRequest,
+    blockDriver,
     chatFeedback,
     clanFeedback,
     clanForm,
@@ -126,6 +127,7 @@ function App() {
     rateAttendee,
     removeLastDraftRoutePoint,
     requestFriend,
+    removeFriendship,
     resetSessionView,
     revokeClanInvite,
     safeUser,
@@ -150,6 +152,7 @@ function App() {
     setSpotPhotoForm,
     setWashForm,
     socialFeedback,
+    socialPendingKey,
     spotPhotoErrors,
     spotPhotoFeedback,
     spotPhotoForm,
@@ -167,6 +170,7 @@ function App() {
     washFeedback,
     washForm,
     inviteFriendToClan,
+    unblockDriver,
     withdrawFriendRequest,
   } = useCruiserWorld(user, setUser, setFuelForm);
 
@@ -346,6 +350,7 @@ function App() {
                 activeTypingUsers={activeTypingUsers}
                 acceptIncomingClanInvite={acceptIncomingClanInvite}
                 approveFriendRequest={approveFriendRequest}
+                blockDriver={blockDriver}
                 chatFeedback={chatFeedback}
                 clanFeedback={clanFeedback}
                 clanForm={clanForm}
@@ -371,11 +376,14 @@ function App() {
                 individualLeaderboardEntries={individualLeaderboard}
                 driverStatsStatus={driverStatsStatus}
                 requestFriend={requestFriend}
+                removeFriendship={removeFriendship}
                 revokeClanInvite={revokeClanInvite}
                 sendMessage={sendMessage}
                 socialFeedback={socialFeedback}
+                socialPendingKey={socialPendingKey}
                 totalUnreadCount={totalUnreadCount}
                 user={safeUser ?? user}
+                unblockDriver={unblockDriver}
                 withdrawFriendRequest={withdrawFriendRequest}
                 mode={activeTab === "leaderboard" ? "leaderboard" : "social"}
               />
@@ -470,6 +478,12 @@ function App() {
       <PublicDriverProfileOverlay
         hostableConvoy={hostableConvoys?.[0] ?? null}
         onClose={() => setPublicProfile(null)}
+        onBlockDriver={async (profile) => {
+          const completed = await blockDriver(profile);
+          if (completed) {
+            setPublicProfile(null);
+          }
+        }}
         onInviteFriendToClan={inviteFriendToClan}
         onInviteToConvoy={inviteDriverToMeet}
         onOpenConversation={(profile) => {
@@ -478,8 +492,11 @@ function App() {
           setPublicProfile(null);
         }}
         onRequestFriend={(profile) => requestFriend(profile)}
+        onRemoveFriendship={removeFriendship}
+        onUnblockDriver={unblockDriver}
         presence={publicProfile ? presenceMap?.[publicProfile.plate] : null}
         profile={publicProfile}
+        socialPendingKey={socialPendingKey}
         user={safeUser ?? user}
       />
     </main>

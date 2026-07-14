@@ -22,6 +22,10 @@ describe("user document contracts", () => {
     serviceLogs: [{ id: "service-1" }],
     vehiclePassport: { vehicleId: "vehicle-1" },
     conversations: { thread: { messages: [] } },
+    friends: [{ userId: "friend-1" }],
+    incomingRequests: [{ userId: "incoming-1" }],
+    outgoingRequests: [{ userId: "outgoing-1" }],
+    blockedDrivers: [{ userId: "blocked-1" }],
     driverScore: 91,
   };
 
@@ -46,6 +50,10 @@ describe("user document contracts", () => {
     expect(profile).not.toHaveProperty("fuelLogs");
     expect(profile).not.toHaveProperty("serviceLogs");
     expect(profile).not.toHaveProperty("conversations");
+    expect(profile).not.toHaveProperty("friends");
+    expect(profile).not.toHaveProperty("incomingRequests");
+    expect(profile).not.toHaveProperty("outgoingRequests");
+    expect(profile).not.toHaveProperty("blockedDrivers");
     expect(profile).not.toHaveProperty("vehiclePassport");
   });
 

@@ -31,9 +31,20 @@ export function useDirectMessages({ user, setUser }) {
 
     return mergeConversations(normalizeConversations(user), firebaseConversations);
   }, [firebaseConversations, user]);
+  const allowedConversationPlates = useMemo(() => {
+    const blockedPlates = new Set((user?.blockedDrivers ?? []).map((entry) => entry.plate));
+    return new Set(
+      (user?.friends ?? [])
+        .map((entry) => entry.plate)
+        .filter((plate) => !blockedPlates.has(plate)),
+    );
+  }, [user?.blockedDrivers, user?.friends]);
   const conversationList = useMemo(
-    () => (user ? buildConversationList({ ...user, conversations: normalizedConversations }) : []),
-    [normalizedConversations, user],
+    () => user
+      ? buildConversationList({ ...user, conversations: normalizedConversations })
+        .filter((conversation) => allowedConversationPlates.has(conversation.participantPlate))
+      : [],
+    [allowedConversationPlates, normalizedConversations, user],
   );
   const totalUnreadCount = useMemo(
     () => conversationList.reduce((sum, conversation) => sum + Number(conversation.unreadCount ?? 0), 0),
@@ -51,8 +62,14 @@ export function useDirectMessages({ user, setUser }) {
   );
 
   useEffect(() => {
-    if (!activeConversationId && conversationList.length) {
-      setActiveConversationId(conversationList[0].id);
+    const activeConversationIsVisible = conversationList.some(
+      (conversation) => conversation.id === activeConversationId,
+    );
+    const nextConversationId = activeConversationIsVisible
+      ? activeConversationId
+      : conversationList[0]?.id ?? null;
+    if (nextConversationId !== activeConversationId) {
+      setActiveConversationId(nextConversationId);
     }
   }, [activeConversationId, conversationList]);
 
@@ -173,7 +190,13 @@ export function useDirectMessages({ user, setUser }) {
     };
   }, [user?.plate]);
 
-  const activeConversation = activeConversationId ? normalizedConversations[activeConversationId] ?? null : null;
+  const activeConversationCandidate = activeConversationId
+    ? normalizedConversations[activeConversationId] ?? null
+    : null;
+  const activeConversation = activeConversationCandidate &&
+    allowedConversationPlates.has(activeConversationCandidate.participantPlate)
+    ? activeConversationCandidate
+    : null;
   const activeTypingUsers = useMemo(
     () =>
       Object.values(typingMap ?? {}).filter(
@@ -228,15 +251,24 @@ export function useDirectMessages({ user, setUser }) {
   }, [activeConversationId, messageDraft, user?.plate]);
 
   const openConversation = (friend) => {
+    if (!(user.friends ?? []).some((entry) => entry.plate === friend?.plate)) {
+      setChatFeedback("Sohbet acmak icin once arkadas olmalisiniz.");
+      return false;
+    }
     const nextConversationId = buildConversationId(user.plate, friend.plate);
     setActiveConversationId(nextConversationId);
     setUser((current) => markConversationRead(current, nextConversationId));
     setChatFeedback(`${friend.fullName} ile sohbet hazir.`);
+    return true;
   };
 
   const sendMessage = (friend) => {
     if (!friend || !messageDraft.trim() || !user) {
-      return;
+      return false;
+    }
+    if (!(user.friends ?? []).some((entry) => entry.plate === friend.plate)) {
+      setChatFeedback("Mesaj gondermek icin aktif arkadaslik gerekli.");
+      return false;
     }
 
     const trimmedMessage = messageDraft.trim();
@@ -272,6 +304,7 @@ export function useDirectMessages({ user, setUser }) {
     setChatFeedback(`${friend.fullName} sohbetine yeni mesaj eklendi.`);
     setMessageDraft("");
     setActiveConversationId(threadId);
+    return true;
   };
 
   return {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GoogleMap, InfoWindowF, MarkerF, PolylineF, useJsApiLoader } from "@react-google-maps/api";
 import { getPinIcon } from "../constants/pins";
 import { getConvoyAccessState } from "../utils/meetVisibility";
@@ -509,6 +509,9 @@ function getFriendshipStatus(user, plate) {
   if (user.plate === plate) {
     return "self";
   }
+  if ((user.blockedDrivers ?? []).some((entry) => entry.plate === plate)) {
+    return "blocked";
+  }
   if ((user.friends ?? []).some((entry) => entry.plate === plate)) {
     return "friend";
   }
@@ -682,7 +685,10 @@ function GoogleMapCard({
   const mapCenter = selectedPin
     ? { lat: selectedPin.lat ?? 39.8687, lng: selectedPin.lng ?? 32.7766 }
     : { lat: 39.8687, lng: 32.7766 };
-  const activeRoutePath = getActiveRoutePath(selectedPin, user);
+  const activeRoutePath = useMemo(
+    () => getActiveRoutePath(selectedPin, user),
+    [selectedPin, user],
+  );
   const hasMockRoute = activeRoutePath.length > 1;
   const displayedRoutePath = routeState.path.length > 1 ? routeState.path : activeRoutePath;
   const hasDisplayedRoute = displayedRoutePath.length > 1;
@@ -1106,13 +1112,15 @@ function GoogleMapCard({
                           ? "Bekliyor"
                           : selectedGhostFriendship === "outgoing"
                             ? "Gonderildi"
+                            : selectedGhostFriendship === "blocked"
+                              ? "Engelli"
                             : selectedGhostFriendship === "self"
                               ? "Sen"
                               : "Arkadas Ekle"}
                     </button>
                     <button
                       type="button"
-                      disabled={selectedGhostFriendship === "self"}
+                      disabled={selectedGhostFriendship !== "friend"}
                       onClick={() => onOpenDriverConversation?.(selectedGhostMarker)}
                       className="min-h-10 rounded-xl border border-lime-400/20 bg-lime-400/10 px-2 text-[10px] font-semibold text-lime-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >

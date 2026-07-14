@@ -99,6 +99,7 @@ export function StatsScreen({
   activeTypingUsers,
   acceptIncomingClanInvite,
   approveFriendRequest,
+  blockDriver,
   chatFeedback,
   clanFeedback,
   clanForm,
@@ -124,11 +125,14 @@ export function StatsScreen({
   openConversation,
   presenceMap,
   requestFriend,
+  removeFriendship,
   revokeClanInvite,
   sendMessage,
   socialFeedback,
+  socialPendingKey,
   totalUnreadCount,
   user,
+  unblockDriver,
   withdrawFriendRequest,
   mode = "social",
 }) {
@@ -141,8 +145,8 @@ export function StatsScreen({
   const socialSummary = [
     { key: "friends", label: "Arkadas", value: `${user.friends?.length ?? 0}` },
     { key: "incoming", label: "Gelen", value: `${user.incomingRequests?.length ?? 0}` },
-    { key: "threads", label: "DM", value: `${conversationList.length}` },
-    { key: "unread", label: "Unread", value: `${totalUnreadCount}` },
+    { key: "outgoing", label: "Giden", value: `${user.outgoingRequests?.length ?? 0}` },
+    { key: "blocked", label: "Engelli", value: `${user.blockedDrivers?.length ?? 0}` },
   ];
   const hasSearchResults = friendSearchResults.length > 0;
 
@@ -153,6 +157,8 @@ export function StatsScreen({
   const openProfileDrawer = (profile, source = "community") => {
     onOpenPublicProfile?.({ ...profile, source });
   };
+  const isSocialEntryPending = (entry) =>
+    Boolean(socialPendingKey && entry?.userId && socialPendingKey.endsWith(`:${entry.userId}`));
   const showSocial = mode === "social";
   const showLeaderboard = mode === "leaderboard";
 
@@ -335,6 +341,7 @@ export function StatsScreen({
             </div>
           </div>
         </div>
+
       </div>
       ) : null}
 
@@ -382,16 +389,18 @@ export function StatsScreen({
                   {entry.friendshipStatus === "none" ? (
                     <button
                       type="button"
+                      disabled={isSocialEntryPending(entry)}
                       onClick={() => requestFriend(entry)}
-                      className="min-h-12 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black"
+                      className="min-h-12 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black disabled:cursor-wait disabled:opacity-50"
                     >
                       Arkadas Ekle
                     </button>
                   ) : entry.friendshipStatus === "outgoing" ? (
                     <button
                       type="button"
+                      disabled={isSocialEntryPending(entry)}
                       onClick={() => withdrawFriendRequest(entry.plate)}
-                      className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
+                      className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:cursor-wait disabled:opacity-50"
                     >
                       Istegi Geri Cek
                     </button>
@@ -399,15 +408,17 @@ export function StatsScreen({
                     <div className="flex gap-2">
                       <button
                         type="button"
+                        disabled={isSocialEntryPending(entry)}
                         onClick={() => approveFriendRequest(entry.plate)}
-                        className="min-h-12 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black"
+                        className="min-h-12 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black disabled:cursor-wait disabled:opacity-50"
                       >
                         Kabul
                       </button>
                       <button
                         type="button"
+                        disabled={isSocialEntryPending(entry)}
                         onClick={() => declineFriendRequest(entry.plate)}
-                        className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
+                        className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:cursor-wait disabled:opacity-50"
                       >
                         Reddet
                       </button>
@@ -428,7 +439,7 @@ export function StatsScreen({
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
             <p className="text-sm font-semibold">Gelen Istekler</p>
             <div className="mt-4 space-y-3">
@@ -443,15 +454,17 @@ export function StatsScreen({
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <button
                         type="button"
+                        disabled={isSocialEntryPending(entry)}
                         onClick={() => approveFriendRequest(entry.plate)}
-                        className="min-h-12 flex-1 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black"
+                        className="min-h-12 flex-1 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black disabled:cursor-wait disabled:opacity-50"
                       >
                         Kabul Et
                       </button>
                       <button
                         type="button"
+                        disabled={isSocialEntryPending(entry)}
                         onClick={() => declineFriendRequest(entry.plate)}
-                        className="min-h-12 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
+                        className="min-h-12 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:cursor-wait disabled:opacity-50"
                       >
                         Reddet
                       </button>
@@ -461,6 +474,35 @@ export function StatsScreen({
               ) : (
                 <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
                   Yeni arkadas istegi yok.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+            <p className="text-sm font-semibold">Giden Istekler</p>
+            <div className="mt-4 space-y-3">
+              {(user.outgoingRequests ?? []).length ? (
+                user.outgoingRequests.map((entry) => (
+                  <div key={`${entry.userId ?? entry.plate}-outgoing`} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+                    <button type="button" onClick={() => openProfileDrawer(entry, "outgoing")} className="text-left">
+                      <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
+                      <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
+                      <p className="text-xs text-neutral-500">{entry.model}</p>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSocialEntryPending(entry)}
+                      onClick={() => withdrawFriendRequest(entry.plate)}
+                      className="mt-3 min-h-12 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:cursor-wait disabled:opacity-50"
+                    >
+                      Istegi Geri Cek
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
+                  Bekleyen giden istek yok.
                 </div>
               )}
             </div>
@@ -481,16 +523,18 @@ export function StatsScreen({
                       <div className="flex min-w-[8.5rem] flex-col gap-2">
                         <button
                           type="button"
+                          disabled={isSocialEntryPending(entry)}
                           onClick={() => openConversation(entry)}
-                          className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
+                          className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-50"
                         >
                           Sohbet Ac
                         </button>
                         {canInviteToClan ? (
                           <button
                             type="button"
+                            disabled={isSocialEntryPending(entry)}
                             onClick={() => inviteFriendToClan(entry)}
-                            className="min-h-12 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black"
+                            className="min-h-12 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black disabled:opacity-50"
                           >
                             Klana Davet Et
                           </button>
@@ -499,6 +543,22 @@ export function StatsScreen({
                             Friend
                           </span>
                         )}
+                        <button
+                          type="button"
+                          disabled={isSocialEntryPending(entry)}
+                          onClick={() => removeFriendship(entry.plate)}
+                          className="min-h-12 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs font-semibold text-neutral-300 disabled:cursor-wait disabled:opacity-50"
+                        >
+                          Arkadasliktan Cikar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isSocialEntryPending(entry)}
+                          onClick={() => blockDriver(entry)}
+                          className="min-h-12 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200 disabled:cursor-wait disabled:opacity-50"
+                        >
+                          Engelle
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -640,6 +700,42 @@ export function StatsScreen({
             </div>
           </div>
         </div>
+        <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">Engellenen Suruculer</p>
+              <p className="mt-1 text-xs text-neutral-500">Bu profiller aramada gorunmez ve yeni arkadaslik istegi olusturamaz.</p>
+            </div>
+            <span className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-rose-200">
+              {user.blockedDrivers?.length ?? 0} blocked
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {(user.blockedDrivers ?? []).length ? (
+              user.blockedDrivers.map((entry) => (
+                <div key={`${entry.userId ?? entry.plate}-blocked`} className="flex items-center justify-between gap-3 rounded-2xl border border-rose-400/10 bg-rose-500/[0.04] p-4">
+                  <div>
+                    <p className="font-mono text-sm tracking-[0.14em] text-rose-200">{entry.plate}</p>
+                    <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
+                    <p className="text-xs text-neutral-500">{entry.model}</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isSocialEntryPending(entry)}
+                    onClick={() => unblockDriver(entry)}
+                    className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:cursor-wait disabled:opacity-50"
+                  >
+                    Engeli Kaldir
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500 md:col-span-2">
+                Engellenen surucu bulunmuyor.
+              </div>
+            )}
+          </div>
+        </div>
       </div>
       ) : null}
 
@@ -658,6 +754,7 @@ export function StatsScreen({
             {driverStatsStatus?.mode === "firebase" ? "Backend Verified" : "Demo Ranking"}
           </div>
         </div>
+
         {driverStatsStatus?.error ? (
           <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-xs text-amber-100">
             {driverStatsStatus.error}

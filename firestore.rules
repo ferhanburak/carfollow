@@ -493,6 +493,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /artifacts/{appId}/public/data/friendships/{documentId} {
+      allow read: if isKnownApp(appId) &&
+        isSignedIn() &&
+        request.auth.uid in resource.data.participantIds;
+      allow write: if false;
+    }
+
     match /artifacts/{appId}/public/data/{collectionName}/{documentId} {
       allow read: if isKnownApp(appId) &&
         isSignedIn() &&
@@ -575,6 +582,11 @@ service cloud.firestore {
     }
 
     match /artifacts/{appId}/users/{userId}/vehiclePassportExports/{documentId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow write: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/blockedUsers/{documentId} {
       allow read: if isKnownApp(appId) && isOwner(userId);
       allow write: if false;
     }

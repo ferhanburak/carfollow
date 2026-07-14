@@ -10,9 +10,11 @@ import {
   doc,
   getDoc,
   getDocs,
+  query,
   setDoc,
   Timestamp,
   updateDoc,
+  where,
   writeBatch,
 } from "firebase/firestore";
 import {
@@ -206,6 +208,33 @@ async function seedFirestoreFixtures() {
       periodKey: "2026-07",
       monthlyKm: 12.4,
     });
+    batch.set(doc(database, publicPath("friendships", `${OTHER_ID}__${OWNER_ID}`)), {
+      id: `${OTHER_ID}__${OWNER_ID}`,
+      requesterUserId: OWNER_ID,
+      targetUserId: OTHER_ID,
+      participantIds: [OWNER_ID, OTHER_ID],
+      participants: { [OWNER_ID]: true, [OTHER_ID]: true },
+      status: "pending",
+      schemaVersion: 1,
+      createdAt: FIXED_TIME,
+      updatedAt: FIXED_TIME,
+    });
+    batch.set(doc(database, privatePath(OWNER_ID, "blockedUsers", STRANGER_ID)), {
+      id: STRANGER_ID,
+      ownerUserId: OWNER_ID,
+      targetUserId: STRANGER_ID,
+      targetProfile: {
+        userId: STRANGER_ID,
+        plate: "34 BLOCK 01",
+        fullName: "Blocked Driver",
+        model: "Test Vehicle",
+        region: "Istanbul",
+        avatar: "",
+      },
+      schemaVersion: 1,
+      blockedAt: FIXED_TIME,
+      updatedAt: FIXED_TIME,
+    });
     await batch.commit();
   });
 }
@@ -268,6 +297,38 @@ describe("Firestore security rules", { concurrency: false }, () => {
     const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
     await assertSucceeds(getDoc(doc(ownerDb, publicPath("plateClaims", PLATE_NORMALIZED))));
     await assertFails(getDocs(collection(ownerDb, `artifacts/${APP_ID}/public/data/plateClaims`)));
+  });
+
+  it("allows participant-scoped friendship reads and blocks direct client writes", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+    const strangerDb = testEnvironment.authenticatedContext(STRANGER_ID).firestore();
+    const friendshipPath = publicPath("friendships", `${OTHER_ID}__${OWNER_ID}`);
+
+    await assertSucceeds(getDoc(doc(ownerDb, friendshipPath)));
+    await assertFails(getDoc(doc(strangerDb, friendshipPath)));
+    await assertSucceeds(getDocs(query(
+      collection(ownerDb, `artifacts/${APP_ID}/public/data/friendships`),
+      where("participantIds", "array-contains", OWNER_ID),
+    )));
+    await assertFails(getDocs(collection(ownerDb, `artifacts/${APP_ID}/public/data/friendships`)));
+    await assertFails(setDoc(doc(ownerDb, publicPath("friendships", "manual-friendship")), {
+      participantIds: [OWNER_ID, STRANGER_ID],
+      status: "accepted",
+    }));
+  });
+
+  it("keeps blocked drivers private and backend-owned", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+    const otherDb = testEnvironment.authenticatedContext(OTHER_ID).firestore();
+    const blockedPath = privatePath(OWNER_ID, "blockedUsers", STRANGER_ID);
+
+    await assertSucceeds(getDoc(doc(ownerDb, blockedPath)));
+    await assertSucceeds(getDocs(collection(ownerDb, `artifacts/${APP_ID}/users/${OWNER_ID}/blockedUsers`)));
+    await assertFails(getDoc(doc(otherDb, blockedPath)));
+    await assertFails(setDoc(doc(ownerDb, privatePath(OWNER_ID, "blockedUsers", OTHER_ID)), {
+      ownerUserId: OWNER_ID,
+      targetUserId: OTHER_ID,
+    }));
   });
 
   it("blocks client writes to driver stats and individual leaderboard", async () => {

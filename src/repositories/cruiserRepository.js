@@ -44,6 +44,18 @@ export {
 } from "./firebaseCruiserRepository";
 
 export {
+  blockFirebaseDriver,
+  buildFirebaseSocialState,
+  cancelFirebaseFriendshipRequest,
+  isFirebaseSocialRepositoryEnabled,
+  removeFirebaseFriendship,
+  requestFirebaseFriendship,
+  respondFirebaseFriendship,
+  subscribeFirebaseSocialState,
+  unblockFirebaseDriver,
+} from "./firebaseSocialRepository";
+
+export {
   createFirebaseVehiclePassportExport,
   loadFirebaseVehiclePassportExports,
   loadFirebaseVehiclePassportBundle,

@@ -33,6 +33,8 @@ describe("firebase path helpers", () => {
     expect(
       privateUserDocumentPath("user-42", PRIVATE_COLLECTIONS.vehiclePassports, "vehicle-42", "demo-app"),
     ).toBe("/artifacts/demo-app/users/user-42/vehiclePassports/vehicle-42");
+    expect(privateUserDocumentPath("user-42", PRIVATE_COLLECTIONS.blockedUsers, "blocked-42", "demo-app"))
+      .toBe("/artifacts/demo-app/users/user-42/blockedUsers/blocked-42");
   });
 
   it("creates a realtime dm path from plate values", () => {

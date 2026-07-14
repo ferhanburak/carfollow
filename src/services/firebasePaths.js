@@ -16,6 +16,7 @@ export const PUBLIC_COLLECTIONS = Object.freeze({
 });
 
 export const PRIVATE_COLLECTIONS = Object.freeze({
+  blockedUsers: "blockedUsers",
   driverStats: "driverStats",
   driveSessions: "driveSessions",
   fuelLogs: "fuelLogs",

@@ -87,6 +87,9 @@ function getProfileStatus(user, profile) {
   if (profile.plate === user.plate) {
     return "self";
   }
+  if ((user.blockedDrivers ?? []).some((entry) => entry.plate === profile.plate)) {
+    return "blocked";
+  }
   if ((user.friends ?? []).some((entry) => entry.plate === profile.plate)) {
     return "friend";
   }
@@ -101,13 +104,17 @@ function getProfileStatus(user, profile) {
 
 export function PublicDriverProfileOverlay({
   hostableConvoy,
+  onBlockDriver,
   onClose,
   onInviteFriendToClan,
   onInviteToConvoy,
   onOpenConversation,
   onRequestFriend,
+  onRemoveFriendship,
+  onUnblockDriver,
   presence,
   profile,
+  socialPendingKey,
   user,
 }) {
   if (!profile) {
@@ -117,6 +124,9 @@ export function PublicDriverProfileOverlay({
   const profileStatus = getProfileStatus(user, profile);
   const reputation = resolveReputation(profile);
   const stats = buildStats(profile, user);
+  const isPending = Boolean(
+    socialPendingKey && profile.userId && socialPendingKey.endsWith(`:${profile.userId}`),
+  );
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-[#050505]/95 px-3 py-6 backdrop-blur-sm">
@@ -198,7 +208,7 @@ export function PublicDriverProfileOverlay({
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              disabled={profileStatus !== "none"}
+              disabled={profileStatus !== "none" || isPending}
               onClick={() => onRequestFriend(profile)}
               className="min-h-12 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -208,13 +218,15 @@ export function PublicDriverProfileOverlay({
                   ? "Istek Bekliyor"
                   : profileStatus === "outgoing"
                     ? "Istek Gonderildi"
+                    : profileStatus === "blocked"
+                      ? "Surucu Engelli"
                     : profileStatus === "self"
                       ? "Bu Sensin"
                       : "Arkadas Ekle"}
             </button>
             <button
               type="button"
-              disabled={profileStatus === "self"}
+              disabled={profileStatus !== "friend" || isPending}
               onClick={() => onOpenConversation(profile)}
               className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -222,7 +234,7 @@ export function PublicDriverProfileOverlay({
             </button>
             <button
               type="button"
-              disabled={!onInviteFriendToClan || profileStatus === "self"}
+              disabled={!onInviteFriendToClan || profileStatus !== "friend" || isPending}
               onClick={() => onInviteFriendToClan(profile)}
               className="min-h-12 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 text-xs font-semibold text-lime-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -230,12 +242,41 @@ export function PublicDriverProfileOverlay({
             </button>
             <button
               type="button"
-              disabled={!hostableConvoy || profileStatus === "self"}
+              disabled={!hostableConvoy || profileStatus !== "friend" || isPending}
               onClick={() => onInviteToConvoy(hostableConvoy.id, profile)}
               className="min-h-12 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 text-xs font-semibold text-rose-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Konvoya Davet
             </button>
+            {profileStatus === "friend" ? (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => onRemoveFriendship?.(profile.plate)}
+                className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-neutral-300 disabled:cursor-wait disabled:opacity-50"
+              >
+                Arkadasliktan Cikar
+              </button>
+            ) : null}
+            {profileStatus === "blocked" ? (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => onUnblockDriver?.(profile)}
+                className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-neutral-200 disabled:cursor-wait disabled:opacity-50"
+              >
+                Engeli Kaldir
+              </button>
+            ) : profileStatus !== "self" ? (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => onBlockDriver?.(profile)}
+                className="min-h-12 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 text-xs font-semibold text-rose-200 disabled:cursor-wait disabled:opacity-50"
+              >
+                Surucuyu Engelle
+              </button>
+            ) : null}
           </div>
 
           <div className="rounded-2xl border border-white/8 bg-black/20 p-4 text-xs text-neutral-400">

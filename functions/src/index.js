@@ -12,6 +12,12 @@ const {
 const {
   buildVehiclePassportExportDocument,
 } = require("./vehiclePassportExport");
+const {
+  buildBlockedDriverDocument,
+  buildFriendshipDocument,
+  buildFriendshipMigrationDocument,
+  buildPairId,
+} = require("./social");
 
 admin.initializeApp();
 
@@ -54,12 +60,32 @@ async function getUserProfile(userId) {
   };
 }
 
-function buildPairId(leftId, rightId) {
-  return [leftId, rightId].sort((left, right) => left.localeCompare(right)).join("__");
-}
-
 function buildScopedMemberId(scopeId, userId) {
   return `${scopeId}__${userId}`;
+}
+
+function requireTargetUserId(request, actorUserId) {
+  const targetUserId = request.data?.targetUserId;
+  if (
+    typeof targetUserId !== "string" ||
+    targetUserId.length < 1 ||
+    targetUserId.length > 128 ||
+    targetUserId.includes("/")
+  ) {
+    throw new HttpsError("invalid-argument", "A valid targetUserId is required.");
+  }
+  if (actorUserId === targetUserId) {
+    throw new HttpsError("failed-precondition", "You cannot perform this action on yourself.");
+  }
+  return targetUserId;
+}
+
+function friendshipDocument(leftUserId, rightUserId) {
+  return publicDocument("friendships", buildPairId(leftUserId, rightUserId));
+}
+
+function blockedDriverDocument(ownerUserId, targetUserId) {
+  return privateUserDocument(ownerUserId, "blockedUsers", targetUserId);
 }
 
 function requireSnapshot(snapshot, code, message) {
@@ -150,46 +176,165 @@ function assertConvoyTrust(convoy, requester) {
 
 exports.requestFriendship = onCall(async (request) => {
   const requesterUserId = requireAuth(request);
-  const { targetUserId } = request.data ?? {};
-
-  if (!targetUserId || typeof targetUserId !== "string") {
-    throw new HttpsError("invalid-argument", "targetUserId is required.");
-  }
-  if (requesterUserId === targetUserId) {
-    throw new HttpsError("failed-precondition", "You cannot request yourself.");
-  }
+  const targetUserId = requireTargetUserId(request, requesterUserId);
 
   const [requester, target] = await Promise.all([
     getUserProfile(requesterUserId),
     getUserProfile(targetUserId),
   ]);
   const friendshipId = buildPairId(requesterUserId, targetUserId);
-  const friendshipRef = publicCollection("friendships").doc(friendshipId);
+  const friendshipRef = friendshipDocument(requesterUserId, targetUserId);
+  const requesterBlockRef = blockedDriverDocument(requesterUserId, targetUserId);
+  const targetBlockRef = blockedDriverDocument(targetUserId, requesterUserId);
 
-  await db.runTransaction(async (transaction) => {
-    const existing = await transaction.get(friendshipRef);
+  const outcome = await db.runTransaction(async (transaction) => {
+    const [existing, requesterBlock, targetBlock] = await Promise.all([
+      transaction.get(friendshipRef),
+      transaction.get(requesterBlockRef),
+      transaction.get(targetBlockRef),
+    ]);
+    if (requesterBlock.exists || targetBlock.exists) {
+      throw new HttpsError("permission-denied", "A friendship request cannot be created for this driver.");
+    }
     if (existing.exists) {
-      throw new HttpsError("already-exists", "Friendship request already exists.");
+      const friendship = existing.data();
+      if (Array.isArray(friendship.participantIds)) {
+        throw new HttpsError("already-exists", "Friendship request already exists.");
+      }
+
+      const timestamp = admin.firestore.FieldValue.serverTimestamp();
+      const migration = buildFriendshipMigrationDocument({
+        friendship,
+        leftProfile: requester,
+        rightProfile: target,
+        timestamp,
+      });
+      if (!migration) {
+        throw new HttpsError("failed-precondition", "Legacy friendship data could not be upgraded safely.");
+      }
+      transaction.set(friendshipRef, migration, { merge: true });
+      return "migrated";
     }
 
-    transaction.set(friendshipRef, {
-      requesterUserId,
-      requesterPlate: requester.plate ?? "",
-      requesterName: requester.fullName ?? "",
-      targetUserId,
-      targetPlate: target.plate ?? "",
-      targetName: target.fullName ?? "",
-      participants: {
-        [requesterUserId]: true,
-        [targetUserId]: true,
-      },
-      status: "pending",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    transaction.set(friendshipRef, buildFriendshipDocument({ requester, target, timestamp }));
+    return "created";
+  });
+
+  return { ok: true, friendshipId, migrated: outcome === "migrated" };
+});
+
+exports.respondFriendship = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const requesterUserId = requireTargetUserId(request, actorUserId);
+  const decision = request.data?.decision;
+  if (!["accepted", "declined"].includes(decision)) {
+    throw new HttpsError("invalid-argument", "Decision must be accepted or declined.");
+  }
+
+  const friendshipRef = friendshipDocument(actorUserId, requesterUserId);
+  const actorBlockRef = blockedDriverDocument(actorUserId, requesterUserId);
+  const requesterBlockRef = blockedDriverDocument(requesterUserId, actorUserId);
+
+  await db.runTransaction(async (transaction) => {
+    const [friendshipSnapshot, actorBlock, requesterBlock] = await Promise.all([
+      transaction.get(friendshipRef),
+      transaction.get(actorBlockRef),
+      transaction.get(requesterBlockRef),
+    ]);
+    const friendship = requireSnapshot(friendshipSnapshot, "not-found", "Friendship request not found.");
+    if (
+      friendship.status !== "pending" ||
+      friendship.targetUserId !== actorUserId ||
+      friendship.requesterUserId !== requesterUserId
+    ) {
+      throw new HttpsError("permission-denied", "Only the request recipient can respond.");
+    }
+
+    if (decision === "declined") {
+      transaction.delete(friendshipRef);
+      return;
+    }
+    if (actorBlock.exists || requesterBlock.exists) {
+      throw new HttpsError("permission-denied", "A blocked friendship request cannot be accepted.");
+    }
+
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    transaction.update(friendshipRef, {
+      status: "accepted",
+      acceptedAt: timestamp,
+      updatedAt: timestamp,
     });
   });
 
-  return { ok: true, friendshipId };
+  return { ok: true, friendshipId: friendshipRef.id, decision };
+});
+
+exports.cancelFriendshipRequest = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const targetUserId = requireTargetUserId(request, actorUserId);
+  const friendshipRef = friendshipDocument(actorUserId, targetUserId);
+
+  await db.runTransaction(async (transaction) => {
+    const friendshipSnapshot = await transaction.get(friendshipRef);
+    const friendship = requireSnapshot(friendshipSnapshot, "not-found", "Friendship request not found.");
+    if (friendship.status !== "pending" || friendship.requesterUserId !== actorUserId) {
+      throw new HttpsError("permission-denied", "Only the requester can cancel this request.");
+    }
+    transaction.delete(friendshipRef);
+  });
+
+  return { ok: true, friendshipId: friendshipRef.id };
+});
+
+exports.removeFriendship = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const targetUserId = requireTargetUserId(request, actorUserId);
+  const friendshipRef = friendshipDocument(actorUserId, targetUserId);
+
+  await db.runTransaction(async (transaction) => {
+    const friendshipSnapshot = await transaction.get(friendshipRef);
+    const friendship = requireSnapshot(friendshipSnapshot, "not-found", "Friendship not found.");
+    if (
+      friendship.status !== "accepted" ||
+      !(friendship.participantIds ?? []).includes(actorUserId)
+    ) {
+      throw new HttpsError("permission-denied", "Only friendship participants can remove this connection.");
+    }
+    transaction.delete(friendshipRef);
+  });
+
+  return { ok: true, friendshipId: friendshipRef.id };
+});
+
+exports.blockDriver = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const targetUserId = requireTargetUserId(request, actorUserId);
+  const target = await getUserProfile(targetUserId);
+  const blockRef = blockedDriverDocument(actorUserId, targetUserId);
+  const friendshipRef = friendshipDocument(actorUserId, targetUserId);
+
+  await db.runTransaction(async (transaction) => {
+    const friendshipSnapshot = await transaction.get(friendshipRef);
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    transaction.set(
+      blockRef,
+      buildBlockedDriverDocument({ ownerUserId: actorUserId, target, timestamp }),
+      { merge: true },
+    );
+    if (friendshipSnapshot.exists) {
+      transaction.delete(friendshipRef);
+    }
+  });
+
+  return { ok: true, targetUserId };
+});
+
+exports.unblockDriver = onCall(async (request) => {
+  const actorUserId = requireAuth(request);
+  const targetUserId = requireTargetUserId(request, actorUserId);
+  await blockedDriverDocument(actorUserId, targetUserId).delete();
+  return { ok: true, targetUserId };
 });
 
 exports.requestConvoyJoin = onCall(async (request) => {

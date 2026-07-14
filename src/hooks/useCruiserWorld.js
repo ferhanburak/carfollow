@@ -165,13 +165,17 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
 
   const {
     approveFriendRequest,
+    blockDriver,
     declineFriendRequest,
     friendSearchQuery,
     friendSearchResults,
     requestFriend,
+    removeFriendship,
     safeUser,
     setFriendSearchQuery,
     socialFeedback,
+    socialPendingKey,
+    unblockDriver,
     withdrawFriendRequest,
   } = useSocialGraph({
     socialDirectory: socialDirectorySeed,
@@ -275,6 +279,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     activeTab,
     acceptIncomingClanInvite,
     approveFriendRequest,
+    blockDriver,
     chatFeedback,
     clanFeedback,
     clanForm,
@@ -331,6 +336,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     rateAttendee,
     removeLastDraftRoutePoint,
     requestFriend,
+    removeFriendship,
     resetSessionView,
     revokeClanInvite,
     safeUser: resolvedSafeUser,
@@ -355,6 +361,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setSpotPhotoForm,
     setWashForm,
     socialFeedback,
+    socialPendingKey,
     spotPhotoErrors,
     spotPhotoFeedback,
     spotPhotoForm,
@@ -374,6 +381,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     hostableConvoys,
     inviteFriendToClan,
     inviteDriverToMeet,
+    unblockDriver,
     withdrawFriendRequest,
   };
 }
