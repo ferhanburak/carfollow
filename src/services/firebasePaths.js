@@ -11,6 +11,8 @@ export const PUBLIC_COLLECTIONS = Object.freeze({
   individualLeaderboard: "individualLeaderboard",
   friendships: "friendships",
   mapPins: "mapPins",
+  mapLikes: "mapLikes",
+  mapSpotPhotos: "mapSpotPhotos",
   plateClaims: "plateClaims",
   publicProfiles: "publicProfiles",
   washReviews: "washReviews",

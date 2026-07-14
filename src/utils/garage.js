@@ -46,6 +46,7 @@ export const createSpotPhotoForm = () => ({
   title: "",
   imageUrl: "",
   fileName: "",
+  file: null,
 });
 
 export const createFuelForm = (odometer) => ({

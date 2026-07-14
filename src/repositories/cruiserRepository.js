@@ -85,6 +85,16 @@ export {
 } from "./firebaseDriverStatsRepository";
 
 export {
+  addFirebaseMapSpotPhoto,
+  buildFirebaseMapState,
+  createFirebaseMapNode,
+  isFirebaseMapRepositoryEnabled,
+  submitFirebaseWashReview,
+  subscribeFirebaseMapState,
+  toggleFirebaseMapLike,
+} from "./firebaseMapRepository";
+
+export {
   isFirebaseAuthRepositoryEnabled,
   loadFirebaseAuthenticatedProfile,
   registerFirebaseAccount,

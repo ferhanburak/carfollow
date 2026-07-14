@@ -29,6 +29,12 @@ const {
   normalizeClanTag,
   sanitizeClanText,
 } = require("./clan");
+const {
+  buildMapPinDocument,
+  buildSpotPhotoDocument,
+  buildWashRating,
+  buildWashReviewDocument,
+} = require("./map");
 
 admin.initializeApp();
 
@@ -1107,4 +1113,117 @@ exports.finishDriveSession = onCall(async (request) => {
   });
 
   return response;
+});
+
+// Stage 6: Spot and wash writes are intentionally callable-only. Event/convoy
+// mutations remain a Stage 7 concern and are not handled by these endpoints.
+exports.createMapNode = onCall(async (request) => {
+  const userId = requireAuth(request);
+  const pin = request.data?.pin ?? request.data;
+  const profile = await getUserProfile(userId);
+  const pinRef = publicCollection("mapPins").doc();
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+  let document;
+  try {
+    document = buildMapPinDocument({ pinId: pinRef.id, pin, profile, userId, timestamp });
+  } catch (error) {
+    throw new HttpsError("invalid-argument", error.message);
+  }
+  if (document.type === "wash" && (pin?.foam || pin?.water)) {
+    let review;
+    try {
+      review = buildWashReviewDocument({ pinId: pinRef.id, userId, profile, review: pin, timestamp });
+    } catch (error) {
+      throw new HttpsError("invalid-argument", error.message);
+    }
+    document.rating = buildWashRating({}, null, review);
+    const batch = db.batch();
+    batch.set(pinRef, document);
+    batch.set(publicDocument("washReviews", review.id), review);
+    await batch.commit();
+  } else {
+    await pinRef.set(document);
+  }
+  return { ok: true, pinId: pinRef.id };
+});
+
+exports.submitWashReview = onCall(async (request) => {
+  const userId = requireAuth(request);
+  const pinId = String(request.data?.pinId ?? "");
+  if (!pinId || pinId.includes("/")) throw new HttpsError("invalid-argument", "A valid wash node is required.");
+  const profile = await getUserProfile(userId);
+  const pinRef = publicDocument("mapPins", pinId);
+  const reviewRef = publicDocument("washReviews", `${pinId}__${userId}`);
+  let rating;
+  await db.runTransaction(async (transaction) => {
+    const [pinSnapshot, previousReviewSnapshot] = await Promise.all([transaction.get(pinRef), transaction.get(reviewRef)]);
+    if (!pinSnapshot.exists || pinSnapshot.data().type !== "wash") throw new HttpsError("not-found", "Wash node not found.");
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    let review;
+    try {
+      review = buildWashReviewDocument({ pinId, userId, profile, review: request.data, timestamp });
+    } catch (error) {
+      throw new HttpsError("invalid-argument", error.message);
+    }
+    rating = buildWashRating(pinSnapshot.data().rating, previousReviewSnapshot.exists ? previousReviewSnapshot.data() : null, review);
+    transaction.set(reviewRef, review, { merge: true });
+    transaction.update(pinRef, { rating, updatedAt: timestamp });
+  });
+  return { ok: true, rating };
+});
+
+exports.toggleMapLike = onCall(async (request) => {
+  const userId = requireAuth(request);
+  const pinId = String(request.data?.pinId ?? "");
+  const targetType = request.data?.targetType;
+  const photoId = targetType === "photo" ? String(request.data?.photoId ?? "") : "";
+  if (!pinId || pinId.includes("/") || !["pin", "photo"].includes(targetType) || (targetType === "photo" && (!photoId || photoId.includes("/")))) {
+    throw new HttpsError("invalid-argument", "A valid like target is required.");
+  }
+  const pinRef = publicDocument("mapPins", pinId);
+  const photoRef = targetType === "photo" ? publicDocument("mapSpotPhotos", photoId) : null;
+  const likeId = `${pinId}__${photoId || "pin"}__${userId}`;
+  const likeRef = publicDocument("mapLikes", likeId);
+  let liked = false;
+  await db.runTransaction(async (transaction) => {
+    const reads = [transaction.get(pinRef), transaction.get(likeRef)];
+    if (photoRef) reads.push(transaction.get(photoRef));
+    const [pinSnapshot, likeSnapshot, photoSnapshot] = await Promise.all(reads);
+    if (!pinSnapshot.exists || (photoRef && (!photoSnapshot.exists || photoSnapshot.data().pinId !== pinId))) throw new HttpsError("not-found", "Map target not found.");
+    const field = targetType === "photo" ? "galleryLikes" : "likes";
+    const current = Number(pinSnapshot.data()[field] ?? 0);
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    liked = !likeSnapshot.exists;
+    if (liked) {
+      transaction.set(likeRef, { id: likeId, pinId, photoId: photoId || null, targetType, userId, createdAt: timestamp });
+    } else {
+      transaction.delete(likeRef);
+    }
+    transaction.update(pinRef, { [field]: Math.max(0, current + (liked ? 1 : -1)), updatedAt: timestamp });
+    if (photoRef) transaction.update(photoRef, { likes: Math.max(0, Number(photoSnapshot.data().likes ?? 0) + (liked ? 1 : -1)), updatedAt: timestamp });
+  });
+  return { ok: true, liked };
+});
+
+exports.addMapSpotPhoto = onCall(async (request) => {
+  const userId = requireAuth(request);
+  const pinId = String(request.data?.pinId ?? "");
+  const storagePath = String(request.data?.storagePath ?? "");
+  const expectedPrefix = `artifacts/${APP_ID}/mapNodes/${pinId}/photos/${userId}/`;
+  if (!pinId || pinId.includes("/") || !storagePath.startsWith(expectedPrefix) || storagePath.includes("..")) {
+    throw new HttpsError("invalid-argument", "Photo must be uploaded to the approved map path.");
+  }
+  const profile = await getUserProfile(userId);
+  const pinRef = publicDocument("mapPins", pinId);
+  const photoRef = publicCollection("mapSpotPhotos").doc();
+  await db.runTransaction(async (transaction) => {
+    const pinSnapshot = await transaction.get(pinRef);
+    if (!pinSnapshot.exists || pinSnapshot.data().type !== "spot") throw new HttpsError("not-found", "Photo spot not found.");
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const photo = buildSpotPhotoDocument({ photoId: photoRef.id, pinId, userId, profile, title: request.data?.title, imageUrl: request.data?.imageUrl, storagePath, timestamp });
+    if (!photo.imageUrl) throw new HttpsError("invalid-argument", "A photo URL is required.");
+    transaction.set(photoRef, photo);
+    transaction.update(pinRef, { photoCount: Number(pinSnapshot.data().photoCount ?? 0) + 1, updatedAt: timestamp });
+  });
+  return { ok: true, photoId: photoRef.id };
 });

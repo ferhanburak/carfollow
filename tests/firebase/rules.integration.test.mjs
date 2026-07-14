@@ -590,6 +590,20 @@ describe("Firestore security rules", { concurrency: false }, () => {
       schemaVersion: 1,
     }));
   });
+
+  it("keeps spot, wash, reviews, photos, and likes callable-only while preserving legacy meet drafts", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+    const basePin = {
+      id: "node-1", name: "Test node", lat: 39.9, lng: 32.8,
+      createdByUid: OWNER_ID, createdAt: FIXED_TIME, updatedAt: FIXED_TIME,
+    };
+    await assertFails(setDoc(doc(ownerDb, publicPath("mapPins", "node-1")), { ...basePin, type: "spot" }));
+    await assertFails(setDoc(doc(ownerDb, publicPath("mapPins", "wash-1")), { ...basePin, id: "wash-1", type: "wash" }));
+    await assertSucceeds(setDoc(doc(ownerDb, publicPath("mapPins", "meet-1")), { ...basePin, id: "meet-1", type: "meet" }));
+    await assertFails(setDoc(doc(ownerDb, publicPath("washReviews", "wash-1__owner")), { pinId: "wash-1", userId: OWNER_ID }));
+    await assertFails(setDoc(doc(ownerDb, publicPath("mapSpotPhotos", "photo-1")), { pinId: "node-1", userId: OWNER_ID }));
+    await assertFails(setDoc(doc(ownerDb, publicPath("mapLikes", "like-1")), { pinId: "node-1", userId: OWNER_ID }));
+  });
 });
 
 describe("Realtime Database security rules", { concurrency: false }, () => {

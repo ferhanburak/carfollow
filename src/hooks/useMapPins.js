@@ -15,7 +15,12 @@ import {
   updateConvoyLifecycleStatus,
   saveFirebaseCruiseJoin,
   saveFirebaseMapPin,
-  saveFirebaseWashReview,
+  addFirebaseMapSpotPhoto,
+  createFirebaseMapNode,
+  isFirebaseMapRepositoryEnabled,
+  submitFirebaseWashReview,
+  subscribeFirebaseMapState,
+  toggleFirebaseMapLike,
 } from "../repositories/cruiserRepository";
 import { getPinIcon } from "../constants/pins";
 import {
@@ -88,6 +93,7 @@ export function useMapPins({ initialWorld, user }) {
   const [spotPhotoErrors, setSpotPhotoErrors] = useState({});
   const [spotPhotoFeedback, setSpotPhotoFeedback] = useState("");
   const [convoyFeedback, setConvoyFeedback] = useState("");
+  const firebaseMapEnabled = isFirebaseMapRepositoryEnabled();
 
   const visibleMapPins = useMemo(() => filterVisibleMapPins(mapPins, user), [mapPins, user]);
   const selectedPin = visibleMapPins.find((pin) => pin.id === selectedPinId) ?? visibleMapPins[0] ?? null;
@@ -103,21 +109,47 @@ export function useMapPins({ initialWorld, user }) {
     }
   }, [selectedPinId, visibleMapPins]);
 
-  const likePin = () => {
+  useEffect(() => {
+    if (!firebaseMapEnabled || !user?.firebaseUid) return undefined;
+    let unsubscribe = () => {};
+    void subscribeFirebaseMapState(
+      (state) => setMapPins(state.mapPins),
+      () => setMapPinFeedback("Live map could not refresh. Check your connection."),
+    ).then((cleanup) => { unsubscribe = cleanup; });
+    return () => unsubscribe();
+  }, [firebaseMapEnabled, user?.firebaseUid]);
+
+  const likePin = async () => {
     if (!selectedPin) {
+      return;
+    }
+    if (firebaseMapEnabled) {
+      try {
+        await toggleFirebaseMapLike({ pinId: selectedPin.id, targetType: "pin" });
+      } catch (error) {
+        setSpotPhotoFeedback(error instanceof Error ? error.message : "Like could not be saved.");
+      }
       return;
     }
     setMapPins((current) => incrementPinLike(current, selectedPin.id));
   };
 
-  const likeGalleryImage = (galleryId) => {
+  const likeGalleryImage = async (galleryId) => {
     if (!selectedPin) {
+      return;
+    }
+    if (firebaseMapEnabled) {
+      try {
+        await toggleFirebaseMapLike({ pinId: selectedPin.id, targetType: "photo", photoId: galleryId });
+      } catch (error) {
+        setSpotPhotoFeedback(error instanceof Error ? error.message : "Like could not be saved.");
+      }
       return;
     }
     setMapPins((current) => incrementGalleryLike(current, selectedPin.id, galleryId));
   };
 
-  const submitWashReview = (event) => {
+  const submitWashReview = async (event) => {
     event.preventDefault();
     if (!user || !selectedPin || selectedPin.type !== "wash") {
       return;
@@ -139,6 +171,17 @@ export function useMapPins({ initialWorld, user }) {
       note: washForm.note,
     };
 
+    if (firebaseMapEnabled) {
+      try {
+        await submitFirebaseWashReview({ pinId: selectedPin.id, ...review });
+        setWashForm(createWashForm());
+        setWashErrors({});
+        setWashFeedback("Review saved to the live map.");
+      } catch (error) {
+        setWashFeedback(error instanceof Error ? error.message : "Review could not be saved.");
+      }
+      return;
+    }
     let nextPin = null;
     setMapPins((current) => {
       const nextPins = appendWashReview(current, selectedPin.id, review);
@@ -148,10 +191,6 @@ export function useMapPins({ initialWorld, user }) {
     setWashForm(createWashForm());
     setWashErrors({});
     setWashFeedback("Review added successfully.");
-    void saveFirebaseWashReview(selectedPin.id, review);
-    if (nextPin) {
-      void saveFirebaseMapPin(nextPin);
-    }
   };
 
   const joinCruise = () => {
@@ -377,7 +416,7 @@ export function useMapPins({ initialWorld, user }) {
     }));
   };
 
-  const submitMapPin = (event) => {
+  const submitMapPin = async (event) => {
     event.preventDefault();
     if (!user) {
       return;
@@ -463,6 +502,18 @@ export function useMapPins({ initialWorld, user }) {
       };
     }
 
+    if (firebaseMapEnabled && newPin.type !== "meet") {
+      try {
+        const result = await createFirebaseMapNode(newPin);
+        setSelectedPinId(result.pinId);
+        setMapPinForm(createMapPinForm(newPin));
+        setMapPinErrors({});
+        setMapPinFeedback(`${newPin.name} added to the live map.`);
+      } catch (error) {
+        setMapPinFeedback(error instanceof Error ? error.message : "Map node could not be created.");
+      }
+      return;
+    }
     setMapPins((current) => appendMapPin(current, newPin));
     setSelectedPinId(newPin.id);
     setMapPinForm({
@@ -483,7 +534,7 @@ export function useMapPins({ initialWorld, user }) {
     void saveFirebaseMapPin(newPin);
   };
 
-  const submitSpotPhoto = (event) => {
+  const submitSpotPhoto = async (event) => {
     event.preventDefault();
     if (!user || !selectedPin || selectedPin.type !== "spot") {
       return;
@@ -504,6 +555,17 @@ export function useMapPins({ initialWorld, user }) {
       uploadedAt: Date.now(),
     };
 
+    if (firebaseMapEnabled) {
+      try {
+        await addFirebaseMapSpotPhoto({ pinId: selectedPin.id, title: spotPhotoForm.title.trim(), file: spotPhotoForm.file });
+        setSpotPhotoForm(createSpotPhotoForm());
+        setSpotPhotoErrors({});
+        setSpotPhotoFeedback("Photo dropped into the live spot gallery.");
+      } catch (error) {
+        setSpotPhotoFeedback(error instanceof Error ? error.message : "Photo could not be uploaded.");
+      }
+      return;
+    }
     let nextPin = null;
     setMapPins((current) => {
       const nextPins = appendSpotPhoto(current, selectedPin.id, photo);
@@ -524,6 +586,7 @@ export function useMapPins({ initialWorld, user }) {
         ...current,
         imageUrl: "",
         fileName: "",
+        file: null,
       }));
       return;
     }
@@ -534,6 +597,7 @@ export function useMapPins({ initialWorld, user }) {
         ...current,
         imageUrl,
         fileName: file.name,
+        file,
         title: current.title || file.name.replace(/\.[^.]+$/, ""),
       }));
       setSpotPhotoErrors((current) => ({ ...current, imageUrl: undefined }));
