@@ -7,6 +7,8 @@ export const createSignUpState = () => ({
   tuningStage: "Stock",
   horsepower: "",
   garage: "",
+  privacyNoticeAccepted: false,
+  plateSearchConsent: false,
 });
 
 export const createWashForm = () => ({

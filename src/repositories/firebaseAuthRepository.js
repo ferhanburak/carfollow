@@ -141,8 +141,14 @@ async function bootstrapFirebaseProfile(firestore, firebaseUser, user) {
       createdAt,
       updatedAt: createdAt,
     });
+    const privateProfile = buildPrivateUserProfile(preparedUser, firebaseUser);
     transaction.set(privateProfileRef, {
-      ...buildPrivateUserProfile(preparedUser, firebaseUser),
+      ...privateProfile,
+      privacyConsent: {
+        ...privateProfile.privacyConsent,
+        kvkkAcceptedAt: createdAt,
+        plateSearchConsent: preparedUser.privacy?.plateSearchEnabled === true,
+      },
       createdAt,
       updatedAt: createdAt,
     });

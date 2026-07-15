@@ -212,6 +212,36 @@ export function AuthScreen({
                   />
                   <FieldError>{signUpErrors.garage}</FieldError>
                 </Field>
+
+                <details className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs text-neutral-400">
+                  <summary className="cursor-pointer font-semibold text-neutral-200">KVKK Aydinlatma Metni</summary>
+                  <div className="mt-3 space-y-2 leading-5">
+                    <p>Hesap, arac, plaka, profil ve servis verileri CRUISER hesabini olusturmak, topluluk ozelliklerini sunmak ve guvenligi saglamak icin islenir.</p>
+                    <p>Plaka ile aranabilirlik, konum hassasiyeti ve sosyal gorunurluk tercihlerinden istedigini daha sonra Profil &gt; Gizlilik alanindan degistirebilirsin.</p>
+                    <p>Arkadaslik onayi olmadan tam plaka ve profil bilgileri arama sonucunda gosterilmez. Hesap ve gizlilik tercihlerin icin destek ekibiyle iletisime gecebilirsin.</p>
+                  </div>
+                </details>
+
+                <label className="flex gap-3 rounded-2xl border border-lime-400/20 bg-lime-400/[0.06] p-4 text-xs text-neutral-300">
+                  <input
+                    type="checkbox"
+                    checked={signUpForm.privacyNoticeAccepted}
+                    onChange={(event) => onSignUpFormChange((current) => ({ ...current, privacyNoticeAccepted: event.target.checked }))}
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-lime-400"
+                  />
+                  <span>KVKK aydinlatma metnini okudum ve kisisel verilerimin hesap hizmetinin sunulmasi kapsaminda islenmesi hakkinda bilgilendirildim.</span>
+                </label>
+                <FieldError>{signUpErrors.privacyNoticeAccepted}</FieldError>
+
+                <label className="flex gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-neutral-400">
+                  <input
+                    type="checkbox"
+                    checked={signUpForm.plateSearchConsent}
+                    onChange={(event) => onSignUpFormChange((current) => ({ ...current, plateSearchConsent: event.target.checked }))}
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-lime-400"
+                  />
+                  <span>Istege bagli: Tanidiklarimin tam plakami yazarak beni bulabilmesine izin veriyorum. Sonucta plakam maskeli gosterilir; bu ayari diledigim an kapatabilirim.</span>
+                </label>
               </div>
 
               <button

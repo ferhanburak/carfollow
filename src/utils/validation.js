@@ -18,6 +18,9 @@ export function validateSignUpForm(form, options = {}) {
     errors.horsepower = "Horsepower must be greater than 0.";
   }
   if (!form.garage.trim()) errors.garage = "Primary garage is required.";
+  if (form.privacyNoticeAccepted !== true) {
+    errors.privacyNoticeAccepted = "Kaydi tamamlamak icin KVKK aydinlatma metnini okudugunu onaylamalisin.";
+  }
   return errors;
 }
 

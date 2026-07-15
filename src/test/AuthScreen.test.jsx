@@ -49,5 +49,7 @@ describe("Firebase authentication screen", () => {
 
     expect(validateSignUpForm(baseForm, { requireEmail: true }).email).toBe("E-mail is required.");
     expect(validateSignUpForm({ ...baseForm, email: "driver@example.com" }, { requireEmail: true }).email).toBeUndefined();
+    expect(validateSignUpForm({ ...baseForm, email: "driver@example.com" }, { requireEmail: true }).privacyNoticeAccepted).toBeTruthy();
+    expect(validateSignUpForm({ ...baseForm, email: "driver@example.com", privacyNoticeAccepted: true }, { requireEmail: true }).privacyNoticeAccepted).toBeUndefined();
   });
 });

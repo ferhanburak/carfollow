@@ -1,5 +1,5 @@
 export const DEFAULT_PRIVACY_SETTINGS = Object.freeze({
-  plateSearchEnabled: true,
+  plateSearchEnabled: false,
   showModelInSearch: true,
   showRegionInSearch: false,
   locationPrecision: "approximate",
@@ -28,7 +28,7 @@ export function normalizePrivacySettings(value = {}) {
     ...DEFAULT_PRIVACY_SETTINGS,
     ...value,
     locationPrecision,
-    plateSearchEnabled: value.plateSearchEnabled !== false,
+    plateSearchEnabled: value.plateSearchEnabled === true,
     showModelInSearch: value.showModelInSearch !== false,
     showRegionInSearch: value.showRegionInSearch === true,
     safeZoneEnabled: value.safeZoneEnabled !== false,

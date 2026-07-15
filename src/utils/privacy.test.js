@@ -9,7 +9,7 @@ describe("privacy helpers", () => {
 
   it("uses safe defaults for malformed settings", () => {
     expect(normalizePrivacySettings({ locationPrecision: "somewhere" })).toMatchObject({
-      plateSearchEnabled: true,
+      plateSearchEnabled: false,
       locationPrecision: "approximate",
     });
   });
