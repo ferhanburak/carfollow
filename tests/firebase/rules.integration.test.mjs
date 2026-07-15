@@ -410,6 +410,10 @@ describe("Firestore security rules", { concurrency: false }, () => {
       collection(otherDb, `artifacts/${APP_ID}/public/data/clanInvites`),
       where("targetUserId", "==", OTHER_ID),
     )));
+    await assertSucceeds(getDocs(query(
+      collection(ownerDb, `artifacts/${APP_ID}/public/data/clanInvites`),
+      where("invitedByUserId", "==", OWNER_ID),
+    )));
     await assertFails(getDoc(doc(strangerDb, invitePath)));
     await assertFails(getDocs(collection(otherDb, `artifacts/${APP_ID}/public/data/clanInvites`)));
     await assertFails(setDoc(doc(ownerDb, clanPath), { id: clanId, name: "Manual Clan" }));

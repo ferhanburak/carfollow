@@ -123,8 +123,8 @@ export function useClanGraph({ clans, setClans, user, setUser }) {
     setClanPendingKey(pendingKey);
     setClanFeedback("Klan islemi Firebase uzerinde dogrulaniyor...");
     try {
-      await action();
-      setClanFeedback(successMessage);
+      const result = await action();
+      setClanFeedback(typeof successMessage === "function" ? successMessage(result) : successMessage);
       return true;
     } catch (error) {
       setClanFeedback(getClanErrorMessage(error));
@@ -163,7 +163,9 @@ export function useClanGraph({ clans, setClans, user, setUser }) {
       return runFirebaseAction(
         `invite:${friend.userId}`,
         () => inviteFirebaseClanMember(currentClan.id, friend.userId),
-        `${friend.fullName ?? friend.plate} icin klan daveti gonderildi.`,
+        (result) => result?.duplicate
+          ? `${friend.fullName ?? friend.plate} icin klan daveti zaten bekliyor.`
+          : `${friend.fullName ?? friend.plate} icin klan daveti gonderildi.`,
       );
     }
     const result = sendClanInvite(safeUser, friend, clans);

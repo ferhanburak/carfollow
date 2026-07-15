@@ -131,7 +131,12 @@ export async function subscribeFirebaseClanState(onStateChange, onError = () => 
         loaded.members = true;
         emit();
       },
-      onError,
+      (error) => {
+        snapshots.members = [];
+        loaded.members = true;
+        onError(error);
+        emit();
+      },
     );
   };
   const bind = (key, reference, afterChange) => onSnapshot(reference, (snapshot) => {
@@ -139,7 +144,13 @@ export async function subscribeFirebaseClanState(onStateChange, onError = () => 
     loaded[key] = true;
     afterChange?.();
     emit();
-  }, onError);
+  }, (error) => {
+    snapshots[key] = [];
+    loaded[key] = true;
+    onError(error);
+    afterChange?.();
+    emit();
+  });
 
   const unsubscribers = [
     bind("clans", collectionRef(PUBLIC_COLLECTIONS.clans)),

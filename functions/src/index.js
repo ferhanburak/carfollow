@@ -130,7 +130,7 @@ function secureCall(name, optionsOrHandler, maybeHandler) {
   const options = typeof optionsOrHandler === "function" ? {} : optionsOrHandler;
   const handler = typeof optionsOrHandler === "function" ? optionsOrHandler : maybeHandler;
 
-  return onCall({ enforceAppCheck: APP_CHECK_ENFORCED }, async (request) => {
+  return onCall({ cors: true, enforceAppCheck: APP_CHECK_ENFORCED, invoker: "public" }, async (request) => {
     const startedAt = Date.now();
     const requestId = String(request.rawRequest?.headers?.["x-cloud-trace-context"] ?? `${name}-${startedAt}`)
       .split("/")[0]
@@ -1038,6 +1038,8 @@ exports.inviteClanMember = secureCall("inviteClanMember", { rateLimit: { limit: 
   const actorBlockRef = blockedDriverDocument(actorUserId, targetUserId);
   const targetBlockRef = blockedDriverDocument(targetUserId, actorUserId);
 
+  let duplicateInvite = false;
+
   await db.runTransaction(async (transaction) => {
     const [clanSnapshot, actorMember, targetMember, invite, friendship, actorBlock, targetBlock] = await Promise.all([
       transaction.get(clanRef),
@@ -1057,7 +1059,8 @@ exports.inviteClanMember = secureCall("inviteClanMember", { rateLimit: { limit: 
       throw new HttpsError("failed-precondition", "This driver already belongs to a clan.");
     }
     if (invite.exists) {
-      throw new HttpsError("already-exists", "An active invite already exists for this driver.");
+      duplicateInvite = true;
+      return;
     }
     if (!isAcceptedFriendship(friendship.data(), actorUserId, targetUserId) || actorBlock.exists || targetBlock.exists) {
       throw new HttpsError("permission-denied", "Clan invites can only be sent to unblocked friends.");
@@ -1077,7 +1080,7 @@ exports.inviteClanMember = secureCall("inviteClanMember", { rateLimit: { limit: 
     }, timestamp);
   });
 
-  return { ok: true, clanId, targetUserId };
+  return { ok: true, clanId, targetUserId, duplicate: duplicateInvite };
 });
 
 exports.respondClanInvite = secureCall("respondClanInvite", async (request) => {
