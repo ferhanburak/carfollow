@@ -41,7 +41,7 @@ describe("buildFirebaseSocialState", () => {
       ],
     });
 
-    expect(state.directory.map((entry) => entry.userId)).toEqual(["friend", "incoming", "outgoing"]);
+    expect(state.directory).toEqual([]);
     expect(state.friends[0]).toMatchObject({ userId: "friend", plate: "34 FND 01", status: "accepted" });
     expect(state.incomingRequests[0]).toMatchObject({ userId: "incoming", status: "pending" });
     expect(state.outgoingRequests[0]).toMatchObject({ userId: "outgoing", status: "pending" });

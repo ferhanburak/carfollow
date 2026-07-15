@@ -22,6 +22,9 @@ const {
   buildFriendshipDocument,
   buildFriendshipMigrationDocument,
   buildPairId,
+  normalizePlate,
+  normalizePrivacySettings,
+  projectPlateSearchResult,
 } = require("./social");
 const {
   buildClanDocument,
@@ -502,6 +505,54 @@ exports.requestFriendship = secureCall("requestFriendship", { rateLimit: { limit
   });
 
   return { ok: true, friendshipId, migrated: outcome === "migrated" };
+});
+
+exports.searchDriverByPlate = secureCall("searchDriverByPlate", { rateLimit: { limit: 12, windowSeconds: 600 } }, async (request) => {
+  const actorUserId = requireAuth(request);
+  const plateNormalized = normalizePlate(request.data?.plate);
+  if (plateNormalized.length < 5 || plateNormalized.length > 12) {
+    throw new HttpsError("invalid-argument", "Enter a complete vehicle plate.");
+  }
+
+  const claimSnapshot = await publicDocument("plateClaims", plateNormalized).get();
+  if (!claimSnapshot.exists) return { ok: true, driver: null };
+  const targetUserId = claimSnapshot.data().uid;
+  if (!targetUserId || targetUserId === actorUserId) return { ok: true, driver: null };
+
+  const [targetSnapshot, actorBlockSnapshot, targetBlockSnapshot] = await Promise.all([
+    privateUserDocument(targetUserId, "profile", "current").get(),
+    blockedDriverDocument(actorUserId, targetUserId).get(),
+    blockedDriverDocument(targetUserId, actorUserId).get(),
+  ]);
+  if (!targetSnapshot.exists || actorBlockSnapshot.exists || targetBlockSnapshot.exists) {
+    return { ok: true, driver: null };
+  }
+  const target = targetSnapshot.data();
+  const privacy = normalizePrivacySettings(target.privacy);
+  if (!privacy.plateSearchEnabled) return { ok: true, driver: null };
+
+  return { ok: true, driver: projectPlateSearchResult(target, targetUserId) };
+});
+
+exports.updatePrivacySettings = secureCall("updatePrivacySettings", async (request) => {
+  const userId = requireAuth(request);
+  const privacy = normalizePrivacySettings(request.data?.privacy);
+  const profileRef = privateUserDocument(userId, "profile", "current");
+  const existingProfile = await profileRef.get();
+  requireSnapshot(existingProfile, "not-found", "User profile not found.");
+  const privacyConsent = request.data?.acceptKvkk === true
+    ? { version: privacy.kvkkConsentVersion, kvkkAcceptedAt: admin.firestore.FieldValue.serverTimestamp() }
+    : null;
+  const patch = { privacy, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+  if (privacyConsent) patch.privacyConsent = privacyConsent;
+  await profileRef.set(patch, { merge: true });
+  return {
+    ok: true,
+    privacy,
+    privacyConsent: privacyConsent
+      ? { version: privacy.kvkkConsentVersion, kvkkAcceptedAt: Date.now() }
+      : (existingProfile.data().privacyConsent ?? null),
+  };
 });
 
 exports.ensureDirectMessageThread = secureCall("ensureDirectMessageThread", async (request) => {

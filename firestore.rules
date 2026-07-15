@@ -421,7 +421,10 @@ service cloud.firestore {
     }
 
     match /artifacts/{appId}/public/data/publicProfiles/{userId} {
-      allow read: if isKnownApp(appId) && isSignedIn();
+      // Public profile discovery is callable-only. A known document can still be
+      // read for approved social flows, but clients cannot enumerate drivers.
+      allow get: if isKnownApp(appId) && isSignedIn();
+      allow list: if false;
       allow create: if isKnownApp(appId) &&
         isOwner(userId) &&
         isValidPublicProfile(request.resource.data, userId) &&

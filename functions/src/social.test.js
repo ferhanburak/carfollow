@@ -6,6 +6,9 @@ const {
   buildFriendshipMigrationDocument,
   buildPairId,
   getCounterpartUserId,
+  maskPlate,
+  normalizePrivacySettings,
+  projectPlateSearchResult,
 } = require("./social");
 
 const requester = {
@@ -73,4 +76,18 @@ test("buildFriendshipMigrationDocument upgrades a legacy edge without changing i
   assert.equal(document.requesterProfile.plate, "34 TEST 01");
   assert.equal(document.createdAt, createdAt);
   assert.equal(document.updatedAt, timestamp);
+});
+
+test("plate search always returns a masked, privacy-scoped profile", () => {
+  const result = projectPlateSearchResult({
+    ...target,
+    privacy: { plateSearchEnabled: true, showModelInSearch: false, showRegionInSearch: true },
+  });
+
+  assert.equal(result.plateMasked, "34 ••• 01");
+  assert.equal(result.fullName, "CRUISER Driver");
+  assert.equal(result.model, "");
+  assert.equal(result.region, "Istanbul");
+  assert.equal(maskPlate("06 TEST 02"), "06 ••• 02");
+  assert.equal(normalizePrivacySettings({ locationPrecision: "bad" }).locationPrecision, "approximate");
 });

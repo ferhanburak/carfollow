@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { VehiclePassportSummary } from "../components/garage/VehiclePassportSummary";
 import { CompactField, InsightCard } from "../components/ui";
 import { buildAchievementProgress, buildPersonalStats } from "../utils/socialStats";
+import { normalizePrivacySettings } from "../utils/privacy";
 
 export function ProfileScreen({
   onLogout,
@@ -14,9 +16,16 @@ export function ProfileScreen({
   tuningOptions,
   user,
   onProfileFormChange,
+  onSavePrivacySettings,
   onSubmitProfile,
   driverStatsStatus,
 }) {
+  const [privacy, setPrivacy] = useState(() => normalizePrivacySettings(user.privacy));
+  const [kvkkAccepted, setKvkkAccepted] = useState(Boolean(user.privacyConsent?.kvkkAcceptedAt));
+  useEffect(() => {
+    setPrivacy(normalizePrivacySettings(user.privacy));
+    setKvkkAccepted(Boolean(user.privacyConsent?.kvkkAcceptedAt));
+  }, [user.privacy, user.privacyConsent?.kvkkAcceptedAt]);
   const achievementProgress = buildAchievementProgress(user);
   const personalStats = buildPersonalStats(user);
   const socialSummary = [
@@ -33,6 +42,45 @@ export function ProfileScreen({
 
   return (
     <section className="space-y-4">
+      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Gizlilik ve Konum</p>
+            <p className="mt-1 text-xs text-neutral-500">Plaka kesfi ve Live Map gorunurlugunu sen belirlersin.</p>
+          </div>
+          <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-lime-300">KVKK</span>
+        </div>
+        <div className="mt-4 space-y-3">
+          <label className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-sm">
+            <span>Plakayla bulunabilir ol</span>
+            <input type="checkbox" checked={privacy.plateSearchEnabled} onChange={(event) => setPrivacy((current) => ({ ...current, plateSearchEnabled: event.target.checked }))} className="h-5 w-5 accent-lime-400" />
+          </label>
+          <label className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-sm">
+            <span>Aramada arac modelimi goster</span>
+            <input type="checkbox" checked={privacy.showModelInSearch} onChange={(event) => setPrivacy((current) => ({ ...current, showModelInSearch: event.target.checked }))} className="h-5 w-5 accent-lime-400" />
+          </label>
+          <label className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-sm">
+            <span>Bolgeyi arama sonucunda goster</span>
+            <input type="checkbox" checked={privacy.showRegionInSearch} onChange={(event) => setPrivacy((current) => ({ ...current, showRegionInSearch: event.target.checked }))} className="h-5 w-5 accent-lime-400" />
+          </label>
+          <label className="block rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-sm">
+            <span className="block">Live Map konum hassasiyeti</span>
+            <select value={privacy.locationPrecision} onChange={(event) => setPrivacy((current) => ({ ...current, locationPrecision: event.target.value }))} className="mt-3 h-11 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm outline-none focus:border-lime-400">
+              <option value="hidden">Gizle</option>
+              <option value="approximate">Yaklasik konum</option>
+              <option value="exact">Tam konum</option>
+            </select>
+          </label>
+          <label className="flex gap-3 rounded-2xl border border-amber-400/15 bg-amber-400/5 p-4 text-xs text-neutral-300">
+            <input type="checkbox" checked={kvkkAccepted} onChange={(event) => setKvkkAccepted(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-lime-400" />
+            <span>Plaka, profil ve konum tercihleri islendigi konusunda aydinlatma metnini okudum; bu tercihleri istegimle kaydediyorum.</span>
+          </label>
+          <button type="button" onClick={() => onSavePrivacySettings?.(privacy, kvkkAccepted)} className="min-h-12 w-full rounded-2xl border border-lime-400/30 bg-lime-400/10 font-semibold text-lime-100">
+            Gizlilik Tercihlerini Kaydet
+          </button>
+        </div>
+      </div>
+
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

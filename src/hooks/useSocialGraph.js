@@ -6,9 +6,12 @@ import {
   removeFirebaseFriendship,
   requestFirebaseFriendship,
   respondFirebaseFriendship,
+  searchFirebaseDriverByPlate,
   subscribeFirebaseSocialState,
   unblockFirebaseDriver,
+  updateFirebasePrivacySettings,
 } from "../repositories/cruiserRepository";
+import { maskPlate, normalizePlateForSearch, normalizePrivacySettings } from "../utils/privacy";
 import {
   acceptFriendRequest,
   blockCommunityMember,
@@ -59,9 +62,20 @@ function socialCollectionsSignature(collections) {
   ].join("~");
 }
 
+function getFriendshipStatusByUserId(user, targetUserId) {
+  if (!user || !targetUserId) return "none";
+  if ((user.firebaseUid ?? user.id) === targetUserId) return "self";
+  if ((user.blockedDrivers ?? []).some((entry) => entry.userId === targetUserId)) return "blocked";
+  if ((user.friends ?? []).some((entry) => entry.userId === targetUserId)) return "friend";
+  if ((user.outgoingRequests ?? []).some((entry) => entry.userId === targetUserId)) return "outgoing";
+  if ((user.incomingRequests ?? []).some((entry) => entry.userId === targetUserId)) return "incoming";
+  return "none";
+}
+
 export function useSocialGraph({ socialDirectory, user, setUser }) {
   const firebaseEnabled = isFirebaseSocialRepositoryEnabled();
   const [friendSearchQuery, setFriendSearchQuery] = useState("");
+  const [firebaseSearchResults, setFirebaseSearchResults] = useState([]);
   const [liveDirectory, setLiveDirectory] = useState(socialDirectory ?? []);
   const [socialFeedback, setSocialFeedback] = useState("");
   const [socialPendingKey, setSocialPendingKey] = useState("");
@@ -72,8 +86,14 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
 
   const safeUser = useMemo(() => (user ? normalizeSocialState(user) : null), [user]);
   const friendSearchResults = useMemo(
-    () => searchCommunityMembers(friendSearchQuery, liveDirectory, safeUser),
-    [friendSearchQuery, liveDirectory, safeUser],
+    () => firebaseEnabled
+      ? firebaseSearchResults.map((entry) => ({
+          ...entry,
+          plate: entry.plateMasked ?? maskPlate(entry.plate),
+          friendshipStatus: getFriendshipStatusByUserId(safeUser, entry.userId),
+        }))
+      : searchCommunityMembers(friendSearchQuery, liveDirectory, safeUser),
+    [firebaseEnabled, firebaseSearchResults, friendSearchQuery, liveDirectory, safeUser],
   );
   const resolveSocialTarget = (profile) =>
     liveDirectory.find((entry) =>
@@ -141,6 +161,33 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
       unsubscribe();
     };
   }, [currentUserId, firebaseEnabled, setUser]);
+
+  useEffect(() => {
+    if (!firebaseEnabled) return undefined;
+    const normalizedPlate = normalizePlateForSearch(friendSearchQuery);
+    if (normalizedPlate.length < 5) {
+      setFirebaseSearchResults([]);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void searchFirebaseDriverByPlate(normalizedPlate)
+        .then((result) => {
+          if (!cancelled) setFirebaseSearchResults(result?.driver ? [result.driver] : []);
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            setFirebaseSearchResults([]);
+            setSocialFeedback(getSocialErrorMessage(error));
+          }
+        });
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [firebaseEnabled, friendSearchQuery]);
 
   const runFirebaseAction = async (pendingKey, action, successMessage) => {
     if (socialPendingRef.current) {
@@ -267,6 +314,27 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
     return true;
   };
 
+  const savePrivacySettings = (privacy, acceptKvkk = false) => {
+    const nextPrivacy = normalizePrivacySettings(privacy);
+    if (!firebaseEnabled) {
+      setUser((current) => ({
+        ...current,
+        privacy: nextPrivacy,
+        privacyConsent: acceptKvkk ? { kvkkAcceptedAt: Date.now(), version: nextPrivacy.kvkkConsentVersion } : current.privacyConsent,
+      }));
+      setSocialFeedback("Gizlilik tercihleri guncellendi.");
+      return Promise.resolve(true);
+    }
+    return runFirebaseAction(
+      "privacy-settings",
+      async () => {
+        const result = await updateFirebasePrivacySettings(nextPrivacy, acceptKvkk);
+        setUser((current) => ({ ...current, privacy: result.privacy, privacyConsent: result.privacyConsent }));
+      },
+      "Gizlilik tercihleri guncellendi.",
+    );
+  };
+
   return {
     approveFriendRequest,
     blockDriver,
@@ -276,6 +344,7 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
     requestFriend,
     removeFriendship,
     safeUser,
+    savePrivacySettings,
     setFriendSearchQuery,
     socialFeedback,
     socialPendingKey,

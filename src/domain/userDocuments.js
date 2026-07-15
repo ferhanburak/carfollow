@@ -1,3 +1,5 @@
+import { DEFAULT_PRIVACY_SETTINGS, normalizePrivacySettings } from "../utils/privacy";
+
 export const USER_SCHEMA_VERSION = 2;
 
 const PRIVATE_SUBCOLLECTION_FIELDS = new Set([
@@ -96,6 +98,11 @@ export function buildPrivateUserProfile(user, firebaseUser) {
     email: firebaseUser?.email ?? source.email ?? "",
     plate: String(source.plate ?? "").toUpperCase(),
     plateNormalized: normalizePlate(source.plate),
+    privacy: normalizePrivacySettings(source.privacy),
+    privacyConsent: source.privacyConsent ?? {
+      kvkkAcceptedAt: null,
+      version: DEFAULT_PRIVACY_SETTINGS.kvkkConsentVersion,
+    },
     schemaVersion: USER_SCHEMA_VERSION,
   };
 }

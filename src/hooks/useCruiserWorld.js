@@ -183,6 +183,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setFriendSearchQuery,
     socialFeedback,
     socialPendingKey,
+    savePrivacySettings,
     unblockDriver,
     withdrawFriendRequest,
   } = useSocialGraph({
@@ -390,6 +391,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setWashForm,
     socialFeedback,
     socialPendingKey,
+    savePrivacySettings,
     spotPhotoErrors,
     spotPhotoFeedback,
     spotPhotoForm,

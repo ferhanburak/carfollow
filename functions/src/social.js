@@ -1,5 +1,50 @@
 const SOCIAL_SCHEMA_VERSION = 1;
 
+const DEFAULT_PRIVACY_SETTINGS = Object.freeze({
+  plateSearchEnabled: true,
+  showModelInSearch: true,
+  showRegionInSearch: false,
+  locationPrecision: "approximate",
+  safeZoneEnabled: true,
+  kvkkConsentVersion: "2026-07",
+});
+
+function normalizePlate(value) {
+  return String(value ?? "").toUpperCase().replace(/[^0-9A-Z]/g, "");
+}
+
+function maskPlate(value) {
+  const normalized = normalizePlate(value);
+  if (normalized.length < 5) return "•• ••• ••";
+  return `${normalized.slice(0, Math.min(2, normalized.length - 3))} ••• ${normalized.slice(-2)}`;
+}
+
+function normalizePrivacySettings(value = {}) {
+  return {
+    ...DEFAULT_PRIVACY_SETTINGS,
+    plateSearchEnabled: value.plateSearchEnabled !== false,
+    showModelInSearch: value.showModelInSearch !== false,
+    showRegionInSearch: value.showRegionInSearch === true,
+    safeZoneEnabled: value.safeZoneEnabled !== false,
+    locationPrecision: ["hidden", "approximate", "exact"].includes(value.locationPrecision)
+      ? value.locationPrecision
+      : DEFAULT_PRIVACY_SETTINGS.locationPrecision,
+  };
+}
+
+function projectPlateSearchResult(profile, fallbackUserId = "") {
+  const privacy = normalizePrivacySettings(profile?.privacy);
+  return {
+    userId: String(profile?.id ?? profile?.userId ?? profile?.firebaseUid ?? fallbackUserId),
+    plateMasked: maskPlate(profile?.plate),
+    fullName: "CRUISER Driver",
+    model: privacy.showModelInSearch ? String(profile?.model ?? "") : "",
+    region: privacy.showRegionInSearch ? String(profile?.region ?? "") : "",
+    vehicleType: String(profile?.vehicleType ?? ""),
+    driverScore: Number(profile?.driverScore ?? 0),
+  };
+}
+
 function buildPairId(leftId, rightId) {
   return [String(leftId), String(rightId)]
     .sort((left, right) => left.localeCompare(right))
@@ -83,10 +128,15 @@ function getCounterpartUserId(friendship, userId) {
 
 module.exports = {
   SOCIAL_SCHEMA_VERSION,
+  DEFAULT_PRIVACY_SETTINGS,
   buildBlockedDriverDocument,
   buildFriendshipDocument,
   buildFriendshipMigrationDocument,
   buildPairId,
   getCounterpartUserId,
+  maskPlate,
+  normalizePlate,
+  normalizePrivacySettings,
+  projectPlateSearchResult,
   projectSocialProfile,
 };

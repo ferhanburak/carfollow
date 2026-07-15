@@ -451,7 +451,7 @@ export function StatsScreen({
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold">Kullanici Ara</p>
-              <p className="mt-1 text-xs text-neutral-500">Plaka, model ya da isimle dogrudan surucu bul.</p>
+              <p className="mt-1 text-xs text-neutral-500">Tam plakayla ara. Sonuclar maskeli gelir; detaylar arkadasliktan sonra acilir.</p>
             </div>
             <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
               {hasSearchResults ? `${Math.min(friendSearchResults.length, 8)} sonuc` : "Hazir"}
@@ -460,7 +460,7 @@ export function StatsScreen({
           <input
             value={friendSearchQuery}
             onChange={(event) => onFriendSearchChange(event.target.value)}
-            placeholder="Plaka, model, isim ya da bolge ile ara"
+            placeholder="Ornek: 06 PWA 101"
             className="mt-3 h-12 w-full rounded-2xl border border-white/10 bg-black/20 px-4 text-sm outline-none focus:border-lime-400"
           />
           <div className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1">
@@ -469,8 +469,8 @@ export function StatsScreen({
                 <div className="flex items-start justify-between gap-3">
                   <button type="button" onClick={() => openProfileDrawer(entry, "search")} className="text-left">
                     <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
-                    <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
-                    <p className="text-xs text-neutral-500">{entry.model} / {entry.region}</p>
+                    <p className="mt-1 text-sm font-semibold">{entry.fullName ?? "CRUISER Driver"}</p>
+                    <p className="text-xs text-neutral-500">{entry.model ?? "Arac bilgisi gizli"}{entry.region ? ` / ${entry.region}` : ""}</p>
                   </button>
                   {entry.friendshipStatus === "none" ? (
                     <button
@@ -519,7 +519,7 @@ export function StatsScreen({
             ))}
             {!hasSearchResults && friendSearchQuery.trim() ? (
               <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
-                Bu aramaya uyan surucu bulunamadi. Plaka, isim ya da bolgeyi farkli deneyebilirsin.
+                Bu tam plakaya ait, aranabilir bir surucu bulunamadi.
               </div>
             ) : null}
           </div>

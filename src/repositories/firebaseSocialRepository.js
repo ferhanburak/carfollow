@@ -85,7 +85,9 @@ export function buildFirebaseSocialState({ currentUserId, profiles = [], friends
   }));
 
   return {
-    directory: normalizedProfiles.filter((profile) => profile.userId !== currentUserId),
+    // The driver directory is intentionally empty in Firebase mode. Plate discovery
+    // is handled by a callable so clients cannot enumerate public profiles.
+    directory: [],
     friends: sortNewest(friends),
     incomingRequests: sortNewest(incomingRequests),
     outgoingRequests: sortNewest(outgoingRequests),
@@ -111,7 +113,7 @@ export async function subscribeFirebaseSocialState(onStateChange, onError = () =
     blocks: [],
   };
   const loaded = {
-    profiles: false,
+    profiles: true,
     friendships: false,
     blocks: false,
   };
@@ -138,10 +140,6 @@ export async function subscribeFirebaseSocialState(onStateChange, onError = () =
 
   const appId = resolveAppId();
   const unsubscribers = [
-    bind(
-      "profiles",
-      query(collection(firestore, publicCollectionPath(PUBLIC_COLLECTIONS.publicProfiles, appId))),
-    ),
     bind(
       "friendships",
       query(
@@ -175,6 +173,14 @@ async function callSocialFunction(name, data) {
 
 export function requestFirebaseFriendship(targetUserId) {
   return callSocialFunction("requestFriendship", { targetUserId });
+}
+
+export function searchFirebaseDriverByPlate(plate) {
+  return callSocialFunction("searchDriverByPlate", { plate });
+}
+
+export function updateFirebasePrivacySettings(privacy, acceptKvkk) {
+  return callSocialFunction("updatePrivacySettings", { privacy, acceptKvkk });
 }
 
 export function respondFirebaseFriendship(targetUserId, decision) {

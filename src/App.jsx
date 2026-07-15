@@ -159,6 +159,7 @@ function App() {
     setMapPinForm,
     setMessageDraft,
     setProfileForm,
+    savePrivacySettings,
     setSelectedPinId,
     setServiceLogForm,
     setSpotPhotoForm,
@@ -462,6 +463,7 @@ function App() {
               <ProfileScreen
                 onLogout={handleLogout}
                 onProfileFormChange={setProfileForm}
+                onSavePrivacySettings={savePrivacySettings}
                 onOpenService={() => setActiveTab("garage")}
                 onOpenStats={() => setActiveTab("leaderboard")}
                 onSubmitProfile={submitProfile}

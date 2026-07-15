@@ -58,9 +58,11 @@ export {
   isFirebaseSocialRepositoryEnabled,
   removeFirebaseFriendship,
   requestFirebaseFriendship,
+  searchFirebaseDriverByPlate,
   respondFirebaseFriendship,
   subscribeFirebaseSocialState,
   unblockFirebaseDriver,
+  updateFirebasePrivacySettings,
 } from "./firebaseSocialRepository";
 
 export {
