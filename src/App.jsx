@@ -41,6 +41,7 @@ function ScreenLoader() {
 
 function App() {
   const [publicProfile, setPublicProfile] = useState(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const {
     authError,
     authMode,
@@ -257,6 +258,15 @@ function App() {
                 >
                   {driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}
                 </button>
+                <button
+                  type="button"
+                  aria-label="Oturumu kapat"
+                  title="Oturumu kapat"
+                  onClick={() => setShowLogoutConfirm(true)}
+                  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-400/30 bg-rose-500/10 text-lg text-rose-200 transition hover:bg-rose-500/20"
+                >
+                  ↪
+                </button>
               </div>
             </div>
             <div className="relative mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-3">
@@ -271,6 +281,17 @@ function App() {
               </div>
             </div>
           </header>
+        ) : null}
+
+        {activeTab === "liveMap" ? (
+          <button
+            type="button"
+            aria-label="Oturumu kapat"
+            onClick={() => setShowLogoutConfirm(true)}
+            className="absolute right-4 top-4 z-30 flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-400/30 bg-black/75 text-lg text-rose-200 backdrop-blur"
+          >
+            ↪
+          </button>
         ) : null}
 
         <div
@@ -461,7 +482,7 @@ function App() {
 
             {activeTab === "profile" ? (
               <ProfileScreen
-                onLogout={handleLogout}
+                onLogout={() => setShowLogoutConfirm(true)}
                 onProfileFormChange={setProfileForm}
                 onSavePrivacySettings={savePrivacySettings}
                 onOpenService={() => setActiveTab("garage")}
@@ -545,6 +566,19 @@ function App() {
         socialPendingKey={socialPendingKey}
         user={safeUser ?? user}
       />
+      {showLogoutConfirm ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center">
+          <div className="w-full max-w-sm rounded-[1.75rem] border border-white/10 bg-[#171717] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.6)]">
+            <p className="text-xs uppercase tracking-[0.28em] text-rose-300">Account Session</p>
+            <h3 className="mt-2 text-xl font-black">Oturumu kapat?</h3>
+            <p className="mt-2 text-sm text-neutral-400">Bu cihazdaki CRUISER oturumun kapanacak. Daha sonra e-posta ve sifrenle tekrar giris yapabilirsin.</p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => setShowLogoutConfirm(false)} className="min-h-12 rounded-2xl border border-white/10 bg-white/5 font-semibold text-neutral-200">Vazgec</button>
+              <button type="button" onClick={() => void handleLogout()} className="min-h-12 rounded-2xl bg-rose-500 font-bold text-white shadow-[0_0_20px_rgba(244,63,94,0.35)]">Oturumu Kapat</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
