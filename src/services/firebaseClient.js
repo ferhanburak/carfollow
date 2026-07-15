@@ -10,6 +10,13 @@ function readFirebaseConfig() {
   };
 }
 
+function readAppCheckConfig() {
+  return {
+    siteKey: import.meta.env.VITE_FIREBASE_APPCHECK_SITE_KEY,
+    debugToken: import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN,
+  };
+}
+
 function hasRequiredFirebaseConfig(config) {
   return Boolean(config.apiKey && config.projectId && config.appId);
 }
@@ -24,6 +31,7 @@ let realtimeDb;
 let firebaseAuth;
 let firebaseFunctions;
 let firebaseStorage;
+let firebaseAppCheck;
 let firebaseInitializationPromise;
 let lastFirebaseServicesError = "";
 
@@ -86,6 +94,27 @@ export function getLastFirebaseServicesError() {
   return lastFirebaseServicesError;
 }
 
+export function getFirebaseAppCheckDiagnostics() {
+  const config = readAppCheckConfig();
+  if (!isFirebaseModeEnabled()) {
+    return { enabled: false, mode: "disabled", message: "App Check is inactive outside Firebase mode." };
+  }
+  if (!config.siteKey) {
+    return {
+      enabled: false,
+      mode: "monitoring-unconfigured",
+      message: "App Check site key is missing; backend enforcement must remain disabled.",
+    };
+  }
+  return {
+    enabled: true,
+    mode: isFirebaseEmulatorEnabled() ? "debug" : "attested",
+    message: isFirebaseEmulatorEnabled()
+      ? "App Check debug provider is prepared for local Firebase testing."
+      : "App Check web attestation is initialized.",
+  };
+}
+
 async function initializeFirebaseServices() {
   if (!isFirebaseModeEnabled()) {
     return null;
@@ -94,6 +123,7 @@ async function initializeFirebaseServices() {
   if (firebaseApp) {
     return {
       app: firebaseApp,
+      appCheck: firebaseAppCheck,
       auth: firebaseAuth,
       firestore: firestoreDb,
       database: realtimeDb,
@@ -105,9 +135,10 @@ async function initializeFirebaseServices() {
   if (!firebaseInitializationPromise) {
     firebaseInitializationPromise = (async () => {
       const config = readFirebaseConfig();
-      const [appModule, firestoreModule, databaseModule, authModule, functionsModule, storageModule] =
+      const [appModule, appCheckModule, firestoreModule, databaseModule, authModule, functionsModule, storageModule] =
         await Promise.all([
           import("firebase/app"),
+          import("firebase/app-check"),
           import("firebase/firestore"),
           import("firebase/database"),
           import("firebase/auth"),
@@ -116,6 +147,18 @@ async function initializeFirebaseServices() {
         ]);
 
       firebaseApp = appModule.getApps().length ? appModule.getApp() : appModule.initializeApp(config);
+      const appCheckConfig = readAppCheckConfig();
+      if (appCheckConfig.siteKey && !firebaseAppCheck) {
+        if (isFirebaseEmulatorEnabled() && appCheckConfig.debugToken) {
+          globalThis.FIREBASE_APPCHECK_DEBUG_TOKEN = appCheckConfig.debugToken === "true"
+            ? true
+            : appCheckConfig.debugToken;
+        }
+        firebaseAppCheck = appCheckModule.initializeAppCheck(firebaseApp, {
+          provider: new appCheckModule.ReCaptchaV3Provider(appCheckConfig.siteKey),
+          isTokenAutoRefreshEnabled: true,
+        });
+      }
       firestoreDb = firestoreModule.getFirestore(firebaseApp);
       realtimeDb = hasRealtimeDatabaseConfig(config) ? databaseModule.getDatabase(firebaseApp) : null;
       firebaseAuth = authModule.getAuth(firebaseApp);
@@ -138,6 +181,7 @@ async function initializeFirebaseServices() {
 
       return {
         app: firebaseApp,
+        appCheck: firebaseAppCheck,
         auth: firebaseAuth,
         firestore: firestoreDb,
         database: realtimeDb,

@@ -15,7 +15,9 @@
     "test:run": "vitest run",
     "test:emulators": "node scripts/runFirebaseEmulatorTests.mjs",
     "test:functions": "npm --prefix functions test",
-    "lint:functions": "npm --prefix functions run lint"
+    "lint:functions": "npm --prefix functions run lint",
+    "backup:list": "firebase firestore:backups:list --project carfollow-75750",
+    "backup:schedules": "firebase firestore:backups:schedules:list --project carfollow-75750"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",

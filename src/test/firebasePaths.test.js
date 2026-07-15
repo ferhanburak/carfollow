@@ -56,4 +56,12 @@ describe("firebase path helpers", () => {
     expect(PRIVATE_COLLECTIONS.driverStats).toBe("driverStats");
     expect(PRIVATE_COLLECTIONS.driveSessions).toBe("driveSessions");
   });
+
+  it("defines backend-owned operations collections", () => {
+    expect(PUBLIC_COLLECTIONS.moderationReports).toBe("moderationReports");
+    expect(PUBLIC_COLLECTIONS.moderationAudit).toBe("moderationAudit");
+    expect(PRIVATE_COLLECTIONS.notifications).toBe("notifications");
+    expect(PRIVATE_COLLECTIONS.moderation).toBe("moderation");
+    expect(PRIVATE_COLLECTIONS.rateLimits).toBe("rateLimits");
+  });
 });

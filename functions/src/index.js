@@ -1,4 +1,6 @@
 const admin = require("firebase-admin");
+const logger = require("firebase-functions/logger");
+const { setGlobalOptions } = require("firebase-functions/v2");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const {
   DRIVE_KM_PER_SECOND,
@@ -55,12 +57,28 @@ const {
   buildThreadMetadata,
   sanitizeMessageBody,
 } = require("./directMessages");
+const {
+  buildModerationAuditDocument,
+  buildModerationReportDocument,
+  buildNotificationDocument,
+  hasModeratorClaim,
+  sanitizeOperationalText,
+} = require("./operations");
+
+setGlobalOptions({
+  region: "us-central1",
+  memory: "256MiB",
+  timeoutSeconds: 60,
+  concurrency: 40,
+  maxInstances: 5,
+});
 
 admin.initializeApp();
 
 const db = admin.firestore();
 const realtimeDb = admin.database();
 const APP_ID = process.env.CRUISER_APP_ID || "cruiser-app-prod";
+const APP_CHECK_ENFORCED = process.env.ENFORCE_APP_CHECK === "true";
 
 function publicCollection(collectionName) {
   return db.collection(`artifacts/${APP_ID}/public/data/${collectionName}`);
@@ -76,6 +94,90 @@ function privateUserCollection(userId, collectionName) {
 
 function publicDocument(collectionName, documentId) {
   return publicCollection(collectionName).doc(documentId);
+}
+
+async function enforceCallableRateLimit(userId, action, { limit, windowSeconds }) {
+  const safeAction = String(action).replace(/[^0-9A-Za-z_-]/g, "-").slice(0, 100);
+  const rateLimitRef = privateUserDocument(userId, "rateLimits", safeAction);
+  const now = Date.now();
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(rateLimitRef);
+    const current = snapshot.exists ? snapshot.data() : {};
+    const currentWindowEnd = Number(current.windowEndMs ?? 0);
+    const isCurrentWindow = currentWindowEnd > now;
+    const nextCount = isCurrentWindow ? Number(current.count ?? 0) + 1 : 1;
+    if (isCurrentWindow && nextCount > limit) {
+      throw new HttpsError("resource-exhausted", "Too many requests. Please wait and try again.");
+    }
+
+    const windowEndMs = isCurrentWindow ? currentWindowEnd : now + windowSeconds * 1000;
+    transaction.set(rateLimitRef, {
+      action: safeAction,
+      count: nextCount,
+      windowStartMs: isCurrentWindow ? Number(current.windowStartMs ?? now) : now,
+      windowEndMs,
+      expiresAt: admin.firestore.Timestamp.fromMillis(windowEndMs + 24 * 60 * 60 * 1000),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+}
+
+function secureCall(name, optionsOrHandler, maybeHandler) {
+  const options = typeof optionsOrHandler === "function" ? {} : optionsOrHandler;
+  const handler = typeof optionsOrHandler === "function" ? optionsOrHandler : maybeHandler;
+
+  return onCall({ enforceAppCheck: APP_CHECK_ENFORCED }, async (request) => {
+    const startedAt = Date.now();
+    const requestId = String(request.rawRequest?.headers?.["x-cloud-trace-context"] ?? `${name}-${startedAt}`)
+      .split("/")[0]
+      .slice(0, 128);
+    const logContext = {
+      callable: name,
+      requestId,
+      authenticated: Boolean(request.auth?.uid),
+      appCheck: Boolean(request.app),
+    };
+    logger.info("callable.start", logContext);
+
+    try {
+      if (options.rateLimit && request.auth?.uid) {
+        await enforceCallableRateLimit(request.auth.uid, name, options.rateLimit);
+      }
+      const result = await handler(request);
+      logger.info("callable.success", { ...logContext, durationMs: Date.now() - startedAt });
+      return result;
+    } catch (error) {
+      const severity = error instanceof HttpsError && ["invalid-argument", "failed-precondition"].includes(error.code)
+        ? "warn"
+        : "error";
+      logger[severity]("callable.failure", {
+        ...logContext,
+        durationMs: Date.now() - startedAt,
+        errorCode: error?.code ?? "internal",
+      });
+      throw error;
+    }
+  });
+}
+
+function writeNotification(transaction, userId, notificationId, payload, timestamp) {
+  const notification = buildNotificationDocument({
+    id: notificationId,
+    userId,
+    ...payload,
+    timestamp,
+  });
+  transaction.set(privateUserDocument(userId, "notifications", notification.id), notification, { merge: true });
+  return notification;
+}
+
+function requireModerator(request) {
+  const userId = requireAuth(request);
+  if (!hasModeratorClaim(request.auth?.token)) {
+    throw new HttpsError("permission-denied", "Moderator privileges are required.");
+  }
+  return userId;
 }
 
 function requireAuth(request) {
@@ -338,7 +440,7 @@ async function migrateLegacyConvoyPins() {
   }
 }
 
-exports.requestFriendship = onCall(async (request) => {
+exports.requestFriendship = secureCall("requestFriendship", { rateLimit: { limit: 20, windowSeconds: 600 } }, async (request) => {
   const requesterUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, requesterUserId);
 
@@ -377,25 +479,39 @@ exports.requestFriendship = onCall(async (request) => {
         throw new HttpsError("failed-precondition", "Legacy friendship data could not be upgraded safely.");
       }
       transaction.set(friendshipRef, migration, { merge: true });
+      writeNotification(transaction, targetUserId, `friend-request-${friendshipId}`, {
+        type: "friend-request",
+        title: "Yeni arkadaslik istegi",
+        body: `${requester.fullName ?? requester.plate} seni arkadas olarak eklemek istiyor.`,
+        actor: requester,
+        action: { type: "social", targetId: requesterUserId },
+      }, timestamp);
       return "migrated";
     }
 
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
     transaction.set(friendshipRef, buildFriendshipDocument({ requester, target, timestamp }));
+    writeNotification(transaction, targetUserId, `friend-request-${friendshipId}`, {
+      type: "friend-request",
+      title: "Yeni arkadaslik istegi",
+      body: `${requester.fullName ?? requester.plate} seni arkadas olarak eklemek istiyor.`,
+      actor: requester,
+      action: { type: "social", targetId: requesterUserId },
+    }, timestamp);
     return "created";
   });
 
   return { ok: true, friendshipId, migrated: outcome === "migrated" };
 });
 
-exports.ensureDirectMessageThread = onCall(async (request) => {
+exports.ensureDirectMessageThread = secureCall("ensureDirectMessageThread", async (request) => {
   const actorUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, actorUserId);
   const state = await ensureDirectMessageThreadState(actorUserId, targetUserId);
   return { ok: true, threadId: state.threadId };
 });
 
-exports.sendDirectMessage = onCall(async (request) => {
+exports.sendDirectMessage = secureCall("sendDirectMessage", { rateLimit: { limit: 60, windowSeconds: 60 } }, async (request) => {
   const actorUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, actorUserId);
   let body;
@@ -416,12 +532,26 @@ exports.sendDirectMessage = onCall(async (request) => {
     [`userThreads/${actorUserId}/${state.threadId}/updatedAt`]: timestamp,
     [`userThreads/${targetUserId}/${state.threadId}/updatedAt`]: timestamp,
   });
+  const notificationTimestamp = admin.firestore.FieldValue.serverTimestamp();
+  await privateUserDocument(targetUserId, "notifications", `message-${message.id}`).set(
+    buildNotificationDocument({
+      id: `message-${message.id}`,
+      userId: targetUserId,
+      type: "direct-message",
+      title: "Yeni mesaj",
+      body: `${state.actor.fullName ?? state.actor.plate} sana bir mesaj gonderdi.`,
+      actor: state.actor,
+      action: { type: "conversation", targetId: actorUserId },
+      timestamp: notificationTimestamp,
+    }),
+  );
   return { ok: true, threadId: state.threadId, messageId: message.id, createdAt: timestamp };
 });
 
-exports.respondFriendship = onCall(async (request) => {
+exports.respondFriendship = secureCall("respondFriendship", async (request) => {
   const actorUserId = requireAuth(request);
   const requesterUserId = requireTargetUserId(request, actorUserId);
+  const actor = await getUserProfile(actorUserId);
   const decision = request.data?.decision;
   if (!["accepted", "declined"].includes(decision)) {
     throw new HttpsError("invalid-argument", "Decision must be accepted or declined.");
@@ -446,6 +576,14 @@ exports.respondFriendship = onCall(async (request) => {
       throw new HttpsError("permission-denied", "Only the request recipient can respond.");
     }
 
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    writeNotification(transaction, requesterUserId, `friend-response-${friendshipRef.id}`, {
+      type: "friend-response",
+      title: decision === "accepted" ? "Arkadaslik istegi kabul edildi" : "Arkadaslik istegi reddedildi",
+      body: `${actor.fullName ?? actor.plate} arkadaslik istegine yanit verdi.`,
+      actor,
+      action: { type: "social", targetId: actorUserId },
+    }, timestamp);
     if (decision === "declined") {
       transaction.delete(friendshipRef);
       return;
@@ -454,7 +592,6 @@ exports.respondFriendship = onCall(async (request) => {
       throw new HttpsError("permission-denied", "A blocked friendship request cannot be accepted.");
     }
 
-    const timestamp = admin.firestore.FieldValue.serverTimestamp();
     transaction.update(friendshipRef, {
       status: "accepted",
       acceptedAt: timestamp,
@@ -465,7 +602,7 @@ exports.respondFriendship = onCall(async (request) => {
   return { ok: true, friendshipId: friendshipRef.id, decision };
 });
 
-exports.cancelFriendshipRequest = onCall(async (request) => {
+exports.cancelFriendshipRequest = secureCall("cancelFriendshipRequest", async (request) => {
   const actorUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, actorUserId);
   const friendshipRef = friendshipDocument(actorUserId, targetUserId);
@@ -482,7 +619,7 @@ exports.cancelFriendshipRequest = onCall(async (request) => {
   return { ok: true, friendshipId: friendshipRef.id };
 });
 
-exports.removeFriendship = onCall(async (request) => {
+exports.removeFriendship = secureCall("removeFriendship", async (request) => {
   const actorUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, actorUserId);
   const friendshipRef = friendshipDocument(actorUserId, targetUserId);
@@ -502,7 +639,7 @@ exports.removeFriendship = onCall(async (request) => {
   return { ok: true, friendshipId: friendshipRef.id };
 });
 
-exports.blockDriver = onCall(async (request) => {
+exports.blockDriver = secureCall("blockDriver", async (request) => {
   const actorUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, actorUserId);
   const target = await getUserProfile(targetUserId);
@@ -525,14 +662,14 @@ exports.blockDriver = onCall(async (request) => {
   return { ok: true, targetUserId };
 });
 
-exports.unblockDriver = onCall(async (request) => {
+exports.unblockDriver = secureCall("unblockDriver", async (request) => {
   const actorUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, actorUserId);
   await blockedDriverDocument(actorUserId, targetUserId).delete();
   return { ok: true, targetUserId };
 });
 
-exports.createConvoy = onCall(async (request) => {
+exports.createConvoy = secureCall("createConvoy", { rateLimit: { limit: 10, windowSeconds: 3600 } }, async (request) => {
   const hostUserId = requireAuth(request);
   const host = await getUserProfile(hostUserId);
   const pin = request.data?.pin ?? request.data;
@@ -558,7 +695,7 @@ exports.createConvoy = onCall(async (request) => {
   return { ok: true, convoyId: convoy.id };
 });
 
-exports.listAccessibleConvoys = onCall(async (request) => {
+exports.listAccessibleConvoys = secureCall("listAccessibleConvoys", async (request) => {
   const userId = requireAuth(request);
   await migrateLegacyConvoyPins();
   const profile = await getUserProfile(userId);
@@ -586,7 +723,7 @@ exports.listAccessibleConvoys = onCall(async (request) => {
   return { ok: true, convoys };
 });
 
-exports.requestConvoyJoin = onCall(async (request) => {
+exports.requestConvoyJoin = secureCall("requestConvoyJoin", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
   const requesterUserId = requireAuth(request);
   const { convoyId } = request.data ?? {};
 
@@ -625,13 +762,21 @@ exports.requestConvoyJoin = onCall(async (request) => {
       [status === "approved" ? "approvedCount" : "pendingCount"]: admin.firestore.FieldValue.increment(1),
       updatedAt: timestamp,
     });
+    writeNotification(transaction, convoy.hostUserId, `convoy-join-${convoyId}-${requesterUserId}`, {
+      type: "convoy-join",
+      title: status === "pending" ? "Yeni konvoy katilim istegi" : "Konvoya yeni katilim",
+      body: `${requester.fullName ?? requester.plate} konvoyuna katilmak istiyor.`,
+      actor: requester,
+      action: { type: "convoy", targetId: convoyId },
+    }, timestamp);
   });
 
   return { ok: true, convoyId };
 });
 
-exports.respondConvoyJoinRequest = onCall(async (request) => {
+exports.respondConvoyJoinRequest = secureCall("respondConvoyJoinRequest", async (request) => {
   const actorUserId = requireAuth(request);
+  const actor = await getUserProfile(actorUserId);
   const { convoyId, memberUserId, decision } = request.data ?? {};
 
   if (!convoyId || !memberUserId || !["approved", "declined"].includes(decision)) {
@@ -667,16 +812,27 @@ exports.respondConvoyJoinRequest = onCall(async (request) => {
       ...(decision === "approved" ? { approvedCount: admin.firestore.FieldValue.increment(1) } : {}),
       updatedAt: timestamp,
     });
+    writeNotification(transaction, memberUserId, `convoy-response-${convoyId}-${memberUserId}`, {
+      type: "convoy-response",
+      title: decision === "approved" ? "Konvoy istegin kabul edildi" : "Konvoy istegin reddedildi",
+      body: `${actor.fullName ?? actor.plate} konvoy katilim istegine yanit verdi.`,
+      actor,
+      action: { type: "convoy", targetId: convoyId },
+    }, timestamp);
   });
 
   return { ok: true, convoyId, memberUserId, decision };
 });
 
-exports.inviteConvoyMember = onCall(async (request) => {
+exports.inviteConvoyMember = secureCall("inviteConvoyMember", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
   const actorUserId = requireAuth(request);
   const { convoyId, targetUserId } = request.data ?? {};
   if (!convoyId || !targetUserId || targetUserId === actorUserId) throw new HttpsError("invalid-argument", "A valid convoy and driver are required.");
-  const [target, friendship] = await Promise.all([getUserProfile(targetUserId), friendshipDocument(actorUserId, targetUserId).get()]);
+  const [actor, target, friendship] = await Promise.all([
+    getUserProfile(actorUserId),
+    getUserProfile(targetUserId),
+    friendshipDocument(actorUserId, targetUserId).get(),
+  ]);
   if (!friendship.exists || friendship.data().status !== "accepted") throw new HttpsError("permission-denied", "Only friends can be invited to a convoy.");
   const convoyRef = publicDocument("convoys", convoyId);
   await db.runTransaction(async (transaction) => {
@@ -685,16 +841,24 @@ exports.inviteConvoyMember = onCall(async (request) => {
     if (convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can invite drivers.");
     if (convoy.lifecycleStatus !== "planning") throw new HttpsError("failed-precondition", "Invites are closed for this convoy.");
     if ((convoy.invitedUserIds ?? []).includes(targetUserId)) return;
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
     transaction.update(convoyRef, {
       invitedUserIds: admin.firestore.FieldValue.arrayUnion(targetUserId),
       invitedGuests: [...(convoy.invitedGuests ?? []), projectDriver(target)],
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: timestamp,
     });
+    writeNotification(transaction, targetUserId, `convoy-invite-${convoyId}-${targetUserId}`, {
+      type: "convoy-invite",
+      title: "Konvoy daveti",
+      body: `${actor.fullName ?? actor.plate} seni konvoyuna davet etti.`,
+      actor,
+      action: { type: "convoy", targetId: convoyId },
+    }, timestamp);
   });
   return { ok: true, convoyId, targetUserId };
 });
 
-exports.updateConvoyLifecycle = onCall(async (request) => {
+exports.updateConvoyLifecycle = secureCall("updateConvoyLifecycle", async (request) => {
   const actorUserId = requireAuth(request);
   const { convoyId, lifecycleStatus } = request.data ?? {};
   if (!convoyId || !LIFECYCLE_STATUSES.includes(lifecycleStatus)) throw new HttpsError("invalid-argument", "A valid convoy status is required.");
@@ -710,7 +874,7 @@ exports.updateConvoyLifecycle = onCall(async (request) => {
   return { ok: true, convoyId, lifecycleStatus };
 });
 
-exports.updateConvoyTripStatus = onCall(async (request) => {
+exports.updateConvoyTripStatus = secureCall("updateConvoyTripStatus", async (request) => {
   const userId = requireAuth(request);
   const { convoyId, tripStatus } = request.data ?? {};
   if (!convoyId || !TRIP_STATUSES.includes(tripStatus)) throw new HttpsError("invalid-argument", "A valid trip status is required.");
@@ -721,7 +885,7 @@ exports.updateConvoyTripStatus = onCall(async (request) => {
   return { ok: true, convoyId, tripStatus };
 });
 
-exports.rateConvoyMember = onCall(async (request) => {
+exports.rateConvoyMember = secureCall("rateConvoyMember", { rateLimit: { limit: 40, windowSeconds: 3600 } }, async (request) => {
   const actorUserId = requireAuth(request);
   const { convoyId, targetUserId, signal } = request.data ?? {};
   if (!convoyId || !targetUserId || targetUserId === actorUserId || !["harmony", "alert"].includes(signal)) {
@@ -764,7 +928,7 @@ exports.rateConvoyMember = onCall(async (request) => {
   return { ok: true, convoyId, targetUserId, signal };
 });
 
-exports.createClan = onCall(async (request) => {
+exports.createClan = secureCall("createClan", { rateLimit: { limit: 3, windowSeconds: 86400 } }, async (request) => {
   const ownerUserId = requireAuth(request);
   const { name, tag, description } = request.data ?? {};
   const identity = assertClanIdentity(name, tag);
@@ -808,7 +972,7 @@ exports.createClan = onCall(async (request) => {
   return { ok: true, clanId: clanRef.id };
 });
 
-exports.inviteClanMember = onCall(async (request) => {
+exports.inviteClanMember = secureCall("inviteClanMember", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
   const actorUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, actorUserId);
   const { clanId } = request.data ?? {};
@@ -853,12 +1017,19 @@ exports.inviteClanMember = onCall(async (request) => {
       ...buildClanInviteDocument({ clan, inviter: actor, target, timestamp }),
       invitedByRole: actorRole,
     });
+    writeNotification(transaction, targetUserId, `clan-invite-${clanId}-${targetUserId}`, {
+      type: "clan-invite",
+      title: "Klan daveti",
+      body: `${actor.fullName ?? actor.plate} seni ${clan.name} klanina davet etti.`,
+      actor,
+      action: { type: "clan", targetId: clanId },
+    }, timestamp);
   });
 
   return { ok: true, clanId, targetUserId };
 });
 
-exports.respondClanInvite = onCall(async (request) => {
+exports.respondClanInvite = secureCall("respondClanInvite", async (request) => {
   const targetUserId = requireAuth(request);
   const { clanId, decision } = request.data ?? {};
   assertClanId(clanId);
@@ -883,6 +1054,14 @@ exports.respondClanInvite = onCall(async (request) => {
       throw new HttpsError("permission-denied", "Only the invite recipient can respond.");
     }
     if (decision === "declined") {
+      const timestamp = admin.firestore.FieldValue.serverTimestamp();
+      writeNotification(transaction, invite.invitedByUserId, `clan-response-${clanId}-${targetUserId}`, {
+        type: "clan-response",
+        title: "Klan daveti reddedildi",
+        body: `${target.fullName ?? target.plate} klan davetine yanit verdi.`,
+        actor: target,
+        action: { type: "clan", targetId: clanId },
+      }, timestamp);
       transaction.delete(inviteRef);
       return;
     }
@@ -908,6 +1087,13 @@ exports.respondClanInvite = onCall(async (request) => {
     }
 
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    writeNotification(transaction, invite.invitedByUserId, `clan-response-${clanId}-${targetUserId}`, {
+      type: "clan-response",
+      title: decision === "accepted" ? "Klan daveti kabul edildi" : "Klan daveti reddedildi",
+      body: `${target.fullName ?? target.plate} klan davetine yanit verdi.`,
+      actor: target,
+      action: { type: "clan", targetId: clanId },
+    }, timestamp);
     const memberCount = Number(clan.memberCount ?? clan.members ?? 0) + 1;
     transaction.set(memberRef, buildClanMemberDocument({
       clanId,
@@ -924,7 +1110,7 @@ exports.respondClanInvite = onCall(async (request) => {
   return { ok: true, clanId, decision };
 });
 
-exports.cancelClanInvite = onCall(async (request) => {
+exports.cancelClanInvite = secureCall("cancelClanInvite", async (request) => {
   const actorUserId = requireAuth(request);
   const { clanId, targetUserId } = request.data ?? {};
   assertClanId(clanId);
@@ -944,7 +1130,7 @@ exports.cancelClanInvite = onCall(async (request) => {
   return { ok: true, clanId, targetUserId };
 });
 
-exports.updateClanMemberRole = onCall(async (request) => {
+exports.updateClanMemberRole = secureCall("updateClanMemberRole", async (request) => {
   const actorUserId = requireAuth(request);
   const { clanId, targetUserId, role } = request.data ?? {};
   assertClanId(clanId);
@@ -977,7 +1163,7 @@ exports.updateClanMemberRole = onCall(async (request) => {
   return { ok: true, clanId, targetUserId, role: nextRole };
 });
 
-exports.removeClanMember = onCall(async (request) => {
+exports.removeClanMember = secureCall("removeClanMember", async (request) => {
   const actorUserId = requireAuth(request);
   const { clanId, targetUserId } = request.data ?? {};
   assertClanId(clanId);
@@ -1006,7 +1192,7 @@ exports.removeClanMember = onCall(async (request) => {
   return { ok: true, clanId, targetUserId };
 });
 
-exports.transferClanOwnership = onCall(async (request) => {
+exports.transferClanOwnership = secureCall("transferClanOwnership", async (request) => {
   const ownerUserId = requireAuth(request);
   const { clanId, targetUserId } = request.data ?? {};
   assertClanId(clanId);
@@ -1046,7 +1232,7 @@ exports.transferClanOwnership = onCall(async (request) => {
   return { ok: true, clanId, ownerUserId: targetUserId };
 });
 
-exports.leaveClan = onCall(async (request) => {
+exports.leaveClan = secureCall("leaveClan", async (request) => {
   const userId = requireAuth(request);
   const { clanId } = request.data ?? {};
   assertClanId(clanId);
@@ -1078,7 +1264,7 @@ exports.leaveClan = onCall(async (request) => {
   return { ok: true, clanId };
 });
 
-exports.refreshDriverStats = onCall(async (request) => {
+exports.refreshDriverStats = secureCall("refreshDriverStats", async (request) => {
   const userId = requireAuth(request);
   let response;
 
@@ -1128,7 +1314,7 @@ exports.refreshDriverStats = onCall(async (request) => {
   return response;
 });
 
-exports.createVehiclePassportExport = onCall(async (request) => {
+exports.createVehiclePassportExport = secureCall("createVehiclePassportExport", { rateLimit: { limit: 10, windowSeconds: 3600 } }, async (request) => {
   const userId = requireAuth(request);
   const exportId = `passport-export-${Date.now()}`;
   let response;
@@ -1191,7 +1377,7 @@ exports.createVehiclePassportExport = onCall(async (request) => {
   return response;
 });
 
-exports.startDriveSession = onCall(async (request) => {
+exports.startDriveSession = secureCall("startDriveSession", { rateLimit: { limit: 20, windowSeconds: 600 } }, async (request) => {
   const userId = requireAuth(request);
   const { sessionId } = request.data ?? {};
   assertDriveSessionId(sessionId);
@@ -1297,7 +1483,7 @@ exports.startDriveSession = onCall(async (request) => {
   return response;
 });
 
-exports.finishDriveSession = onCall(async (request) => {
+exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { limit: 20, windowSeconds: 600 } }, async (request) => {
   const userId = requireAuth(request);
   const { sessionId, reportedKm } = request.data ?? {};
   assertDriveSessionId(sessionId);
@@ -1397,14 +1583,24 @@ exports.finishDriveSession = onCall(async (request) => {
     }
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
     const partHealth = partsSnapshot.docs.map((partDocument) => {
-      const health = buildPartLifeSnapshot(partDocument.data(), nextOdometer, finishedAt);
+      const part = partDocument.data();
+      const health = buildPartLifeSnapshot(part, nextOdometer, finishedAt);
       transaction.set(partDocument.ref, {
         ...health,
         healthCalculatedAt: timestamp,
         lastDriveSessionId: sessionId,
         updatedAt: timestamp,
       }, { merge: true });
-      return { id: partDocument.id, key: partDocument.data().key, ...health };
+      if (Number(part.healthPercent ?? 100) >= 20 && health.healthPercent < 20) {
+        writeNotification(transaction, userId, `maintenance-critical-${partDocument.id}-${health.healthPeriodKey}`, {
+          type: "maintenance-critical",
+          title: "Kritik bakim uyarisi",
+          body: `${part.name ?? part.key} omru %${health.healthPercent} seviyesine dustu.`,
+          actor: { userId, fullName: "CRUISER Garage", plate: profile.plate },
+          action: { type: "garage", targetId: partDocument.id },
+        }, timestamp);
+      }
+      return { id: partDocument.id, key: part.key, ...health };
     });
     let clanLeaderboardEntry = null;
 
@@ -1479,7 +1675,7 @@ exports.finishDriveSession = onCall(async (request) => {
 
 // Stage 6: Spot and wash writes are intentionally callable-only. Event/convoy
 // mutations remain a Stage 7 concern and are not handled by these endpoints.
-exports.createMapNode = onCall(async (request) => {
+exports.createMapNode = secureCall("createMapNode", { rateLimit: { limit: 12, windowSeconds: 3600 } }, async (request) => {
   const userId = requireAuth(request);
   const pin = request.data?.pin ?? request.data;
   const profile = await getUserProfile(userId);
@@ -1509,7 +1705,7 @@ exports.createMapNode = onCall(async (request) => {
   return { ok: true, pinId: pinRef.id };
 });
 
-exports.submitWashReview = onCall(async (request) => {
+exports.submitWashReview = secureCall("submitWashReview", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
   const userId = requireAuth(request);
   const pinId = String(request.data?.pinId ?? "");
   if (!pinId || pinId.includes("/")) throw new HttpsError("invalid-argument", "A valid wash node is required.");
@@ -1534,7 +1730,7 @@ exports.submitWashReview = onCall(async (request) => {
   return { ok: true, rating };
 });
 
-exports.toggleMapLike = onCall(async (request) => {
+exports.toggleMapLike = secureCall("toggleMapLike", { rateLimit: { limit: 120, windowSeconds: 60 } }, async (request) => {
   const userId = requireAuth(request);
   const pinId = String(request.data?.pinId ?? "");
   const targetType = request.data?.targetType;
@@ -1567,7 +1763,7 @@ exports.toggleMapLike = onCall(async (request) => {
   return { ok: true, liked };
 });
 
-exports.addMapSpotPhoto = onCall(async (request) => {
+exports.addMapSpotPhoto = secureCall("addMapSpotPhoto", { rateLimit: { limit: 20, windowSeconds: 3600 } }, async (request) => {
   const userId = requireAuth(request);
   const pinId = String(request.data?.pinId ?? "");
   const storagePath = String(request.data?.storagePath ?? "");
@@ -1588,4 +1784,173 @@ exports.addMapSpotPhoto = onCall(async (request) => {
     transaction.update(pinRef, { photoCount: Number(pinSnapshot.data().photoCount ?? 0) + 1, updatedAt: timestamp });
   });
   return { ok: true, photoId: photoRef.id };
+});
+
+exports.markNotificationRead = secureCall("markNotificationRead", { rateLimit: { limit: 120, windowSeconds: 60 } }, async (request) => {
+  const userId = requireAuth(request);
+  const notificationId = sanitizeOperationalText(request.data?.notificationId, 180);
+  if (!notificationId || notificationId.includes("/")) {
+    throw new HttpsError("invalid-argument", "A valid notificationId is required.");
+  }
+
+  const notificationRef = privateUserDocument(userId, "notifications", notificationId);
+  const snapshot = await notificationRef.get();
+  if (!snapshot.exists || snapshot.data().userId !== userId) {
+    throw new HttpsError("not-found", "Notification not found.");
+  }
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+  await notificationRef.update({ readAt: timestamp, updatedAt: timestamp });
+  return { ok: true, notificationId };
+});
+
+exports.markAllNotificationsRead = secureCall("markAllNotificationsRead", { rateLimit: { limit: 10, windowSeconds: 60 } }, async (request) => {
+  const userId = requireAuth(request);
+  const snapshot = await privateUserCollection(userId, "notifications").limit(100).get();
+  const unread = snapshot.docs.filter((document) => !document.data().readAt);
+  if (unread.length) {
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const batch = db.batch();
+    unread.forEach((document) => batch.update(document.ref, { readAt: timestamp, updatedAt: timestamp }));
+    await batch.commit();
+  }
+  return { ok: true, updatedCount: unread.length, hasMore: snapshot.size === 100 };
+});
+
+exports.submitModerationReport = secureCall("submitModerationReport", { rateLimit: { limit: 10, windowSeconds: 86400 } }, async (request) => {
+  const reporterUserId = requireAuth(request);
+  const reporter = await getUserProfile(reporterUserId);
+  const targetType = String(request.data?.targetType ?? "");
+  const targetId = sanitizeOperationalText(request.data?.targetId, 180);
+  const reason = String(request.data?.reason ?? "");
+  if (targetType === "driver" && targetId === reporterUserId) {
+    throw new HttpsError("failed-precondition", "You cannot report your own profile.");
+  }
+
+  const targetCollections = {
+    driver: "publicProfiles",
+    mapPin: "mapPins",
+    convoy: "convoys",
+    clan: "clans",
+  };
+  if (targetCollections[targetType]) {
+    const targetSnapshot = await publicDocument(targetCollections[targetType], targetId).get();
+    if (!targetSnapshot.exists) {
+      throw new HttpsError("not-found", "The reported target no longer exists.");
+    }
+  }
+
+  const reportRef = publicCollection("moderationReports").doc();
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+  let report;
+  try {
+    report = buildModerationReportDocument({
+      reportId: reportRef.id,
+      reporter,
+      targetType,
+      targetId,
+      reason,
+      details: request.data?.details,
+      timestamp,
+    });
+  } catch (error) {
+    throw new HttpsError("invalid-argument", error.message);
+  }
+  await reportRef.set(report);
+  logger.warn("moderation.report.created", {
+    reportId: reportRef.id,
+    targetType,
+    reason,
+  });
+  return { ok: true, reportId: reportRef.id, status: "open" };
+});
+
+exports.listModerationQueue = secureCall("listModerationQueue", async (request) => {
+  requireModerator(request);
+  const snapshot = await publicCollection("moderationReports").limit(100).get();
+  const reports = snapshot.docs
+    .map((document) => ({ id: document.id, ...document.data() }))
+    .filter((report) => report.status === "open")
+    .sort((left, right) => Number(right.createdAt?.toMillis?.() ?? 0) - Number(left.createdAt?.toMillis?.() ?? 0));
+  return { ok: true, reports };
+});
+
+exports.resolveModerationReport = secureCall("resolveModerationReport", { rateLimit: { limit: 60, windowSeconds: 3600 } }, async (request) => {
+  const moderatorUserId = requireModerator(request);
+  const reportId = sanitizeOperationalText(request.data?.reportId, 180);
+  const decision = String(request.data?.decision ?? "");
+  if (!reportId || reportId.includes("/")) {
+    throw new HttpsError("invalid-argument", "A valid reportId is required.");
+  }
+
+  const reportRef = publicDocument("moderationReports", reportId);
+  const auditRef = publicCollection("moderationAudit").doc();
+  let resolvedTargetType = "";
+  await db.runTransaction(async (transaction) => {
+    const reportSnapshot = await transaction.get(reportRef);
+    const report = requireSnapshot(reportSnapshot, "not-found", "Moderation report not found.");
+    if (report.status !== "open") {
+      throw new HttpsError("failed-precondition", "This moderation report is already resolved.");
+    }
+
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    let audit;
+    try {
+      audit = buildModerationAuditDocument({
+        report: { id: reportId, ...report },
+        moderatorUserId,
+        decision,
+        note: request.data?.note,
+        timestamp,
+      });
+    } catch (error) {
+      throw new HttpsError("invalid-argument", error.message);
+    }
+    transaction.set(auditRef, { id: auditRef.id, ...audit });
+    transaction.update(reportRef, {
+      status: decision === "dismiss" ? "dismissed" : "actioned",
+      assignedModeratorId: moderatorUserId,
+      decision,
+      resolutionNote: audit.note,
+      resolvedAt: timestamp,
+      updatedAt: timestamp,
+    });
+    resolvedTargetType = report.targetType;
+
+    const recipientUserId = decision === "dismiss" ? report.reporterUserId : report.targetType === "driver" ? report.targetId : "";
+    if (recipientUserId) {
+      writeNotification(transaction, recipientUserId, `moderation-${reportId}-${decision}`, {
+        type: "moderation",
+        title: decision === "dismiss" ? "Rapor incelendi" : decision === "warn" ? "Topluluk kurallari uyarisi" : "Hesap kisitlamasi",
+        body: decision === "dismiss"
+          ? "Gonderdigin rapor incelendi ve islem gerektirmedigi belirlendi."
+          : decision === "warn"
+            ? "Topluluk kurallarina uygun davranman icin hesabina uyari verildi."
+            : "Hesabin topluluk guvenligi nedeniyle gecici olarak kisitlandi.",
+        actor: { userId: moderatorUserId, fullName: "CRUISER Safety" },
+        action: { type: "profile", targetId: recipientUserId },
+      }, timestamp);
+    }
+
+    if (report.targetType === "driver" && decision !== "dismiss") {
+      const restrictedUntil = decision === "restrict"
+        ? admin.firestore.Timestamp.fromMillis(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        : null;
+      const moderationPatch = {
+        status: decision === "restrict" ? "restricted" : "warned",
+        lastDecision: decision,
+        lastReportId: reportId,
+        restrictedUntil,
+        updatedAt: timestamp,
+      };
+      transaction.set(privateUserDocument(report.targetId, "moderation", "current"), moderationPatch, { merge: true });
+      transaction.set(publicDocument("publicProfiles", report.targetId), {
+        moderationStatus: moderationPatch.status,
+        restrictedUntil,
+        updatedAt: timestamp,
+      }, { merge: true });
+    }
+  });
+
+  logger.warn("moderation.report.resolved", { reportId, decision, targetType: resolvedTargetType });
+  return { ok: true, reportId, decision };
 });

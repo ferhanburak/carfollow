@@ -194,6 +194,25 @@ async function seedFirestoreFixtures() {
       vehicleId: VEHICLE_ID,
       status: "completed",
     });
+    batch.set(doc(database, privatePath(OWNER_ID, "notifications", "notification-owner-1")), {
+      id: "notification-owner-1",
+      userId: OWNER_ID,
+      type: "friend-request",
+      title: "Test notification",
+      readAt: null,
+      createdAt: FIXED_TIME,
+      updatedAt: FIXED_TIME,
+    });
+    batch.set(doc(database, privatePath(OWNER_ID, "moderation", "current")), {
+      status: "warned",
+      lastReportId: "report-owner-1",
+      updatedAt: FIXED_TIME,
+    });
+    batch.set(doc(database, privatePath(OWNER_ID, "rateLimits", "sendDirectMessage")), {
+      action: "sendDirectMessage",
+      count: 1,
+      windowEndMs: 9999999999999,
+    });
     batch.set(doc(database, privatePath(OWNER_ID, "vehiclePassportExports", "export-owner-1")), {
       id: "export-owner-1",
       userId: OWNER_ID,
@@ -213,6 +232,22 @@ async function seedFirestoreFixtures() {
       clanId: "clan-owner",
       periodKey: "2026-07",
       monthlyKm: 42.4,
+    });
+    batch.set(doc(database, publicPath("moderationReports", "report-owner-1")), {
+      id: "report-owner-1",
+      reporterUserId: OWNER_ID,
+      targetType: "driver",
+      targetId: OTHER_ID,
+      reason: "dangerous-driving",
+      status: "open",
+      createdAt: FIXED_TIME,
+    });
+    batch.set(doc(database, publicPath("moderationAudit", "audit-owner-1")), {
+      id: "audit-owner-1",
+      reportId: "report-owner-1",
+      moderatorUserId: "moderator-user",
+      decision: "warn",
+      createdAt: FIXED_TIME,
     });
     batch.set(doc(database, publicPath("friendships", `${OTHER_ID}__${OWNER_ID}`)), {
       id: `${OTHER_ID}__${OWNER_ID}`,
@@ -418,6 +453,27 @@ describe("Firestore security rules", { concurrency: false }, () => {
     await assertFails(setDoc(doc(ownerDb, publicPath("clanLeaderboard", "manual-entry")), {
       clanId: "clan-owner",
       monthlyKm: 9999,
+    }));
+  });
+
+  it("keeps notifications owner-readable and all operational records backend-only", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+    const otherDb = testEnvironment.authenticatedContext(OTHER_ID).firestore();
+    const notificationPath = privatePath(OWNER_ID, "notifications", "notification-owner-1");
+    const moderationPath = privatePath(OWNER_ID, "moderation", "current");
+
+    await assertSucceeds(getDoc(doc(ownerDb, notificationPath)));
+    await assertFails(getDoc(doc(otherDb, notificationPath)));
+    await assertFails(updateDoc(doc(ownerDb, notificationPath), { readAt: FIXED_TIME }));
+    await assertSucceeds(getDoc(doc(ownerDb, moderationPath)));
+    await assertFails(getDoc(doc(otherDb, moderationPath)));
+    await assertFails(getDoc(doc(ownerDb, privatePath(OWNER_ID, "rateLimits", "sendDirectMessage"))));
+    await assertFails(getDoc(doc(ownerDb, publicPath("moderationReports", "report-owner-1"))));
+    await assertFails(getDoc(doc(ownerDb, publicPath("moderationAudit", "audit-owner-1"))));
+    await assertFails(setDoc(doc(ownerDb, publicPath("moderationReports", "manual-report")), {
+      reporterUserId: OWNER_ID,
+      targetId: OTHER_ID,
+      status: "open",
     }));
   });
 

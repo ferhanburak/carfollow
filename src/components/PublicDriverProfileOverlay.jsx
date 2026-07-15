@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { formatNumber } from "../utils/garage";
 
 function clampPercent(value) {
@@ -109,14 +110,21 @@ export function PublicDriverProfileOverlay({
   onInviteFriendToClan,
   onInviteToConvoy,
   onOpenConversation,
+  onReportDriver,
   onRequestFriend,
   onRemoveFriendship,
   onUnblockDriver,
   presence,
   profile,
+  moderationFeedback,
+  moderationPending,
   socialPendingKey,
   user,
 }) {
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("dangerous-driving");
+  const [reportDetails, setReportDetails] = useState("");
+
   if (!profile) {
     return null;
   }
@@ -278,6 +286,60 @@ export function PublicDriverProfileOverlay({
               </button>
             ) : null}
           </div>
+
+          {profileStatus !== "self" ? (
+            <div className="rounded-2xl border border-rose-400/15 bg-rose-500/[0.04] p-4">
+              <button
+                type="button"
+                onClick={() => setReportOpen((current) => !current)}
+                className="min-h-12 w-full rounded-xl border border-rose-400/20 px-4 text-xs font-semibold text-rose-200"
+              >
+                {reportOpen ? "Rapor Formunu Kapat" : "Surucuyu Raporla"}
+              </button>
+              {reportOpen ? (
+                <form
+                  className="mt-3 space-y-3"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    const completed = await onReportDriver?.(profile, { reason: reportReason, details: reportDetails });
+                    if (completed) {
+                      setReportDetails("");
+                      setReportOpen(false);
+                    }
+                  }}
+                >
+                  <select
+                    value={reportReason}
+                    onChange={(event) => setReportReason(event.target.value)}
+                    className="min-h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-neutral-200"
+                  >
+                    <option value="dangerous-driving">Tehlikeli surus</option>
+                    <option value="harassment">Taciz veya rahatsizlik</option>
+                    <option value="spam">Spam</option>
+                    <option value="false-information">Yanlis bilgi</option>
+                    <option value="inappropriate-content">Uygunsuz icerik</option>
+                    <option value="other">Diger</option>
+                  </select>
+                  <textarea
+                    value={reportDetails}
+                    onChange={(event) => setReportDetails(event.target.value)}
+                    maxLength={500}
+                    rows={3}
+                    placeholder="Incelemeye yardimci olacak kisa bir aciklama..."
+                    className="w-full rounded-xl border border-white/10 bg-[#171717] px-3 py-3 text-sm text-neutral-200 outline-none focus:border-rose-400/40"
+                  />
+                  <button
+                    type="submit"
+                    disabled={moderationPending || !onReportDriver}
+                    className="min-h-12 w-full rounded-xl bg-rose-500 px-4 text-xs font-black text-white disabled:opacity-50"
+                  >
+                    {moderationPending ? "Rapor gonderiliyor..." : "Guvenlik Ekibine Gonder"}
+                  </button>
+                </form>
+              ) : null}
+              {moderationFeedback ? <p className="mt-3 text-xs text-rose-100/80">{moderationFeedback}</p> : null}
+            </div>
+          ) : null}
 
           <div className="rounded-2xl border border-white/8 bg-black/20 p-4 text-xs text-neutral-400">
             <p>Kaynak: {profile.source ?? "shared-overlay"}</p>

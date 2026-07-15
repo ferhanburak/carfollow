@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { appId, navItems, tuningOptions } from "./data/mockData";
 import { PublicDriverProfileOverlay } from "./components/PublicDriverProfileOverlay";
+import { NotificationCenter } from "./components/NotificationCenter";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
 import { AuthScreen } from "./screens/AuthScreen";
@@ -115,6 +116,12 @@ function App() {
     mapPinForm,
     mapPins,
     messageDraft,
+    markAllNotificationsRead,
+    markNotificationRead,
+    moderationFeedback,
+    moderationPending,
+    notificationFeedback,
+    notifications,
     openConversation,
     passportExportFeedback,
     passportExportPending,
@@ -130,6 +137,7 @@ function App() {
     rateAttendee,
     removeLastDraftRoutePoint,
     requestFriend,
+    reportDriver,
     removeFriendship,
     removeClanMember,
     resetSessionView,
@@ -168,6 +176,7 @@ function App() {
     submitWashReview,
     toggleDrive,
     totalUnreadCount,
+    unreadNotificationCount,
     upcomingMaintenance,
     useSelectedPinCoordinates,
     washErrors,
@@ -209,25 +218,45 @@ function App() {
           <header className="relative overflow-hidden border-b border-white/10 px-5 py-5">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.18),_transparent_34%),radial-gradient(circle_at_bottom_left,_rgba(244,63,94,0.14),_transparent_28%),linear-gradient(180deg,#171717,#0a0a0a)]" />
             <div className="relative flex items-start justify-between gap-4">
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-[11px] uppercase tracking-[0.35em] text-lime-400">CRUISER // {user.region}</p>
-                <h2 className="mt-2 text-2xl font-black">{user.plate}</h2>
-                <p className="text-sm text-neutral-400">
+                <h2 className="mt-2 truncate text-2xl font-black">{user.plate}</h2>
+                <p className="truncate text-sm text-neutral-400">
                   {user.model} / {user.horsepower} HP / {user.tuningStage}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={toggleDrive}
-                disabled={driveSessionPending}
-                className={`min-h-12 min-w-12 rounded-2xl px-4 text-sm font-bold transition ${
-                  isDriving
-                    ? "bg-rose-500 text-white shadow-[0_0_24px_rgba(244,63,94,0.5)]"
-                    : "bg-lime-400 text-black shadow-[0_0_24px_rgba(163,230,53,0.38)]"
-                } disabled:cursor-wait disabled:opacity-60`}
-              >
-                {driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <NotificationCenter
+                  feedback={notificationFeedback}
+                  notifications={notifications}
+                  onMarkAllRead={markAllNotificationsRead}
+                  onMarkRead={markNotificationRead}
+                  onNavigate={(action) => {
+                    const targetTabs = {
+                      clan: "social",
+                      conversation: "social",
+                      convoy: "map",
+                      garage: "garage",
+                      profile: "profile",
+                      social: "social",
+                    };
+                    setActiveTab(targetTabs[action?.type] ?? "profile");
+                  }}
+                  unreadCount={unreadNotificationCount}
+                />
+                <button
+                  type="button"
+                  onClick={toggleDrive}
+                  disabled={driveSessionPending}
+                  className={`min-h-12 min-w-12 rounded-2xl px-4 text-sm font-bold transition ${
+                    isDriving
+                      ? "bg-rose-500 text-white shadow-[0_0_24px_rgba(244,63,94,0.5)]"
+                      : "bg-lime-400 text-black shadow-[0_0_24px_rgba(163,230,53,0.38)]"
+                  } disabled:cursor-wait disabled:opacity-60`}
+                >
+                  {driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}
+                </button>
+              </div>
             </div>
             <div className="relative mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-3">
               <img src={user.avatar} alt={user.model} className="h-14 w-14 rounded-2xl object-cover" />
@@ -504,10 +533,13 @@ function App() {
           setPublicProfile(null);
         }}
         onRequestFriend={(profile) => requestFriend(profile)}
+        onReportDriver={reportDriver}
         onRemoveFriendship={removeFriendship}
         onUnblockDriver={unblockDriver}
         presence={publicProfile ? presenceMap?.[publicProfile.plate] : null}
         profile={publicProfile}
+        moderationFeedback={moderationFeedback}
+        moderationPending={moderationPending}
         socialPendingKey={socialPendingKey}
         user={safeUser ?? user}
       />

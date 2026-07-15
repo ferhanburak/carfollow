@@ -16,6 +16,8 @@ import { useDriverStats } from "./useDriverStats";
 import { useFirebaseSync } from "./useFirebaseSync";
 import { useClanGraph } from "./useClanGraph";
 import { useMapPins } from "./useMapPins";
+import { useModeration } from "./useModeration";
+import { useNotifications } from "./useNotifications";
 import { useProfileEditor } from "./useProfileEditor";
 import { useSocialGraph } from "./useSocialGraph";
 import { useVehiclePassport } from "./useVehiclePassport";
@@ -209,6 +211,15 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     setUser,
   });
 
+  const {
+    markAllNotificationsRead,
+    markNotificationRead,
+    notificationFeedback,
+    notifications,
+    unreadNotificationCount,
+  } = useNotifications(resolvedSafeUser);
+  const { moderationFeedback, moderationPending, reportDriver } = useModeration(resolvedSafeUser);
+
   useEffect(() => {
     const shuffleTimer = window.setInterval(() => {
       startTransition(() => {
@@ -328,6 +339,12 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     mapPinForm,
     mapPins,
     messageDraft,
+    markAllNotificationsRead,
+    markNotificationRead,
+    moderationFeedback,
+    moderationPending,
+    notificationFeedback,
+    notifications,
     openConversation,
     passportSummary,
     passportExportFeedback,
@@ -344,6 +361,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     rateAttendee,
     removeLastDraftRoutePoint,
     requestFriend,
+    reportDriver,
     removeFriendship,
     resetSessionView,
     revokeClanInvite,
@@ -383,6 +401,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     submitWashReview,
     toggleDrive,
     totalUnreadCount,
+    unreadNotificationCount,
     upcomingMaintenance,
     useSelectedPinCoordinates,
     washErrors,

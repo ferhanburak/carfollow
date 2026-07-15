@@ -132,6 +132,8 @@ service cloud.firestore {
         data.get('monthlyKmPeriod', '') == previousData.get('monthlyKmPeriod', '') &&
         data.get('achievementBadges', []) == previousData.get('achievementBadges', []) &&
         data.get('driverStatsUpdatedAt', null) == previousData.get('driverStatsUpdatedAt', null) &&
+        data.get('moderationStatus', null) == previousData.get('moderationStatus', null) &&
+        data.get('restrictedUntil', null) == previousData.get('restrictedUntil', null) &&
         data.get('clan', null) == previousData.get('clan', null) &&
         data.get('clanId', null) == previousData.get('clanId', null) &&
         data.get('clanRole', null) == previousData.get('clanRole', null);
@@ -457,6 +459,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /artifacts/{appId}/public/data/moderationReports/{documentId} {
+      allow read, write: if false;
+    }
+
+    match /artifacts/{appId}/public/data/moderationAudit/{documentId} {
+      allow read, write: if false;
+    }
+
     match /artifacts/{appId}/public/data/mapPins/{documentId} {
       allow read: if isKnownApp(appId) && isSignedIn();
       allow write: if false;
@@ -644,6 +654,15 @@ service cloud.firestore {
     match /artifacts/{appId}/users/{userId}/notifications/{documentId} {
       allow read: if isKnownApp(appId) && isOwner(userId);
       allow write: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/moderation/{documentId} {
+      allow read: if isKnownApp(appId) && isOwner(userId);
+      allow write: if false;
+    }
+
+    match /artifacts/{appId}/users/{userId}/rateLimits/{documentId} {
+      allow read, write: if false;
     }
 
     match /{document=**} {

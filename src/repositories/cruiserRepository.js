@@ -93,6 +93,18 @@ export {
 } from "./firebaseDriverStatsRepository";
 
 export {
+  isFirebaseNotificationRepositoryEnabled,
+  markAllFirebaseNotificationsRead,
+  markFirebaseNotificationRead,
+  subscribeFirebaseNotifications,
+} from "./firebaseNotificationRepository";
+
+export {
+  isFirebaseModerationRepositoryEnabled,
+  submitFirebaseModerationReport,
+} from "./firebaseModerationRepository";
+
+export {
   addFirebaseMapSpotPhoto,
   buildFirebaseMapState,
   createFirebaseConvoy,
