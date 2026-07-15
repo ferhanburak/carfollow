@@ -72,6 +72,20 @@ function getMapsApiKey() {
   return import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "";
 }
 
+function hasValidMapCoordinates(pin) {
+  const lat = Number(pin?.lat);
+  const lng = Number(pin?.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+}
+
+function normalizeMapPinCoordinates(pin) {
+  return {
+    ...pin,
+    lat: Number(pin.lat),
+    lng: Number(pin.lng),
+  };
+}
+
 function getPinGlyph(type) {
   return getPinIcon(type);
 }
@@ -581,8 +595,10 @@ export function MapCard({
   mapHeight = "18rem",
 }) {
   const mapsApiKey = getMapsApiKey();
-  const shouldUseGoogleMaps = Boolean(mapsApiKey) && pins.every((pin) => typeof pin.lat === "number" && typeof pin.lng === "number");
-  const selectedPin = pins.find((pin) => pin.id === selectedPinId) ?? pins[0];
+  // Legacy or partially-created nodes must not disable the whole Google map.
+  const mappablePins = pins.filter(hasValidMapCoordinates).map(normalizeMapPinCoordinates);
+  const shouldUseGoogleMaps = Boolean(mapsApiKey);
+  const selectedPin = mappablePins.find((pin) => pin.id === selectedPinId) ?? mappablePins[0];
 
   if (!shouldUseGoogleMaps) {
     return (
@@ -618,7 +634,7 @@ export function MapCard({
   return (
     <GoogleMapCard
       mapsApiKey={mapsApiKey}
-      pins={pins}
+      pins={mappablePins}
       selectedPin={selectedPin}
       selectedPinId={selectedPinId}
       onSelect={onSelect}
@@ -1181,7 +1197,7 @@ function GoogleMapCard({
         <>
           <FallbackGridMap pins={pins} selectedPinId={selectedPinId} onSelect={onSelect} />
           <p className="mt-3 text-xs text-rose-300">
-            Google Maps could not load. Check API restrictions for `localhost` and `127.0.0.1`.
+            Google Maps could not load. Check that Maps JavaScript API is enabled and this key permits `localhost` and `127.0.0.1`.
           </p>
         </>
       ) : null}
