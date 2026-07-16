@@ -44,6 +44,7 @@ export function buildFirebaseClanState({
   incomingInvites = [],
   outgoingInvites = [],
   members = [],
+  loaded,
 }) {
   const membership = memberships[0] ?? null;
   const periodKey = getDriverStatsPeriod();
@@ -69,6 +70,14 @@ export function buildFirebaseClanState({
     membership,
     clanInvites: sortNewest(incomingInvites.map(normalizeInvite)),
     sentClanInvites: sortNewest(outgoingInvites.map(normalizeInvite)),
+    loaded: loaded ? { ...loaded } : {
+      clans: true,
+      leaderboardEntries: true,
+      memberships: true,
+      incomingInvites: true,
+      outgoingInvites: true,
+      members: true,
+    },
   };
 }
 
@@ -107,9 +116,8 @@ export async function subscribeFirebaseClanState(onStateChange, onError = () => 
 
   const mapSnapshot = (snapshot) => snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
   const emit = () => {
-    if (Object.values(loaded).every(Boolean)) {
-      onStateChange(buildFirebaseClanState(snapshots));
-    }
+    // Invite delivery must not wait for unrelated clan or leaderboard queries.
+    onStateChange(buildFirebaseClanState({ ...snapshots, loaded }));
   };
   const bindMembers = (clanId) => {
     if (subscribedClanId === clanId) {

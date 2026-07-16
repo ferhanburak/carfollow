@@ -154,6 +154,7 @@ export function StatsScreen({
     { key: "incoming", label: "Gelen", value: `${user.incomingRequests?.length ?? 0}` },
     { key: "outgoing", label: "Giden", value: `${user.outgoingRequests?.length ?? 0}` },
     { key: "blocked", label: "Engelli", value: `${user.blockedDrivers?.length ?? 0}` },
+    { key: "clan-invites", label: "Klan Daveti", value: `${user.clanInvites?.length ?? 0}` },
   ];
   const hasSearchResults = friendSearchResults.length > 0;
 
@@ -173,7 +174,7 @@ export function StatsScreen({
     <section className="space-y-4">
       {showSocial ? (
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <div className="mb-4 grid grid-cols-4 gap-2">
+        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {socialSummary.map((item) => (
             <div key={item.key} className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
               <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">{item.label}</p>
@@ -181,6 +182,15 @@ export function StatsScreen({
             </div>
           ))}
         </div>
+
+        {(user.clanInvites ?? []).length ? (
+          <div
+            data-testid="incoming-clan-invite-alert"
+            className="mb-4 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100"
+          >
+            {user.clanInvites.length} bekleyen klan davetin var. Kabul veya red islemini Klan Merkezi'nden yapabilirsin.
+          </div>
+        ) : null}
 
         <div className="flex items-center justify-between gap-3">
           <div>

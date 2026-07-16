@@ -64,8 +64,25 @@ export function useClanGraph({ clans, setClans, user, setUser }) {
         if (cancelled) {
           return;
         }
-        setFirebaseClanState(state);
-        setClans((current) => {
+        const loaded = state.loaded ?? {};
+        const membershipReady = loaded.clans !== false && loaded.memberships !== false;
+        const clanListReady = loaded.clans !== false && loaded.leaderboardEntries !== false;
+        setFirebaseClanState((current) => ({
+          ...state,
+          clans: clanListReady ? state.clans : current?.clans ?? [],
+          currentClan: membershipReady ? state.currentClan : current?.currentClan ?? null,
+          currentClanMembers: loaded.members !== false
+            ? state.currentClanMembers
+            : current?.currentClanMembers ?? [],
+          membership: loaded.memberships !== false ? state.membership : current?.membership ?? null,
+          clanInvites: loaded.incomingInvites !== false
+            ? state.clanInvites
+            : current?.clanInvites ?? [],
+          sentClanInvites: loaded.outgoingInvites !== false
+            ? state.sentClanInvites
+            : current?.sentClanInvites ?? [],
+        }));
+        if (clanListReady) setClans((current) => {
           const nextSignature = state.clans
             .map((clan) => `${clan.id}|${clan.monthlyKmPeriod}|${clan.monthlyKm}|${clan.memberCount}`)
             .join("~");
@@ -78,25 +95,32 @@ export function useClanGraph({ clans, setClans, user, setUser }) {
           if (!current) {
             return current;
           }
-          const membership = state.membership;
-          const nextClan = state.currentClan?.name ?? null;
-          const nextRole = membership?.role ?? null;
+          const membership = loaded.memberships !== false ? state.membership : null;
+          const nextClanId = membershipReady ? membership?.clanId ?? null : current.clanId ?? null;
+          const nextClan = membershipReady ? state.currentClan?.name ?? null : current.clan ?? null;
+          const nextRole = membershipReady ? membership?.role ?? null : current.clanRole ?? null;
+          const nextInvites = loaded.incomingInvites !== false
+            ? state.clanInvites
+            : current.clanInvites ?? [];
+          const nextSentInvites = loaded.outgoingInvites !== false
+            ? state.sentClanInvites
+            : current.sentClanInvites ?? [];
           if (
-            current.clanId === (membership?.clanId ?? null) &&
+            current.clanId === nextClanId &&
             current.clan === nextClan &&
             current.clanRole === nextRole &&
-            inviteSignature(current.clanInvites) === inviteSignature(state.clanInvites) &&
-            inviteSignature(current.sentClanInvites) === inviteSignature(state.sentClanInvites)
+            inviteSignature(current.clanInvites) === inviteSignature(nextInvites) &&
+            inviteSignature(current.sentClanInvites) === inviteSignature(nextSentInvites)
           ) {
             return current;
           }
           return {
             ...current,
             clan: nextClan,
-            clanId: membership?.clanId ?? null,
+            clanId: nextClanId,
             clanRole: nextRole,
-            clanInvites: state.clanInvites,
-            sentClanInvites: state.sentClanInvites,
+            clanInvites: nextInvites,
+            sentClanInvites: nextSentInvites,
           };
         });
       },

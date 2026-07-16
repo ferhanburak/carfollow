@@ -44,4 +44,32 @@ describe("buildFirebaseClanState", () => {
       ["clan-2", 80],
     ]);
   });
+
+  it("preserves partial subscription readiness so invites can render immediately", () => {
+    const state = buildFirebaseClanState({
+      incomingInvites: [
+        {
+          id: "clan-1__self",
+          clanId: "clan-1",
+          clanName: "INIURIA",
+          targetUserId: "self",
+          invitedByName: "Captain",
+          status: "pending",
+          createdAt: { toMillis: () => 500 },
+        },
+      ],
+      loaded: {
+        clans: false,
+        leaderboardEntries: false,
+        memberships: false,
+        incomingInvites: true,
+        outgoingInvites: false,
+        members: true,
+      },
+    });
+
+    expect(state.clanInvites).toHaveLength(1);
+    expect(state.clanInvites[0]).toMatchObject({ clanName: "INIURIA", targetUserId: "self" });
+    expect(state.loaded).toMatchObject({ incomingInvites: true, clans: false });
+  });
 });
