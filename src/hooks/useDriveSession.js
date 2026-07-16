@@ -4,14 +4,12 @@ import {
   buildDriveTickState,
   incrementClanKm,
   incrementUserOdometer,
-  syncActiveDriver,
 } from "../repositories/cruiserRepository";
 
 export function useDriveSession({
   user,
   setUser,
   setClans,
-  setDrivers,
   setMapPins,
   onTelemetrySync,
   onSessionStart,
@@ -25,11 +23,30 @@ export function useDriveSession({
   const [driveSessionFeedback, setDriveSessionFeedback] = useState("");
   const [driveSessionPending, setDriveSessionPending] = useState(false);
   const userRef = useRef(user);
+  const telemetrySyncRef = useRef(onTelemetrySync);
   const actionLockRef = useRef(false);
 
   useEffect(() => {
     userRef.current = user;
   }, [user]);
+
+  useEffect(() => {
+    telemetrySyncRef.current = onTelemetrySync;
+  }, [onTelemetrySync]);
+
+  useEffect(() => {
+    if (!isDriving || !userRef.current) {
+      return;
+    }
+
+    telemetrySyncRef.current?.({
+      active: true,
+      plate: userRef.current.plate,
+      vehicle: userRef.current.model,
+      node: driveHud.etaNode,
+      speed: driveHud.speed,
+    });
+  }, [driveHud.etaNode, driveHud.speed, isDriving]);
 
   useEffect(() => {
     if (!isDriving || !userRef.current) {
@@ -57,12 +74,11 @@ export function useDriveSession({
         if (!serverOwnedDriverStats) {
           setClans((current) => incrementClanKm(current, userRef.current?.clan));
         }
-        setDrivers((current) => syncActiveDriver(current, userRef.current));
       });
     }, 1000);
 
     return () => window.clearInterval(driveTimer);
-  }, [isDriving, serverOwnedDriverStats, setClans, setDrivers, setMapPins, setUser]);
+  }, [isDriving, serverOwnedDriverStats, setClans, setMapPins, setUser]);
 
   const toggleDrive = async () => {
     if (!user || actionLockRef.current) {
@@ -125,14 +141,14 @@ export function useDriveSession({
             ? `${acceptedKm.toFixed(1)} KM onaylandi; ${rejectedKm.toFixed(1)} KM zaman siniri nedeniyle sayilmadi.`
             : `${acceptedKm.toFixed(1)} KM onaylandi ve aylik siralamaya eklendi.`,
         );
+        await telemetrySyncRef.current?.({
+          active: false,
+          plate: user.plate,
+          vehicle: user.model,
+          node: driveHud.etaNode,
+          speed: 0,
+        });
       }
-
-      onTelemetrySync?.({
-        plate: user.plate,
-        vehicle: user.model,
-        node: driveHud.etaNode,
-        speed: isDriving ? 0 : driveHud.speed,
-      });
       return { ok: true };
     } finally {
       actionLockRef.current = false;
@@ -141,6 +157,15 @@ export function useDriveSession({
   };
 
   const resetDriveSession = () => {
+    if (userRef.current) {
+      telemetrySyncRef.current?.({
+        active: false,
+        plate: userRef.current.plate,
+        vehicle: userRef.current.model,
+        node: "Hazir",
+        speed: 0,
+      });
+    }
     setIsDriving(false);
     setDriveHud({ speed: 0, sessionKm: 0, etaNode: "Hazir" });
     setDriveSessionId(null);

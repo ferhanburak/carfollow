@@ -23,14 +23,12 @@ export {
   rateCruiseAttendee,
   updateConvoyAttendeeTripStatus,
   updateConvoyLifecycleStatus,
-  syncActiveDriver,
-  tickAmbientDrivers,
 } from "./mockCruiserRepository";
 
 export {
   isFirebaseRepositoryEnabled,
-  loadFirebaseWorldState,
   saveFirebaseActiveDriver,
+  subscribeFirebaseActiveDrivers,
   saveFirebaseCruiseJoin,
   saveFirebaseMapPin,
   saveFirebaseUserProfile,

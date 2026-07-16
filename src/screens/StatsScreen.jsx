@@ -111,7 +111,6 @@ export function StatsScreen({
   currentClanMembers = [],
   declineFriendRequest,
   declineIncomingClanInvite,
-  drivers,
   friendSearchQuery,
   friendSearchResults,
   hostableConvoys,
@@ -937,31 +936,6 @@ export function StatsScreen({
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-      ) : null}
-
-      {showLeaderboard ? (
-      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <p className="text-sm font-semibold">Active Drivers on the Highway</p>
-        <div className="mt-4 space-y-3">
-          {drivers.map((driver) => (
-            <button
-              key={`${driver.plate}-leader`}
-              type="button"
-              onClick={() => openProfileDrawer({ plate: driver.plate, model: driver.vehicle, region: driver.node, fullName: driver.plate, speed: driver.speed }, "highway")}
-              className="flex w-full items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3 text-left"
-            >
-              <div>
-                <p className="font-mono text-sm tracking-[0.16em] text-lime-300">{driver.plate}</p>
-                <p className="text-xs text-neutral-500">{driver.vehicle}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold">{driver.node}</p>
-                <p className="text-xs text-rose-300">{driver.speed} KM/H</p>
-              </div>
-            </button>
           ))}
         </div>
       </div>

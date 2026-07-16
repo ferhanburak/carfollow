@@ -425,7 +425,6 @@ function App() {
                 currentClanMembers={currentClanMembers}
                 declineFriendRequest={declineFriendRequest}
                 declineIncomingClanInvite={declineIncomingClanInvite}
-                drivers={drivers}
                 friendSearchQuery={friendSearchQuery}
                 friendSearchResults={friendSearchResults}
                 hostableConvoys={hostableConvoys}

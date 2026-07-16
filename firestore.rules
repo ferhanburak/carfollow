@@ -530,7 +530,7 @@ service cloud.firestore {
     match /artifacts/{appId}/public/data/{collectionName}/{documentId} {
       allow read: if isKnownApp(appId) &&
         isSignedIn() &&
-        collectionName in ['clans', 'drivers'];
+        collectionName == 'clans';
       allow write: if false;
     }
 

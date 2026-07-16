@@ -19,8 +19,8 @@ if (missingKeys.length > 0) {
   throw new Error(`Missing Firebase config keys: ${missingKeys.join(", ")}`);
 }
 
-const { appId, initialClans, initialDrivers, initialMapPins, quickProfiles } = await import("../src/data/mockData.js");
-const { privateUserCollectionPath, publicCollectionPath, realtimeDmPath } = await import(
+const { appId, initialClans, initialMapPins, quickProfiles } = await import("../src/data/mockData.js");
+const { privateUserCollectionPath, publicCollectionPath } = await import(
   "../src/services/firebasePaths.js"
 );
 
@@ -130,14 +130,6 @@ async function seedQuickProfile(profile) {
   for (const fuelLog of profile.fuelLogs) {
     await putFirestoreDocument(`${privateUserCollectionPath(profile.id, "fuelLogs", appId)}/${fuelLog.id}`, fuelLog);
   }
-
-  await putRealtimeNode(realtimeDmPath(`${profile.plate}_telemetry`), {
-    plate: profile.plate,
-    vehicle: profile.model,
-    node: profile.region,
-    speed: 0,
-    updatedAt: Date.now(),
-  });
 }
 
 async function seedCruiseAndReviews() {
@@ -166,16 +158,6 @@ async function seedCruiseAndReviews() {
 }
 
 async function seedRealtimeDatabase() {
-  const telemetrySeed = Object.fromEntries(
-    initialDrivers.map((driver) => [
-      `${driver.plate}_telemetry`.replaceAll(" ", "_"),
-      {
-        ...driver,
-        updatedAt: Date.now(),
-      },
-    ]),
-  );
-
   const profilesSeed = Object.fromEntries(
     quickProfiles.map((profile) => [
       profile.plate.replaceAll(" ", "_"),
@@ -190,7 +172,6 @@ async function seedRealtimeDatabase() {
   );
 
   await putRealtimeNode("directMessagesSeed/activeProfiles", profilesSeed);
-  await putRealtimeNode("directMessagesSeed/telemetry", telemetrySeed);
   await putRealtimeNode("codexSeedProbe", {
     ok: true,
     source: "codex-seed-script-rest",
@@ -200,7 +181,6 @@ async function seedRealtimeDatabase() {
 
 await seedPublicCollection("mapPins", initialMapPins);
 await seedPublicCollection("clans", initialClans);
-await seedPublicCollection("drivers", initialDrivers, (driver) => driver.plate.replaceAll(" ", "_"));
 
 for (const profile of quickProfiles) {
   await seedQuickProfile(profile);

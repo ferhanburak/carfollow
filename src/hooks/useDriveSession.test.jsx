@@ -14,7 +14,6 @@ function createHookProps(overrides = {}) {
     },
     setUser: vi.fn(),
     setClans: vi.fn(),
-    setDrivers: vi.fn(),
     setMapPins: vi.fn(),
     onTelemetrySync: vi.fn(),
     onSessionStart: vi.fn().mockResolvedValue({
@@ -43,6 +42,10 @@ describe("useDriveSession", () => {
     expect(result.current.isDriving).toBe(true);
     expect(result.current.driveSessionStatus).toBe("active");
     expect(result.current.driveSessionId).toBe("ride-user-1-123456");
+    expect(props.onTelemetrySync).toHaveBeenCalledWith(expect.objectContaining({
+      active: true,
+      plate: "06 TEST 01",
+    }));
 
     await act(async () => {
       await result.current.toggleDrive();
@@ -53,6 +56,10 @@ describe("useDriveSession", () => {
     });
     expect(result.current.isDriving).toBe(false);
     expect(result.current.driveSessionStatus).toBe("completed");
+    expect(props.onTelemetrySync).toHaveBeenLastCalledWith(expect.objectContaining({
+      active: false,
+      speed: 0,
+    }));
   });
 
   it("does not enter driving mode when the backend rejects start", async () => {

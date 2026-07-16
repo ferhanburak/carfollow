@@ -1,4 +1,4 @@
-import { initialClans, initialDrivers, initialMapPins, quickProfiles } from "../data/mockData";
+import { initialClans, initialMapPins, quickProfiles } from "../data/mockData";
 import { normalizeClanState } from "../utils/clanGraph";
 import { getConvoyAccessState } from "../utils/meetVisibility";
 import { applyPartServiceToUser } from "../utils/vehiclePassport";
@@ -209,18 +209,10 @@ export function getInitialWorldState() {
   return {
     mapPins: clone(initialMapPins),
     clans: clone(initialClans),
-    drivers: clone(initialDrivers),
+    drivers: [],
     ambientNodes,
     routeNodes,
   };
-}
-
-export function tickAmbientDrivers(drivers, ticker) {
-  return drivers.map((driver, index) => ({
-    ...driver,
-    speed: Math.max(86, Math.min(118, driver.speed + ((index % 2 === 0 ? 1 : -1) * ((ticker % 5) + 1)) / 2)),
-    node: ambientNodes[(ticker + index) % ambientNodes.length],
-  }));
 }
 
 export function buildDriveTickState(driveHud) {
@@ -335,19 +327,6 @@ export function advanceConvoySimulation(mapPins, driveHud, user) {
 
 export function incrementClanKm(clans, clanName) {
   return clans.map((clan) => (clan.name === clanName ? { ...clan, km: Number((clan.km + 0.4).toFixed(1)) } : clan));
-}
-
-export function syncActiveDriver(drivers, user) {
-  const others = drivers.filter((driver) => driver.plate !== user.plate);
-  return [
-    {
-      plate: user.plate,
-      vehicle: user.model,
-      node: routeNodes[Math.floor(Math.random() * routeNodes.length)],
-      speed: 85 + Math.floor(Math.random() * 31),
-    },
-    ...others,
-  ];
 }
 
 export function incrementPinLike(mapPins, pinId) {

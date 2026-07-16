@@ -1,10 +1,9 @@
-import { startTransition, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { socialDirectorySeed } from "../data/mockData";
 import {
   appendFuelLog,
   getInitialWorldState,
   isFirebaseRepositoryEnabled,
-  tickAmbientDrivers,
 } from "../repositories/cruiserRepository";
 import {
   computeFuelInsights,
@@ -36,8 +35,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   const [fuelFeedback, setFuelFeedback] = useState("");
   const [fuelPending, setFuelPending] = useState(false);
   const [clans, setClans] = useState(initialWorld.clans);
-  const [drivers, setDrivers] = useState(initialWorld.drivers);
-  const tickerRef = useRef(0);
+  const [drivers, setDrivers] = useState([]);
 
   const {
     profileCompletion,
@@ -122,7 +120,6 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     user,
     setUser,
     setClans,
-    setDrivers,
     setMapPins,
     onTelemetrySync: syncTelemetry,
     onSessionStart: startDriveSession,
@@ -223,17 +220,6 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     unreadNotificationCount,
   } = useNotifications(resolvedSafeUser);
   const { moderationFeedback, moderationPending, reportDriver } = useModeration(resolvedSafeUser);
-
-  useEffect(() => {
-    const shuffleTimer = window.setInterval(() => {
-      startTransition(() => {
-        setDrivers((current) => tickAmbientDrivers(current, tickerRef.current));
-        tickerRef.current += 1;
-      });
-    }, 2200);
-
-    return () => window.clearInterval(shuffleTimer);
-  }, []);
 
   const fuelInsights = user ? computeFuelInsights(user.fuelLogs) : { average: 0, costPerFill: 0, totalSpend: 0 };
 

@@ -1,27 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import {
   isFirebaseRepositoryEnabled,
-  loadFirebaseWorldState,
   saveFirebaseActiveDriver,
   saveFirebaseFuelLog,
   saveFirebaseServiceLog,
   saveFirebaseUserProfile,
+  subscribeFirebaseActiveDrivers,
 } from "../repositories/cruiserRepository";
 import {
   getFirebaseModeDiagnostics,
   getFirebaseServices,
   getLastFirebaseServicesError,
 } from "../services/firebaseClient";
-
-function sortByReferenceOrder(items, referenceItems, keySelector) {
-  const referenceOrder = new Map(referenceItems.map((item, index) => [keySelector(item), index]));
-
-  return [...items].sort((left, right) => {
-    const leftIndex = referenceOrder.get(keySelector(left)) ?? Number.MAX_SAFE_INTEGER;
-    const rightIndex = referenceOrder.get(keySelector(right)) ?? Number.MAX_SAFE_INTEGER;
-    return leftIndex - rightIndex;
-  });
-}
 
 export function useFirebaseSync({
   user,
@@ -44,6 +34,7 @@ export function useFirebaseSync({
   });
   const lastRemoteUserSyncRef = useRef(0);
   const profileSyncTimerRef = useRef(null);
+  const telemetryWriteQueueRef = useRef(Promise.resolve());
 
   useEffect(() => {
     lastRemoteUserSyncRef.current = 0;
@@ -131,33 +122,41 @@ export function useFirebaseSync({
   useEffect(() => {
     let cancelled = false;
 
-    async function hydrateFromFirebase() {
+    let unsubscribe = () => {};
+
+    async function subscribeToFirebaseDrivers() {
       if (!user || !isFirebaseRepositoryEnabled()) {
+        setDrivers([]);
         return;
       }
 
-      const remoteWorld = await loadFirebaseWorldState();
-      if (!remoteWorld || cancelled) {
-        return;
-      }
-
-      // Map pins and clans have their own realtime subscriptions. Keeping them
-      // out of this legacy hydrate path prevents stale demo fixtures winning a race.
-      if (remoteWorld.drivers?.length) {
-        setDrivers(
-          sortByReferenceOrder(
-            remoteWorld.drivers,
-            [],
-            (driver) => driver.plate,
-          ),
-        );
+      setDrivers([]);
+      const cleanup = await subscribeFirebaseActiveDrivers((activeDrivers) => {
+        if (!cancelled) {
+          setDrivers(activeDrivers);
+        }
+      });
+      if (cancelled) {
+        cleanup();
+      } else {
+        unsubscribe = cleanup;
       }
     }
 
-    void hydrateFromFirebase();
+    void subscribeToFirebaseDrivers().catch((error) => {
+      if (!cancelled) {
+        setDrivers([]);
+        setFirebaseStatus((current) => ({
+          ...current,
+          telemetry: "error",
+          error: error instanceof Error ? error.message : "Active driver subscription failed.",
+        }));
+      }
+    });
 
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [setDrivers, user?.firebaseUid]);
 
@@ -242,11 +241,13 @@ export function useFirebaseSync({
 
   const syncTelemetry = (driver) => {
     if (!isFirebaseRepositoryEnabled()) {
-      return;
+      return Promise.resolve(null);
     }
 
     setFirebaseStatus((current) => ({ ...current, telemetry: "syncing", error: null }));
-    void saveFirebaseActiveDriver(driver)
+    const operation = telemetryWriteQueueRef.current
+      .then(() => saveFirebaseActiveDriver(driver));
+    const handledOperation = operation
       .then((result) => {
         if (!result) {
           setFirebaseStatus((current) => ({
@@ -270,7 +271,10 @@ export function useFirebaseSync({
           telemetry: "error",
           error: error instanceof Error ? error.message : "Telemetry sync failed.",
         }));
+        return null;
       });
+    telemetryWriteQueueRef.current = handledOperation;
+    return handledOperation;
   };
 
   const syncServiceLog = async (serviceLog, part) => {

@@ -525,13 +525,6 @@ export const initialClans = [
   { id: "c4", name: "Lowline Union", tag: "LOW", description: "Fitment, static setup ve chill route seven suruculerin grubu.", km: 9640, members: 19, captainPlate: "07 VTEC 707", visibility: "friends" },
 ];
 
-export const initialDrivers = [
-  { plate: "34 MOTO 410", vehicle: "Yamaha R6", node: "FSM Koprusu", speed: 102 },
-  { plate: "06 PWA 101", vehicle: "Seat Ibiza Cupra", node: "Eskisehir Yolu", speed: 96 },
-  { plate: "16 GTI 232", vehicle: "Golf GTI", node: "Bursa Ring", speed: 108 },
-  { plate: "35 SRT 908", vehicle: "Ducati Monster", node: "Izmir Cevre", speed: 99 },
-];
-
 export const tuningOptions = ["Stock", "Stage 1", "Stage 2+", "Stage 3"];
 
 export const navItems = [

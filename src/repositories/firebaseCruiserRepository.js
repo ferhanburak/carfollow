@@ -6,6 +6,7 @@ import {
   publicCollectionPath,
   realtimePresencePath,
   realtimePresenceUserPath,
+  realtimeTelemetryPath,
   realtimeTelemetryUserPath,
   realtimeDmThreadTypingPath,
   realtimeDmThreadsPath,
@@ -33,23 +34,6 @@ async function loadDatabaseModule() {
 
 export function isFirebaseRepositoryEnabled() {
   return isFirebaseModeEnabled();
-}
-
-export async function loadFirebaseWorldState() {
-  const services = await getFirebaseServices();
-  if (!services) {
-    return null;
-  }
-
-  const { firestore } = services;
-  const { collection, getDocs, query } = await loadFirestoreModule();
-  const driversSnapshot = await getDocs(query(
-    collection(firestore, publicCollectionPath(PUBLIC_COLLECTIONS.drivers, resolveAppId())),
-  ));
-
-  return {
-    drivers: mapCollectionSnapshot(driversSnapshot),
-  };
 }
 
 export async function saveFirebaseUserProfile(user) {
@@ -144,9 +128,23 @@ export async function saveFirebaseActiveDriver(driver) {
     return null;
   }
 
-  const { ref, serverTimestamp, set } = await loadDatabaseModule();
+  const { onDisconnect, ref, serverTimestamp, set } = await loadDatabaseModule();
+  const driverRef = ref(database, realtimeTelemetryUserPath(authUser.uid, resolveAppId()));
+  const disconnect = onDisconnect(driverRef);
+  if (driver.active) {
+    await disconnect.set({
+      ...driver,
+      active: false,
+      firebaseUid: authUser.uid,
+      speed: 0,
+      updatedAt: serverTimestamp(),
+    });
+  } else {
+    await disconnect.cancel();
+  }
+
   // Realtime Database is reserved for low-latency driver / DM-like surfaces.
-  await set(ref(database, realtimeTelemetryUserPath(authUser.uid, resolveAppId())), {
+  await set(driverRef, {
     ...driver,
     firebaseUid: authUser.uid,
     updatedAt: serverTimestamp(),
@@ -155,6 +153,53 @@ export async function saveFirebaseActiveDriver(driver) {
   return {
     authUid: authUser.uid,
     syncedAt: Date.now(),
+  };
+}
+
+const ACTIVE_TELEMETRY_MAX_AGE_MS = 20_000;
+
+export function normalizeFirebaseActiveDrivers(payload, now = Date.now()) {
+  return Object.entries(payload ?? {})
+    .map(([firebaseUid, value]) => ({
+      firebaseUid,
+      ...value,
+    }))
+    .filter((driver) => (
+      driver.active === true
+      && typeof driver.plate === "string"
+      && driver.plate.trim().length > 0
+      && Number(driver.updatedAt ?? 0) >= now - ACTIVE_TELEMETRY_MAX_AGE_MS
+    ))
+    .map((driver) => ({
+      firebaseUid: driver.firebaseUid,
+      plate: driver.plate,
+      vehicle: driver.vehicle || "Vehicle not shared",
+      node: driver.node || "Location hidden",
+      speed: Math.max(0, Math.round(Number(driver.speed ?? 0))),
+      updatedAt: Number(driver.updatedAt),
+    }))
+    .sort((left, right) => right.updatedAt - left.updatedAt);
+}
+
+export async function subscribeFirebaseActiveDrivers(onDriversChange) {
+  const services = await getFirebaseServices();
+  if (!services?.database || typeof onDriversChange !== "function") {
+    return () => {};
+  }
+
+  const { onValue, ref } = await loadDatabaseModule();
+  const telemetryRef = ref(services.database, realtimeTelemetryPath(resolveAppId()));
+  let latestPayload = {};
+  const publish = () => onDriversChange(normalizeFirebaseActiveDrivers(latestPayload));
+  const unsubscribe = onValue(telemetryRef, (snapshot) => {
+    latestPayload = snapshot.val() ?? {};
+    publish();
+  });
+  const expiryTimer = globalThis.setInterval(publish, 5_000);
+
+  return () => {
+    globalThis.clearInterval(expiryTimer);
+    unsubscribe();
   };
 }
 

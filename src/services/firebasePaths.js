@@ -9,7 +9,6 @@ export const PUBLIC_COLLECTIONS = Object.freeze({
   convoyRatings: "convoyRatings",
   convoys: "convoys",
   cruiseAttendees: "cruiseAttendees",
-  drivers: "drivers",
   individualLeaderboard: "individualLeaderboard",
   friendships: "friendships",
   mapPins: "mapPins",

@@ -107,21 +107,33 @@ export function DriveScreen({
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <p className="text-sm font-semibold">Canli Aktif Suruculer</p>
-        <div className="mt-4 space-y-3">
-          {drivers.map((driver) => (
-            <div key={driver.plate} className="flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3">
-              <div>
-                <p className="font-mono text-sm tracking-[0.16em] text-lime-300">{driver.plate}</p>
-                <p className="text-xs text-neutral-500">{driver.vehicle}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold">{driver.speed} KM/H</p>
-                <p className="text-xs text-neutral-500">{driver.node}</p>
-              </div>
-            </div>
-          ))}
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold">Canli Aktif Suruculer</p>
+          <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-lime-300">
+            Firebase Live
+          </span>
         </div>
+        {drivers.length > 0 ? (
+          <div className="mt-4 space-y-3">
+            {drivers.map((driver) => (
+              <div key={driver.plate} className="flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3">
+                <div>
+                  <p className="font-mono text-sm tracking-[0.16em] text-lime-300">{driver.plate}</p>
+                  <p className="text-xs text-neutral-500">{driver.vehicle}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-semibold">{driver.speed} KM/H</p>
+                  <p className="text-xs text-neutral-500">{driver.node}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-5 text-center">
+            <p className="text-sm font-semibold text-neutral-300">Su anda aktif surucu yok</p>
+            <p className="mt-1 text-xs text-neutral-500">Liste yalnizca Firebase'e canli telemetri gonderen suruculeri gosterir.</p>
+          </div>
+        )}
       </div>
     </section>
   );
