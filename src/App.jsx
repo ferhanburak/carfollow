@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { appId, navItems, tuningOptions } from "./data/mockData";
 import { PublicDriverProfileOverlay } from "./components/PublicDriverProfileOverlay";
 import { NotificationCenter } from "./components/NotificationCenter";
@@ -63,6 +63,12 @@ function App() {
     signUpForm,
     user,
   } = useCruiserAuth();
+
+  useEffect(() => {
+    // A sign-out can change the active Firebase user before this component rerenders.
+    // Never carry an account-specific confirmation modal into the next session.
+    setShowLogoutConfirm(false);
+  }, [user?.firebaseUid]);
 
   const {
     activeConversation,

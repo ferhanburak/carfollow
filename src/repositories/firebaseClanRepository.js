@@ -103,7 +103,7 @@ export async function subscribeFirebaseClanState(onStateChange, onError = () => 
     members: false,
   };
   let unsubscribeMembers = () => {};
-  let subscribedClanId = "";
+  let subscribedClanId = null;
 
   const mapSnapshot = (snapshot) => snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
   const emit = () => {

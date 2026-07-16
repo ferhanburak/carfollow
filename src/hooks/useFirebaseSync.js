@@ -23,23 +23,8 @@ function sortByReferenceOrder(items, referenceItems, keySelector) {
   });
 }
 
-function mergeReferenceItems(referenceItems, remoteItems, keySelector) {
-  const remoteById = new Map(remoteItems.map((item) => [keySelector(item), item]));
-  const mergedReferenceItems = referenceItems.map((item) => ({
-    ...item,
-    ...(remoteById.get(keySelector(item)) ?? {}),
-  }));
-  const extraRemoteItems = remoteItems.filter((item) => !referenceItems.some((entry) => keySelector(entry) === keySelector(item)));
-
-  return [...mergedReferenceItems, ...extraRemoteItems];
-}
-
 export function useFirebaseSync({
-  initialWorld,
   user,
-  setMapPins,
-  setSelectedPinId,
-  setClans,
   setDrivers,
 }) {
   const firebaseDiagnostics = getFirebaseModeDiagnostics();
@@ -156,28 +141,13 @@ export function useFirebaseSync({
         return;
       }
 
-      if (remoteWorld.mapPins?.length) {
-        const mergedMapPins = mergeReferenceItems(initialWorld.mapPins, remoteWorld.mapPins, (pin) => pin.id);
-        const orderedMapPins = sortByReferenceOrder(mergedMapPins, initialWorld.mapPins, (pin) => pin.id);
-        setMapPins(orderedMapPins);
-        setSelectedPinId((current) =>
-          orderedMapPins.some((pin) => pin.id === current) ? current : orderedMapPins[0].id,
-        );
-      }
-      if (remoteWorld.clans?.length) {
-        setClans(
-          sortByReferenceOrder(
-            mergeReferenceItems(initialWorld.clans, remoteWorld.clans, (clan) => clan.id),
-            initialWorld.clans,
-            (clan) => clan.id,
-          ),
-        );
-      }
+      // Map pins and clans have their own realtime subscriptions. Keeping them
+      // out of this legacy hydrate path prevents stale demo fixtures winning a race.
       if (remoteWorld.drivers?.length) {
         setDrivers(
           sortByReferenceOrder(
-            mergeReferenceItems(initialWorld.drivers, remoteWorld.drivers, (driver) => driver.plate),
-            initialWorld.drivers,
+            remoteWorld.drivers,
+            [],
             (driver) => driver.plate,
           ),
         );
@@ -189,16 +159,7 @@ export function useFirebaseSync({
     return () => {
       cancelled = true;
     };
-  }, [
-    initialWorld.clans,
-    initialWorld.drivers,
-    initialWorld.mapPins,
-    setClans,
-    setDrivers,
-    setMapPins,
-    setSelectedPinId,
-    user?.firebaseUid,
-  ]);
+  }, [setDrivers, user?.firebaseUid]);
 
   useEffect(() => {
     if (!user || !isFirebaseRepositoryEnabled()) {

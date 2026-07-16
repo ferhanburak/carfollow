@@ -43,15 +43,11 @@ export async function loadFirebaseWorldState() {
 
   const { firestore } = services;
   const { collection, getDocs, query } = await loadFirestoreModule();
-  const [mapPinsSnapshot, clansSnapshot, driversSnapshot] = await Promise.all([
-    getDocs(query(collection(firestore, publicCollectionPath(PUBLIC_COLLECTIONS.mapPins, resolveAppId())))),
-    getDocs(query(collection(firestore, publicCollectionPath(PUBLIC_COLLECTIONS.clans, resolveAppId())))),
-    getDocs(query(collection(firestore, publicCollectionPath(PUBLIC_COLLECTIONS.drivers, resolveAppId())))),
-  ]);
+  const driversSnapshot = await getDocs(query(
+    collection(firestore, publicCollectionPath(PUBLIC_COLLECTIONS.drivers, resolveAppId())),
+  ));
 
   return {
-    mapPins: mapCollectionSnapshot(mapPinsSnapshot),
-    clans: mapCollectionSnapshot(clansSnapshot),
     drivers: mapCollectionSnapshot(driversSnapshot),
   };
 }

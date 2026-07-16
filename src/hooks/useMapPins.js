@@ -88,7 +88,7 @@ function readFileAsDataUrl(file) {
 
 export function useMapPins({ initialWorld, user }) {
   const [mapPins, setMapPins] = useState(initialWorld.mapPins);
-  const [selectedPinId, setSelectedPinId] = useState(initialWorld.mapPins[0].id);
+  const [selectedPinId, setSelectedPinId] = useState(initialWorld.mapPins[0]?.id ?? "");
   const [washForm, setWashForm] = useState(createWashForm);
   const [washErrors, setWashErrors] = useState({});
   const [washFeedback, setWashFeedback] = useState("");

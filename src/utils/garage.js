@@ -34,7 +34,7 @@ export const createMapPinForm = (seedPin) => ({
   shadowDrying: false,
   note: "",
   routePoints: seedPin?.routePath ?? [],
-  visibility: seedPin?.visibility ?? "friends",
+  visibility: seedPin?.visibility ?? "public",
   capacity: seedPin?.capacity ?? 12,
   invitedPlates: seedPin?.invitedGuests?.map((guest) => guest.plate) ?? [],
   accessPolicy: seedPin?.accessPolicy ?? "request",

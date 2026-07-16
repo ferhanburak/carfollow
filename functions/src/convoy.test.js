@@ -37,11 +37,20 @@ test("trusted visible driver receives exact details while low-score driver recei
 });
 
 test("friends and clan visibility are evaluated from server-owned relationships", () => {
+  const publicConvoy = createConvoy();
   const friendsConvoy = createConvoy({ visibility: "friends" });
   const clanConvoy = createConvoy({ visibility: "clan" });
+  // A separate authenticated driver can always discover a public convoy.
+  assert.equal(canSeeConvoy(publicConvoy, guest, new Set()), true);
   assert.equal(canSeeConvoy(friendsConvoy, guest, new Set(["host"])), true);
   assert.equal(canSeeConvoy(friendsConvoy, guest, new Set()), false);
   assert.equal(canSeeConvoy(clanConvoy, { ...guest, clanId: "clan-1" }, new Set()), true);
+});
+
+test("missing convoy visibility defaults to public discovery", () => {
+  const convoy = createConvoy({ visibility: undefined });
+  assert.equal(convoy.visibility, "public");
+  assert.equal(canSeeConvoy(convoy, guest, new Set()), true);
 });
 
 test("member documents preserve identity and reputation snapshots", () => {

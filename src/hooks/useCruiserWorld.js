@@ -3,6 +3,7 @@ import { socialDirectorySeed } from "../data/mockData";
 import {
   appendFuelLog,
   getInitialWorldState,
+  isFirebaseRepositoryEnabled,
   tickAmbientDrivers,
 } from "../repositories/cruiserRepository";
 import {
@@ -23,7 +24,13 @@ import { useSocialGraph } from "./useSocialGraph";
 import { useVehiclePassport } from "./useVehiclePassport";
 
 export function useCruiserWorld(user, setUser, setFuelForm) {
-  const [initialWorld] = useState(getInitialWorldState);
+  const [initialWorld] = useState(() => {
+    const world = getInitialWorldState();
+    // Firebase mode has one shared world; demo fixtures must never leak into it.
+    return isFirebaseRepositoryEnabled()
+      ? { ...world, mapPins: [], clans: [], drivers: [] }
+      : world;
+  });
   const [activeTab, setActiveTab] = useState("map");
   const [fuelErrors, setFuelErrors] = useState({});
   const [fuelFeedback, setFuelFeedback] = useState("");
@@ -90,11 +97,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   });
 
   const { firebaseStatus, syncFuelLog, syncServiceLog, syncTelemetry } = useFirebaseSync({
-    initialWorld,
     user,
-    setMapPins,
-    setSelectedPinId,
-    setClans,
     setDrivers,
   });
 
