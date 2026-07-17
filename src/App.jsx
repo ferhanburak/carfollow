@@ -252,12 +252,12 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen bg-[#050505] px-3 py-6 text-neutral-100">
-      <div className="relative mx-auto flex min-h-[95vh] max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[#0a0a0a] shadow-[0_0_90px_rgba(163,230,53,0.08)]">
+    <main className="min-h-[100dvh] bg-[#050505] text-neutral-100 md:px-3 md:py-6">
+      <div className="app-shell relative mx-auto flex w-full max-w-md flex-col overflow-hidden bg-[#0a0a0a] shadow-[0_0_90px_rgba(163,230,53,0.08)] md:rounded-[2rem] md:border md:border-white/10">
         {activeTab !== "liveMap" ? (
-          <header className="relative overflow-hidden border-b border-white/10 px-5 py-5">
+          <header className="app-safe-top relative overflow-hidden border-b border-white/10 px-4 pb-4 sm:px-5 sm:pb-5">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.18),_transparent_34%),radial-gradient(circle_at_bottom_left,_rgba(244,63,94,0.14),_transparent_28%),linear-gradient(180deg,#171717,#0a0a0a)]" />
-            <div className="relative flex items-start justify-between gap-4">
+            <div className="relative flex items-start justify-between gap-2 sm:gap-4">
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] uppercase tracking-[0.35em] text-lime-400">CRUISER // {user.region}</p>
                 <h2 className="mt-2 truncate text-2xl font-black">{user.plate}</h2>
@@ -286,15 +286,17 @@ function App() {
                 />
                 <button
                   type="button"
+                  aria-label={driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}
                   onClick={toggleDrive}
                   disabled={driveSessionPending}
-                  className={`min-h-12 min-w-12 rounded-2xl px-4 text-sm font-bold transition ${
+                  className={`min-h-12 min-w-12 rounded-2xl px-3 text-sm font-bold transition sm:px-4 ${
                     isDriving
                       ? "bg-rose-500 text-white shadow-[0_0_24px_rgba(244,63,94,0.5)]"
                       : "bg-lime-400 text-black shadow-[0_0_24px_rgba(163,230,53,0.38)]"
                   } disabled:cursor-wait disabled:opacity-60`}
                 >
-                  {driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}
+                  <span aria-hidden="true" className="sm:hidden">{driveSessionPending ? "..." : isDriving ? "Durdur" : "Baslat"}</span>
+                  <span aria-hidden="true" className="hidden sm:inline">{driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}</span>
                 </button>
                 <button
                   type="button"
@@ -326,7 +328,7 @@ function App() {
             type="button"
             aria-label="Oturumu kapat"
             onClick={() => setShowLogoutConfirm(true)}
-            className="absolute right-4 top-4 z-30 flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-400/30 bg-black/75 text-lg text-rose-200 backdrop-blur"
+            className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-30 flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-400/30 bg-black/75 text-lg text-rose-200 backdrop-blur"
           >
             ↪
           </button>
@@ -335,8 +337,8 @@ function App() {
         <div
           className={`flex-1 min-h-0 ${
             activeTab === "liveMap"
-              ? "relative overflow-hidden px-0 py-0 pb-16"
-              : "overflow-y-auto px-4 py-4 pb-28"
+              ? "app-live-content relative overflow-hidden px-0 py-0"
+              : "app-scroll-content overflow-y-auto px-3 py-4 sm:px-4"
           }`}
         >
           <Suspense fallback={<ScreenLoader />}>
@@ -554,15 +556,11 @@ function App() {
         </div>
 
         <nav
-          className={`left-1/2 z-20 -translate-x-1/2 ${
-            activeTab === "liveMap"
-              ? "absolute bottom-2 w-[calc(100%-1rem)] max-w-[23rem] px-2"
-              : "fixed bottom-4 w-[calc(100%-1.5rem)] max-w-md px-3"
-          }`}
+          className="app-bottom-nav absolute left-1/2 z-20 w-[calc(100%-0.75rem)] max-w-[27rem] -translate-x-1/2 px-1.5 sm:w-[calc(100%-1.5rem)] sm:px-3"
         >
           <div
-            className={`grid grid-cols-7 gap-2 border border-white/10 bg-[#111111]/95 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur ${
-              activeTab === "liveMap" ? "rounded-[1.35rem] p-1.5" : "rounded-[1.8rem] p-2"
+            className={`grid grid-cols-7 gap-1 border border-white/10 bg-[#111111]/95 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur ${
+              activeTab === "liveMap" ? "rounded-[1.35rem] p-1" : "rounded-[1.8rem] p-1.5 sm:p-2"
             }`}
           >
             {navItems.map((item) => (
@@ -570,8 +568,8 @@ function App() {
                 key={item.key}
                 type="button"
                 onClick={() => setActiveTab(item.key)}
-                className={`rounded-2xl px-2 text-center font-semibold transition ${
-                  activeTab === "liveMap" ? "min-h-10 py-1 text-[11px]" : "min-h-12 py-2 text-xs"
+                className={`min-h-12 rounded-2xl px-0.5 text-center font-semibold transition ${
+                  activeTab === "liveMap" ? "py-1 text-[11px]" : "py-1.5 text-xs sm:py-2"
                 } ${
                   activeTab === item.key
                     ? "bg-lime-400 text-black shadow-[0_0_18px_rgba(163,230,53,0.45)]"
@@ -579,13 +577,13 @@ function App() {
                 }`}
               >
                 <span
-                  className={`block uppercase tracking-[0.18em] ${
-                    activeTab === "liveMap" ? "text-[10px]" : "text-[11px]"
+                  className={`block whitespace-nowrap uppercase tracking-[0.08em] sm:tracking-[0.18em] ${
+                    activeTab === "liveMap" ? "text-[8px] sm:text-[10px]" : "text-[8px] sm:text-[11px]"
                   }`}
                 >
                   {item.icon}
                 </span>
-                <span className={`block ${activeTab === "liveMap" ? "mt-0.5 text-[10px]" : "mt-1"}`}>{item.label}</span>
+                <span className={`block whitespace-nowrap ${activeTab === "liveMap" ? "mt-0.5 text-[9px] sm:text-[10px]" : "mt-1 text-[9px] sm:text-xs"}`}>{item.label}</span>
               </button>
             ))}
           </div>
@@ -619,7 +617,7 @@ function App() {
         user={safeUser ?? user}
       />
       {showLogoutConfirm ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center">
+        <div className="app-bottom-sheet fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center">
           <div className="w-full max-w-sm rounded-[1.75rem] border border-white/10 bg-[#171717] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.6)]">
             <p className="text-xs uppercase tracking-[0.28em] text-rose-300">Account Session</p>
             <h3 className="mt-2 text-xl font-black">Oturumu kapat?</h3>

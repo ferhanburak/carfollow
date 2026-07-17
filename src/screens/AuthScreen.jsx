@@ -1,7 +1,7 @@
 import { Field } from "../components/ui";
 
 const inputClassName =
-  "h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 text-white outline-none transition focus:border-lime-400";
+  "h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 text-base text-white outline-none transition focus:border-lime-400";
 
 function FieldError({ children }) {
   return children ? <p className="text-xs text-rose-300">{children}</p> : null;
@@ -29,9 +29,9 @@ export function AuthScreen({
   const isBusy = authMode === "authenticating" || authMode === "loading";
 
   return (
-    <main className="min-h-screen bg-[#050505] px-4 py-10 text-neutral-100">
-      <div className="mx-auto flex min-h-[92vh] max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[#0a0a0a] shadow-[0_0_80px_rgba(163,230,53,0.08)]">
-        <div className="relative overflow-hidden border-b border-white/10 px-6 py-6">
+    <main className="min-h-[100dvh] bg-[#050505] text-neutral-100 sm:px-4 sm:py-10">
+      <div className="mx-auto flex min-h-[100dvh] max-w-md flex-col overflow-hidden bg-[#0a0a0a] shadow-[0_0_80px_rgba(163,230,53,0.08)] sm:min-h-[92vh] sm:rounded-[2rem] sm:border sm:border-white/10">
+        <div className="app-safe-top relative overflow-hidden border-b border-white/10 px-5 pb-5 sm:px-6 sm:pb-6">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(163,230,53,0.18),_transparent_42%),linear-gradient(135deg,rgba(23,23,23,0.96),rgba(10,10,10,1))]" />
           <div className="relative">
             <p className="text-xs uppercase tracking-[0.4em] text-lime-400">CRUISER // ACCESS</p>
@@ -60,7 +60,7 @@ export function AuthScreen({
           ))}
         </div>
 
-        <div className="flex-1 space-y-5 px-5 py-6">
+        <div className="flex-1 space-y-5 px-5 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           {isFirebaseAuth ? (
             <div className="rounded-2xl border border-lime-400/20 bg-lime-400/8 px-4 py-3 text-sm text-neutral-300">
               <p className="font-semibold text-lime-200">Firebase Secure Account</p>

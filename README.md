@@ -9,6 +9,7 @@ CRUISER is a React + Vite + Tailwind CSS single page application for car and mot
 - Digital garage, maintenance tracking, and fuel log
 - Firebase-ready data layer with mock/fallback mode
 - Lazy-loaded screens and optimized Firebase bundle loading
+- Installable PWA shell with responsive safe-area support and an offline fallback
 
 ## Tech Stack
 
@@ -164,6 +165,33 @@ Vite will print a preview URL, usually:
 ```text
 http://localhost:4173/
 ```
+
+## Deploy To Vercel
+
+Import this GitHub repository into Vercel and use:
+
+- Framework preset: `Vite`
+- Build command: `npm run build`
+- Output directory: `dist`
+- Root directory: repository root
+
+Copy the Firebase and Maps values from `.env` into the Vercel project's Production environment. Set:
+
+```text
+VITE_CRUISER_DATA_SOURCE=firebase
+VITE_USE_FIREBASE_EMULATORS=false
+```
+
+Do not upload or commit the local `.env` file. The included `vercel.json` provides the SPA fallback, geolocation permissions policy, and fresh service worker delivery.
+
+After the first deployment:
+
+1. Add the stable Vercel hostname to Firebase Authentication -> Settings -> Authorized domains.
+2. Add `https://your-project.vercel.app/*` to the Google Maps browser key website restrictions.
+3. Keep the Maps key restricted to `Maps JavaScript API` and `Routes API`.
+4. Register the production hostname in Firebase App Check, monitor valid traffic, and enforce it only after the web flow is verified.
+
+The app can be installed from supported mobile browsers. Foreground GPS works over Vercel HTTPS, but continuous lock-screen/background tracking still requires the planned native Capacitor layer.
 
 ## Available Scripts
 

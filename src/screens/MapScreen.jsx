@@ -262,7 +262,7 @@ export function MapScreen({
         : "Serbest mod";
 
   return (
-    <section className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#050505] px-3 py-3">
+    <section className="live-map-screen relative flex h-full min-h-0 flex-col overflow-hidden bg-[#050505] px-3 pb-3">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0 rounded-[1rem] border border-white/10 bg-black/35 px-3 py-2 backdrop-blur">
           <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">CRUISER LIVE MAP</p>
@@ -341,7 +341,7 @@ export function MapScreen({
           draftRoutePath={[]}
           isDriving={isDriving}
           navigationMode
-          mapHeight="calc(100vh - 19.5rem)"
+          mapHeight="clamp(18rem, calc(100dvh - 19.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)), 42rem)"
         />
 
         {activeOverlay === "details" && selectedPin ? (
