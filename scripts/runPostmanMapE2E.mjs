@@ -31,6 +31,17 @@ function pass(message) {
   console.log(`[PASS] ${message}`);
 }
 
+function assertCoordinate(actual, expected, label) {
+  assert(Number(actual?.lat) === expected.lat, `${label} latitude changed: ${actual?.lat}`);
+  assert(Number(actual?.lng) === expected.lng, `${label} longitude changed: ${actual?.lng}`);
+}
+
+function assertRoutePath(actual, expected, label) {
+  assert(Array.isArray(actual), `${label} is not an array.`);
+  assert(actual.length === expected.length, `${label} node count changed: expected ${expected.length}, received ${actual.length}.`);
+  expected.forEach((point, index) => assertCoordinate(actual[index], point, `${label}[${index}]`));
+}
+
 async function parseResponse(response, label) {
   const text = await response.text();
   let body;
@@ -162,13 +173,18 @@ async function main() {
   assert(washReview.rating?.reviews === 2, "Wash aggregate did not include both accounts.");
   pass("Wash aggregate updated for both accounts");
 
+  const selectedConvoyRoute = [
+    { lat: 39.9208, lng: 32.8541 },
+    { lat: 39.9004, lng: 32.8093 },
+    { lat: 39.9021, lng: 32.7029 },
+  ];
   const convoy = await callFunction("createConvoy", accountA, {
     pin: {
       name: `POSTMAN E2E PUBLIC CONVOY ${runId}`,
       lat: 39.9208,
       lng: 32.8541,
       route: "Kizilay - Cankaya - Umitkoy",
-      routePath: [{ lat: 39.9208, lng: 32.8541 }, { lat: 39.9004, lng: 32.8093 }, { lat: 39.9021, lng: 32.7029 }],
+      routePath: selectedConvoyRoute,
       time: "2026-07-18 22:30",
       capacity: 12,
       visibility: "public",
@@ -181,7 +197,12 @@ async function main() {
     },
   });
   let convoyList = await callFunction("listAccessibleConvoys", accountB);
-  assert(convoyList.convoys.some((item) => item.id === convoy.convoyId), "Public convoy is not visible to Account B.");
+  const mapView = convoyList.convoys.find((item) => item.id === convoy.convoyId);
+  assert(mapView, "Public convoy marker is not visible to Account B.");
+  assert(mapView.type === "meet", "Public convoy was not projected as a meet marker.");
+  assertCoordinate(mapView, selectedConvoyRoute[0], "Account B convoy marker");
+  assertRoutePath(mapView.routePath, selectedConvoyRoute, "Account B selected route");
+  pass("Account B receives Account A convoy marker and selected route");
   await callFunction("requestConvoyJoin", accountB, { convoyId: convoy.convoyId });
   convoyList = await callFunction("listAccessibleConvoys", accountA);
   const hostView = convoyList.convoys.find((item) => item.id === convoy.convoyId);
@@ -190,7 +211,7 @@ async function main() {
   convoyList = await callFunction("listAccessibleConvoys", accountB);
   const memberView = convoyList.convoys.find((item) => item.id === convoy.convoyId);
   assert(memberView.attendees.some((item) => item.userId === accountB.uid), "Account B was not approved.");
-  assert(memberView.routePath.length > 1, "Approved member cannot see exact route.");
+  assertRoutePath(memberView.routePath, selectedConvoyRoute, "Approved member route");
   pass("Public convoy request, approval and route visibility");
   await callFunction("updateConvoyTripStatus", accountB, { convoyId: convoy.convoyId, tripStatus: "enroute" });
   await callFunction("updateConvoyLifecycle", accountA, { convoyId: convoy.convoyId, lifecycleStatus: "rolling" });

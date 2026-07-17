@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { GoogleMap, InfoWindowF, MarkerF, PolylineF, useJsApiLoader } from "@react-google-maps/api";
 import { getPinIcon } from "../constants/pins";
 import { getConvoyAccessState } from "../utils/meetVisibility";
+import { buildMapOverlayModel, getActiveConvoyRoute, hasValidMapCoordinates } from "../utils/mapOverlays";
 
 const mapContainerStyle = {
   width: "100%",
@@ -70,20 +71,6 @@ function getMapsApiKey() {
   }
 
   return import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? "";
-}
-
-function hasValidMapCoordinates(pin) {
-  const lat = Number(pin?.lat);
-  const lng = Number(pin?.lng);
-  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
-}
-
-function normalizeMapPinCoordinates(pin) {
-  return {
-    ...pin,
-    lat: Number(pin.lat),
-    lng: Number(pin.lng),
-  };
 }
 
 function getPinGlyph(type) {
@@ -354,19 +341,6 @@ function getMarkerLabel(pin) {
   };
 }
 
-function getActiveRoutePath(selectedPin, user) {
-  if (
-    selectedPin?.type === "meet" &&
-    getConvoyAccessState(selectedPin, user).canViewDetails &&
-    Array.isArray(selectedPin.routePath) &&
-    selectedPin.routePath.length > 1
-  ) {
-    return selectedPin.routePath;
-  }
-
-  return [];
-}
-
 function formatDistance(distanceMeters) {
   if (!distanceMeters) {
     return "-- km";
@@ -609,9 +583,10 @@ export function MapCard({
 }) {
   const mapsApiKey = getMapsApiKey();
   // Legacy or partially-created nodes must not disable the whole Google map.
-  const mappablePins = pins.filter(hasValidMapCoordinates).map(normalizeMapPinCoordinates);
+  const overlayModel = buildMapOverlayModel({ pins, selectedPinId, user });
+  const mappablePins = overlayModel.markers;
   const shouldUseGoogleMaps = Boolean(mapsApiKey);
-  const selectedPin = mappablePins.find((pin) => pin.id === selectedPinId) ?? mappablePins[0];
+  const selectedPin = overlayModel.selectedPin;
 
   if (!shouldUseGoogleMaps) {
     return (
@@ -717,7 +692,7 @@ function GoogleMapCard({
     ? { lat: selectedPin.lat ?? 39.8687, lng: selectedPin.lng ?? 32.7766 }
     : { lat: 39.8687, lng: 32.7766 };
   const activeRoutePath = useMemo(
-    () => getActiveRoutePath(selectedPin, user),
+    () => getActiveConvoyRoute(selectedPin, user),
     [selectedPin, user],
   );
   const hasMockRoute = activeRoutePath.length > 1;
