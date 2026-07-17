@@ -11,6 +11,8 @@ This Postman collection verifies that Account A can create shared map content an
 5. Set the Postman working directory to the repository root so `postman/fixtures/test-spot.svg` can be uploaded.
 6. Run the collection in its defined order.
 
+For an automated CLI run, set `CARFOLLOW_E2E_EMAIL_A`, `CARFOLLOW_E2E_PASSWORD_A`, `CARFOLLOW_E2E_EMAIL_B`, and `CARFOLLOW_E2E_PASSWORD_B` in the current terminal, then run `npm run postman:test`. The dependency-free runner reads the API key from `.env`, executes the same two-account flow with Node's built-in HTTP client, never writes credentials to disk, and prints the generated `runId`.
+
 The friends-convoy folder requires Accounts A and B to already have an accepted friendship. All other folders work independently of clan membership.
 
 ## Coverage
@@ -23,6 +25,12 @@ The friends-convoy folder requires Accounts A and B to already have an accepted 
 
 ## Production Data Warning
 
-This collection writes to production and uses `POSTMAN E2E {runId}` names. The backend currently has no creator-facing delete endpoint, so remove generated `mapPins`, `mapSpotPhotos`, `mapLikes`, `washReviews`, `convoys`, `convoyMembers`, `convoyRatings`, and uploaded Storage objects from Firebase Console after testing.
+This collection writes to production and uses `POSTMAN E2E {runId}` names. Preview the exact cleanup scope with `npm run postman:cleanup -- --run-id=RUN_ID`. Execute only after reviewing the report:
 
-Ratings change both test users' reputation by `+3`. Use test accounts only.
+```powershell
+npm run postman:cleanup -- --run-id=RUN_ID --execute --confirm=DELETE-POSTMAN-E2E-RUN_ID
+```
+
+The cleanup is an administrator-only local script. It removes the run's map nodes, photos, likes, wash reviews, convoys, members, ratings, related notifications and Storage objects. Rating deltas are rolled back before deletion. No public cleanup endpoint is deployed.
+
+Ratings temporarily change both test users' reputation by `+3`; the guarded cleanup reverses the recorded deltas. Use test accounts only and clean each completed run.

@@ -1041,7 +1041,17 @@ exports.rateConvoyMember = secureCall("rateConvoyMember", { rateLimit: { limit: 
     const standing = reputationPatch.alertVotes > 2 || nextScore < 55
       ? "Watchlist"
       : reputationPatch.harmonyVotes >= 5 || nextScore >= 85 ? "Uyumlu" : "Convoy Ready";
-    transaction.set(ratingRef, { id: ratingRef.id, convoyId, actorUserId, targetUserId, signal, createdAt: timestamp });
+    transaction.set(ratingRef, {
+      id: ratingRef.id,
+      convoyId,
+      actorUserId,
+      targetUserId,
+      signal,
+      scoreDeltaApplied: nextScore - Number(profile.driverScore ?? 0),
+      harmonyDelta: signal === "harmony" ? 1 : 0,
+      alertDelta: signal === "alert" ? 1 : 0,
+      createdAt: timestamp,
+    });
     transaction.set(targetPrivateRef, reputationPatch, { merge: true });
     transaction.set(targetPublicRef, reputationPatch, { merge: true });
     transaction.update(targetMemberRef, { score: nextScore, status: standing, ...reputationPatch });
