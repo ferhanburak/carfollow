@@ -123,17 +123,19 @@ function createDuplicatePlateError() {
   return error;
 }
 
-async function bootstrapCruiserIdentity(firestore, firebaseUser, user) {
+async function bootstrapCruiserIdentity(_firestore, firebaseUser, user) {
   const plateNormalized = normalizePlate(user.plate);
   const vehicleId = `vehicle-${firebaseUser.uid}`;
   const createdAt = serverTimestamp();
-  const claimRef = doc(firestore, publicPath("plateClaims", plateNormalized));
-  const publicProfileRef = doc(firestore, publicPath("publicProfiles", firebaseUser.uid));
-  const privateProfileRef = doc(firestore, privatePath(firebaseUser.uid, "profile", "current"));
-  const vehicleRef = doc(firestore, privatePath(firebaseUser.uid, "vehicles", vehicleId));
-  const passportRef = doc(firestore, privatePath(firebaseUser.uid, "vehiclePassports", vehicleId));
+  return testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const claimRef = doc(firestore, publicPath("plateClaims", plateNormalized));
+    const publicProfileRef = doc(firestore, publicPath("publicProfiles", firebaseUser.uid));
+    const privateProfileRef = doc(firestore, privatePath(firebaseUser.uid, "profile", "current"));
+    const vehicleRef = doc(firestore, privatePath(firebaseUser.uid, "vehicles", vehicleId));
+    const passportRef = doc(firestore, privatePath(firebaseUser.uid, "vehiclePassports", vehicleId));
 
-  await runTransaction(firestore, async (transaction) => {
+    await runTransaction(firestore, async (transaction) => {
     const existingClaim = await transaction.get(claimRef);
     if (existingClaim.exists() && existingClaim.data().uid !== firebaseUser.uid) {
       throw createDuplicatePlateError();
@@ -237,6 +239,7 @@ async function bootstrapCruiserIdentity(firestore, firebaseUser, user) {
         updatedAt: createdAt,
       });
     }
+    });
   });
 }
 

@@ -67,6 +67,10 @@ const {
   hasModeratorClaim,
   sanitizeOperationalText,
 } = require("./operations");
+const {
+  RegistrationError,
+  buildRegistrationBundle,
+} = require("./registration");
 
 setGlobalOptions({
   region: "us-central1",
@@ -244,6 +248,72 @@ function setProfileClanState(transaction, userId, { clan, clanId, clanRole, time
   transaction.set(privateUserDocument(userId, "profile", "current"), patch, { merge: true });
   transaction.set(publicDocument("publicProfiles", userId), patch, { merge: true });
 }
+
+exports.finalizeRegistration = secureCall("finalizeRegistration", { rateLimit: { limit: 5, windowSeconds: 3600 } }, async (request) => {
+  const userId = requireAuth(request);
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+  let bundle;
+  try {
+    bundle = buildRegistrationBundle({
+      uid: userId,
+      email: request.auth?.token?.email,
+      profile: request.data?.profile,
+      acceptKvkk: request.data?.acceptKvkk,
+      timestamp,
+    });
+  } catch (error) {
+    if (error instanceof RegistrationError) {
+      throw new HttpsError(error.code, error.message);
+    }
+    throw error;
+  }
+
+  const claimRef = publicDocument("plateClaims", bundle.claim.plateNormalized);
+  const publicProfileRef = publicDocument("publicProfiles", userId);
+  const privateProfileRef = privateUserDocument(userId, "profile", "current");
+  const vehicleRef = privateUserDocument(userId, "vehicles", bundle.vehicle.vehicleId);
+  const passportRef = privateUserDocument(userId, "vehiclePassports", bundle.passport.vehicleId);
+  let created = false;
+
+  await db.runTransaction(async (transaction) => {
+    const [claimSnapshot, profileSnapshot] = await Promise.all([
+      transaction.get(claimRef),
+      transaction.get(privateProfileRef),
+    ]);
+    const existingClaim = claimSnapshot.exists ? claimSnapshot.data() : null;
+    if (existingClaim?.uid && existingClaim.uid !== userId) {
+      throw new HttpsError("already-exists", "This vehicle plate is already registered.");
+    }
+    if (profileSnapshot.exists) {
+      if (
+        profileSnapshot.data().plateNormalized !== bundle.claim.plateNormalized ||
+        (existingClaim?.uid && existingClaim.uid !== userId)
+      ) {
+        throw new HttpsError("failed-precondition", "This account already has a different CRUISER identity.");
+      }
+      return;
+    }
+
+    if (!claimSnapshot.exists) {
+      transaction.create(claimRef, bundle.claim);
+    }
+    transaction.set(publicProfileRef, bundle.publicProfile);
+    transaction.set(privateProfileRef, bundle.privateProfile);
+    transaction.set(vehicleRef, bundle.vehicle);
+    transaction.set(passportRef, bundle.passport);
+    for (const part of bundle.parts) {
+      transaction.set(privateUserDocument(userId, "parts", part.id), part.data);
+    }
+    created = true;
+  });
+
+  return {
+    ok: true,
+    created,
+    plateNormalized: bundle.claim.plateNormalized,
+    vehicleId: bundle.vehicle.vehicleId,
+  };
+});
 
 function assertClanId(clanId) {
   if (typeof clanId !== "string" || clanId.length < 1 || clanId.length > 160 || clanId.includes("/")) {

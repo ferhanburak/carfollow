@@ -112,17 +112,6 @@ service cloud.firestore {
         data.primaryVehicleId == previousData.primaryVehicleId;
     }
 
-    function hasInitialReputation(data) {
-      return data.driverScore == 80 &&
-        data.harmonyVotes == 1 &&
-        data.alertVotes == 0 &&
-        data.monthlyKm == 0 &&
-        data.badges is list &&
-        data.badges.size() == 2 &&
-        data.badges.hasAll(['Yeni Uye', 'Garajda Aktif']) &&
-        data.get('achievementBadges', []).size() == 0;
-    }
-
     function keepsProtectedReputation(data, previousData) {
       return data.driverScore == previousData.driverScore &&
         data.harmonyVotes == previousData.harmonyVotes &&
@@ -409,15 +398,8 @@ service cloud.firestore {
     match /artifacts/{appId}/public/data/plateClaims/{plateNormalized} {
       allow get: if isKnownApp(appId) && isSignedIn();
       allow list: if false;
-      allow create: if isKnownApp(appId) &&
-        isSignedIn() &&
-        request.resource.data.keys().hasOnly(['uid', 'vehicleId', 'plate', 'plateNormalized', 'createdAt']) &&
-        request.resource.data.uid == request.auth.uid &&
-        request.resource.data.vehicleId is string &&
-        request.resource.data.plateNormalized == plateNormalized &&
-        request.resource.data.plate is string &&
-        request.resource.data.createdAt is timestamp;
-      allow update, delete: if false;
+      // Claims are reserved atomically by finalizeRegistration via Admin SDK.
+      allow create, update, delete: if false;
     }
 
     match /artifacts/{appId}/public/data/publicProfiles/{userId} {
@@ -425,17 +407,7 @@ service cloud.firestore {
       // read for approved social flows, but clients cannot enumerate drivers.
       allow get: if isKnownApp(appId) && isSignedIn();
       allow list: if false;
-      allow create: if isKnownApp(appId) &&
-        isOwner(userId) &&
-        isValidPublicProfile(request.resource.data, userId) &&
-        hasInitialReputation(request.resource.data) &&
-        ownsPlateClaimAfter(
-          appId,
-          request.resource.data.plateNormalized,
-          userId,
-          request.resource.data.primaryVehicleId
-        ) &&
-        hasConsistentPublicVehicleAfter(appId, userId, request.resource.data);
+      allow create: if false;
       allow update: if isKnownApp(appId) &&
         isOwner(userId) &&
         isValidPublicProfile(request.resource.data, userId) &&
@@ -536,17 +508,7 @@ service cloud.firestore {
 
     match /artifacts/{appId}/users/{userId}/profile/current {
       allow read: if isKnownApp(appId) && isOwner(userId);
-      allow create: if isKnownApp(appId) &&
-        isOwner(userId) &&
-        isValidPrivateProfile(request.resource.data, userId) &&
-        hasInitialReputation(request.resource.data) &&
-        ownsPlateClaimAfter(
-          appId,
-          request.resource.data.plateNormalized,
-          userId,
-          request.resource.data.primaryVehicleId
-        ) &&
-        hasConsistentPrivateVehicleAfter(appId, userId, request.resource.data);
+      allow create: if false;
       allow update: if isKnownApp(appId) &&
         isOwner(userId) &&
         isValidPrivateProfile(request.resource.data, userId) &&
@@ -565,10 +527,7 @@ service cloud.firestore {
 
     match /artifacts/{appId}/users/{userId}/vehicles/{vehicleId} {
       allow read: if isKnownApp(appId) && isOwner(userId);
-      allow create: if isKnownApp(appId) &&
-        isOwner(userId) &&
-        isValidVehicle(request.resource.data, userId, vehicleId) &&
-        hasConsistentProfileAfter(appId, userId, vehicleId, request.resource.data.odometer);
+      allow create: if false;
       allow update: if isKnownApp(appId) &&
         isOwner(userId) &&
         isValidVehicle(request.resource.data, userId, vehicleId) &&
@@ -590,12 +549,7 @@ service cloud.firestore {
 
     match /artifacts/{appId}/users/{userId}/vehiclePassports/{vehicleId} {
       allow read: if isKnownApp(appId) && isOwner(userId);
-      allow create: if isKnownApp(appId) &&
-        isOwner(userId) &&
-        isOwnedVehicleAfter(appId, userId, vehicleId) &&
-        isValidPassport(request.resource.data, userId, vehicleId) &&
-        request.resource.data.lastMutationType == 'bootstrap' &&
-        request.resource.data.lastMutationId == 'bootstrap';
+      allow create: if false;
       allow update: if isKnownApp(appId) &&
         isOwner(userId) &&
         isOwnedVehicleAfter(appId, userId, vehicleId) &&

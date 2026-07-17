@@ -340,6 +340,42 @@ describe("Firestore security rules", { concurrency: false }, () => {
     await assertFails(getDocs(collection(ownerDb, `artifacts/${APP_ID}/public/data/plateClaims`)));
   });
 
+  it("reserves identity bootstrap documents for the registration backend", async () => {
+    const otherDb = testEnvironment.authenticatedContext(OTHER_ID).firestore();
+    const vehicleId = `vehicle-${OTHER_ID}`;
+    const plateNormalized = "34SERVER34";
+
+    await assertFails(setDoc(doc(otherDb, publicPath("plateClaims", plateNormalized)), {
+      uid: OTHER_ID,
+      vehicleId,
+      plate: "34 SERVER 34",
+      plateNormalized,
+      createdAt: FIXED_TIME,
+    }));
+    await assertFails(setDoc(doc(otherDb, publicPath("publicProfiles", OTHER_ID)), buildPublicProfile({
+      id: OTHER_ID,
+      userId: OTHER_ID,
+      firebaseUid: OTHER_ID,
+      primaryVehicleId: vehicleId,
+      plate: "34 SERVER 34",
+      plateNormalized,
+    })));
+    await assertFails(setDoc(doc(otherDb, privatePath(OTHER_ID, "profile", "current")), buildPrivateProfile({
+      id: OTHER_ID,
+      firebaseUid: OTHER_ID,
+      primaryVehicleId: vehicleId,
+      plate: "34 SERVER 34",
+      plateNormalized,
+    })));
+    await assertFails(setDoc(doc(otherDb, privatePath(OTHER_ID, "vehicles", vehicleId)), buildVehicle({
+      id: vehicleId,
+      vehicleId,
+      ownerId: OTHER_ID,
+      plate: "34 SERVER 34",
+      plateNormalized,
+    })));
+  });
+
   it("allows participant-scoped friendship reads and blocks direct client writes", async () => {
     const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
     const strangerDb = testEnvironment.authenticatedContext(STRANGER_ID).firestore();
