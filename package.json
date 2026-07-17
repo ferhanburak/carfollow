@@ -20,7 +20,8 @@
     "backup:schedules": "firebase firestore:backups:schedules:list --project carfollow-75750",
     "postman:generate": "node scripts/generatePostmanMapE2E.mjs",
     "postman:test": "node scripts/runPostmanMapE2E.mjs",
-    "postman:cleanup": "node scripts/cleanupPostmanE2E.mjs"
+    "postman:cleanup": "node scripts/cleanupPostmanE2E.mjs",
+    "backend:invokers": "node scripts/auditCallableInvokers.mjs"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",

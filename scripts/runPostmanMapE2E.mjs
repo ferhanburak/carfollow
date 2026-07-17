@@ -33,7 +33,12 @@ function pass(message) {
 
 async function parseResponse(response, label) {
   const text = await response.text();
-  const body = text ? JSON.parse(text) : {};
+  let body;
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(`${label} returned non-JSON (${response.status}): ${text.replace(/\s+/g, " ").slice(0, 240)}`);
+  }
   if (!response.ok) throw new Error(`${label} failed (${response.status}): ${JSON.stringify(body)}`);
   return body;
 }
