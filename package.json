@@ -17,7 +17,8 @@
     "test:functions": "npm --prefix functions test",
     "lint:functions": "npm --prefix functions run lint",
     "backup:list": "firebase firestore:backups:list --project carfollow-75750",
-    "backup:schedules": "firebase firestore:backups:schedules:list --project carfollow-75750"
+    "backup:schedules": "firebase firestore:backups:schedules:list --project carfollow-75750",
+    "postman:generate": "node scripts/generatePostmanMapE2E.mjs"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",

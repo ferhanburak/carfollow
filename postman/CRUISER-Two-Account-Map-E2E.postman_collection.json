@@ -1,0 +1,1419 @@
+{
+  "info": {
+    "_postman_id": "47ae4abe-6808-4adf-98a7-11d68b1fda01",
+    "name": "CRUISER - Two Account Map & Convoy E2E",
+    "description": "Production E2E flow. Account A creates map content; Account B discovers and interacts with it. Run folders in order.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "spotPinId",
+      "value": ""
+    },
+    {
+      "key": "washPinId",
+      "value": ""
+    },
+    {
+      "key": "photoId",
+      "value": ""
+    },
+    {
+      "key": "storagePath",
+      "value": ""
+    },
+    {
+      "key": "photoUrl",
+      "value": ""
+    },
+    {
+      "key": "convoyId",
+      "value": ""
+    },
+    {
+      "key": "invitedConvoyId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Authentication",
+      "item": [
+        {
+          "name": "Sign In Account A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Account A signed in\", () => pm.response.to.have.status(200));",
+                  "const auth = pm.response.json();",
+                  "pm.environment.set(\"idTokenA\", auth.idToken);",
+                  "pm.environment.set(\"refreshTokenA\", auth.refreshToken);",
+                  "pm.environment.set(\"uidA\", auth.localId);",
+                  "pm.collectionVariables.set(\"runId\", Date.now().toString());"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailA}}\",\n  \"password\": \"{{passwordA}}\",\n  \"returnSecureToken\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{authBase}}/accounts:signInWithPassword?key={{apiKey}}",
+              "host": [
+                "{{authBase}}"
+              ],
+              "path": [
+                "accounts:signInWithPassword"
+              ],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "{{apiKey}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sign In Account B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Account B signed in\", () => pm.response.to.have.status(200));",
+                  "const auth = pm.response.json();",
+                  "pm.environment.set(\"idTokenB\", auth.idToken);",
+                  "pm.environment.set(\"refreshTokenB\", auth.refreshToken);",
+                  "pm.environment.set(\"uidB\", auth.localId);",
+                  "pm.test(\"Accounts are different\", () => pm.expect(auth.localId).to.not.eql(pm.environment.get(\"uidA\")));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailB}}\",\n  \"password\": \"{{passwordB}}\",\n  \"returnSecureToken\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{authBase}}/accounts:signInWithPassword?key={{apiKey}}",
+              "host": [
+                "{{authBase}}"
+              ],
+              "path": [
+                "accounts:signInWithPassword"
+              ],
+              "query": [
+                {
+                  "key": "key",
+                  "value": "{{apiKey}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Photo Spot",
+      "item": [
+        {
+          "name": "A Creates Photo Spot",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A Creates Photo Spot: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "pm.collectionVariables.set(\"spotPinId\", payload.result.pinId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"pin\": {\n      \"type\": \"spot\",\n      \"name\": \"POSTMAN E2E SPOT {{runId}}\",\n      \"lat\": 39.9208,\n      \"lng\": 32.8541,\n      \"description\": \"Two-account Postman visibility test.\",\n      \"tags\": [\n        \"#PostmanE2E\",\n        \"#NightRun\"\n      ]\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/createMapNode",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "createMapNode"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Reads A's Photo Spot",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Reads A's Photo Spot: document is visible\", () => pm.response.to.have.status(200));",
+                  "const document = pm.response.json();",
+                  "pm.test(\"Creator is Account A\", () => pm.expect(document.fields.createdByUid.stringValue).to.eql(pm.environment.get(\"uidA\")));",
+                  "pm.test(\"Spot type is preserved\", () => pm.expect(document.fields.type.stringValue).to.eql(\"spot\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{firestoreBase}}/mapPins/{{spotPinId}}",
+              "host": [
+                "{{firestoreBase}}"
+              ],
+              "path": [
+                "mapPins",
+                "{{spotPinId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Likes A's Photo Spot",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Likes A's Photo Spot: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "pm.test(\"Like was added\", () => pm.expect(payload.result.liked).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"pinId\": \"{{spotPinId}}\",\n    \"targetType\": \"pin\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/toggleMapLike",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "toggleMapLike"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Uploads Spot Photo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Photo uploaded\", () => pm.response.to.have.status(200));",
+                  "const uploaded = pm.response.json();",
+                  "pm.collectionVariables.set(\"storagePath\", uploaded.name);",
+                  "const token = String(uploaded.downloadTokens || \"\").split(\",\")[0];",
+                  "const url = `https://firebasestorage.googleapis.com/v0/b/${pm.environment.get(\"storageBucket\")}/o/${encodeURIComponent(uploaded.name)}?alt=media${token ? `&token=${token}` : \"\"}`;",
+                  "pm.collectionVariables.set(\"photoUrl\", url);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "image/svg+xml"
+              }
+            ],
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": "postman/fixtures/test-spot.svg"
+              }
+            },
+            "url": {
+              "raw": "https://firebasestorage.googleapis.com/v0/b/{{storageBucket}}/o?uploadType=media&name=artifacts%2Fcruiser-app-prod%2FmapNodes%2F{{spotPinId}}%2Fphotos%2F{{uidB}}%2Fpostman-{{runId}}.svg",
+              "protocol": "https",
+              "host": [
+                "firebasestorage",
+                "googleapis",
+                "com"
+              ],
+              "path": [
+                "v0",
+                "b",
+                "{{storageBucket}}",
+                "o"
+              ],
+              "query": [
+                {
+                  "key": "uploadType",
+                  "value": "media"
+                },
+                {
+                  "key": "name",
+                  "value": "artifacts/cruiser-app-prod/mapNodes/{{spotPinId}}/photos/{{uidB}}/postman-{{runId}}.svg"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Registers Uploaded Photo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Registers Uploaded Photo: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "pm.collectionVariables.set(\"photoId\", payload.result.photoId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"pinId\": \"{{spotPinId}}\",\n    \"title\": \"POSTMAN E2E PHOTO {{runId}}\",\n    \"imageUrl\": \"{{photoUrl}}\",\n    \"storagePath\": \"{{storagePath}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/addMapSpotPhoto",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "addMapSpotPhoto"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Likes B's Spot Photo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A Likes B's Spot Photo: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "pm.test(\"Photo like was added\", () => pm.expect(payload.result.liked).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"pinId\": \"{{spotPinId}}\",\n    \"targetType\": \"photo\",\n    \"photoId\": \"{{photoId}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/toggleMapLike",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "toggleMapLike"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Car Wash",
+      "item": [
+        {
+          "name": "A Creates Wash Node",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A Creates Wash Node: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "pm.collectionVariables.set(\"washPinId\", payload.result.pinId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"pin\": {\n      \"type\": \"wash\",\n      \"name\": \"POSTMAN E2E WASH {{runId}}\",\n      \"lat\": 39.9135,\n      \"lng\": 32.8421,\n      \"foam\": 4,\n      \"water\": 4,\n      \"allowsBuckets\": true,\n      \"shadowDrying\": true,\n      \"note\": \"Initial Account A review.\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/createMapNode",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "createMapNode"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Reads A's Wash Node",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Reads A's Wash Node: document is visible\", () => pm.response.to.have.status(200));",
+                  "const document = pm.response.json();",
+                  "pm.test(\"Wash type is preserved\", () => pm.expect(document.fields.type.stringValue).to.eql(\"wash\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{firestoreBase}}/mapPins/{{washPinId}}",
+              "host": [
+                "{{firestoreBase}}"
+              ],
+              "path": [
+                "mapPins",
+                "{{washPinId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Reviews A's Wash Node",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Reviews A's Wash Node: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "pm.test(\"Aggregate has two reviews\", () => pm.expect(payload.result.rating.reviews).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"pinId\": \"{{washPinId}}\",\n    \"foam\": 5,\n    \"water\": 4,\n    \"allowsBuckets\": true,\n    \"shadowDrying\": false,\n    \"note\": \"Account B Postman review.\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/submitWashReview",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "submitWashReview"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Reads Updated Wash Aggregate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A Reads Updated Wash Aggregate: document is visible\", () => pm.response.to.have.status(200));",
+                  "const document = pm.response.json();",
+                  "pm.test(\"Review aggregate is visible\", () => pm.expect(Number(document.fields.rating.mapValue.fields.reviews.integerValue)).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{firestoreBase}}/mapPins/{{washPinId}}",
+              "host": [
+                "{{firestoreBase}}"
+              ],
+              "path": [
+                "mapPins",
+                "{{washPinId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Public Convoy Request Flow",
+      "item": [
+        {
+          "name": "A Creates Public Convoy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A Creates Public Convoy: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "pm.collectionVariables.set(\"convoyId\", payload.result.convoyId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"pin\": {\n      \"name\": \"POSTMAN E2E PUBLIC CONVOY {{runId}}\",\n      \"lat\": 39.9208,\n      \"lng\": 32.8541,\n      \"route\": \"Kizilay - Cankaya - Umitkoy\",\n      \"routePath\": [\n        {\n          \"lat\": 39.9208,\n          \"lng\": 32.8541\n        },\n        {\n          \"lat\": 39.9004,\n          \"lng\": 32.8093\n        },\n        {\n          \"lat\": 39.9021,\n          \"lng\": 32.7029\n        }\n      ],\n      \"time\": \"2026-07-18 22:30\",\n      \"capacity\": 12,\n      \"visibility\": \"public\",\n      \"accessPolicy\": \"request\",\n      \"detailVisibility\": \"trusted\",\n      \"minDriverScore\": 0,\n      \"minHarmonyVotes\": 0,\n      \"maxAlertVotes\": 99,\n      \"invitedGuests\": []\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/createConvoy",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "createConvoy"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Lists and Sees A's Convoy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Lists and Sees A's Convoy: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "pm.test(\"Created convoy is visible to B\", () => pm.expect(payload.result.convoys.some((item) => item.id === pm.collectionVariables.get(\"convoyId\"))).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/listAccessibleConvoys",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "listAccessibleConvoys"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Requests Convoy Join",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Requests Convoy Join: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"convoyId\": \"{{convoyId}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/requestConvoyJoin",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "requestConvoyJoin"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Sees B's Pending Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A Sees B's Pending Request: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "const convoy = payload.result.convoys.find((item) => item.id === pm.collectionVariables.get(\"convoyId\"));",
+                  "pm.test(\"B is pending\", () => pm.expect(convoy.pendingRequests.some((item) => item.userId === pm.environment.get(\"uidB\"))).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/listAccessibleConvoys",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "listAccessibleConvoys"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Approves B's Join Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A Approves B's Join Request: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"convoyId\": \"{{convoyId}}\",\n    \"memberUserId\": \"{{uidB}}\",\n    \"decision\": \"approved\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/respondConvoyJoinRequest",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "respondConvoyJoinRequest"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Sees Approved Membership and Route",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Sees Approved Membership and Route: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "const convoy = payload.result.convoys.find((item) => item.id === pm.collectionVariables.get(\"convoyId\"));",
+                  "pm.test(\"B is approved\", () => pm.expect(convoy.attendees.some((item) => item.userId === pm.environment.get(\"uidB\"))).to.eql(true));",
+                  "pm.test(\"Exact route is visible\", () => pm.expect(convoy.routePath.length).to.be.above(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/listAccessibleConvoys",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "listAccessibleConvoys"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Marks Trip Enroute",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Marks Trip Enroute: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"convoyId\": \"{{convoyId}}\",\n    \"tripStatus\": \"enroute\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/updateConvoyTripStatus",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "updateConvoyTripStatus"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Starts Convoy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A Starts Convoy: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"convoyId\": \"{{convoyId}}\",\n    \"lifecycleStatus\": \"rolling\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/updateConvoyLifecycle",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "updateConvoyLifecycle"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Completes Convoy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A Completes Convoy: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"convoyId\": \"{{convoyId}}\",\n    \"lifecycleStatus\": \"completed\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/updateConvoyLifecycle",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "updateConvoyLifecycle"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Rates A Harmony",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Rates A Harmony: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"convoyId\": \"{{convoyId}}\",\n    \"targetUserId\": \"{{uidA}}\",\n    \"signal\": \"harmony\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/rateConvoyMember",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "rateConvoyMember"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Rates B Harmony",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A Rates B Harmony: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"convoyId\": \"{{convoyId}}\",\n    \"targetUserId\": \"{{uidB}}\",\n    \"signal\": \"harmony\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/rateConvoyMember",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "rateConvoyMember"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Friends Convoy Invite Flow",
+      "item": [
+        {
+          "name": "A Creates Friends Convoy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A Creates Friends Convoy: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "pm.collectionVariables.set(\"invitedConvoyId\", payload.result.convoyId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"pin\": {\n      \"name\": \"POSTMAN E2E FRIENDS CONVOY {{runId}}\",\n      \"lat\": 39.925,\n      \"lng\": 32.84,\n      \"route\": \"Ankara Friends Test Route\",\n      \"routePath\": [\n        {\n          \"lat\": 39.925,\n          \"lng\": 32.84\n        },\n        {\n          \"lat\": 39.91,\n          \"lng\": 32.79\n        }\n      ],\n      \"time\": \"2026-07-19 21:30\",\n      \"capacity\": 8,\n      \"visibility\": \"friends\",\n      \"accessPolicy\": \"request\",\n      \"detailVisibility\": \"trusted\",\n      \"minDriverScore\": 0,\n      \"minHarmonyVotes\": 0,\n      \"maxAlertVotes\": 99,\n      \"invitedGuests\": []\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/createConvoy",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "createConvoy"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A Invites Friend B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A Invites Friend B: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenA}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"convoyId\": \"{{invitedConvoyId}}\",\n    \"targetUserId\": \"{{uidB}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/inviteConvoyMember",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "inviteConvoyMember"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Lists Invited Friends Convoy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Lists Invited Friends Convoy: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "pm.test(\"Invited convoy is visible\", () => pm.expect(payload.result.convoys.some((item) => item.id === pm.collectionVariables.get(\"invitedConvoyId\"))).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/listAccessibleConvoys",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "listAccessibleConvoys"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Joins Invited Convoy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Joins Invited Convoy: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"convoyId\": \"{{invitedConvoyId}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/requestConvoyJoin",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "requestConvoyJoin"
+              ]
+            }
+          }
+        },
+        {
+          "name": "B Verifies Immediate Approval",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"B Verifies Immediate Approval: HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const payload = pm.response.json();",
+                  "pm.test(\"Callable result is successful\", () => pm.expect(payload.result?.ok).to.eql(true));",
+                  "const convoy = payload.result.convoys.find((item) => item.id === pm.collectionVariables.get(\"invitedConvoyId\"));",
+                  "pm.test(\"Invited B joined without pending approval\", () => pm.expect(convoy.attendees.some((item) => item.userId === pm.environment.get(\"uidB\"))).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idTokenB}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{functionsBase}}/listAccessibleConvoys",
+              "host": [
+                "{{functionsBase}}"
+              ],
+              "path": [
+                "listAccessibleConvoys"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

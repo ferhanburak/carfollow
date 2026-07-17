@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <rect width="640" height="360" fill="#0a0a0a"/>
+  <path d="M40 270 C180 100 360 330 600 90" fill="none" stroke="#a3e635" stroke-width="12"/>
+  <circle cx="320" cy="180" r="54" fill="#171717" stroke="#f43f5e" stroke-width="8"/>
+  <text x="320" y="190" fill="#ffffff" font-family="monospace" font-size="28" text-anchor="middle">CRUISER E2E</text>
+</svg>
