@@ -32,12 +32,21 @@ Do not delete a backup schedule during an incident. A restore must first be test
 
 App Check code is installed but enforcement intentionally defaults to `false`. Enabling enforcement before a valid web provider is registered rejects legitimate callable requests.
 
+Run the guarded readiness audit at any point:
+
+```powershell
+npm run appcheck:status
+```
+
+The command never enables enforcement. It fails only when enforcement is already enabled with an incomplete client configuration.
+
 1. Open Firebase Console -> App Check and register the CRUISER web app.
 2. Configure a reCAPTCHA v3 site and restrict it to the production and preview domains.
 3. Add its public site key to the web build environment:
 
 ```text
 VITE_FIREBASE_APPCHECK_SITE_KEY=your-public-site-key
+CARFOLLOW_APP_CHECK_DOMAINS=carfollow.example,www.carfollow.example
 ```
 
 4. Deploy the client and monitor App Check metrics until verified traffic is healthy.
@@ -45,6 +54,7 @@ VITE_FIREBASE_APPCHECK_SITE_KEY=your-public-site-key
 6. Enable enforcement for Firestore, Realtime Database, and Storage from the App Check console only after their verified-request metrics are healthy.
 
 Local emulator builds can use `VITE_FIREBASE_APPCHECK_DEBUG_TOKEN`. Never commit the generated debug token.
+Project-specific Functions environment files are gitignored. Do not enable enforcement until `npm run appcheck:status` reports `readyForMetrics: true` and Firebase Console metrics show legitimate traffic as verified.
 
 ## Moderator access
 

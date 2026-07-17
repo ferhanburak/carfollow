@@ -3,6 +3,8 @@ dist/
 work-dev.log
 work-dev.err.log
 .env
+functions/.env.*
+!functions/.env.example
 .DS_Store
 firebase-debug.log
 firestore-debug.log
