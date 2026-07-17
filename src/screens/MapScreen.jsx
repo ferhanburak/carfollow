@@ -195,6 +195,7 @@ function OverlayCard({ children, title, onClose }) {
 
 export function MapScreen({
   convoyFeedback,
+  drivers,
   driveHud,
   driveSessionPending,
   driveSessionStatus,
@@ -294,6 +295,7 @@ export function MapScreen({
 
       <div className="relative flex-1 min-h-0">
         <MapCard
+          drivers={drivers}
           pins={mapPins}
           selectedPinId={selectedPinId}
           onSelect={(pinId) => {

@@ -90,4 +90,8 @@ test("plate search always returns a masked, privacy-scoped profile", () => {
   assert.equal(result.region, "Istanbul");
   assert.equal(maskPlate("06 TEST 02"), "06 ••• 02");
   assert.equal(normalizePrivacySettings({ locationPrecision: "bad" }).locationPrecision, "approximate");
+  assert.deepEqual(
+    normalizePrivacySettings({ safeZone: { lat: 39.9, lng: 32.8, radiusM: 25 } }).safeZone,
+    { lat: 39.9, lng: 32.8, radiusM: 100 },
+  );
 });

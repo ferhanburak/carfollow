@@ -25,6 +25,7 @@ export function useDriveSession({
   const userRef = useRef(user);
   const telemetrySyncRef = useRef(onTelemetrySync);
   const actionLockRef = useRef(false);
+  const liveLocationRef = useRef(null);
 
   useEffect(() => {
     userRef.current = user;
@@ -33,6 +34,32 @@ export function useDriveSession({
   useEffect(() => {
     telemetrySyncRef.current = onTelemetrySync;
   }, [onTelemetrySync]);
+
+  useEffect(() => {
+    if (!isDriving || typeof navigator === "undefined" || !navigator.geolocation) {
+      liveLocationRef.current = null;
+      return undefined;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        liveLocationRef.current = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        };
+      },
+      () => {
+        liveLocationRef.current = null;
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      liveLocationRef.current = null;
+    };
+  }, [isDriving]);
 
   useEffect(() => {
     if (!isDriving || !userRef.current) {
@@ -45,6 +72,7 @@ export function useDriveSession({
       vehicle: userRef.current.model,
       node: driveHud.etaNode,
       speed: driveHud.speed,
+      location: liveLocationRef.current,
     });
   }, [driveHud.etaNode, driveHud.speed, isDriving]);
 

@@ -38,6 +38,8 @@ describe("normalizeFirebaseActiveDrivers", () => {
         vehicle: "Audi A5",
         node: "Ankara Merkez",
         speed: 93,
+        locationVisibility: "hidden",
+        safeZoneActive: false,
         updatedAt: now - 1_000,
       },
       {
@@ -46,8 +48,24 @@ describe("normalizeFirebaseActiveDrivers", () => {
         vehicle: "Vehicle not shared",
         node: "Location hidden",
         speed: 75,
+        locationVisibility: "hidden",
+        safeZoneActive: false,
         updatedAt: now - 5_000,
       },
     ]);
+  });
+
+  it("keeps only already-sanitized public coordinates", () => {
+    const drivers = normalizeFirebaseActiveDrivers({
+      visible: {
+        active: true,
+        plate: "06 *** 01",
+        lat: 39.96,
+        lng: 32.74,
+        locationVisibility: "approximate",
+        updatedAt: 99_000,
+      },
+    }, 100_000);
+    expect(drivers[0]).toMatchObject({ lat: 39.96, lng: 32.74, locationVisibility: "approximate" });
   });
 });

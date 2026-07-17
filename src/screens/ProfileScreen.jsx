@@ -22,6 +22,7 @@ export function ProfileScreen({
 }) {
   const [privacy, setPrivacy] = useState(() => normalizePrivacySettings(user.privacy));
   const [kvkkAccepted, setKvkkAccepted] = useState(Boolean(user.privacyConsent?.kvkkAcceptedAt));
+  const [safeZoneFeedback, setSafeZoneFeedback] = useState("");
   useEffect(() => {
     setPrivacy(normalizePrivacySettings(user.privacy));
     setKvkkAccepted(Boolean(user.privacyConsent?.kvkkAcceptedAt));
@@ -39,6 +40,30 @@ export function ProfileScreen({
     { key: "passport", label: "Pasaport", value: passportSummary ? "Hazir" : "Bos" },
     { key: "badges", label: "Unvan", value: `${user.badges?.length ?? 0}` },
   ];
+
+  const captureSafeZoneCenter = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setSafeZoneFeedback("Bu cihaz konum secimini desteklemiyor.");
+      return;
+    }
+    setSafeZoneFeedback("Guvenli merkez aliniyor...");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setPrivacy((current) => normalizePrivacySettings({
+          ...current,
+          safeZoneEnabled: true,
+          safeZone: {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            radiusM: current.safeZone?.radiusM ?? 300,
+          },
+        }));
+        setSafeZoneFeedback("Guvenli merkez yalnizca ozel profiline eklendi. Kaydetmeyi unutma.");
+      },
+      (error) => setSafeZoneFeedback(error.message || "Konum izni alinamadi."),
+      { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 },
+    );
+  };
 
   return (
     <section className="space-y-4">
@@ -63,6 +88,10 @@ export function ProfileScreen({
             <span>Bolgeyi arama sonucunda goster</span>
             <input type="checkbox" checked={privacy.showRegionInSearch} onChange={(event) => setPrivacy((current) => ({ ...current, showRegionInSearch: event.target.checked }))} className="h-5 w-5 accent-lime-400" />
           </label>
+          <label className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-sm">
+            <span>Live Map'te tam plakami goster</span>
+            <input type="checkbox" checked={privacy.showPlateOnLiveMap} onChange={(event) => setPrivacy((current) => ({ ...current, showPlateOnLiveMap: event.target.checked }))} className="h-5 w-5 accent-lime-400" />
+          </label>
           <label className="block rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-sm">
             <span className="block">Live Map konum hassasiyeti</span>
             <select value={privacy.locationPrecision} onChange={(event) => setPrivacy((current) => ({ ...current, locationPrecision: event.target.value }))} className="mt-3 h-11 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm outline-none focus:border-lime-400">
@@ -71,6 +100,37 @@ export function ProfileScreen({
               <option value="exact">Tam konum</option>
             </select>
           </label>
+          <div className="rounded-2xl border border-rose-400/15 bg-rose-400/5 px-4 py-4">
+            <label className="flex min-h-12 items-center justify-between gap-3 text-sm">
+              <span>
+                <span className="block font-semibold">Safe Zone</span>
+                <span className="mt-1 block text-xs text-neutral-500">Bu bolgede Live Map koordinati yayinlanmaz.</span>
+              </span>
+              <input type="checkbox" checked={privacy.safeZoneEnabled} onChange={(event) => setPrivacy((current) => ({ ...current, safeZoneEnabled: event.target.checked }))} className="h-5 w-5 accent-lime-400" />
+            </label>
+            <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+              <button type="button" onClick={captureSafeZoneCenter} className="min-h-12 rounded-xl border border-white/10 bg-black/30 px-3 text-xs font-semibold text-neutral-200">
+                {privacy.safeZone ? "Merkezi Yenile" : "Mevcut Konumu Merkez Yap"}
+              </button>
+              <select
+                aria-label="Safe Zone Radius"
+                value={privacy.safeZone?.radiusM ?? 300}
+                onChange={(event) => setPrivacy((current) => ({
+                  ...current,
+                  safeZone: current.safeZone ? { ...current.safeZone, radiusM: Number(event.target.value) } : null,
+                }))}
+                className="min-h-12 rounded-xl border border-white/10 bg-[#171717] px-3 text-xs outline-none focus:border-lime-400"
+              >
+                <option value="200">200 m</option>
+                <option value="300">300 m</option>
+                <option value="500">500 m</option>
+                <option value="1000">1 km</option>
+              </select>
+            </div>
+            <p className="mt-2 text-[11px] text-neutral-500">
+              {safeZoneFeedback || (privacy.safeZone ? "Guvenli merkez kayit icin hazir; koordinat ekranda gosterilmez." : "Henuz guvenli merkez secilmedi.")}
+            </p>
+          </div>
           <label className="flex gap-3 rounded-2xl border border-amber-400/15 bg-amber-400/5 p-4 text-xs text-neutral-300">
             <input type="checkbox" checked={kvkkAccepted} onChange={(event) => setKvkkAccepted(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-lime-400" />
             <span>Plaka, profil ve konum tercihleri islendigi konusunda aydinlatma metnini okudum; bu tercihleri istegimle kaydediyorum.</span>

@@ -16,6 +16,7 @@ import {
 import { getFirebaseServices, isFirebaseModeEnabled } from "../services/firebaseClient";
 import { buildPrivateUserProfilePatch, buildPublicUserProfilePatch } from "../domain/userDocuments";
 import { buildVehicleProfilePatch, resolvePrimaryVehicleId } from "../domain/vehicleDocuments";
+import { buildPrivacyAwareTelemetry } from "../utils/privacy";
 
 function mapCollectionSnapshot(snapshot) {
   return snapshot.docs.map((item) => ({
@@ -117,7 +118,7 @@ export async function saveFirebaseCruiseJoin(pinId, plate) {
   );
 }
 
-export async function saveFirebaseActiveDriver(driver) {
+export async function saveFirebaseActiveDriver(driver, privacy) {
   const services = await getFirebaseServices();
   if (!services || !driver?.plate) {
     return null;
@@ -130,12 +131,15 @@ export async function saveFirebaseActiveDriver(driver) {
 
   const { onDisconnect, ref, serverTimestamp, set } = await loadDatabaseModule();
   const driverRef = ref(database, realtimeTelemetryUserPath(authUser.uid, resolveAppId()));
+  const safeDriver = buildPrivacyAwareTelemetry(driver, privacy);
   const disconnect = onDisconnect(driverRef);
   if (driver.active) {
     await disconnect.set({
-      ...driver,
+      ...safeDriver,
       active: false,
       firebaseUid: authUser.uid,
+      locationVisibility: "inactive",
+      safeZoneActive: false,
       speed: 0,
       updatedAt: serverTimestamp(),
     });
@@ -145,7 +149,7 @@ export async function saveFirebaseActiveDriver(driver) {
 
   // Realtime Database is reserved for low-latency driver / DM-like surfaces.
   await set(driverRef, {
-    ...driver,
+    ...safeDriver,
     firebaseUid: authUser.uid,
     updatedAt: serverTimestamp(),
   });
@@ -176,6 +180,11 @@ export function normalizeFirebaseActiveDrivers(payload, now = Date.now()) {
       vehicle: driver.vehicle || "Vehicle not shared",
       node: driver.node || "Location hidden",
       speed: Math.max(0, Math.round(Number(driver.speed ?? 0))),
+      ...(Number.isFinite(Number(driver.lat)) && Number.isFinite(Number(driver.lng))
+        ? { lat: Number(driver.lat), lng: Number(driver.lng) }
+        : {}),
+      locationVisibility: driver.locationVisibility || "hidden",
+      safeZoneActive: driver.safeZoneActive === true,
       updatedAt: Number(driver.updatedAt),
     }))
     .sort((left, right) => right.updatedAt - left.updatedAt);

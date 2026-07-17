@@ -246,7 +246,7 @@ export function useFirebaseSync({
 
     setFirebaseStatus((current) => ({ ...current, telemetry: "syncing", error: null }));
     const operation = telemetryWriteQueueRef.current
-      .then(() => saveFirebaseActiveDriver(driver));
+      .then(() => saveFirebaseActiveDriver(driver, user?.privacy));
     const handledOperation = operation
       .then((result) => {
         if (!result) {

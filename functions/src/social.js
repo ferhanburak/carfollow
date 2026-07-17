@@ -2,12 +2,30 @@ const SOCIAL_SCHEMA_VERSION = 1;
 
 const DEFAULT_PRIVACY_SETTINGS = Object.freeze({
   plateSearchEnabled: false,
+  showPlateOnLiveMap: false,
   showModelInSearch: true,
   showRegionInSearch: false,
   locationPrecision: "approximate",
   safeZoneEnabled: true,
+  safeZone: null,
   kvkkConsentVersion: "2026-07",
 });
+
+function normalizeSafeZone(value) {
+  const lat = Number(value?.lat);
+  const lng = Number(value?.lng);
+  const radiusM = Number(value?.radiusM);
+  if (
+    !Number.isFinite(lat) || lat < -90 || lat > 90 ||
+    !Number.isFinite(lng) || lng < -180 || lng > 180 ||
+    !Number.isFinite(radiusM)
+  ) return null;
+  return {
+    lat: Number(lat.toFixed(6)),
+    lng: Number(lng.toFixed(6)),
+    radiusM: Math.round(Math.min(2000, Math.max(100, radiusM))),
+  };
+}
 
 function normalizePlate(value) {
   return String(value ?? "").toUpperCase().replace(/[^0-9A-Z]/g, "");
@@ -23,9 +41,11 @@ function normalizePrivacySettings(value = {}) {
   return {
     ...DEFAULT_PRIVACY_SETTINGS,
     plateSearchEnabled: value.plateSearchEnabled === true,
+    showPlateOnLiveMap: value.showPlateOnLiveMap === true,
     showModelInSearch: value.showModelInSearch !== false,
     showRegionInSearch: value.showRegionInSearch === true,
     safeZoneEnabled: value.safeZoneEnabled !== false,
+    safeZone: normalizeSafeZone(value.safeZone),
     locationPrecision: ["hidden", "approximate", "exact"].includes(value.locationPrecision)
       ? value.locationPrecision
       : DEFAULT_PRIVACY_SETTINGS.locationPrecision,

@@ -772,6 +772,43 @@ describe("Realtime Database security rules", { concurrency: false }, () => {
     await assertFails(setDatabaseValue(databaseRef(otherDb, realtimePath(`telemetry/${OWNER_ID}`)), validTelemetry));
   });
 
+  it("accepts sanitized coordinates but rejects raw and safe-zone location leaks", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).database();
+    const telemetryPath = realtimePath(`telemetry/${OWNER_ID}`);
+    const baseTelemetry = {
+      active: true,
+      plate: "06 *** 01",
+      firebaseUid: OWNER_ID,
+      speed: 90,
+      updatedAt: 1720958400000,
+    };
+
+    await assertSucceeds(setDatabaseValue(databaseRef(ownerDb, telemetryPath), {
+      ...baseTelemetry,
+      lat: 39.96,
+      lng: 32.74,
+      locationVisibility: "approximate",
+      safeZoneActive: false,
+    }));
+    await assertFails(setDatabaseValue(databaseRef(ownerDb, telemetryPath), {
+      ...baseTelemetry,
+      location: { lat: 39.9, lng: 32.8 },
+      locationVisibility: "exact",
+    }));
+    await assertFails(setDatabaseValue(databaseRef(ownerDb, telemetryPath), {
+      ...baseTelemetry,
+      lat: 39.9,
+      lng: 32.8,
+      locationVisibility: "safe-zone",
+      safeZoneActive: true,
+    }));
+    await assertSucceeds(setDatabaseValue(databaseRef(ownerDb, telemetryPath), {
+      ...baseTelemetry,
+      locationVisibility: "safe-zone",
+      safeZoneActive: true,
+    }));
+  });
+
   it("limits DM thread reads and writes to participants", async () => {
     const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).database();
     const otherDb = testEnvironment.authenticatedContext(OTHER_ID).database();

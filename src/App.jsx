@@ -353,6 +353,7 @@ function App() {
 
             {activeTab === "liveMap" ? (
               <MapScreen
+                drivers={drivers}
                 driveHud={driveHud}
                 driveSessionPending={driveSessionPending}
                 driveSessionStatus={driveSessionStatus}

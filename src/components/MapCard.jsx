@@ -412,6 +412,18 @@ function getCurrentLocationIcon() {
   };
 }
 
+function getActiveDriverIcon(locationVisibility) {
+  if (typeof window === "undefined" || !window.google?.maps) return undefined;
+  return {
+    path: window.google.maps.SymbolPath.CIRCLE,
+    fillColor: locationVisibility === "approximate" ? "#facc15" : "#a3e635",
+    fillOpacity: 0.95,
+    strokeColor: "#0a0a0a",
+    strokeWeight: 4,
+    scale: locationVisibility === "approximate" ? 8 : 7,
+  };
+}
+
 function getDraftLocationIcon() {
   if (typeof window === "undefined" || !window.google?.maps) {
     return undefined;
@@ -577,6 +589,7 @@ function FallbackGridMap({ pins, selectedPinId, onSelect, fullScreen = false, ma
 }
 
 export function MapCard({
+  drivers = [],
   pins,
   selectedPinId,
   onSelect,
@@ -634,6 +647,7 @@ export function MapCard({
   return (
     <GoogleMapCard
       mapsApiKey={mapsApiKey}
+      drivers={drivers}
       pins={mappablePins}
       selectedPin={selectedPin}
       selectedPinId={selectedPinId}
@@ -657,6 +671,7 @@ export function MapCard({
 
 function GoogleMapCard({
   mapsApiKey,
+  drivers,
   pins,
   selectedPin,
   selectedPinId,
@@ -1032,6 +1047,17 @@ function GoogleMapCard({
                 icon={getCurrentLocationIcon()}
               />
             ) : null}
+            {drivers
+              .filter((driver) => hasValidMapCoordinates(driver))
+              .map((driver) => (
+                <MarkerF
+                  key={`active-driver-${driver.firebaseUid}`}
+                  position={{ lat: Number(driver.lat), lng: Number(driver.lng) }}
+                  title={`${driver.plate} / ${driver.vehicle}`}
+                  zIndex={996}
+                  icon={getActiveDriverIcon(driver.locationVisibility)}
+                />
+              ))}
             {draftRoutePath?.map((point, index) => {
               const waypoint = getDraftWaypointMeta(index, draftRoutePath.length);
 

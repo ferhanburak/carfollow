@@ -106,10 +106,12 @@ function buildRegistrationBundle({ uid, email, profile, acceptKvkk, timestamp })
   const vehicleId = `vehicle-${normalizeIdentifier(uid, "primary")}`;
   const privacy = {
     plateSearchEnabled: profile?.privacy?.plateSearchEnabled === true,
+    showPlateOnLiveMap: false,
     showModelInSearch: profile?.privacy?.showModelInSearch !== false,
     showRegionInSearch: profile?.privacy?.showRegionInSearch === true,
     locationPrecision: "approximate",
     safeZoneEnabled: true,
+    safeZone: null,
     kvkkConsentVersion: KVKK_CONSENT_VERSION,
   };
   const identity = {
