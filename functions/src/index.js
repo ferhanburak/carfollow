@@ -73,6 +73,13 @@ const {
   RegistrationError,
   buildRegistrationBundle,
 } = require("./registration");
+const {
+  ACCOUNT_DELETE_CONFIRMATION,
+  buildAccountExport,
+  buildWithdrawnPrivacySettings,
+  hasRecentAuthentication,
+  requireDeletionConfirmation,
+} = require("./accountLifecycle");
 
 setGlobalOptions({
   region: "us-central1",
@@ -662,6 +669,15 @@ exports.updatePrivacySettings = secureCall("updatePrivacySettings", async (reque
   const profileRef = privateUserDocument(userId, "profile", "current");
   const existingProfile = await profileRef.get();
   requireSnapshot(existingProfile, "not-found", "User profile not found.");
+  const existingConsent = existingProfile.data().privacyConsent ?? null;
+  const consentIsActive = Boolean(existingConsent?.kvkkAcceptedAt && !existingConsent?.withdrawnAt);
+  const needsConsent = privacy.plateSearchEnabled ||
+    privacy.showPlateOnLiveMap ||
+    privacy.locationPrecision !== "hidden" ||
+    privacy.safeZoneEnabled;
+  if (needsConsent && request.data?.acceptKvkk !== true && !consentIsActive) {
+    throw new HttpsError("failed-precondition", "Accept the privacy notice before enabling discovery or location features.");
+  }
   const privacyConsent = request.data?.acceptKvkk === true
     ? { version: privacy.kvkkConsentVersion, kvkkAcceptedAt: admin.firestore.FieldValue.serverTimestamp() }
     : null;
@@ -673,8 +689,174 @@ exports.updatePrivacySettings = secureCall("updatePrivacySettings", async (reque
     privacy,
     privacyConsent: privacyConsent
       ? { version: privacy.kvkkConsentVersion, kvkkAcceptedAt: Date.now() }
-      : (existingProfile.data().privacyConsent ?? null),
+      : existingConsent,
   };
+});
+
+const ACCOUNT_EXPORT_COLLECTIONS = Object.freeze([
+  "profile",
+  "vehicles",
+  "vehiclePassports",
+  "vehiclePassportExports",
+  "serviceLogs",
+  "fuelLogs",
+  "parts",
+  "driverStats",
+  "driveSessions",
+  "notifications",
+  "blockedUsers",
+  "moderation",
+]);
+
+async function exportPrivateCollection(userId, collectionName) {
+  const snapshot = await privateUserCollection(userId, collectionName).limit(500).get();
+  return snapshot.docs.map((document) => ({ id: document.id, ...document.data() }));
+}
+
+exports.exportMyData = secureCall("exportMyData", { rateLimit: { limit: 3, windowSeconds: 3600 } }, async (request) => {
+  const userId = requireAuth(request);
+  const [privateCollections, friendships, clanMemberships, convoyMemberships] = await Promise.all([
+    Promise.all(ACCOUNT_EXPORT_COLLECTIONS.map(async (name) => [name, await exportPrivateCollection(userId, name)])),
+    publicCollection("friendships").where("participantIds", "array-contains", userId).limit(500).get(),
+    publicCollection("clanMembers").where("userId", "==", userId).limit(100).get(),
+    publicCollection("convoyMembers").where("userId", "==", userId).limit(500).get(),
+  ]);
+  const collections = Object.fromEntries(privateCollections);
+  const profile = collections.profile?.find((item) => item.id === "current") ?? null;
+  delete collections.profile;
+  return buildAccountExport({
+    userId,
+    profile,
+    collections,
+    social: {
+      friendships: friendships.docs.map((document) => ({ id: document.id, ...document.data() })),
+      clanMemberships: clanMemberships.docs.map((document) => ({ id: document.id, ...document.data() })),
+      convoyMemberships: convoyMemberships.docs.map((document) => ({ id: document.id, ...document.data() })),
+    },
+    exportedAt: new Date().toISOString(),
+  });
+});
+
+exports.withdrawPrivacyConsent = secureCall("withdrawPrivacyConsent", async (request) => {
+  const userId = requireAuth(request);
+  const profileRef = privateUserDocument(userId, "profile", "current");
+  const snapshot = await profileRef.get();
+  const profile = requireSnapshot(snapshot, "not-found", "User profile not found.");
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+  const privacy = buildWithdrawnPrivacySettings(normalizePrivacySettings(profile.privacy));
+  await profileRef.set({
+    privacy,
+    privacyConsent: {
+      version: profile.privacyConsent?.version ?? privacy.kvkkConsentVersion,
+      kvkkAcceptedAt: profile.privacyConsent?.kvkkAcceptedAt ?? null,
+      withdrawnAt: timestamp,
+    },
+    updatedAt: timestamp,
+  }, { merge: true });
+  await realtimeDb.ref(`artifacts/${APP_ID}/realtime/telemetry/${userId}`).remove();
+  return { ok: true, privacy, withdrawnAt: Date.now() };
+});
+
+async function queryDocuments(collectionName, field, operator, value) {
+  const snapshot = await publicCollection(collectionName).where(field, operator, value).limit(500).get();
+  return snapshot.docs;
+}
+
+exports.deleteMyAccount = secureCall("deleteMyAccount", { rateLimit: { limit: 3, windowSeconds: 3600 } }, async (request) => {
+  const userId = requireAuth(request);
+  try {
+    requireDeletionConfirmation(request.data?.confirmation);
+  } catch (error) {
+    throw new HttpsError("invalid-argument", error.message);
+  }
+  if (!hasRecentAuthentication(request.auth?.token?.auth_time)) {
+    throw new HttpsError("failed-precondition", "Sign in again before deleting your account.");
+  }
+
+  const profileSnapshot = await privateUserDocument(userId, "profile", "current").get();
+  const profile = requireSnapshot(profileSnapshot, "not-found", "User profile not found.");
+  if (profile.clanRole === "owner") {
+    throw new HttpsError("failed-precondition", "Transfer or close your clan before deleting your account.");
+  }
+  const hostedConvoys = await publicCollection("convoys").where("hostUserId", "==", userId).limit(100).get();
+  if (hostedConvoys.docs.some((document) => !["completed", "cancelled"].includes(document.data().lifecycleStatus))) {
+    throw new HttpsError("failed-precondition", "Complete or cancel your active convoys before deleting your account.");
+  }
+
+  const querySpecs = [
+    ["friendships", "participantIds", "array-contains", userId],
+    ["clanInvites", "targetUserId", "==", userId],
+    ["clanInvites", "invitedByUserId", "==", userId],
+    ["clanMembers", "userId", "==", userId],
+    ["convoyMembers", "userId", "==", userId],
+    ["convoyRatings", "actorUserId", "==", userId],
+    ["convoyRatings", "targetUserId", "==", userId],
+    ["mapLikes", "userId", "==", userId],
+    ["mapSpotPhotos", "userId", "==", userId],
+    ["moderationReports", "reporterUserId", "==", userId],
+    ["individualLeaderboard", "userId", "==", userId],
+  ];
+  const queryResults = await Promise.all(querySpecs.map((spec) => queryDocuments(...spec)));
+  const documentsToDelete = new Map();
+  queryResults.flat().forEach((document) => documentsToDelete.set(document.ref.path, document));
+  const spotPhotos = queryResults[8];
+
+  const [authoredPins, authoredConvoys] = await Promise.all([
+    queryDocuments("mapPins", "createdByUid", "==", userId),
+    queryDocuments("convoys", "hostUserId", "==", userId),
+  ]);
+  const bulkWriter = db.bulkWriter();
+  documentsToDelete.forEach((document) => bulkWriter.delete(document.ref));
+  authoredPins.forEach((document) => bulkWriter.update(document.ref, {
+    createdByUid: "deleted",
+    createdByPlate: "",
+    createdByName: "Deleted Driver",
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }));
+  authoredConvoys.forEach((document) => bulkWriter.update(document.ref, {
+    hostUserId: "deleted",
+    createdByUid: "deleted",
+    createdByPlate: "",
+    createdByName: "Deleted Driver",
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }));
+  bulkWriter.delete(publicDocument("publicProfiles", userId));
+  if (profile.plateNormalized) {
+    const claimRef = publicDocument("plateClaims", profile.plateNormalized);
+    const claim = await claimRef.get();
+    if (claim.exists && claim.data().uid === userId) bulkWriter.delete(claimRef);
+  }
+  await bulkWriter.close();
+
+  const directMessageRoot = realtimeDb.ref(`artifacts/${APP_ID}/realtime/directMessages`);
+  const userThreadsSnapshot = await directMessageRoot.child(`userThreads/${userId}`).get();
+  const realtimeUpdates = {
+    [`artifacts/${APP_ID}/realtime/presence/${userId}`]: null,
+    [`artifacts/${APP_ID}/realtime/telemetry/${userId}`]: null,
+    [`artifacts/${APP_ID}/realtime/directMessages/userThreads/${userId}`]: null,
+  };
+  for (const threadId of Object.keys(userThreadsSnapshot.val() ?? {})) {
+    const threadSnapshot = await directMessageRoot.child(`threads/${threadId}`).get();
+    const participantIds = Object.keys(threadSnapshot.child("participantUids").val() ?? {});
+    realtimeUpdates[`artifacts/${APP_ID}/realtime/directMessages/threads/${threadId}`] = null;
+    participantIds.forEach((participantId) => {
+      realtimeUpdates[`artifacts/${APP_ID}/realtime/directMessages/userThreads/${participantId}/${threadId}`] = null;
+    });
+  }
+  await realtimeDb.ref().update(realtimeUpdates);
+
+  const bucket = admin.storage().bucket();
+  await Promise.allSettled([
+    bucket.deleteFiles({ prefix: `artifacts/${APP_ID}/users/${userId}/avatars/` }),
+    ...spotPhotos.map((document) => {
+      const storagePath = document.data().storagePath;
+      return storagePath ? bucket.file(storagePath).delete({ ignoreNotFound: true }) : Promise.resolve();
+    }),
+  ]);
+  await db.recursiveDelete(db.doc(`artifacts/${APP_ID}/users/${userId}`));
+  await admin.auth().deleteUser(userId);
+  logger.info("account.deleted", { userId, sharedRecordsRemoved: documentsToDelete.size });
+  return { ok: true, deleted: true };
 });
 
 exports.ensureDirectMessageThread = secureCall("ensureDirectMessageThread", async (request) => {

@@ -2,14 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import {
   createAuthenticatedUser,
   createSignedUpUser,
+  deleteFirebaseAccount,
+  exportFirebaseAccountData,
   getQuickProfileByCredentials,
   isFirebaseAuthRepositoryEnabled,
   listQuickProfiles,
   loadFirebaseAuthenticatedProfile,
   registerFirebaseAccount,
+  sendFirebaseEmailVerification,
+  sendFirebasePasswordReset,
   signInFirebaseAccount,
   signOutFirebaseAccount,
   subscribeFirebaseAuthState,
+  withdrawFirebasePrivacyConsent,
 } from "../repositories/cruiserRepository";
 import { clearCruiserSession, loadCruiserSession, saveCruiserSession } from "../services/storage";
 import { createFuelForm, createSignUpState } from "../utils/garage";
@@ -31,6 +36,9 @@ function getAuthErrorMessage(error) {
     "cruiser/vehicle-owner-mismatch": "Arac sahipligi bu Firebase hesabi ile eslesmiyor.",
     "cruiser/vehicle-passport-not-found": "Vehicle Passport kaydi yuklenemedi.",
     "permission-denied": "Firebase guvenlik kurallari bu hesap islemini reddetti.",
+    "functions/failed-precondition": "Bu islem icin gerekli on kosullar tamamlanmadi. Aktif konvoyu kapat, klan sahipligini devret veya yeniden giris yap.",
+    "functions/invalid-argument": "Gonderilen hesap islemi bilgileri gecersiz.",
+    "functions/resource-exhausted": "Cok fazla istek gonderildi. Biraz bekleyip tekrar dene.",
   };
 
   return messages[error?.code] ?? (error instanceof Error ? error.message : "Kimlik dogrulama islemi tamamlanamadi.");
@@ -48,6 +56,9 @@ export function useCruiserAuth() {
     firebaseAuthEnabled ? "loading" : hydratedPersistedUser ? "authenticated" : "locked",
   );
   const [authError, setAuthError] = useState("");
+  const [authFeedback, setAuthFeedback] = useState("");
+  const [accountFeedback, setAccountFeedback] = useState("");
+  const [accountPending, setAccountPending] = useState(false);
   const [loginForm, setLoginForm] = useState({
     email: "",
     plate: allQuickProfiles[0]?.plate ?? "",
@@ -174,6 +185,7 @@ export function useCruiserAuth() {
   const handleLogin = async (event, options = {}) => {
     event.preventDefault();
     setAuthError("");
+    setAuthFeedback("");
 
     if (!firebaseAuthEnabled) {
       const match = getQuickProfileByCredentials(loginForm.plate, loginForm.password);
@@ -218,6 +230,7 @@ export function useCruiserAuth() {
     const validationErrors = validateSignUpForm(signUpForm, { requireEmail: firebaseAuthEnabled });
     setSignUpErrors(validationErrors);
     setAuthError("");
+    setAuthFeedback("");
     if (Object.keys(validationErrors).length > 0) {
       return null;
     }
@@ -269,14 +282,118 @@ export function useCruiserAuth() {
     }
   };
 
+  const handlePasswordReset = async () => {
+    if (!firebaseAuthEnabled) return false;
+    const email = loginForm.email.trim();
+    if (!email) {
+      setAuthError("Sifre sifirlama baglantisi icin e-posta adresini gir.");
+      setAuthMode("error");
+      return false;
+    }
+    setAuthError("");
+    setAuthFeedback("");
+    try {
+      await sendFirebasePasswordReset(email);
+      setAuthFeedback("Sifre sifirlama baglantisi e-posta adresine gonderildi.");
+      return true;
+    } catch (error) {
+      setAuthError(getAuthErrorMessage(error));
+      setAuthMode("error");
+      return false;
+    }
+  };
+
+  const handleEmailVerification = async () => {
+    setAccountPending(true);
+    setAccountFeedback("");
+    try {
+      await sendFirebaseEmailVerification();
+      setAccountFeedback("Dogrulama e-postasi gonderildi. Baglantiyi actiktan sonra tekrar giris yap.");
+      return true;
+    } catch (error) {
+      setAccountFeedback(getAuthErrorMessage(error));
+      return false;
+    } finally {
+      setAccountPending(false);
+    }
+  };
+
+  const handleAccountExport = async () => {
+    setAccountPending(true);
+    setAccountFeedback("");
+    try {
+      const payload = await exportFirebaseAccountData();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `cruiser-account-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setAccountFeedback("Hesap verisi JSON olarak indirildi.");
+      return true;
+    } catch (error) {
+      setAccountFeedback(getAuthErrorMessage(error));
+      return false;
+    } finally {
+      setAccountPending(false);
+    }
+  };
+
+  const handleConsentWithdrawal = async () => {
+    setAccountPending(true);
+    setAccountFeedback("");
+    try {
+      const result = await withdrawFirebasePrivacyConsent();
+      setUser((current) => current ? {
+        ...current,
+        privacy: result.privacy,
+        privacyConsent: { ...(current.privacyConsent ?? {}), withdrawnAt: result.withdrawnAt },
+      } : current);
+      setAccountFeedback("KVKK onayi geri cekildi; plaka kesfi ve konum paylasimi kapatildi.");
+      return true;
+    } catch (error) {
+      setAccountFeedback(getAuthErrorMessage(error));
+      return false;
+    } finally {
+      setAccountPending(false);
+    }
+  };
+
+  const handleAccountDeletion = async (confirmation) => {
+    setAccountPending(true);
+    setAccountFeedback("");
+    try {
+      await deleteFirebaseAccount(confirmation);
+      clearCruiserSession();
+      setUser(null);
+      setAuthMode("locked");
+      setAuthTab("login");
+      return true;
+    } catch (error) {
+      setAccountFeedback(getAuthErrorMessage(error));
+      return false;
+    } finally {
+      setAccountPending(false);
+    }
+  };
+
   return {
     authError,
+    authFeedback,
     authMode,
     authTab,
     fuelForm,
+    accountFeedback,
+    accountPending,
+    handleAccountDeletion,
+    handleAccountExport,
+    handleConsentWithdrawal,
+    handleEmailVerification,
     handleLogin,
     handleLogout,
     handleQuickLogin,
+    handlePasswordReset,
     handleSignUp,
     isFirebaseAuth: firebaseAuthEnabled,
     loginForm,

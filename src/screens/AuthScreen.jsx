@@ -9,12 +9,14 @@ function FieldError({ children }) {
 
 export function AuthScreen({
   authError,
+  authFeedback,
   authMode,
   authTab,
   isFirebaseAuth,
   loginForm,
   onAuthTabChange,
   onLogin,
+  onPasswordReset,
   onLoginFormChange,
   onQuickLogin,
   onSignUp,
@@ -98,6 +100,16 @@ export function AuthScreen({
                   placeholder="6+ characters"
                 />
               </Field>
+              {isFirebaseAuth ? (
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={onPasswordReset}
+                  className="min-h-12 w-full rounded-2xl border border-white/10 bg-white/[0.03] text-sm font-semibold text-neutral-300 disabled:opacity-50"
+                >
+                  Sifremi Unuttum
+                </button>
+              ) : null}
               <button
                 type="submit"
                 disabled={isBusy}
@@ -108,6 +120,11 @@ export function AuthScreen({
               {authMode === "error" ? (
                 <div className="rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
                   {authError || "Kimlik dogrulama islemi tamamlanamadi."}
+                </div>
+              ) : null}
+              {authFeedback ? (
+                <div className="rounded-2xl border border-lime-400/30 bg-lime-400/10 px-4 py-3 text-sm text-lime-100">
+                  {authFeedback}
                 </div>
               ) : null}
             </form>

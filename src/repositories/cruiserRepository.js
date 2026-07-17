@@ -126,9 +126,14 @@ export {
 
 export {
   isFirebaseAuthRepositoryEnabled,
+  deleteFirebaseAccount,
+  exportFirebaseAccountData,
   loadFirebaseAuthenticatedProfile,
   registerFirebaseAccount,
+  sendFirebaseEmailVerification,
+  sendFirebasePasswordReset,
   signInFirebaseAccount,
   signOutFirebaseAccount,
   subscribeFirebaseAuthState,
+  withdrawFirebasePrivacyConsent,
 } from "./firebaseAuthRepository";

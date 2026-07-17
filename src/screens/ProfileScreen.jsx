@@ -5,6 +5,13 @@ import { buildAchievementProgress, buildPersonalStats } from "../utils/socialSta
 import { normalizePrivacySettings } from "../utils/privacy";
 
 export function ProfileScreen({
+  accountFeedback,
+  accountPending,
+  isFirebaseAuth,
+  onDeleteAccount,
+  onExportAccount,
+  onSendEmailVerification,
+  onWithdrawConsent,
   onLogout,
   onOpenService,
   onOpenStats,
@@ -21,12 +28,13 @@ export function ProfileScreen({
   driverStatsStatus,
 }) {
   const [privacy, setPrivacy] = useState(() => normalizePrivacySettings(user.privacy));
-  const [kvkkAccepted, setKvkkAccepted] = useState(Boolean(user.privacyConsent?.kvkkAcceptedAt));
+  const [kvkkAccepted, setKvkkAccepted] = useState(Boolean(user.privacyConsent?.kvkkAcceptedAt && !user.privacyConsent?.withdrawnAt));
   const [safeZoneFeedback, setSafeZoneFeedback] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   useEffect(() => {
     setPrivacy(normalizePrivacySettings(user.privacy));
-    setKvkkAccepted(Boolean(user.privacyConsent?.kvkkAcceptedAt));
-  }, [user.privacy, user.privacyConsent?.kvkkAcceptedAt]);
+    setKvkkAccepted(Boolean(user.privacyConsent?.kvkkAcceptedAt && !user.privacyConsent?.withdrawnAt));
+  }, [user.privacy, user.privacyConsent?.kvkkAcceptedAt, user.privacyConsent?.withdrawnAt]);
   const achievementProgress = buildAchievementProgress(user);
   const personalStats = buildPersonalStats(user);
   const socialSummary = [
@@ -407,11 +415,41 @@ export function ProfileScreen({
         </form>
       </div>
 
+      {isFirebaseAuth ? (
+        <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
+          <p className="text-sm font-semibold text-neutral-100">Hesap ve Veri Kontrolleri</p>
+          <p className="mt-1 text-xs text-neutral-500">Dogrulama, veri tasinabilirligi ve KVKK tercihlerini buradan yonet.</p>
+          {accountFeedback ? (
+            <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-xs text-lime-100">
+              {accountFeedback}
+            </div>
+          ) : null}
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button type="button" disabled={accountPending || user.emailVerified} onClick={onSendEmailVerification} className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-neutral-200 disabled:opacity-50">
+              {user.emailVerified ? "E-posta Dogrulandi" : "Dogrulama E-postasi Gonder"}
+            </button>
+            <button type="button" disabled={accountPending} onClick={onExportAccount} className="min-h-12 rounded-2xl border border-lime-400/25 bg-lime-400/10 px-3 text-xs font-semibold text-lime-100 disabled:opacity-50">
+              Verilerimi JSON Olarak Indir
+            </button>
+            <button type="button" disabled={accountPending} onClick={onWithdrawConsent} className="min-h-12 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-3 text-xs font-semibold text-amber-100 disabled:opacity-50 sm:col-span-2">
+              KVKK Onayini Geri Cek ve Paylasimi Kapat
+            </button>
+          </div>
+          <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/[0.06] p-4">
+            <p className="text-xs font-semibold text-rose-100">Hesabi kalici olarak sil</p>
+            <p className="mt-1 text-[11px] text-neutral-500">Once aktif konvoylarini kapat ve klan sahipligini devret. Sonra asagidaki ifadeyi aynen yaz.</p>
+            <p className="mt-2 font-mono text-[11px] text-rose-200">DELETE MY CRUISER ACCOUNT</p>
+            <input value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} className="mt-3 h-12 w-full rounded-xl border border-rose-400/20 bg-black/30 px-3 text-sm outline-none focus:border-rose-400" />
+            <button type="button" disabled={accountPending || deleteConfirmation !== "DELETE MY CRUISER ACCOUNT"} onClick={() => onDeleteAccount?.(deleteConfirmation)} className="mt-3 min-h-12 w-full rounded-xl bg-rose-500 px-4 text-xs font-black text-white disabled:opacity-40">
+              Hesabimi ve Kisisel Verilerimi Sil
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="rounded-[1.75rem] border border-rose-400/15 bg-rose-500/5 p-4">
         <p className="text-sm font-semibold text-neutral-100">Account Session</p>
-        <p className="mt-1 text-xs text-neutral-500">
-          Bu cihazdaki CRUISER oturumunu guvenli sekilde kapat.
-        </p>
+        <p className="mt-1 text-xs text-neutral-500">Bu cihazdaki CRUISER oturumunu guvenli sekilde kapat.</p>
         <button
           type="button"
           onClick={onLogout}

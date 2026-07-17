@@ -45,12 +45,20 @@ function App() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const {
     authError,
+    authFeedback,
     authMode,
     authTab,
     fuelForm,
+    accountFeedback,
+    accountPending,
+    handleAccountDeletion,
+    handleAccountExport,
+    handleConsentWithdrawal,
+    handleEmailVerification,
     handleLogin,
     handleLogout,
     handleQuickLogin,
+    handlePasswordReset,
     handleSignUp,
     isFirebaseAuth,
     loginForm,
@@ -219,12 +227,14 @@ function App() {
     return (
       <AuthScreen
         authError={authError}
+        authFeedback={authFeedback}
         authMode={authMode}
         authTab={authTab}
         isFirebaseAuth={isFirebaseAuth}
         loginForm={loginForm}
         onAuthTabChange={setAuthTab}
         onLogin={(event) => handleLogin(event, { onAuthenticated: resetSessionView })}
+        onPasswordReset={handlePasswordReset}
         onLoginFormChange={setLoginForm}
         onQuickLogin={(profile) => handleQuickLogin(profile, { onAuthenticated: resetSessionView })}
         onSignUp={(event) => handleSignUp(event, { onAuthenticated: resetSessionView })}
@@ -506,6 +516,13 @@ function App() {
 
             {activeTab === "profile" ? (
               <ProfileScreen
+                accountFeedback={accountFeedback}
+                accountPending={accountPending}
+                isFirebaseAuth={isFirebaseAuth}
+                onDeleteAccount={handleAccountDeletion}
+                onExportAccount={handleAccountExport}
+                onSendEmailVerification={handleEmailVerification}
+                onWithdrawConsent={handleConsentWithdrawal}
                 onLogout={() => setShowLogoutConfirm(true)}
                 onProfileFormChange={setProfileForm}
                 onSavePrivacySettings={savePrivacySettings}

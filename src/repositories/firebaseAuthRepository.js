@@ -51,6 +51,7 @@ export async function loadFirebaseAuthenticatedProfile(firebaseUser) {
       id: firebaseUser.uid,
       firebaseUid: firebaseUser.uid,
       email: firebaseUser.email ?? profileData.email ?? "",
+      emailVerified: firebaseUser.emailVerified === true,
     },
   );
   return mergeVehiclePassportBundle(
@@ -59,6 +60,7 @@ export async function loadFirebaseAuthenticatedProfile(firebaseUser) {
       id: firebaseUser.uid,
       firebaseUid: firebaseUser.uid,
       email: firebaseUser.email ?? profileData.email ?? "",
+      emailVerified: firebaseUser.emailVerified === true,
     },
     vehicleBundle,
   );
@@ -122,6 +124,46 @@ export async function signOutFirebaseAccount() {
 
   const { signOut } = await import("firebase/auth");
   await signOut(services.auth);
+}
+
+export async function sendFirebasePasswordReset(email) {
+  const services = await getFirebaseCoreServices();
+  if (!services) {
+    throw createCruiserAuthError("cruiser/firebase-unavailable", "Firebase services are unavailable.");
+  }
+  const { sendPasswordResetEmail } = await import("firebase/auth");
+  await sendPasswordResetEmail(services.auth, String(email ?? "").trim());
+}
+
+export async function sendFirebaseEmailVerification() {
+  const services = await getFirebaseCoreServices();
+  if (!services?.auth.currentUser) {
+    throw createCruiserAuthError("cruiser/unauthenticated", "Firebase authentication is required.");
+  }
+  const { sendEmailVerification } = await import("firebase/auth");
+  await sendEmailVerification(services.auth.currentUser);
+}
+
+async function callAccountFunction(name, data = {}) {
+  const services = await getFirebaseCoreServices();
+  if (!services?.auth.currentUser) {
+    throw createCruiserAuthError("cruiser/unauthenticated", "Firebase authentication is required.");
+  }
+  const { httpsCallable } = await import("firebase/functions");
+  const result = await httpsCallable(services.functions, name)(data);
+  return result.data;
+}
+
+export function exportFirebaseAccountData() {
+  return callAccountFunction("exportMyData");
+}
+
+export function withdrawFirebasePrivacyConsent() {
+  return callAccountFunction("withdrawPrivacyConsent");
+}
+
+export function deleteFirebaseAccount(confirmation) {
+  return callAccountFunction("deleteMyAccount", { confirmation });
 }
 
 export async function subscribeFirebaseAuthState(onAuthStateChange) {
