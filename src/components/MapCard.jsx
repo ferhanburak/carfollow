@@ -528,6 +528,8 @@ function getFriendshipStatus(user, plate) {
 function FallbackGridMap({ pins, selectedPinId, onSelect, fullScreen = false, mapHeight = "18rem" }) {
   return (
     <div
+      data-testid="fallback-map-surface"
+      onClick={() => onSelect?.(null)}
       className={`relative overflow-hidden border border-white/8 bg-[radial-gradient(circle_at_center,_rgba(163,230,53,0.12),_transparent_32%),linear-gradient(180deg,#0f0f0f,#090909)] ${fullScreen ? "h-full rounded-none" : "rounded-[1.5rem]"}`}
       style={fullScreen ? undefined : { height: mapHeight }}
     >
@@ -541,7 +543,10 @@ function FallbackGridMap({ pins, selectedPinId, onSelect, fullScreen = false, ma
         <button
           key={pin.id}
           type="button"
-          onClick={() => onSelect(pin.id)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect(pin.id);
+          }}
           aria-label={`${pin.name} (${pin.type})`}
           className={`absolute flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl border text-lg transition ${
             selectedPinId === pin.id
@@ -688,9 +693,13 @@ export function GoogleMapCard({
     googleMapsApiKey: mapsApiKey,
     libraries: loaderLibraries,
   });
-  const mapCenter = selectedPin
-    ? { lat: selectedPin.lat ?? 39.8687, lng: selectedPin.lng ?? 32.7766 }
-    : { lat: 39.8687, lng: 32.7766 };
+  const selectedPinCenter = useMemo(
+    () => selectedPin
+      ? { lat: selectedPin.lat ?? 39.8687, lng: selectedPin.lng ?? 32.7766 }
+      : null,
+    [selectedPin?.lat, selectedPin?.lng],
+  );
+  const initialMapCenterRef = useRef(selectedPinCenter ?? { lat: 39.8687, lng: 32.7766 });
   const activeRoutePath = useMemo(
     () => getActiveConvoyRoute(selectedPin, user),
     [selectedPin, user],
@@ -877,58 +886,44 @@ export function GoogleMapCard({
   }, [activeRoutePath, hasMockRoute, isLoaded, selectedPin]);
 
   useEffect(() => {
-    if (!isLoaded || !mapRef.current) {
-      return;
-    }
+    if (!isLoaded || !mapRef.current) return undefined;
 
-    // Google Maps can render into a black/blank canvas if the container size
-    // settles after the map instance is created. Force a resize once visible.
     const resizeMap = () => {
-      if (!mapRef.current || !window.google?.maps?.event) {
-        return;
-      }
+      if (!mapRef.current || !window.google?.maps?.event) return;
 
       window.google.maps.event.trigger(mapRef.current, "resize");
     };
 
     const animationFrame = window.requestAnimationFrame(resizeMap);
     const timeoutId = window.setTimeout(resizeMap, 120);
-
-    if (hasDisplayedRoute && shouldAutoFrameRouteRef.current) {
-      const bounds = new window.google.maps.LatLngBounds();
-      displayedRoutePath.forEach((point) => bounds.extend(point));
-      mapRef.current.fitBounds(bounds, 48);
-      shouldAutoFrameRouteRef.current = false;
-      return () => {
-        window.cancelAnimationFrame(animationFrame);
-        window.clearTimeout(timeoutId);
-      };
-    }
-
-    if (navigationMode && currentLocation && followCurrentLocation) {
-      mapRef.current.panTo(currentLocation);
-      mapRef.current.setZoom(14);
-      return () => {
-        window.cancelAnimationFrame(animationFrame);
-        window.clearTimeout(timeoutId);
-      };
-    }
-
-    if (!selectedPin) {
-      return () => {
-        window.cancelAnimationFrame(animationFrame);
-        window.clearTimeout(timeoutId);
-      };
-    }
-
-    mapRef.current.panTo(mapCenter);
-    mapRef.current.setZoom(12);
-
     return () => {
       window.cancelAnimationFrame(animationFrame);
       window.clearTimeout(timeoutId);
     };
-  }, [currentLocation, displayedRoutePath, followCurrentLocation, hasDisplayedRoute, isLoaded, mapCenter, navigationMode, selectedPin]);
+  }, [fullScreen, isLoaded, mapHeight]);
+
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current || !hasDisplayedRoute || !shouldAutoFrameRouteRef.current) return;
+
+    const bounds = new window.google.maps.LatLngBounds();
+    displayedRoutePath.forEach((point) => bounds.extend(point));
+    mapRef.current.fitBounds(bounds, 48);
+    shouldAutoFrameRouteRef.current = false;
+  }, [displayedRoutePath, hasDisplayedRoute, isLoaded, selectedPinId]);
+
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current || !navigationMode || !currentLocation || !followCurrentLocation) return;
+
+    mapRef.current.panTo(currentLocation);
+    mapRef.current.setZoom(14);
+  }, [currentLocation, followCurrentLocation, isLoaded, navigationMode]);
+
+  useEffect(() => {
+    if (!isLoaded || !mapRef.current || !selectedPinId || !selectedPinCenter || hasDisplayedRoute) return;
+
+    mapRef.current.panTo(selectedPinCenter);
+    mapRef.current.setZoom(12);
+  }, [hasDisplayedRoute, isLoaded, selectedPinCenter, selectedPinId]);
 
   return (
     <div
@@ -980,10 +975,11 @@ export function GoogleMapCard({
           {!fullScreen ? <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 bg-[linear-gradient(180deg,rgba(10,10,10,0.75),transparent)]" /> : null}
           <GoogleMap
             mapContainerStyle={fullScreen ? { width: "100%", height: "100%" } : { width: "100%", height: mapHeight }}
-            center={mapCenter}
+            center={initialMapCenterRef.current}
             zoom={11}
             options={mapOptions}
             onClick={(event) => {
+              onSelect?.(null);
               if (navigationMode) {
                 return;
               }

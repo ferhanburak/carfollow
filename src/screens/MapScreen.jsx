@@ -302,7 +302,7 @@ export function MapScreen({
           selectedPinId={selectedPinId}
           onSelect={(pinId) => {
             onSelectPin(pinId);
-            setActiveOverlay("details");
+            setActiveOverlay(pinId ? "details" : null);
           }}
           onOpenDriverConversation={onGhostOpenConversation}
           onOpenDriverProfile={onGhostOpenProfile}

@@ -1,8 +1,15 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@react-google-maps/api", () => ({
-  GoogleMap: ({ children }) => <div data-testid="google-map">{children}</div>,
+  GoogleMap: ({ children, onClick }) => (
+    <div
+      data-testid="google-map"
+      onClick={() => onClick?.({ latLng: { lat: () => 39.87, lng: () => 32.78 } })}
+    >
+      {children}
+    </div>
+  ),
   InfoWindowF: ({ children }) => <div>{children}</div>,
   MarkerF: ({ position, title }) => (
     <div data-testid="map-marker" data-position={JSON.stringify(position)} data-title={title ?? ""} />
@@ -38,6 +45,7 @@ describe("GoogleMapCard convoy overlays", () => {
   });
 
   it("renders the accessible convoy as a map marker and route polyline", async () => {
+    const onSelect = vi.fn();
     const convoy = {
       id: "convoy-route-test",
       type: "meet",
@@ -57,7 +65,7 @@ describe("GoogleMapCard convoy overlays", () => {
         pins={[convoy]}
         selectedPin={convoy}
         selectedPinId={convoy.id}
-        onSelect={() => {}}
+        onSelect={onSelect}
         user={{ firebaseUid: "member-1" }}
         driveHud={{}}
         draftRoutePath={[]}
@@ -77,5 +85,8 @@ describe("GoogleMapCard convoy overlays", () => {
     await waitFor(() => {
       expect(JSON.parse(screen.getByTestId("map-polyline").dataset.path)).toEqual(routePath);
     });
+
+    fireEvent.click(screen.getByTestId("google-map"));
+    expect(onSelect).toHaveBeenLastCalledWith(null);
   });
 });

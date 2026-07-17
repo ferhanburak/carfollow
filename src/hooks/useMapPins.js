@@ -106,16 +106,16 @@ export function useMapPins({ initialWorld, user }) {
   const firebaseMapEnabled = isFirebaseMapRepositoryEnabled();
 
   const visibleMapPins = useMemo(() => filterVisibleMapPins(mapPins, user), [mapPins, user]);
-  const selectedPin = visibleMapPins.find((pin) => pin.id === selectedPinId) ?? visibleMapPins[0] ?? null;
+  const selectedPin = visibleMapPins.find((pin) => pin.id === selectedPinId) ?? null;
 
   useEffect(() => {
-    if (!visibleMapPins.length) {
+    if (!selectedPinId) {
       return;
     }
 
     const selectedStillVisible = visibleMapPins.some((pin) => pin.id === selectedPinId);
     if (!selectedStillVisible) {
-      setSelectedPinId(visibleMapPins[0].id);
+      setSelectedPinId(null);
     }
   }, [selectedPinId, visibleMapPins]);
 

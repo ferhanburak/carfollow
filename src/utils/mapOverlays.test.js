@@ -54,7 +54,7 @@ describe("map overlay model", () => {
     expect(result.routePath).toEqual([]);
   });
 
-  it("drops invalid coordinates before Google Maps receives marker props", () => {
+  it("drops invalid coordinates and does not auto-select another marker", () => {
     const result = buildMapOverlayModel({
       pins: [
         { id: "valid", type: "spot", lat: 39.9, lng: 32.8 },
@@ -65,6 +65,21 @@ describe("map overlay model", () => {
     });
 
     expect(result.markers.map((pin) => pin.id)).toEqual(["valid"]);
-    expect(result.selectedPin?.id).toBe("valid");
+    expect(result.selectedPin).toBeNull();
+  });
+
+  it("keeps every marker unselected after a blank map click", () => {
+    const result = buildMapOverlayModel({
+      pins: [
+        { id: "spot-1", type: "spot", lat: 39.9, lng: 32.8 },
+        { id: "meet-1", type: "meet", lat: 39.8, lng: 32.7 },
+      ],
+      selectedPinId: null,
+      user: null,
+    });
+
+    expect(result.markers).toHaveLength(2);
+    expect(result.selectedPin).toBeNull();
+    expect(result.routePath).toEqual([]);
   });
 });

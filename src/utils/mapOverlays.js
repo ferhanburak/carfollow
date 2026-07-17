@@ -29,7 +29,9 @@ export function getActiveConvoyRoute(selectedPin, user) {
 
 export function buildMapOverlayModel({ pins = [], selectedPinId, user }) {
   const markers = pins.filter(hasValidMapCoordinates).map(normalizeMapPinCoordinates);
-  const selectedPin = markers.find((pin) => pin.id === selectedPinId) ?? markers[0] ?? null;
+  const selectedPin = selectedPinId
+    ? markers.find((pin) => pin.id === selectedPinId) ?? null
+    : null;
 
   return {
     markers,
