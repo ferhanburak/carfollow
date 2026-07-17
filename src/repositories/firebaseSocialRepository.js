@@ -179,6 +179,10 @@ export function searchFirebaseDriverByPlate(plate) {
   return callSocialFunction("searchDriverByPlate", { plate });
 }
 
+export function getFirebasePublicDriverProfile(targetUserId, context = {}) {
+  return callSocialFunction("getPublicDriverProfile", { targetUserId, context });
+}
+
 export function updateFirebasePrivacySettings(privacy, acceptKvkk) {
   return callSocialFunction("updatePrivacySettings", { privacy, acceptKvkk });
 }

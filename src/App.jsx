@@ -5,6 +5,7 @@ import { NotificationCenter } from "./components/NotificationCenter";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
 import { AuthScreen } from "./screens/AuthScreen";
+import { getFirebasePublicDriverProfile } from "./repositories/cruiserRepository";
 
 const DriveScreen = lazy(() => import("./screens/DriveScreen").then((module) => ({ default: module.DriveScreen })));
 const GarageScreen = lazy(() => import("./screens/GarageScreen").then((module) => ({ default: module.GarageScreen })));
@@ -63,6 +64,23 @@ function App() {
     signUpForm,
     user,
   } = useCruiserAuth();
+
+  const openPublicProfile = async (profile, context = {}) => {
+    if (!profile) return;
+    const targetUserId = profile.userId ?? profile.firebaseUid ?? profile.id;
+    if (!isFirebaseAuth || !targetUserId) {
+      setPublicProfile(profile);
+      return;
+    }
+
+    try {
+      const result = await getFirebasePublicDriverProfile(targetUserId, context);
+      setPublicProfile(result?.driver ? { ...result.driver, source: profile.source ?? "access-matrix" } : null);
+    } catch (error) {
+      console.error("Public profile access failed", error);
+      setPublicProfile(null);
+    }
+  };
 
   useEffect(() => {
     // A sign-out can change the active Firebase user before this component rerenders.
@@ -367,7 +385,7 @@ function App() {
                   openConversation(profile);
                   setActiveTab("social");
                 }}
-                onGhostOpenProfile={(profile) => setPublicProfile({ ...profile, source: "live-map" })}
+                onGhostOpenProfile={(profile) => void openPublicProfile({ ...profile, source: "live-map" })}
                 onGhostRequestFriend={(profile) => requestFriend(profile)}
                 onSelectPin={setSelectedPinId}
                 onApproveCruiseJoinRequest={approveCruiseJoinRequest}
@@ -435,7 +453,7 @@ function App() {
                 onClanFormChange={setClanForm}
                 onFriendSearchChange={setFriendSearchQuery}
                 onMessageDraftChange={setMessageDraft}
-                onOpenPublicProfile={(profile) => setPublicProfile(profile)}
+                onOpenPublicProfile={(profile) => void openPublicProfile(profile, { convoyId: profile.convoyId })}
                 openConversation={openConversation}
                 presenceMap={presenceMap}
                 inviteFriendToClan={inviteFriendToClan}

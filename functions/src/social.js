@@ -1,5 +1,13 @@
 const SOCIAL_SCHEMA_VERSION = 1;
 
+const PROFILE_RELATIONS = Object.freeze({
+  SELF: "self",
+  FRIEND: "friend",
+  CLAN: "clan",
+  CONVOY: "convoy",
+  STRANGER: "stranger",
+});
+
 const DEFAULT_PRIVACY_SETTINGS = Object.freeze({
   plateSearchEnabled: false,
   showPlateOnLiveMap: false,
@@ -62,6 +70,36 @@ function projectPlateSearchResult(profile, fallbackUserId = "") {
     region: privacy.showRegionInSearch ? String(profile?.region ?? "") : "",
     vehicleType: String(profile?.vehicleType ?? ""),
     driverScore: Number(profile?.driverScore ?? 0),
+  };
+}
+
+function projectPublicProfileForViewer(profile, relation = PROFILE_RELATIONS.STRANGER, fallbackUserId = "") {
+  const privacy = normalizePrivacySettings(profile?.privacy);
+  const userId = String(profile?.id ?? profile?.userId ?? profile?.firebaseUid ?? fallbackUserId);
+  const trusted = [
+    PROFILE_RELATIONS.SELF,
+    PROFILE_RELATIONS.FRIEND,
+    PROFILE_RELATIONS.CLAN,
+    PROFILE_RELATIONS.CONVOY,
+  ].includes(relation);
+
+  return {
+    userId,
+    id: userId,
+    relation,
+    plate: trusted ? String(profile?.plate ?? "") : maskPlate(profile?.plate),
+    plateMasked: maskPlate(profile?.plate),
+    fullName: trusted ? String(profile?.fullName ?? profile?.plate ?? "CRUISER Driver") : "CRUISER Driver",
+    model: trusted || privacy.showModelInSearch ? String(profile?.model ?? "") : "",
+    region: trusted || privacy.showRegionInSearch ? String(profile?.region ?? "") : "",
+    vehicleType: String(profile?.vehicleType ?? ""),
+    avatar: trusted ? String(profile?.avatar ?? "") : "",
+    clan: trusted ? String(profile?.clan ?? "") : "",
+    clanId: trusted ? String(profile?.clanId ?? "") : "",
+    driverScore: Number(profile?.driverScore ?? 0),
+    monthlyKm: Number(profile?.monthlyKm ?? 0),
+    harmonyVotes: Number(profile?.harmonyVotes ?? 0),
+    alertVotes: Number(profile?.alertVotes ?? 0),
   };
 }
 
@@ -148,6 +186,7 @@ function getCounterpartUserId(friendship, userId) {
 
 module.exports = {
   SOCIAL_SCHEMA_VERSION,
+  PROFILE_RELATIONS,
   DEFAULT_PRIVACY_SETTINGS,
   buildBlockedDriverDocument,
   buildFriendshipDocument,
@@ -158,5 +197,6 @@ module.exports = {
   normalizePlate,
   normalizePrivacySettings,
   projectPlateSearchResult,
+  projectPublicProfileForViewer,
   projectSocialProfile,
 };

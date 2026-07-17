@@ -24,7 +24,9 @@ const {
   buildPairId,
   normalizePlate,
   normalizePrivacySettings,
+  PROFILE_RELATIONS,
   projectPlateSearchResult,
+  projectPublicProfileForViewer,
 } = require("./social");
 const {
   buildClanDocument,
@@ -602,6 +604,56 @@ exports.searchDriverByPlate = secureCall("searchDriverByPlate", { rateLimit: { l
   if (!privacy.plateSearchEnabled) return { ok: true, driver: null };
 
   return { ok: true, driver: projectPlateSearchResult(target, targetUserId) };
+});
+
+exports.getPublicDriverProfile = secureCall("getPublicDriverProfile", { rateLimit: { limit: 60, windowSeconds: 600 } }, async (request) => {
+  const actorUserId = requireAuth(request);
+  const targetUserId = String(request.data?.targetUserId ?? "");
+  if (!targetUserId || targetUserId.length > 128 || targetUserId.includes("/")) {
+    throw new HttpsError("invalid-argument", "A valid targetUserId is required.");
+  }
+
+  const [actorSnapshot, targetSnapshot, actorBlockSnapshot, targetBlockSnapshot] = await Promise.all([
+    privateUserDocument(actorUserId, "profile", "current").get(),
+    privateUserDocument(targetUserId, "profile", "current").get(),
+    blockedDriverDocument(actorUserId, targetUserId).get(),
+    blockedDriverDocument(targetUserId, actorUserId).get(),
+  ]);
+  if (!targetSnapshot.exists || actorBlockSnapshot.exists || targetBlockSnapshot.exists) {
+    return { ok: true, driver: null };
+  }
+
+  const actor = actorSnapshot.exists ? actorSnapshot.data() : {};
+  const target = targetSnapshot.data();
+  let relation = actorUserId === targetUserId ? PROFILE_RELATIONS.SELF : PROFILE_RELATIONS.STRANGER;
+
+  if (relation === PROFILE_RELATIONS.STRANGER) {
+    const friendshipSnapshot = await friendshipDocument(actorUserId, targetUserId).get();
+    if (friendshipSnapshot.exists && friendshipSnapshot.data().status === "accepted") {
+      relation = PROFILE_RELATIONS.FRIEND;
+    } else if (actor.clanId && actor.clanId === target.clanId) {
+      relation = PROFILE_RELATIONS.CLAN;
+    }
+  }
+
+  const convoyId = String(request.data?.context?.convoyId ?? "");
+  if (relation === PROFILE_RELATIONS.STRANGER && convoyId && convoyId.length <= 128 && !convoyId.includes("/")) {
+    const [actorMember, targetMember] = await Promise.all([
+      publicDocument("convoyMembers", buildScopedMemberId(convoyId, actorUserId)).get(),
+      publicDocument("convoyMembers", buildScopedMemberId(convoyId, targetUserId)).get(),
+    ]);
+    if (
+      actorMember.exists && actorMember.data().membershipStatus === "approved" &&
+      targetMember.exists && targetMember.data().membershipStatus === "approved"
+    ) {
+      relation = PROFILE_RELATIONS.CONVOY;
+    }
+  }
+
+  return {
+    ok: true,
+    driver: projectPublicProfileForViewer(target, relation, targetUserId),
+  };
 });
 
 exports.updatePrivacySettings = secureCall("updatePrivacySettings", async (request) => {

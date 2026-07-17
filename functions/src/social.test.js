@@ -8,7 +8,9 @@ const {
   getCounterpartUserId,
   maskPlate,
   normalizePrivacySettings,
+  PROFILE_RELATIONS,
   projectPlateSearchResult,
+  projectPublicProfileForViewer,
 } = require("./social");
 
 const requester = {
@@ -29,6 +31,37 @@ const target = {
 test("buildPairId is stable regardless of request direction", () => {
   assert.equal(buildPairId("driver-b", "driver-a"), "driver-a__driver-b");
   assert.equal(buildPairId("driver-a", "driver-b"), "driver-a__driver-b");
+});
+
+test("public profile projection follows the relationship access matrix", () => {
+  const privateTarget = {
+    ...target,
+    avatar: "https://example.test/avatar.jpg",
+    clan: "Night Crew",
+    clanId: "night-crew",
+    driverScore: 88,
+    monthlyKm: 1240,
+    harmonyVotes: 7,
+    alertVotes: 1,
+    privacy: { showModelInSearch: false, showRegionInSearch: false },
+  };
+
+  const stranger = projectPublicProfileForViewer(privateTarget);
+  assert.equal(stranger.relation, PROFILE_RELATIONS.STRANGER);
+  assert.equal(stranger.plate, maskPlate(privateTarget.plate));
+  assert.equal(stranger.fullName, "CRUISER Driver");
+  assert.equal(stranger.model, "");
+  assert.equal(stranger.region, "");
+  assert.equal(stranger.avatar, "");
+  assert.equal(stranger.clanId, "");
+  assert.equal(stranger.driverScore, 88);
+
+  const friend = projectPublicProfileForViewer(privateTarget, PROFILE_RELATIONS.FRIEND);
+  assert.equal(friend.plate, "34 TEST 01");
+  assert.equal(friend.fullName, "First Driver");
+  assert.equal(friend.model, "Yamaha R6");
+  assert.equal(friend.region, "Istanbul");
+  assert.equal(friend.clanId, "night-crew");
 });
 
 test("buildFriendshipDocument stores a participant-scoped pending edge", () => {

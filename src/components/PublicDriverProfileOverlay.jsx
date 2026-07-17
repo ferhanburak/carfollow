@@ -85,19 +85,25 @@ function getProfileStatus(user, profile) {
   if (!profile) {
     return "none";
   }
-  if (profile.plate === user.plate) {
+  const profileUserId = profile.userId ?? profile.firebaseUid ?? profile.id;
+  const currentUserId = user.firebaseUid ?? user.userId ?? user.id;
+  const matchesProfile = (entry) => {
+    const entryUserId = entry.userId ?? entry.firebaseUid ?? entry.id;
+    return profileUserId && entryUserId ? profileUserId === entryUserId : entry.plate === profile.plate;
+  };
+  if ((profileUserId && profileUserId === currentUserId) || profile.plate === user.plate) {
     return "self";
   }
-  if ((user.blockedDrivers ?? []).some((entry) => entry.plate === profile.plate)) {
+  if ((user.blockedDrivers ?? []).some(matchesProfile)) {
     return "blocked";
   }
-  if ((user.friends ?? []).some((entry) => entry.plate === profile.plate)) {
+  if ((user.friends ?? []).some(matchesProfile)) {
     return "friend";
   }
-  if ((user.incomingRequests ?? []).some((entry) => entry.plate === profile.plate)) {
+  if ((user.incomingRequests ?? []).some(matchesProfile)) {
     return "incoming";
   }
-  if ((user.outgoingRequests ?? []).some((entry) => entry.plate === profile.plate)) {
+  if ((user.outgoingRequests ?? []).some(matchesProfile)) {
     return "outgoing";
   }
   return "none";

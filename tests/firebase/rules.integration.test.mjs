@@ -310,10 +310,12 @@ describe("Firestore security rules", { concurrency: false }, () => {
       .authenticatedContext("anonymous-user", { firebase: { sign_in_provider: "anonymous" } })
       .firestore();
     const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).firestore();
+    const otherDb = testEnvironment.authenticatedContext(OTHER_ID).firestore();
     const profileReference = publicPath("publicProfiles", OWNER_ID);
 
     await assertFails(getDoc(doc(unauthenticatedDb, profileReference)));
     await assertFails(getDoc(doc(anonymousDb, profileReference)));
+    await assertFails(getDoc(doc(otherDb, profileReference)));
     await assertSucceeds(getDoc(doc(ownerDb, profileReference)));
   });
 

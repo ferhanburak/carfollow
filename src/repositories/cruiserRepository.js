@@ -53,6 +53,7 @@ export {
   blockFirebaseDriver,
   buildFirebaseSocialState,
   cancelFirebaseFriendshipRequest,
+  getFirebasePublicDriverProfile,
   isFirebaseSocialRepositoryEnabled,
   removeFirebaseFriendship,
   requestFirebaseFriendship,
