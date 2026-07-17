@@ -100,6 +100,15 @@ function getTripStatusLabel(value) {
   return "Hazir";
 }
 
+function formatLaunchTime(pin) {
+  const scheduledStartAtMs = Number(pin?.scheduledStartAtMs ?? 0);
+  if (!scheduledStartAtMs) return pin?.time ?? "--";
+  return new Intl.DateTimeFormat("tr-TR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(scheduledStartAtMs));
+}
+
 export function MeetPinPanel({
   convoyFeedback,
   pin,
@@ -132,7 +141,7 @@ export function MeetPinPanel({
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <InsightCard label="Launch Time" value={accessState.canViewDetails ? pin.time : "Restricted"} />
+        <InsightCard label="Launch Time" value={accessState.canViewDetails ? formatLaunchTime(pin) : "Restricted"} />
         <InsightCard label="Route" value={accessState.canViewDetails ? pin.route : "Trusted drivers only"} />
       </div>
 
@@ -164,6 +173,15 @@ export function MeetPinPanel({
       {convoyFeedback ? (
         <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-100">
           {convoyFeedback}
+        </div>
+      ) : null}
+
+      {accessState.canViewDetails && ["planning", "rolling", "delayed"].includes(lifecycleStatus) ? (
+        <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+          <p className="font-semibold">Otomatik konvoy takibi</p>
+          <p className="mt-1 text-xs text-sky-100/75">
+            Baslangic saatinde onayli suruculerin GPS takibi acilir. Son aktif surucu hedefe ulastiginda konvoy tamamlanir ve oylama acilir.
+          </p>
         </div>
       ) : null}
 

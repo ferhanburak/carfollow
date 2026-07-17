@@ -189,10 +189,10 @@ export function MapComposerPanel({
                 <div className="grid grid-cols-2 gap-3">
                   <CompactField label="Launch Time">
                     <input
+                      type="datetime-local"
                       value={form.time}
                       onChange={(event) => onFormChange((current) => ({ ...current, time: event.target.value }))}
                       className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
-                      placeholder="23:30"
                     />
                     {errors.time ? <p className="text-xs text-rose-300">{errors.time}</p> : null}
                   </CompactField>

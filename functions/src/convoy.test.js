@@ -5,7 +5,9 @@ const {
   buildConvoyMemberDocument,
   buildPublicMapSummary,
   canSeeConvoy,
+  getDistanceMeters,
   presentConvoy,
+  resolveConvoyLocationUpdate,
 } = require("./convoy");
 
 const host = { id: "host", plate: "06 HOST 06", fullName: "Host", clanId: "clan-1", clan: "Apex", driverScore: 90, harmonyVotes: 8 };
@@ -58,4 +60,24 @@ test("member documents preserve identity and reputation snapshots", () => {
   assert.equal(member.id, "convoy-1__guest");
   assert.equal(member.membershipStatus, "pending");
   assert.equal(member.scoreSnapshot, 80);
+});
+
+test("scheduled convoy waits for launch time before GPS tracking starts", () => {
+  const convoy = createConvoy({ scheduledStartAtMs: 10_000, routePath: [{ lat: 39.9, lng: 32.8 }, { lat: 39.8, lng: 32.7 }] });
+  const update = resolveConvoyLocationUpdate(convoy, { lat: 39.85, lng: 32.75 }, 9_000);
+  assert.equal(update.lifecycleStatus, "planning");
+  assert.equal(update.tripStatus, "ready");
+  assert.equal(update.startsInMs, 1_000);
+});
+
+test("GPS heartbeat starts a due convoy and marks destination arrival", () => {
+  const destination = { lat: 39.8, lng: 32.7 };
+  const convoy = createConvoy({ scheduledStartAtMs: 10_000, routePath: [{ lat: 39.9, lng: 32.8 }, destination] });
+  const driving = resolveConvoyLocationUpdate(convoy, { lat: 39.85, lng: 32.75 }, 11_000);
+  const arrived = resolveConvoyLocationUpdate(convoy, destination, 11_000);
+  assert.equal(driving.lifecycleStatus, "rolling");
+  assert.equal(driving.tripStatus, "enroute");
+  assert.equal(arrived.tripStatus, "arrived");
+  assert.equal(arrived.distanceToDestinationM, 0);
+  assert.ok(getDistanceMeters({ lat: 39.9, lng: 32.8 }, destination) > 10_000);
 });

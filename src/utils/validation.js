@@ -78,6 +78,8 @@ export function validateMapPinForm(form) {
   if (form.type === "meet") {
     if (!form.time.trim()) {
       errors.time = "Launch time is required.";
+    } else if (!Number.isFinite(new Date(form.time).getTime())) {
+      errors.time = "Select a valid launch date and time.";
     }
     if (!form.route.trim()) {
       errors.route = "Route summary is required.";
@@ -105,6 +107,8 @@ export function validateMapPinForm(form) {
     }
     if (Array.isArray(form.routePoints) && form.routePoints.length === 1) {
       errors.routePoints = "Add at least 2 route points or clear the draft route.";
+    } else if (!Array.isArray(form.routePoints) || form.routePoints.length < 2) {
+      errors.routePoints = "Select at least 2 route points for automatic arrival tracking.";
     }
   }
   if (form.type === "wash") {

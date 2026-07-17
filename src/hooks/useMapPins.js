@@ -589,6 +589,7 @@ export function useMapPins({ initialWorld, user }) {
       newPin = {
         ...basePin,
         time: mapPinForm.time,
+        scheduledStartAtMs: new Date(mapPinForm.time).getTime(),
         route: mapPinForm.route.trim(),
         capacity: Number(mapPinForm.capacity),
         routePath: mapPinForm.routePoints.length > 1 ? mapPinForm.routePoints : buildMeetRoutePath(lat, lng),
@@ -780,6 +781,7 @@ export function useMapPins({ initialWorld, user }) {
     mapPins: visibleMapPins,
     pickMapLocation,
     rateAttendee,
+    refreshFirebaseConvoys,
     reportSpotPhoto,
     removeLastDraftRoutePoint,
     resetMapInteractions,

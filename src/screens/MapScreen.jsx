@@ -195,6 +195,7 @@ function OverlayCard({ children, title, onClose }) {
 
 export function MapScreen({
   convoyFeedback,
+  convoyTracking,
   drivers,
   driveHud,
   driveSessionPending,
@@ -282,7 +283,13 @@ export function MapScreen({
         <div className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-3 py-2">
           <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Durum</p>
           <p className="mt-1 truncate text-xs font-bold text-white">
-            {driveSessionStatus === "error" ? "Backend hatasi" : liveStatusLabel}
+            {convoyTracking?.status === "tracking"
+              ? "Konvoy GPS aktif"
+              : convoyTracking?.status === "arrived"
+                ? "Hedefe varildi"
+                : convoyTracking?.status === "completed"
+                  ? "Konvoy tamamlandi"
+                  : driveSessionStatus === "error" ? "Backend hatasi" : liveStatusLabel}
           </p>
         </div>
         <div className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-3 py-2">
@@ -294,6 +301,16 @@ export function MapScreen({
           <p className="mt-1 truncate text-xs font-bold text-white">{accessLabel}</p>
         </div>
       </div>
+
+      {convoyTracking?.status && !["idle", "tracking"].includes(convoyTracking.status) ? (
+        <div className={`mb-3 rounded-[0.95rem] border px-3 py-2 text-xs ${convoyTracking.error ? "border-rose-400/30 bg-rose-500/10 text-rose-100" : "border-lime-400/25 bg-lime-400/10 text-lime-100"}`}>
+          {convoyTracking.error || (convoyTracking.status === "requesting"
+            ? "Konvoy saati geldi. GPS izni bekleniyor..."
+            : convoyTracking.status === "arrived"
+              ? "Rota sonuna ulastin. Diger suruculer bekleniyor."
+              : "Konvoy tamamlandi. Surucu oylamasi acildi.")}
+        </div>
+      ) : null}
 
       <div className="relative flex-1 min-h-0">
         <MapCard

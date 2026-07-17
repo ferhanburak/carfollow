@@ -112,6 +112,7 @@ function App() {
     clans,
     clearDraftRoute,
     convoyFeedback,
+    convoyTracking,
     conversationList,
     createNewClan,
     createPassportExport,
@@ -416,6 +417,7 @@ function App() {
                 selectedPin={selectedPin}
                 selectedPinId={selectedPinId}
                 convoyFeedback={convoyFeedback}
+                convoyTracking={convoyTracking}
                 spotPhotoErrors={spotPhotoErrors}
                 spotPhotoFeedback={spotPhotoFeedback}
                 spotPhotoForm={spotPhotoForm}

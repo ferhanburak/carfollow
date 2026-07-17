@@ -4,6 +4,7 @@ const ACCESS_POLICIES = ["open", "request", "trusted"];
 const DETAIL_VISIBILITIES = ["public", "trusted"];
 const LIFECYCLE_STATUSES = ["planning", "rolling", "delayed", "completed"];
 const TRIP_STATUSES = ["ready", "enroute", "arrived", "cancelled"];
+const DEFAULT_ARRIVAL_RADIUS_M = 150;
 
 function safeText(value, maxLength) {
   return String(value ?? "").trim().replace(/\s+/g, " ").slice(0, maxLength);
@@ -18,6 +19,53 @@ function safeCoordinate(value, limit) {
 function safeRoutePoints(points) {
   if (!Array.isArray(points)) return [];
   return points.slice(0, 40).map((point) => ({ lat: safeCoordinate(point?.lat, 90), lng: safeCoordinate(point?.lng, 180) }));
+}
+
+function safeScheduledStartAtMs(value) {
+  const scheduledStartAtMs = Number(value);
+  return Number.isFinite(scheduledStartAtMs) && scheduledStartAtMs > 0
+    ? Math.round(scheduledStartAtMs)
+    : null;
+}
+
+function getDistanceMeters(left, right) {
+  const radians = (degrees) => (degrees * Math.PI) / 180;
+  const latitudeDelta = radians(Number(right.lat) - Number(left.lat));
+  const longitudeDelta = radians(Number(right.lng) - Number(left.lng));
+  const startLatitude = radians(Number(left.lat));
+  const endLatitude = radians(Number(right.lat));
+  const haversine =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(startLatitude) * Math.cos(endLatitude) * Math.sin(longitudeDelta / 2) ** 2;
+  return 6371000 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+function resolveConvoyLocationUpdate(convoy, location, nowMs = Date.now()) {
+  const destination = convoy?.routePath?.at?.(-1);
+  const scheduledStartAtMs = safeScheduledStartAtMs(convoy?.scheduledStartAtMs);
+  const lifecycleStatus = convoy?.lifecycleStatus ?? "planning";
+  if (lifecycleStatus === "completed") {
+    return { lifecycleStatus, tripStatus: "arrived", distanceToDestinationM: 0, completed: true };
+  }
+  if (lifecycleStatus === "planning" && (!scheduledStartAtMs || nowMs < scheduledStartAtMs)) {
+    return {
+      lifecycleStatus,
+      tripStatus: "ready",
+      distanceToDestinationM: null,
+      startsInMs: scheduledStartAtMs ? scheduledStartAtMs - nowMs : null,
+      completed: false,
+    };
+  }
+  if (!destination) throw new Error("Convoy route destination is missing.");
+  const distanceToDestinationM = Math.round(getDistanceMeters(location, destination));
+  const arrivalRadiusM = Number(convoy?.arrivalRadiusM ?? DEFAULT_ARRIVAL_RADIUS_M);
+  return {
+    lifecycleStatus: lifecycleStatus === "planning" ? "rolling" : lifecycleStatus,
+    tripStatus: distanceToDestinationM <= arrivalRadiusM ? "arrived" : "enroute",
+    distanceToDestinationM,
+    startsInMs: 0,
+    completed: false,
+  };
 }
 
 function projectDriver(profile, fallbackUserId = "") {
@@ -59,6 +107,7 @@ function buildConvoyDocument({ convoyId, pin, host, invitedProfiles = [], timest
   }).filter(([userId]) => userId && userId !== hostProfile.userId)).values()).slice(0, 20);
   const routePath = safeRoutePoints(pin?.routePath);
   if (routePath.length === 1) throw new Error("A convoy route needs at least two points.");
+  const scheduledStartAtMs = safeScheduledStartAtMs(pin?.scheduledStartAtMs);
   const minDriverScore = Number(pin?.minDriverScore ?? 0);
   const minHarmonyVotes = Number(pin?.minHarmonyVotes ?? 0);
   const maxAlertVotes = Number(pin?.maxAlertVotes ?? 999);
@@ -72,6 +121,8 @@ function buildConvoyDocument({ convoyId, pin, host, invitedProfiles = [], timest
     route,
     routePath,
     time,
+    scheduledStartAtMs,
+    arrivalRadiusM: DEFAULT_ARRIVAL_RADIUS_M,
     capacity,
     visibility,
     accessPolicy,
@@ -191,7 +242,7 @@ function presentConvoy(convoy, profile, membership, members) {
 }
 
 module.exports = {
-  ACCESS_POLICIES, CONVOY_SCHEMA_VERSION, DETAIL_VISIBILITIES, LIFECYCLE_STATUSES, TRIP_STATUSES, VISIBILITIES,
+  ACCESS_POLICIES, CONVOY_SCHEMA_VERSION, DEFAULT_ARRIVAL_RADIUS_M, DETAIL_VISIBILITIES, LIFECYCLE_STATUSES, TRIP_STATUSES, VISIBILITIES,
   buildConvoyDocument, buildConvoyMemberDocument, buildPublicMapSummary, canSeeConvoy, canSeeDetails,
-  meetsTrust, presentConvoy, projectDriver, safeText,
+  getDistanceMeters, meetsTrust, presentConvoy, projectDriver, resolveConvoyLocationUpdate, safeText,
 };

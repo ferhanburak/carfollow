@@ -15,6 +15,7 @@ import { useDriveSession } from "./useDriveSession";
 import { useDriverStats } from "./useDriverStats";
 import { useFirebaseSync } from "./useFirebaseSync";
 import { useClanGraph } from "./useClanGraph";
+import { useConvoyTracking } from "./useConvoyTracking";
 import { useMapPins } from "./useMapPins";
 import { useModeration } from "./useModeration";
 import { useNotifications } from "./useNotifications";
@@ -68,6 +69,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     mapPins,
     pickMapLocation,
     rateAttendee,
+    refreshFirebaseConvoys,
     reportSpotPhoto,
     removeLastDraftRoutePoint,
     resetMapInteractions,
@@ -94,6 +96,12 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   } = useMapPins({
     initialWorld,
     user,
+  });
+
+  const convoyTracking = useConvoyTracking({
+    mapPins,
+    user,
+    onRefreshConvoys: refreshFirebaseConvoys,
   });
 
   const { firebaseStatus, syncFuelLog, syncServiceLog, syncTelemetry } = useFirebaseSync({
@@ -296,6 +304,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     clans,
     clearDraftRoute,
     convoyFeedback,
+    convoyTracking,
     conversationList,
     createPassportExport,
     createNewClan,

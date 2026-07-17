@@ -77,6 +77,7 @@ export const inviteFirebaseConvoyMember = (convoyId, targetUserId) => callMapFun
 export const updateFirebaseConvoyLifecycle = (convoyId, lifecycleStatus) => callMapFunction("updateConvoyLifecycle", { convoyId, lifecycleStatus });
 export const updateFirebaseConvoyTripStatus = (convoyId, tripStatus) => callMapFunction("updateConvoyTripStatus", { convoyId, tripStatus });
 export const rateFirebaseConvoyMember = (convoyId, targetUserId, signal) => callMapFunction("rateConvoyMember", { convoyId, targetUserId, signal });
+export const syncFirebaseConvoyLocation = (convoyId, location) => callMapFunction("syncConvoyLocation", { convoyId, ...location });
 
 export async function loadFirebaseAccessibleConvoys() {
   const response = await callMapFunction("listAccessibleConvoys", {});

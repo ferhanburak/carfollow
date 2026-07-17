@@ -19,6 +19,12 @@ export const createWashForm = () => ({
   note: "",
 });
 
+function createDefaultConvoyTime() {
+  const date = new Date(Date.now() + 60 * 60 * 1000);
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
+  return localDate.toISOString().slice(0, 16);
+}
+
 export const createMapPinForm = (seedPin) => ({
   type: "meet",
   name: "",
@@ -26,7 +32,7 @@ export const createMapPinForm = (seedPin) => ({
   lng: seedPin?.lng ?? 32.7766,
   description: "",
   tags: "#NightRun #CrewApproved",
-  time: "22:30",
+  time: createDefaultConvoyTime(),
   route: "",
   foam: 5,
   water: 5,

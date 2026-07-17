@@ -164,7 +164,10 @@ function getConvoyGhostMarkers(selectedPin, user, driveHud, isDriving) {
         return null;
       }
 
-      const position = interpolatePoint(selectedPin.routePath, progress);
+      const livePosition = Number.isFinite(Number(attendee.lat)) && Number.isFinite(Number(attendee.lng))
+        ? { lat: Number(attendee.lat), lng: Number(attendee.lng) }
+        : null;
+      const position = livePosition ?? interpolatePoint(selectedPin.routePath, progress);
       if (!position) {
         return null;
       }

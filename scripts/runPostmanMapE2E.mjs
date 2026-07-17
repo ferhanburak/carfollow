@@ -186,6 +186,7 @@ async function main() {
       route: "Kizilay - Cankaya - Umitkoy",
       routePath: selectedConvoyRoute,
       time: "2026-07-18 22:30",
+      scheduledStartAtMs: Date.now() - 60_000,
       capacity: 12,
       visibility: "public",
       accessPolicy: "request",
@@ -213,9 +214,16 @@ async function main() {
   assert(memberView.attendees.some((item) => item.userId === accountB.uid), "Account B was not approved.");
   assertRoutePath(memberView.routePath, selectedConvoyRoute, "Approved member route");
   pass("Public convoy request, approval and route visibility");
-  await callFunction("updateConvoyTripStatus", accountB, { convoyId: convoy.convoyId, tripStatus: "enroute" });
-  await callFunction("updateConvoyLifecycle", accountA, { convoyId: convoy.convoyId, lifecycleStatus: "rolling" });
-  await callFunction("updateConvoyLifecycle", accountA, { convoyId: convoy.convoyId, lifecycleStatus: "completed" });
+  const destination = selectedConvoyRoute.at(-1);
+  const hostArrival = await callFunction("syncConvoyLocation", accountA, { convoyId: convoy.convoyId, ...destination, accuracy: 5 });
+  assert(hostArrival.tripStatus === "arrived" && hostArrival.lifecycleStatus === "rolling", "Convoy completed before every active member arrived.");
+  const memberArrival = await callFunction("syncConvoyLocation", accountB, { convoyId: convoy.convoyId, ...destination, accuracy: 5 });
+  assert(memberArrival.tripStatus === "arrived" && memberArrival.lifecycleStatus === "completed", "Last GPS arrival did not complete the convoy.");
+  convoyList = await callFunction("listAccessibleConvoys", accountB);
+  const completedView = convoyList.convoys.find((item) => item.id === convoy.convoyId);
+  assert(completedView.lifecycleStatus === "completed", "Completed convoy state is not visible to Account B.");
+  assert(completedView.attendees.every((item) => item.tripStatus === "arrived"), "Not every convoy member is marked arrived.");
+  pass("GPS arrivals automatically complete the convoy");
   await callFunction("rateConvoyMember", accountB, { convoyId: convoy.convoyId, targetUserId: accountA.uid, signal: "harmony" });
   await callFunction("rateConvoyMember", accountA, { convoyId: convoy.convoyId, targetUserId: accountB.uid, signal: "harmony" });
 

@@ -2,6 +2,7 @@ const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const {
   DRIVE_KM_PER_SECOND,
   applyCompletedDriveToClan,
@@ -55,6 +56,7 @@ const {
   meetsTrust,
   presentConvoy,
   projectDriver,
+  resolveConvoyLocationUpdate,
 } = require("./convoy");
 const {
   buildDirectMessage,
@@ -1076,6 +1078,103 @@ exports.listAccessibleConvoys = secureCall("listAccessibleConvoys", async (reque
       : [];
   });
   return { ok: true, convoys };
+});
+
+exports.advanceScheduledConvoys = onSchedule({ schedule: "every 1 minutes", timeZone: "Europe/Istanbul" }, async () => {
+  const nowMs = Date.now();
+  const snapshot = await publicCollection("convoys").where("lifecycleStatus", "==", "planning").limit(400).get();
+  const dueConvoys = snapshot.docs
+    .map((document) => ({ id: document.id, ref: document.ref, ...document.data() }))
+    .filter((convoy) => Number(convoy.scheduledStartAtMs ?? 0) > 0 && Number(convoy.scheduledStartAtMs) <= nowMs);
+  if (!dueConvoys.length) return;
+
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+  const batch = db.batch();
+  dueConvoys.forEach((convoy) => {
+    const updated = { ...convoy, lifecycleStatus: "rolling", startedAt: timestamp, updatedAt: timestamp };
+    batch.update(convoy.ref, { lifecycleStatus: "rolling", startedAt: timestamp, updatedAt: timestamp });
+    if (convoy.visibility === "public") {
+      batch.set(publicDocument("mapPins", convoy.id), buildPublicMapSummary(updated), { merge: true });
+    }
+  });
+  await batch.commit();
+  logger.info("Scheduled convoys advanced", { count: dueConvoys.length });
+});
+
+exports.syncConvoyLocation = secureCall("syncConvoyLocation", { rateLimit: { limit: 600, windowSeconds: 3600 } }, async (request) => {
+  const userId = requireAuth(request);
+  const { convoyId } = request.data ?? {};
+  const lat = Number(request.data?.lat);
+  const lng = Number(request.data?.lng);
+  const reportedAccuracy = Number(request.data?.accuracy ?? 0);
+  const accuracy = Number.isFinite(reportedAccuracy) ? Math.max(0, Math.min(500, reportedAccuracy)) : 0;
+  if (!convoyId || !Number.isFinite(lat) || Math.abs(lat) > 90 || !Number.isFinite(lng) || Math.abs(lng) > 180) {
+    throw new HttpsError("invalid-argument", "A valid convoy and GPS location are required.");
+  }
+
+  const convoyRef = publicDocument("convoys", convoyId);
+  const memberRef = publicDocument("convoyMembers", buildScopedMemberId(convoyId, userId));
+  const membersQuery = publicCollection("convoyMembers").where("convoyId", "==", convoyId);
+  const nowMs = Date.now();
+  const result = await db.runTransaction(async (transaction) => {
+    const [convoySnapshot, memberSnapshot, membersSnapshot] = await Promise.all([
+      transaction.get(convoyRef),
+      transaction.get(memberRef),
+      transaction.get(membersQuery),
+    ]);
+    const convoy = requireSnapshot(convoySnapshot, "not-found", "Convoy not found.");
+    const member = requireSnapshot(memberSnapshot, "not-found", "Convoy membership not found.");
+    if (member.membershipStatus !== "approved" || member.tripStatus === "cancelled") {
+      throw new HttpsError("permission-denied", "Only active approved convoy members can share convoy GPS.");
+    }
+
+    let locationUpdate;
+    try {
+      locationUpdate = resolveConvoyLocationUpdate(convoy, { lat, lng }, nowMs);
+    } catch (error) {
+      throw new HttpsError("failed-precondition", error.message);
+    }
+    if (locationUpdate.lifecycleStatus === "planning") return { ...locationUpdate, convoyId };
+
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const memberPatch = {
+      tripStatus: locationUpdate.tripStatus,
+      lat: Number(lat.toFixed(6)),
+      lng: Number(lng.toFixed(6)),
+      accuracy,
+      distanceToDestinationM: locationUpdate.distanceToDestinationM,
+      trackingStatus: "active",
+      lastLocationAt: timestamp,
+      updatedAt: timestamp,
+    };
+    transaction.update(memberRef, memberPatch);
+
+    const activeMembers = membersSnapshot.docs
+      .map((document) => document.id === memberRef.id ? { ...document.data(), ...memberPatch } : document.data())
+      .filter((entry) => entry.membershipStatus === "approved" && entry.tripStatus !== "cancelled");
+    const allArrived = activeMembers.length > 0 && activeMembers.every((entry) => entry.tripStatus === "arrived");
+    const lifecycleStatus = allArrived ? "completed" : locationUpdate.lifecycleStatus;
+    const convoyPatch = {
+      lifecycleStatus,
+      ...(convoy.lifecycleStatus === "planning" ? { startedAt: timestamp } : {}),
+      ...(allArrived ? { completedAt: timestamp } : {}),
+      updatedAt: timestamp,
+    };
+    transaction.update(convoyRef, convoyPatch);
+    if (convoy.visibility === "public") {
+      transaction.set(publicDocument("mapPins", convoyId), buildPublicMapSummary({ ...convoy, ...convoyPatch }), { merge: true });
+    }
+    return {
+      ok: true,
+      convoyId,
+      lifecycleStatus,
+      tripStatus: locationUpdate.tripStatus,
+      distanceToDestinationM: locationUpdate.distanceToDestinationM,
+      completed: allArrived,
+    };
+  });
+
+  return { ok: true, ...result };
 });
 
 exports.requestConvoyJoin = secureCall("requestConvoyJoin", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
