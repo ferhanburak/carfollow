@@ -17,6 +17,8 @@ export function MapHubScreen({
   mapPins,
   onApproveCruiseJoinRequest,
   onDeclineCruiseJoinRequest,
+  onDeleteSpotPhoto,
+  onReportSpotPhoto,
   onPickLocation,
   onSelectPin,
   onSetAttendeeTripStatus,
@@ -88,6 +90,8 @@ export function MapHubScreen({
         washFeedback={washFeedback}
         onApproveCruiseJoinRequest={onApproveCruiseJoinRequest}
         onDeclineCruiseJoinRequest={onDeclineCruiseJoinRequest}
+        onDeleteSpotPhoto={onDeleteSpotPhoto}
+        onReportSpotPhoto={onReportSpotPhoto}
         onJoinCruise={joinCruise}
         onLikeGallery={likeGalleryImage}
         onLikePin={likePin}

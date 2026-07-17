@@ -118,6 +118,7 @@ function App() {
     currentClan,
     currentClanMembers,
     declineCruiseJoinRequest,
+    deleteSpotPhoto,
     declineFriendRequest,
     declineIncomingClanInvite,
     driveHud,
@@ -168,6 +169,7 @@ function App() {
     presenceMap,
     primeServiceLogForm,
     rateAttendee,
+    reportSpotPhoto,
     removeLastDraftRoutePoint,
     requestFriend,
     reportDriver,
@@ -353,6 +355,8 @@ function App() {
                 onPickLocation={pickMapLocation}
                 onApproveCruiseJoinRequest={approveCruiseJoinRequest}
                 onDeclineCruiseJoinRequest={declineCruiseJoinRequest}
+                onDeleteSpotPhoto={deleteSpotPhoto}
+                onReportSpotPhoto={reportSpotPhoto}
                 onSelectPin={setSelectedPinId}
                 onSetAttendeeTripStatus={setAttendeeTripStatus}
                 onSetConvoyLifecycleStatus={setConvoyLifecycleStatus}
@@ -400,6 +404,8 @@ function App() {
                 onSelectPin={setSelectedPinId}
                 onApproveCruiseJoinRequest={approveCruiseJoinRequest}
                 onDeclineCruiseJoinRequest={declineCruiseJoinRequest}
+                onDeleteSpotPhoto={deleteSpotPhoto}
+                onReportSpotPhoto={reportSpotPhoto}
                 onSetSpotPhotoForm={setSpotPhotoForm}
                 onSetAttendeeTripStatus={setAttendeeTripStatus}
                 onSetConvoyLifecycleStatus={setConvoyLifecycleStatus}

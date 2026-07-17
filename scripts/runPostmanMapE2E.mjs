@@ -76,6 +76,14 @@ async function getPublicDocument(collectionName, documentId, account) {
   return parseResponse(response, `Read ${collectionName}/${documentId}`);
 }
 
+async function assertPublicDocumentMissing(collectionName, documentId, account) {
+  const response = await fetch(`${firestoreBase}/${collectionName}/${documentId}`, {
+    headers: { Authorization: `Bearer ${account.idToken}` },
+  });
+  assert(response.status === 404, `${collectionName}/${documentId} should have been deleted.`);
+  pass(`Account verifies deleted ${collectionName} document`);
+}
+
 async function uploadSpotFixture(pinId, account) {
   const storagePath = `artifacts/cruiser-app-prod/mapNodes/${pinId}/photos/${account.uid}/postman-${runId}.svg`;
   const image = await readFile(path.join(rootDir, "postman", "fixtures", "test-spot.svg"));
@@ -124,6 +132,8 @@ async function main() {
     ...upload,
   });
   await callFunction("toggleMapLike", accountA, { pinId: spot.pinId, targetType: "photo", photoId: photo.photoId });
+  await callFunction("deleteMapSpotPhoto", accountB, { photoId: photo.photoId });
+  await assertPublicDocumentMissing("mapSpotPhotos", photo.photoId, accountA);
 
   const wash = await callFunction("createMapNode", accountA, {
     pin: {

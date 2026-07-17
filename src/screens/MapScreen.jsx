@@ -210,6 +210,8 @@ export function MapScreen({
   onGhostRequestFriend,
   onApproveCruiseJoinRequest,
   onDeclineCruiseJoinRequest,
+  onDeleteSpotPhoto,
+  onReportSpotPhoto,
   onSelectPin,
   onSetAttendeeTripStatus,
   onSetConvoyLifecycleStatus,
@@ -327,6 +329,8 @@ export function MapScreen({
               washFeedback={washFeedback}
               onApproveCruiseJoinRequest={onApproveCruiseJoinRequest}
               onDeclineCruiseJoinRequest={onDeclineCruiseJoinRequest}
+              onDeleteSpotPhoto={onDeleteSpotPhoto}
+              onReportSpotPhoto={onReportSpotPhoto}
               onJoinCruise={joinCruise}
               onLikeGallery={likeGalleryImage}
               onLikePin={likePin}

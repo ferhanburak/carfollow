@@ -7,7 +7,7 @@ const MODERATION_REASONS = Object.freeze([
   "other",
 ]);
 
-const MODERATION_TARGET_TYPES = Object.freeze(["driver", "mapPin", "convoy", "message", "clan"]);
+const MODERATION_TARGET_TYPES = Object.freeze(["driver", "mapPin", "mapPhoto", "convoy", "message", "clan"]);
 const MODERATION_DECISIONS = Object.freeze(["dismiss", "warn", "restrict"]);
 
 function sanitizeOperationalText(value, maxLength) {

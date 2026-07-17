@@ -49,6 +49,20 @@ test("moderation reports reject unknown reasons and sanitize details", () => {
   }));
 });
 
+test("moderation reports support public map photos", () => {
+  const report = buildModerationReportDocument({
+    reportId: "report-photo",
+    reporter: { id: "driver-1", plate: "06 TEST 01" },
+    targetType: "mapPhoto",
+    targetId: "photo-1",
+    reason: "inappropriate-content",
+    details: "Unsafe image",
+    timestamp: 123,
+  });
+  assert.equal(report.targetType, "mapPhoto");
+  assert.equal(report.targetId, "photo-1");
+});
+
 test("moderation claims and audit decisions remain explicit", () => {
   assert.equal(hasModeratorClaim({ moderator: true }), true);
   assert.equal(hasModeratorClaim({ admin: true }), true);

@@ -8,6 +8,8 @@ export function SpotPinPanel({
   spotPhotoFeedback,
   onLikePin,
   onLikeGallery,
+  onDeleteSpotPhoto,
+  onReportSpotPhoto,
   onSpotPhotoFileChange,
   onSpotPhotoFormChange,
   onSubmitSpotPhoto,
@@ -81,13 +83,20 @@ export function SpotPinPanel({
                 <p className="truncate font-semibold">{item.title}</p>
                 <p className="text-xs text-neutral-500">{item.author ?? user.plate} toplulugu burada aktif.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => onLikeGallery(item.id)}
-                className="min-h-12 rounded-2xl border border-white/10 px-4 text-sm text-lime-300"
-              >
-                {item.likes} Like
-              </button>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => onLikeGallery(item.id)} className="min-h-12 rounded-2xl border border-white/10 px-3 text-xs text-lime-300">
+                  {item.likes} Like
+                </button>
+                {item.userId === (user.firebaseUid ?? user.id) ? (
+                  <button type="button" onClick={() => onDeleteSpotPhoto?.(item.id)} className="min-h-12 rounded-2xl border border-rose-400/25 bg-rose-500/10 px-3 text-xs text-rose-200">
+                    Sil
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => onReportSpotPhoto?.(item.id)} className="min-h-12 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-3 text-xs text-amber-100">
+                    Raporla
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}

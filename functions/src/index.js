@@ -2154,6 +2154,46 @@ exports.addMapSpotPhoto = secureCall("addMapSpotPhoto", { rateLimit: { limit: 20
   return { ok: true, photoId: photoRef.id };
 });
 
+exports.deleteMapSpotPhoto = secureCall("deleteMapSpotPhoto", { rateLimit: { limit: 20, windowSeconds: 3600 } }, async (request) => {
+  const userId = requireAuth(request);
+  const photoId = String(request.data?.photoId ?? "");
+  if (!photoId || photoId.includes("/") || photoId.length > 180) {
+    throw new HttpsError("invalid-argument", "A valid photoId is required.");
+  }
+  const photoRef = publicDocument("mapSpotPhotos", photoId);
+  const snapshot = await photoRef.get();
+  const photo = requireSnapshot(snapshot, "not-found", "Photo not found.");
+  if (photo.userId !== userId) {
+    throw new HttpsError("permission-denied", "Only the uploader can delete this photo.");
+  }
+  const pinRef = publicDocument("mapPins", photo.pinId);
+  const likes = await publicCollection("mapLikes").where("photoId", "==", photoId).limit(450).get();
+  await db.runTransaction(async (transaction) => {
+    const [livePhoto, pinSnapshot] = await Promise.all([
+      transaction.get(photoRef),
+      transaction.get(pinRef),
+    ]);
+    if (!livePhoto.exists || livePhoto.data().userId !== userId) {
+      throw new HttpsError("permission-denied", "Photo ownership changed or the photo was removed.");
+    }
+    transaction.delete(photoRef);
+    likes.docs.forEach((document) => transaction.delete(document.ref));
+    if (pinSnapshot.exists) {
+      transaction.update(pinRef, {
+        photoCount: Math.max(0, Number(pinSnapshot.data().photoCount ?? 0) - 1),
+        galleryLikes: Math.max(0, Number(pinSnapshot.data().galleryLikes ?? 0) - Number(livePhoto.data().likes ?? 0)),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  });
+  if (photo.storagePath) {
+    await admin.storage().bucket().file(photo.storagePath).delete({ ignoreNotFound: true }).catch((error) => {
+      logger.warn("map.photo.storage-delete-failed", { photoId, errorCode: error?.code ?? "unknown" });
+    });
+  }
+  return { ok: true, photoId };
+});
+
 exports.markNotificationRead = secureCall("markNotificationRead", { rateLimit: { limit: 120, windowSeconds: 60 } }, async (request) => {
   const userId = requireAuth(request);
   const notificationId = sanitizeOperationalText(request.data?.notificationId, 180);
@@ -2197,6 +2237,7 @@ exports.submitModerationReport = secureCall("submitModerationReport", { rateLimi
   const targetCollections = {
     driver: "publicProfiles",
     mapPin: "mapPins",
+    mapPhoto: "mapSpotPhotos",
     convoy: "convoys",
     clan: "clans",
   };
@@ -2204,6 +2245,9 @@ exports.submitModerationReport = secureCall("submitModerationReport", { rateLimi
     const targetSnapshot = await publicDocument(targetCollections[targetType], targetId).get();
     if (!targetSnapshot.exists) {
       throw new HttpsError("not-found", "The reported target no longer exists.");
+    }
+    if (targetType === "mapPhoto" && targetSnapshot.data().userId === reporterUserId) {
+      throw new HttpsError("failed-precondition", "You cannot report your own photo.");
     }
   }
 

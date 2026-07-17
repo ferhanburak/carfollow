@@ -17,6 +17,7 @@ import {
   addFirebaseMapSpotPhoto,
   createFirebaseConvoy,
   createFirebaseMapNode,
+  deleteFirebaseMapSpotPhoto,
   inviteFirebaseConvoyMember,
   isFirebaseMapRepositoryEnabled,
   loadFirebaseAccessibleConvoys,
@@ -25,6 +26,7 @@ import {
   requestFirebaseConvoyJoin,
   respondFirebaseConvoyJoin,
   submitFirebaseWashReview,
+  submitFirebaseModerationReport,
   subscribeFirebaseMapState,
   toggleFirebaseMapLike,
   updateFirebaseConvoyLifecycle,
@@ -161,6 +163,52 @@ export function useMapPins({ initialWorld, user }) {
       return;
     }
     setMapPins((current) => incrementGalleryLike(current, selectedPin.id, galleryId));
+  };
+
+  const deleteSpotPhoto = async (photoId) => {
+    if (!selectedPin || selectedPin.type !== "spot") return false;
+    if (firebaseMapEnabled) {
+      try {
+        await deleteFirebaseMapSpotPhoto(photoId);
+        setSpotPhotoFeedback("Foto ve ona ait begeniler kalici olarak silindi.");
+        return true;
+      } catch (error) {
+        setSpotPhotoFeedback(error instanceof Error ? error.message : "Foto silinemedi.");
+        return false;
+      }
+    }
+    setMapPins((current) => current.map((pin) => {
+      if (pin.id !== selectedPin.id) return pin;
+      const photo = (pin.gallery ?? []).find((item) => item.id === photoId);
+      return {
+        ...pin,
+        gallery: (pin.gallery ?? []).filter((item) => item.id !== photoId),
+        photoCount: Math.max(0, Number(pin.photoCount ?? pin.gallery?.length ?? 0) - 1),
+        galleryLikes: Math.max(0, Number(pin.galleryLikes ?? 0) - Number(photo?.likes ?? 0)),
+      };
+    }));
+    setSpotPhotoFeedback("Foto galeriden silindi.");
+    return true;
+  };
+
+  const reportSpotPhoto = async (photoId) => {
+    if (!firebaseMapEnabled) {
+      setSpotPhotoFeedback("Foto raporlama yalnizca Firebase modunda kullanilabilir.");
+      return false;
+    }
+    try {
+      await submitFirebaseModerationReport({
+        targetType: "mapPhoto",
+        targetId: photoId,
+        reason: "inappropriate-content",
+        details: `Photo reported from map spot ${selectedPin?.id ?? "unknown"}.`,
+      });
+      setSpotPhotoFeedback("Foto guvenlik ekibinin inceleme kuyruguna gonderildi.");
+      return true;
+    } catch (error) {
+      setSpotPhotoFeedback(error instanceof Error ? error.message : "Foto raporlanamadi.");
+      return false;
+    }
   };
 
   const submitWashReview = async (event) => {
@@ -718,6 +766,7 @@ export function useMapPins({ initialWorld, user }) {
     clearDraftRoute,
     convoyFeedback,
     declineCruiseJoinRequest,
+    deleteSpotPhoto,
     inviteDriverToMeet,
     joinCruise,
     likeGalleryImage,
@@ -731,6 +780,7 @@ export function useMapPins({ initialWorld, user }) {
     mapPins: visibleMapPins,
     pickMapLocation,
     rateAttendee,
+    reportSpotPhoto,
     removeLastDraftRoutePoint,
     resetMapInteractions,
     selectedPin,
