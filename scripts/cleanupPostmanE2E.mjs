@@ -6,6 +6,7 @@ const APP_ID = "cruiser-app-prod";
 const STORAGE_BUCKET = "carfollow-75750.firebasestorage.app";
 const runId = process.argv.find((value) => value.startsWith("--run-id="))?.split("=")[1] ?? "";
 const execute = process.argv.includes("--execute");
+const allowPartial = process.argv.includes("--allow-partial");
 const confirmation = process.argv.find((value) => value.startsWith("--confirm="))?.slice(10) ?? "";
 const expectedConfirmation = `DELETE-POSTMAN-E2E-${runId}`;
 const publicRoot = `artifacts/${APP_ID}/public/data`;
@@ -114,11 +115,13 @@ async function patchDocument(documentPath, patch, token) {
 async function deleteDocuments(documents, token) {
   const names = [...new Set(documents.map((document) => document.name))];
   for (let index = 0; index < names.length; index += 400) {
-    await requestJson(
+    const { body } = await requestJson(
       `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:batchWrite`,
       token,
       { method: "POST", body: JSON.stringify({ writes: names.slice(index, index + 400).map((name) => ({ delete: name })) }) },
     );
+    const failures = (body.status ?? []).filter((status) => Number(status.code ?? 0) !== 0);
+    if (failures.length) throw new Error(`Firestore batch delete reported failures: ${JSON.stringify(failures)}`);
   }
 }
 
@@ -227,9 +230,10 @@ async function main() {
   if (confirmation !== expectedConfirmation) {
     throw new Error(`Execution guard failed. Use --confirm=${expectedConfirmation}`);
   }
-  if (pins.length !== 2 || convoys.length !== 2) {
+  if (!allowPartial && (pins.length !== 2 || convoys.length !== 2)) {
     throw new Error(`Expected exactly 2 pins and 2 convoys for this run, found ${pins.length} and ${convoys.length}.`);
   }
+  if (allowPartial && pins.length === 0 && convoys.length === 0) return;
   await rollbackRatings(ratings, token);
   await deleteStorageObjects(storageObjects, token);
   await deleteDocuments(documentsToDelete, token);
