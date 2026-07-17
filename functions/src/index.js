@@ -1098,6 +1098,21 @@ exports.advanceScheduledConvoys = onSchedule({ schedule: "every 1 minutes", time
     }
   });
   await batch.commit();
+  await Promise.all(dueConvoys.map(async (convoy) => {
+    const members = await publicCollection("convoyMembers").where("convoyId", "==", convoy.id).get();
+    const notificationBatch = db.batch();
+    members.docs
+      .map((document) => document.data())
+      .filter((member) => member.membershipStatus === "approved" && member.tripStatus !== "cancelled")
+      .forEach((member) => writeNotification(notificationBatch, member.userId, `convoy-started-${convoy.id}`, {
+        type: "convoy-started",
+        title: "Konvoy basladi",
+        body: `${convoy.name} icin GPS konvoy takibi aktif.`,
+        actor: { userId: convoy.hostUserId, fullName: convoy.createdByName, plate: convoy.createdByPlate },
+        action: { type: "convoy", targetId: convoy.id },
+      }, timestamp));
+    if (!members.empty) await notificationBatch.commit();
+  }));
   logger.info("Scheduled convoys advanced", { count: dueConvoys.length });
 });
 
@@ -1163,6 +1178,24 @@ exports.syncConvoyLocation = secureCall("syncConvoyLocation", { rateLimit: { lim
     transaction.update(convoyRef, convoyPatch);
     if (convoy.visibility === "public") {
       transaction.set(publicDocument("mapPins", convoyId), buildPublicMapSummary({ ...convoy, ...convoyPatch }), { merge: true });
+    }
+    if (convoy.lifecycleStatus === "planning") {
+      activeMembers.forEach((entry) => writeNotification(transaction, entry.userId, `convoy-started-${convoyId}`, {
+        type: "convoy-started",
+        title: "Konvoy basladi",
+        body: `${convoy.name} icin GPS konvoy takibi aktif.`,
+        actor: { userId: convoy.hostUserId, fullName: convoy.createdByName, plate: convoy.createdByPlate },
+        action: { type: "convoy", targetId: convoyId },
+      }, timestamp));
+    }
+    if (allArrived) {
+      activeMembers.forEach((entry) => writeNotification(transaction, entry.userId, `convoy-completed-${convoyId}`, {
+        type: "convoy-completed",
+        title: "Konvoy tamamlandi",
+        body: `${convoy.name} tamamlandi. Surucu oylamasi acildi.`,
+        actor: { userId: convoy.hostUserId, fullName: convoy.createdByName, plate: convoy.createdByPlate },
+        action: { type: "convoy", targetId: convoyId },
+      }, timestamp));
     }
     return {
       ok: true,

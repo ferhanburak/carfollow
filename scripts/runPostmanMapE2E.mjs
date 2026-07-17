@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const functionsBase = "https://us-central1-carfollow-75750.cloudfunctions.net";
 const firestoreBase = "https://firestore.googleapis.com/v1/projects/carfollow-75750/databases/(default)/documents/artifacts/cruiser-app-prod/public/data";
+const firestoreDocumentsBase = "https://firestore.googleapis.com/v1/projects/carfollow-75750/databases/(default)/documents";
 const storageBucket = "carfollow-75750.firebasestorage.app";
 const runId = Date.now().toString();
 
@@ -85,6 +86,14 @@ async function getPublicDocument(collectionName, documentId, account) {
     headers: { Authorization: `Bearer ${account.idToken}` },
   });
   return parseResponse(response, `Read ${collectionName}/${documentId}`);
+}
+
+async function getPrivateNotification(userId, notificationId, account) {
+  const path = `artifacts/cruiser-app-prod/users/${userId}/notifications/${notificationId}`;
+  const response = await fetch(`${firestoreDocumentsBase}/${path}`, {
+    headers: { Authorization: `Bearer ${account.idToken}` },
+  });
+  return parseResponse(response, `Read notification ${notificationId}`);
 }
 
 async function assertPublicDocumentMissing(collectionName, documentId, account) {
@@ -223,7 +232,11 @@ async function main() {
   const completedView = convoyList.convoys.find((item) => item.id === convoy.convoyId);
   assert(completedView.lifecycleStatus === "completed", "Completed convoy state is not visible to Account B.");
   assert(completedView.attendees.every((item) => item.tripStatus === "arrived"), "Not every convoy member is marked arrived.");
+  const completionNotificationId = `convoy-completed-${convoy.convoyId}`;
+  await getPrivateNotification(accountA.uid, completionNotificationId, accountA);
+  await getPrivateNotification(accountB.uid, completionNotificationId, accountB);
   pass("GPS arrivals automatically complete the convoy");
+  pass("Both convoy members receive completion notifications");
   await callFunction("rateConvoyMember", accountB, { convoyId: convoy.convoyId, targetUserId: accountA.uid, signal: "harmony" });
   await callFunction("rateConvoyMember", accountA, { convoyId: convoy.convoyId, targetUserId: accountB.uid, signal: "harmony" });
 
