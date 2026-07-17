@@ -266,6 +266,11 @@ async function main() {
   const invitedView = convoyList.convoys.find((item) => item.id === friendsConvoy.convoyId);
   assert(invitedView.attendees.some((item) => item.userId === accountB.uid), "Invited Account B was not immediately approved.");
   pass("Friends convoy invitation and immediate approval");
+  await callFunction("removeConvoyMember", accountA, { convoyId: friendsConvoy.convoyId, memberUserId: accountB.uid });
+  convoyList = await callFunction("listAccessibleConvoys", accountA);
+  const removedMemberView = convoyList.convoys.find((item) => item.id === friendsConvoy.convoyId);
+  assert(!removedMemberView.attendees.some((item) => item.userId === accountB.uid), "Removed convoy member is still approved.");
+  pass("Host removes an approved convoy member");
 
   console.log(`E2E completed successfully. runId=${runId}`);
 }

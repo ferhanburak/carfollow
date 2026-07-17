@@ -279,6 +279,15 @@ function getLifecycleTone(lifecycleStatus, isSelected = false) {
     };
   }
 
+  if (lifecycleStatus === "cancelled") {
+    return {
+      fill: "#f43f5e",
+      stroke: "#fecdd3",
+      badge: "#881337",
+      text: "#fff1f2",
+    };
+  }
+
   return {
     fill: "#171717",
     stroke: "#fafafa",

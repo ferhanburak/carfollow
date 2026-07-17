@@ -171,6 +171,7 @@ function App() {
     primeServiceLogForm,
     rateAttendee,
     reportSpotPhoto,
+    removeConvoyMember,
     removeLastDraftRoutePoint,
     requestFriend,
     reportDriver,
@@ -358,6 +359,7 @@ function App() {
                 onDeclineCruiseJoinRequest={declineCruiseJoinRequest}
                 onDeleteSpotPhoto={deleteSpotPhoto}
                 onReportSpotPhoto={reportSpotPhoto}
+                onRemoveConvoyMember={removeConvoyMember}
                 onSelectPin={setSelectedPinId}
                 onSetAttendeeTripStatus={setAttendeeTripStatus}
                 onSetConvoyLifecycleStatus={setConvoyLifecycleStatus}
@@ -407,6 +409,7 @@ function App() {
                 onDeclineCruiseJoinRequest={declineCruiseJoinRequest}
                 onDeleteSpotPhoto={deleteSpotPhoto}
                 onReportSpotPhoto={reportSpotPhoto}
+                onRemoveConvoyMember={removeConvoyMember}
                 onSetSpotPhotoForm={setSpotPhotoForm}
                 onSetAttendeeTripStatus={setAttendeeTripStatus}
                 onSetConvoyLifecycleStatus={setConvoyLifecycleStatus}

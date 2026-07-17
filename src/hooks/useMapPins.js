@@ -23,6 +23,7 @@ import {
   loadFirebaseAccessibleConvoys,
   mergeFirebaseConvoys,
   rateFirebaseConvoyMember,
+  removeFirebaseConvoyMember,
   requestFirebaseConvoyJoin,
   respondFirebaseConvoyJoin,
   submitFirebaseWashReview,
@@ -359,6 +360,24 @@ export function useMapPins({ initialWorld, user }) {
 
     if (nextPin) {
       void saveFirebaseMapPin(nextPin);
+    }
+  };
+
+  const removeConvoyMember = async (attendee) => {
+    if (!selectedPin || selectedPin.type !== "meet" || !attendee?.userId) return;
+    if (!firebaseMapEnabled) {
+      setMapPins((current) => current.map((pin) => pin.id === selectedPin.id
+        ? { ...pin, attendees: (pin.attendees ?? []).filter((entry) => entry.plate !== attendee.plate) }
+        : pin));
+      setConvoyFeedback(`${attendee.plate} konvoydan cikarildi.`);
+      return;
+    }
+    try {
+      await removeFirebaseConvoyMember(selectedPin.id, attendee.userId);
+      await refreshFirebaseConvoys();
+      setConvoyFeedback(`${attendee.plate} konvoydan cikarildi.`);
+    } catch (error) {
+      setConvoyFeedback(error instanceof Error ? error.message : "Surucu konvoydan cikarilamadi.");
     }
   };
 
@@ -783,6 +802,7 @@ export function useMapPins({ initialWorld, user }) {
     rateAttendee,
     refreshFirebaseConvoys,
     reportSpotPhoto,
+    removeConvoyMember,
     removeLastDraftRoutePoint,
     resetMapInteractions,
     selectedPin,

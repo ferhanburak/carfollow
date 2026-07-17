@@ -2,7 +2,7 @@ const CONVOY_SCHEMA_VERSION = 1;
 const VISIBILITIES = ["public", "friends", "clan"];
 const ACCESS_POLICIES = ["open", "request", "trusted"];
 const DETAIL_VISIBILITIES = ["public", "trusted"];
-const LIFECYCLE_STATUSES = ["planning", "rolling", "delayed", "completed"];
+const LIFECYCLE_STATUSES = ["planning", "rolling", "delayed", "completed", "cancelled"];
 const TRIP_STATUSES = ["ready", "enroute", "arrived", "cancelled"];
 const DEFAULT_ARRIVAL_RADIUS_M = 150;
 

@@ -19,6 +19,7 @@ export function MapHubScreen({
   onDeclineCruiseJoinRequest,
   onDeleteSpotPhoto,
   onReportSpotPhoto,
+  onRemoveConvoyMember,
   onPickLocation,
   onSelectPin,
   onSetAttendeeTripStatus,
@@ -92,6 +93,7 @@ export function MapHubScreen({
         onDeclineCruiseJoinRequest={onDeclineCruiseJoinRequest}
         onDeleteSpotPhoto={onDeleteSpotPhoto}
         onReportSpotPhoto={onReportSpotPhoto}
+        onRemoveConvoyMember={onRemoveConvoyMember}
         onJoinCruise={joinCruise}
         onLikeGallery={likeGalleryImage}
         onLikePin={likePin}

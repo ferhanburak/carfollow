@@ -82,6 +82,9 @@ function getLifecycleLabel(value) {
   if (value === "completed") {
     return "Tamamlandi";
   }
+  if (value === "cancelled") {
+    return "Iptal Edildi";
+  }
 
   return "Hazirlaniyor";
 }
@@ -117,6 +120,7 @@ export function MeetPinPanel({
   onDeclineCruiseJoinRequest,
   onJoinCruise,
   onRateAttendee,
+  onRemoveConvoyMember,
   onSetAttendeeTripStatus,
   onSetConvoyLifecycleStatus,
 }) {
@@ -215,7 +219,7 @@ export function MeetPinPanel({
             </span>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            {["planning", "rolling", "delayed", "completed"].map((status) => (
+            {["planning", "delayed", "cancelled"].map((status) => (
               <button
                 key={status}
                 type="button"
@@ -360,6 +364,15 @@ export function MeetPinPanel({
                       Tasinlik +1
                     </button>
                   </div>
+                  {isHost && !isSelf && !["completed", "cancelled"].includes(lifecycleStatus) ? (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveConvoyMember?.(attendee)}
+                      className="mt-3 min-h-12 w-full rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 text-sm font-semibold text-rose-200"
+                    >
+                      Konvoydan Cikar
+                    </button>
+                  ) : null}
                 </div>
               );
             })}

@@ -1311,6 +1311,43 @@ exports.respondConvoyJoinRequest = secureCall("respondConvoyJoinRequest", async 
   return { ok: true, convoyId, memberUserId, decision };
 });
 
+exports.removeConvoyMember = secureCall("removeConvoyMember", { rateLimit: { limit: 50, windowSeconds: 3600 } }, async (request) => {
+  const actorUserId = requireAuth(request);
+  const { convoyId, memberUserId } = request.data ?? {};
+  if (!convoyId || !memberUserId || memberUserId === actorUserId) {
+    throw new HttpsError("invalid-argument", "A valid removable convoy member is required.");
+  }
+  const actor = await getUserProfile(actorUserId);
+  const convoyRef = publicDocument("convoys", convoyId);
+  const memberRef = publicDocument("convoyMembers", buildScopedMemberId(convoyId, memberUserId));
+  await db.runTransaction(async (transaction) => {
+    const [convoySnapshot, memberSnapshot] = await Promise.all([
+      transaction.get(convoyRef),
+      transaction.get(memberRef),
+    ]);
+    const convoy = requireSnapshot(convoySnapshot, "not-found", "Convoy not found.");
+    const member = requireSnapshot(memberSnapshot, "not-found", "Convoy member not found.");
+    if (convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can remove convoy members.");
+    if (["completed", "cancelled"].includes(convoy.lifecycleStatus)) throw new HttpsError("failed-precondition", "Closed convoys cannot change members.");
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    transaction.delete(memberRef);
+    transaction.update(convoyRef, {
+      [member.membershipStatus === "pending" ? "pendingCount" : "approvedCount"]: admin.firestore.FieldValue.increment(-1),
+      invitedUserIds: admin.firestore.FieldValue.arrayRemove(memberUserId),
+      invitedGuests: (convoy.invitedGuests ?? []).filter((guest) => guest.userId !== memberUserId),
+      updatedAt: timestamp,
+    });
+    writeNotification(transaction, memberUserId, `convoy-removed-${convoyId}-${memberUserId}`, {
+      type: "convoy-removed",
+      title: "Konvoy katilimi sonlandirildi",
+      body: `${convoy.name} hostu seni katilim listesinden cikardi.`,
+      actor,
+      action: { type: "convoy", targetId: convoyId },
+    }, timestamp);
+  });
+  return { ok: true, convoyId, memberUserId };
+});
+
 exports.inviteConvoyMember = secureCall("inviteConvoyMember", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
   const actorUserId = requireAuth(request);
   const { convoyId, targetUserId } = request.data ?? {};
@@ -1351,12 +1388,36 @@ exports.updateConvoyLifecycle = secureCall("updateConvoyLifecycle", async (reque
   if (!convoyId || !LIFECYCLE_STATUSES.includes(lifecycleStatus)) throw new HttpsError("invalid-argument", "A valid convoy status is required.");
   const convoyRef = publicDocument("convoys", convoyId);
   await db.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(convoyRef);
+    const [snapshot, membersSnapshot] = await Promise.all([
+      transaction.get(convoyRef),
+      transaction.get(publicCollection("convoyMembers").where("convoyId", "==", convoyId)),
+    ]);
     const convoy = requireSnapshot(snapshot, "not-found", "Convoy not found.");
     if (convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can update convoy status.");
+    if (["completed", "cancelled"].includes(convoy.lifecycleStatus)) throw new HttpsError("failed-precondition", "Closed convoys cannot be reopened.");
+    const allowedTransitions = {
+      planning: new Set(["planning", "delayed", "cancelled"]),
+      delayed: new Set(["planning", "delayed", "cancelled"]),
+      rolling: new Set(["rolling", "delayed", "cancelled"]),
+    };
+    if (!allowedTransitions[convoy.lifecycleStatus]?.has(lifecycleStatus)) {
+      throw new HttpsError("failed-precondition", "This convoy status transition is managed automatically.");
+    }
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
     transaction.update(convoyRef, { lifecycleStatus, updatedAt: timestamp });
     if (convoy.visibility === "public") transaction.set(publicDocument("mapPins", convoyId), buildPublicMapSummary({ ...convoy, lifecycleStatus, updatedAt: timestamp }), { merge: true });
+    if (lifecycleStatus === "cancelled") {
+      membersSnapshot.docs
+        .map((document) => document.data())
+        .filter((member) => member.membershipStatus === "approved")
+        .forEach((member) => writeNotification(transaction, member.userId, `convoy-cancelled-${convoyId}`, {
+          type: "convoy-cancelled",
+          title: "Konvoy iptal edildi",
+          body: `${convoy.name} host tarafindan iptal edildi.`,
+          actor: { userId: convoy.hostUserId, fullName: convoy.createdByName, plate: convoy.createdByPlate },
+          action: { type: "convoy", targetId: convoyId },
+        }, timestamp));
+    }
   });
   return { ok: true, convoyId, lifecycleStatus };
 });

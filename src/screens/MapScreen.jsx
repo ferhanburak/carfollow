@@ -95,6 +95,9 @@ function getLifecycleLabel(value) {
   if (value === "completed") {
     return "Tamamlandi";
   }
+  if (value === "cancelled") {
+    return "Iptal Edildi";
+  }
 
   return "Hazirlaniyor";
 }
@@ -213,6 +216,7 @@ export function MapScreen({
   onDeclineCruiseJoinRequest,
   onDeleteSpotPhoto,
   onReportSpotPhoto,
+  onRemoveConvoyMember,
   onSelectPin,
   onSetAttendeeTripStatus,
   onSetConvoyLifecycleStatus,
@@ -348,6 +352,7 @@ export function MapScreen({
               onDeclineCruiseJoinRequest={onDeclineCruiseJoinRequest}
               onDeleteSpotPhoto={onDeleteSpotPhoto}
               onReportSpotPhoto={onReportSpotPhoto}
+              onRemoveConvoyMember={onRemoveConvoyMember}
               onJoinCruise={joinCruise}
               onLikeGallery={likeGalleryImage}
               onLikePin={likePin}

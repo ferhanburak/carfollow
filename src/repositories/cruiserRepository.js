@@ -116,6 +116,7 @@ export {
   loadFirebaseAccessibleConvoys,
   mergeFirebaseConvoys,
   rateFirebaseConvoyMember,
+  removeFirebaseConvoyMember,
   requestFirebaseConvoyJoin,
   respondFirebaseConvoyJoin,
   submitFirebaseWashReview,
