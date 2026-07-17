@@ -184,7 +184,7 @@ export function MeetPinPanel({
         <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
           <p className="font-semibold">Otomatik konvoy takibi</p>
           <p className="mt-1 text-xs text-sky-100/75">
-            Baslangic saatinde onayli suruculerin GPS takibi acilir. Son aktif surucu hedefe ulastiginda konvoy tamamlanir ve oylama acilir.
+            Baslangic saatinde onayli suruculerin GPS takibi acilir. Her surucu hedefin 50 metre alaninda iki ardisik hassas konum olcumuyle dogrulanir. Son aktif surucu dogrulandiginda konvoy tamamlanir ve oylama acilir.
           </p>
         </div>
       ) : null}
@@ -243,20 +243,15 @@ export function MeetPinPanel({
               {getTripStatusLabel(selfAttendee.tripStatus)}
             </span>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {["ready", "enroute", "arrived", "cancelled"].map((status) => (
-              <button
-                key={status}
-                type="button"
-                onClick={() => onSetAttendeeTripStatus(user.plate, status)}
-                className={`min-h-12 rounded-2xl px-3 text-xs font-semibold transition ${
-                  selfAttendee.tripStatus === status ? "bg-lime-400 text-black" : "border border-white/10 bg-white/5 text-neutral-300"
-                }`}
-              >
-                {getTripStatusLabel(status)}
-              </button>
-            ))}
-          </div>
+          {selfAttendee.tripStatus !== "cancelled" ? (
+            <button
+              type="button"
+              onClick={() => onSetAttendeeTripStatus(user.plate, "cancelled")}
+              className="mt-3 min-h-12 w-full rounded-2xl border border-rose-400/30 bg-rose-500/10 px-3 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/20"
+            >
+              Konvoydan Ayril
+            </button>
+          ) : null}
         </div>
       ) : null}
 

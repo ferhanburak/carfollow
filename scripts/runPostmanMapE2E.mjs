@@ -224,8 +224,14 @@ async function main() {
   assertRoutePath(memberView.routePath, selectedConvoyRoute, "Approved member route");
   pass("Public convoy request, approval and route visibility");
   const destination = selectedConvoyRoute.at(-1);
+  const weakArrival = await callFunction("syncConvoyLocation", accountA, { convoyId: convoy.convoyId, ...destination, accuracy: 120 });
+  assert(weakArrival.tripStatus === "enroute" && weakArrival.awaitingAccuracy, "Weak GPS accuracy incorrectly confirmed arrival.");
+  const hostVerification = await callFunction("syncConvoyLocation", accountA, { convoyId: convoy.convoyId, ...destination, accuracy: 5 });
+  assert(hostVerification.tripStatus === "enroute" && hostVerification.arrivalConfirmationCount === 1, "First host heartbeat did not enter arrival verification.");
   const hostArrival = await callFunction("syncConvoyLocation", accountA, { convoyId: convoy.convoyId, ...destination, accuracy: 5 });
   assert(hostArrival.tripStatus === "arrived" && hostArrival.lifecycleStatus === "rolling", "Convoy completed before every active member arrived.");
+  const memberVerification = await callFunction("syncConvoyLocation", accountB, { convoyId: convoy.convoyId, ...destination, accuracy: 5 });
+  assert(memberVerification.tripStatus === "enroute" && memberVerification.arrivalConfirmationCount === 1, "First member heartbeat did not enter arrival verification.");
   const memberArrival = await callFunction("syncConvoyLocation", accountB, { convoyId: convoy.convoyId, ...destination, accuracy: 5 });
   assert(memberArrival.tripStatus === "arrived" && memberArrival.lifecycleStatus === "completed", "Last GPS arrival did not complete the convoy.");
   convoyList = await callFunction("listAccessibleConvoys", accountB);
@@ -235,7 +241,7 @@ async function main() {
   const completionNotificationId = `convoy-completed-${convoy.convoyId}`;
   await getPrivateNotification(accountA.uid, completionNotificationId, accountA);
   await getPrivateNotification(accountB.uid, completionNotificationId, accountB);
-  pass("GPS arrivals automatically complete the convoy");
+  pass("50 m arrival radius, GPS accuracy and two-heartbeat confirmation complete the convoy");
   pass("Both convoy members receive completion notifications");
   await callFunction("rateConvoyMember", accountB, { convoyId: convoy.convoyId, targetUserId: accountA.uid, signal: "harmony" });
   await callFunction("rateConvoyMember", accountA, { convoyId: convoy.convoyId, targetUserId: accountB.uid, signal: "harmony" });

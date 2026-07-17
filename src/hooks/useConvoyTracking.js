@@ -64,12 +64,24 @@ export function useConvoyTracking({ mapPins, user, onRefreshConvoys }) {
           syncFirebaseConvoyLocation(convoy.id, latestLocation)));
         if (cancelled) return;
         const primary = results[0] ?? {};
+        const status = primary.completed
+          ? "completed"
+          : primary.tripStatus === "arrived"
+            ? "arrived"
+            : primary.awaitingAccuracy
+              ? "low-accuracy"
+              : primary.arrivalConfirmationCount > 0
+                ? "verifying"
+                : "tracking";
         setTracking({
-          status: primary.completed ? "completed" : primary.tripStatus === "arrived" ? "arrived" : "tracking",
+          status,
           convoyId: primary.convoyId ?? trackableConvoys[0]?.id ?? null,
           lifecycleStatus: primary.lifecycleStatus,
           tripStatus: primary.tripStatus,
           distanceToDestinationM: primary.distanceToDestinationM,
+          arrivalRadiusM: primary.arrivalRadiusM,
+          arrivalConfirmationCount: primary.arrivalConfirmationCount,
+          arrivalConfirmationRequired: primary.arrivalConfirmationRequired,
           error: "",
         });
         await refreshRef.current?.();

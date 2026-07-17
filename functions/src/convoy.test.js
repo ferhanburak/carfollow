@@ -4,6 +4,7 @@ const {
   buildConvoyDocument,
   buildConvoyMemberDocument,
   buildPublicMapSummary,
+  DEFAULT_ARRIVAL_RADIUS_M,
   canSeeConvoy,
   getDistanceMeters,
   presentConvoy,
@@ -73,11 +74,44 @@ test("scheduled convoy waits for launch time before GPS tracking starts", () => 
 test("GPS heartbeat starts a due convoy and marks destination arrival", () => {
   const destination = { lat: 39.8, lng: 32.7 };
   const convoy = createConvoy({ scheduledStartAtMs: 10_000, routePath: [{ lat: 39.9, lng: 32.8 }, destination] });
-  const driving = resolveConvoyLocationUpdate(convoy, { lat: 39.85, lng: 32.75 }, 11_000);
-  const arrived = resolveConvoyLocationUpdate(convoy, destination, 11_000);
+  const driving = resolveConvoyLocationUpdate(convoy, { lat: 39.85, lng: 32.75, accuracy: 5 }, 11_000);
+  const verifying = resolveConvoyLocationUpdate(convoy, { ...destination, accuracy: 5 }, 11_000);
+  const arrived = resolveConvoyLocationUpdate(convoy, { ...destination, accuracy: 5 }, 11_000, {
+    tripStatus: verifying.tripStatus,
+    arrivalConfirmationCount: verifying.arrivalConfirmationCount,
+  });
   assert.equal(driving.lifecycleStatus, "rolling");
   assert.equal(driving.tripStatus, "enroute");
+  assert.equal(verifying.tripStatus, "enroute");
+  assert.equal(verifying.arrivalConfirmationCount, 1);
   assert.equal(arrived.tripStatus, "arrived");
+  assert.equal(arrived.arrivalConfirmationCount, 2);
   assert.equal(arrived.distanceToDestinationM, 0);
+  assert.equal(arrived.arrivalRadiusM, 50);
+  assert.equal(DEFAULT_ARRIVAL_RADIUS_M, 50);
   assert.ok(getDistanceMeters({ lat: 39.9, lng: 32.8 }, destination) > 10_000);
+});
+
+test("arrival verification rejects weak GPS and resets after leaving the destination radius", () => {
+  const destination = { lat: 39.8, lng: 32.7 };
+  const convoy = createConvoy({
+    arrivalRadiusM: 150,
+    scheduledStartAtMs: 10_000,
+    routePath: [{ lat: 39.9, lng: 32.8 }, destination],
+  });
+  const weakGps = resolveConvoyLocationUpdate(convoy, { ...destination, accuracy: 120 }, 11_000);
+  const firstValid = resolveConvoyLocationUpdate(convoy, { ...destination, accuracy: 10 }, 11_000);
+  const outside = resolveConvoyLocationUpdate(
+    convoy,
+    { lat: destination.lat + 0.001, lng: destination.lng, accuracy: 10 },
+    11_000,
+    { arrivalConfirmationCount: firstValid.arrivalConfirmationCount },
+  );
+
+  assert.equal(weakGps.awaitingAccuracy, true);
+  assert.equal(weakGps.arrivalConfirmationCount, 0);
+  assert.equal(firstValid.arrivalConfirmationCount, 1);
+  assert.equal(outside.insideArrivalRadius, false);
+  assert.equal(outside.arrivalConfirmationCount, 0);
+  assert.equal(outside.arrivalRadiusM, 50);
 });

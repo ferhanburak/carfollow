@@ -48,7 +48,6 @@ const {
 } = require("./map");
 const {
   LIFECYCLE_STATUSES,
-  TRIP_STATUSES,
   buildConvoyDocument,
   buildConvoyMemberDocument,
   buildPublicMapSummary,
@@ -1145,7 +1144,7 @@ exports.syncConvoyLocation = secureCall("syncConvoyLocation", { rateLimit: { lim
 
     let locationUpdate;
     try {
-      locationUpdate = resolveConvoyLocationUpdate(convoy, { lat, lng }, nowMs);
+      locationUpdate = resolveConvoyLocationUpdate(convoy, { lat, lng, accuracy }, nowMs, member);
     } catch (error) {
       throw new HttpsError("failed-precondition", error.message);
     }
@@ -1158,6 +1157,14 @@ exports.syncConvoyLocation = secureCall("syncConvoyLocation", { rateLimit: { lim
       lng: Number(lng.toFixed(6)),
       accuracy,
       distanceToDestinationM: locationUpdate.distanceToDestinationM,
+      arrivalConfirmationCount: locationUpdate.arrivalConfirmationCount,
+      arrivalVerificationStatus: locationUpdate.tripStatus === "arrived"
+        ? "confirmed"
+        : locationUpdate.awaitingAccuracy
+          ? "low-accuracy"
+          : locationUpdate.arrivalConfirmationCount > 0
+            ? "verifying"
+            : "tracking",
       trackingStatus: "active",
       lastLocationAt: timestamp,
       updatedAt: timestamp,
@@ -1203,6 +1210,10 @@ exports.syncConvoyLocation = secureCall("syncConvoyLocation", { rateLimit: { lim
       lifecycleStatus,
       tripStatus: locationUpdate.tripStatus,
       distanceToDestinationM: locationUpdate.distanceToDestinationM,
+      arrivalRadiusM: locationUpdate.arrivalRadiusM,
+      arrivalConfirmationCount: locationUpdate.arrivalConfirmationCount,
+      arrivalConfirmationRequired: locationUpdate.arrivalConfirmationRequired,
+      awaitingAccuracy: locationUpdate.awaitingAccuracy,
       completed: allArrived,
     };
   });
@@ -1425,11 +1436,13 @@ exports.updateConvoyLifecycle = secureCall("updateConvoyLifecycle", async (reque
 exports.updateConvoyTripStatus = secureCall("updateConvoyTripStatus", async (request) => {
   const userId = requireAuth(request);
   const { convoyId, tripStatus } = request.data ?? {};
-  if (!convoyId || !TRIP_STATUSES.includes(tripStatus)) throw new HttpsError("invalid-argument", "A valid trip status is required.");
+  if (!convoyId || tripStatus !== "cancelled") {
+    throw new HttpsError("invalid-argument", "Manual arrival updates are disabled; only convoy cancellation is allowed.");
+  }
   const memberRef = publicDocument("convoyMembers", buildScopedMemberId(convoyId, userId));
   const member = requireSnapshot(await memberRef.get(), "not-found", "Convoy membership not found.");
   if (member.membershipStatus !== "approved") throw new HttpsError("permission-denied", "Only approved convoy members can update trip status.");
-  await memberRef.update({ tripStatus, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  await memberRef.update({ tripStatus, arrivalConfirmationCount: 0, trackingStatus: "inactive", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
   return { ok: true, convoyId, tripStatus };
 });
 

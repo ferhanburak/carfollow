@@ -4,7 +4,9 @@ const ACCESS_POLICIES = ["open", "request", "trusted"];
 const DETAIL_VISIBILITIES = ["public", "trusted"];
 const LIFECYCLE_STATUSES = ["planning", "rolling", "delayed", "completed", "cancelled"];
 const TRIP_STATUSES = ["ready", "enroute", "arrived", "cancelled"];
-const DEFAULT_ARRIVAL_RADIUS_M = 150;
+const DEFAULT_ARRIVAL_RADIUS_M = 50;
+const ARRIVAL_CONFIRMATION_COUNT = 2;
+const MAX_AUTO_ARRIVAL_ACCURACY_M = 75;
 
 function safeText(value, maxLength) {
   return String(value ?? "").trim().replace(/\s+/g, " ").slice(0, maxLength);
@@ -40,29 +42,63 @@ function getDistanceMeters(left, right) {
   return 6371000 * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }
 
-function resolveConvoyLocationUpdate(convoy, location, nowMs = Date.now()) {
+function resolveConvoyLocationUpdate(convoy, location, nowMs = Date.now(), member = {}) {
   const destination = convoy?.routePath?.at?.(-1);
   const scheduledStartAtMs = safeScheduledStartAtMs(convoy?.scheduledStartAtMs);
   const lifecycleStatus = convoy?.lifecycleStatus ?? "planning";
   if (lifecycleStatus === "completed") {
-    return { lifecycleStatus, tripStatus: "arrived", distanceToDestinationM: 0, completed: true };
+    return {
+      lifecycleStatus,
+      tripStatus: "arrived",
+      distanceToDestinationM: 0,
+      arrivalConfirmationCount: ARRIVAL_CONFIRMATION_COUNT,
+      arrivalConfirmationRequired: ARRIVAL_CONFIRMATION_COUNT,
+      completed: true,
+    };
   }
   if (lifecycleStatus === "planning" && (!scheduledStartAtMs || nowMs < scheduledStartAtMs)) {
     return {
       lifecycleStatus,
       tripStatus: "ready",
       distanceToDestinationM: null,
+      arrivalConfirmationCount: Number(member?.arrivalConfirmationCount ?? 0),
+      arrivalConfirmationRequired: ARRIVAL_CONFIRMATION_COUNT,
       startsInMs: scheduledStartAtMs ? scheduledStartAtMs - nowMs : null,
       completed: false,
     };
   }
   if (!destination) throw new Error("Convoy route destination is missing.");
   const distanceToDestinationM = Math.round(getDistanceMeters(location, destination));
-  const arrivalRadiusM = Number(convoy?.arrivalRadiusM ?? DEFAULT_ARRIVAL_RADIUS_M);
+  const configuredRadiusM = Number(convoy?.arrivalRadiusM ?? DEFAULT_ARRIVAL_RADIUS_M);
+  const arrivalRadiusM = Math.min(
+    DEFAULT_ARRIVAL_RADIUS_M,
+    Number.isFinite(configuredRadiusM) && configuredRadiusM > 0 ? configuredRadiusM : DEFAULT_ARRIVAL_RADIUS_M,
+  );
+  const accuracy = Number(location?.accuracy);
+  const accuracyAccepted = Number.isFinite(accuracy) && accuracy > 0 && accuracy <= MAX_AUTO_ARRIVAL_ACCURACY_M;
+  const insideArrivalRadius = distanceToDestinationM <= arrivalRadiusM;
+  const alreadyArrived = member?.tripStatus === "arrived";
+  const storedConfirmationCount = Number(member?.arrivalConfirmationCount ?? 0);
+  const previousConfirmationCount = Math.min(
+    ARRIVAL_CONFIRMATION_COUNT,
+    Math.max(0, Number.isFinite(storedConfirmationCount) ? storedConfirmationCount : 0),
+  );
+  const arrivalConfirmationCount = alreadyArrived
+    ? ARRIVAL_CONFIRMATION_COUNT
+    : insideArrivalRadius && accuracyAccepted
+      ? Math.min(ARRIVAL_CONFIRMATION_COUNT, previousConfirmationCount + 1)
+      : 0;
+  const arrivalConfirmed = alreadyArrived || arrivalConfirmationCount >= ARRIVAL_CONFIRMATION_COUNT;
   return {
     lifecycleStatus: lifecycleStatus === "planning" ? "rolling" : lifecycleStatus,
-    tripStatus: distanceToDestinationM <= arrivalRadiusM ? "arrived" : "enroute",
+    tripStatus: arrivalConfirmed ? "arrived" : "enroute",
     distanceToDestinationM,
+    arrivalRadiusM,
+    insideArrivalRadius,
+    accuracyAccepted,
+    awaitingAccuracy: insideArrivalRadius && !accuracyAccepted,
+    arrivalConfirmationCount,
+    arrivalConfirmationRequired: ARRIVAL_CONFIRMATION_COUNT,
     startsInMs: 0,
     completed: false,
   };
@@ -157,6 +193,7 @@ function buildConvoyMemberDocument({ convoy, profile, status = "approved", times
     ...driver,
     membershipStatus: status,
     tripStatus: "ready",
+    arrivalConfirmationCount: 0,
     scoreSnapshot: driver.score,
     harmonyVotesSnapshot: driver.harmonyVotes,
     alertVotesSnapshot: driver.alertVotes,
@@ -242,7 +279,8 @@ function presentConvoy(convoy, profile, membership, members) {
 }
 
 module.exports = {
-  ACCESS_POLICIES, CONVOY_SCHEMA_VERSION, DEFAULT_ARRIVAL_RADIUS_M, DETAIL_VISIBILITIES, LIFECYCLE_STATUSES, TRIP_STATUSES, VISIBILITIES,
+  ACCESS_POLICIES, ARRIVAL_CONFIRMATION_COUNT, CONVOY_SCHEMA_VERSION, DEFAULT_ARRIVAL_RADIUS_M, DETAIL_VISIBILITIES,
+  LIFECYCLE_STATUSES, MAX_AUTO_ARRIVAL_ACCURACY_M, TRIP_STATUSES, VISIBILITIES,
   buildConvoyDocument, buildConvoyMemberDocument, buildPublicMapSummary, canSeeConvoy, canSeeDetails,
   getDistanceMeters, meetsTrust, presentConvoy, projectDriver, resolveConvoyLocationUpdate, safeText,
 };

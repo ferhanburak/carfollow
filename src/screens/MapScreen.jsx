@@ -289,6 +289,10 @@ export function MapScreen({
           <p className="mt-1 truncate text-xs font-bold text-white">
             {convoyTracking?.status === "tracking"
               ? "Konvoy GPS aktif"
+              : convoyTracking?.status === "verifying"
+                ? "Varis dogrulaniyor"
+                : convoyTracking?.status === "low-accuracy"
+                  ? "GPS hassasiyeti dusuk"
               : convoyTracking?.status === "arrived"
                 ? "Hedefe varildi"
                 : convoyTracking?.status === "completed"
@@ -310,6 +314,10 @@ export function MapScreen({
         <div className={`mb-3 rounded-[0.95rem] border px-3 py-2 text-xs ${convoyTracking.error ? "border-rose-400/30 bg-rose-500/10 text-rose-100" : "border-lime-400/25 bg-lime-400/10 text-lime-100"}`}>
           {convoyTracking.error || (convoyTracking.status === "requesting"
             ? "Konvoy saati geldi. GPS izni bekleniyor..."
+            : convoyTracking.status === "verifying"
+              ? `Varis dogrulaniyor (${convoyTracking.arrivalConfirmationCount ?? 1}/${convoyTracking.arrivalConfirmationRequired ?? 2}). Hedef alaninda kal.`
+              : convoyTracking.status === "low-accuracy"
+                ? "Hedef alanindasin ancak GPS hassasiyeti dusuk. Acik alanda konum dogrulamasi bekleniyor."
             : convoyTracking.status === "arrived"
               ? "Rota sonuna ulastin. Diger suruculer bekleniyor."
               : "Konvoy tamamlandi. Surucu oylamasi acildi.")}
