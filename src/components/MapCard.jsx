@@ -644,7 +644,7 @@ export function MapCard({
   );
 }
 
-function GoogleMapCard({
+export function GoogleMapCard({
   mapsApiKey,
   drivers,
   pins,

@@ -20,8 +20,21 @@ The friends-convoy folder requires Accounts A and B to already have an accepted 
 - Both Firebase Authentication sessions and distinct UIDs
 - Photo spot creation, cross-account visibility, pin likes, Storage upload, photo registration, and photo likes
 - Car-wash creation, cross-account visibility, review submission, and aggregate rating
-- Public convoy creation, discovery, join request, host approval, exact route visibility, trip state, lifecycle, and mutual rating
+- Public convoy creation, cross-account map marker discovery, exact selected route coordinate preservation, join request, host approval, route visibility, trip state, lifecycle, and mutual rating
 - Friends-only convoy creation, invitation, discovery, and immediate invited-member approval
+
+The frontend test suite also verifies that an authorized convoy projection renders one Google Maps marker and one route polyline, while a restricted projection keeps only the coarse marker and hides the route.
+
+## Manual Route Check
+
+1. Sign in as Account A and open `GRID / Harita`.
+2. Open the node editor, keep `Event` selected, then select the main event location on the map.
+3. Switch `Route Builder` to `Rota Noktasi` and click at least three points in driving order. Confirm the red draft line and `S`/`F` waypoint badges.
+4. Complete the event fields and select `Event Ekle`. Confirm the new convoy marker remains on the Grid map.
+5. Open a private/incognito window, sign in as Account B, and open `MAP / Live Map`. Confirm the convoy marker appears and opens its popup.
+6. Request to join from Account B, approve from Account A, then refresh Account B. Confirm the exact lime route line and route node count appear.
+
+For deterministic verification without manual clicking, run `npm run test:run` followed by the two-account `npm run postman:test` flow above. The first command proves marker/polyline rendering; the second proves production persistence and cross-account visibility.
 
 ## Production Data Warning
 
