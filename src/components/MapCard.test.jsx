@@ -89,4 +89,28 @@ describe("GoogleMapCard convoy overlays", () => {
     fireEvent.click(screen.getByTestId("google-map"));
     expect(onSelect).toHaveBeenLastCalledWith(null);
   });
+
+  it("keeps the full-screen Google map shell stretched to its parent", () => {
+    render(
+      <GoogleMapCard
+        mapsApiKey="test-key"
+        drivers={[]}
+        pins={[]}
+        selectedPin={null}
+        selectedPinId={null}
+        onSelect={vi.fn()}
+        user={{ firebaseUid: "member-1" }}
+        driveHud={{}}
+        draftRoutePath={[]}
+        isDriving={false}
+        mapPickMode="node"
+        fullScreen
+        navigationMode
+        mapHeight="18rem"
+      />,
+    );
+
+    expect(screen.getByTestId("google-map-shell")).toHaveClass("absolute", "inset-0", "h-full", "w-full");
+    expect(screen.getByTestId("google-map-shell")).not.toHaveClass("relative");
+  });
 });

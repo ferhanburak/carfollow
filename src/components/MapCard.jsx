@@ -977,9 +977,10 @@ export function GoogleMapCard({
 
       {isLoaded && !loadError ? (
         <div
-          className={`relative overflow-hidden ${
-            fullScreen ? "absolute inset-0" : "rounded-[1.5rem] border border-white/8"
-          }`}
+          data-testid="google-map-shell"
+          className={fullScreen
+            ? "absolute inset-0 h-full w-full overflow-hidden"
+            : "relative overflow-hidden rounded-[1.5rem] border border-white/8"}
         >
           {fullScreen ? (
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(163,230,53,0.08),_transparent_36%),linear-gradient(180deg,#0a0a0a,#050505)]" />
