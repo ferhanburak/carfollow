@@ -68,6 +68,18 @@ describe("App", () => {
     expect(await screen.findByText("Canli Aktif Suruculer")).toBeInTheDocument();
   });
 
+  it("renders one accessible action toolbar on Live Map", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
+    await user.click(screen.getByRole("button", { name: /Live Map/i }));
+
+    expect(await screen.findAllByRole("button", { name: "Bildirim merkezi" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Suruse Basla" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Oturumu kapat" })).toHaveLength(1);
+  });
+
   it("blocks invalid sign up and shows field errors", async () => {
     const user = userEvent.setup();
     render(<App />);

@@ -207,8 +207,8 @@ export function MapScreen({
   convoyTracking,
   drivers,
   driveHud,
-  driveSessionPending,
   driveSessionStatus,
+  headerActions,
   isDriving,
   joinCruise,
   likeGalleryImage,
@@ -237,7 +237,6 @@ export function MapScreen({
   spotPhotoFeedback,
   spotPhotoForm,
   submitWashReview,
-  toggleDrive,
   user,
   washForm,
   washErrors,
@@ -269,24 +268,13 @@ export function MapScreen({
 
   return (
     <section className="live-map-screen relative flex h-full min-h-0 flex-col overflow-hidden bg-[#050505] px-3 pb-3">
-      <div className="mb-3 flex items-start justify-between gap-2">
+      <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
         <div className="min-w-0 rounded-[1rem] border border-white/10 bg-black/35 px-3 py-2 backdrop-blur">
           <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">CRUISER LIVE MAP</p>
           <p className="mt-1 truncate text-sm font-black text-white">{user.plate}</p>
           <p className="text-[10px] text-neutral-400">{user.region}</p>
         </div>
-        <button
-          type="button"
-          onClick={toggleDrive}
-          disabled={driveSessionPending}
-          className={`min-h-12 rounded-[0.95rem] px-3 text-[11px] font-bold transition ${
-            isDriving
-              ? "bg-rose-500 text-white shadow-[0_0_18px_rgba(244,63,94,0.36)]"
-              : "bg-lime-400 text-black shadow-[0_0_18px_rgba(163,230,53,0.3)]"
-          } disabled:cursor-wait disabled:opacity-60`}
-        >
-          {driveSessionPending ? "Isleniyor" : isDriving ? "Durdur" : "Baslat"}
-        </button>
+        {headerActions}
       </div>
 
       <div className="mb-3 grid grid-cols-3 gap-2">

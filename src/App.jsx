@@ -227,6 +227,18 @@ function App() {
     withdrawFriendRequest,
   } = useCruiserWorld(user, setUser, setFuelForm);
 
+  const navigateFromNotification = (action) => {
+    const targetTabs = {
+      clan: "social",
+      conversation: "social",
+      convoy: "map",
+      garage: "garage",
+      profile: "profile",
+      social: "social",
+    };
+    setActiveTab(targetTabs[action?.type] ?? "profile");
+  };
+
   if (authMode !== "authenticated" || !user) {
     return (
       <AuthScreen
@@ -271,17 +283,7 @@ function App() {
                   notifications={notifications}
                   onMarkAllRead={markAllNotificationsRead}
                   onMarkRead={markNotificationRead}
-                  onNavigate={(action) => {
-                    const targetTabs = {
-                      clan: "social",
-                      conversation: "social",
-                      convoy: "map",
-                      garage: "garage",
-                      profile: "profile",
-                      social: "social",
-                    };
-                    setActiveTab(targetTabs[action?.type] ?? "profile");
-                  }}
+                  onNavigate={navigateFromNotification}
                   unreadCount={unreadNotificationCount}
                 />
                 <button
@@ -321,17 +323,6 @@ function App() {
               </div>
             </div>
           </header>
-        ) : null}
-
-        {activeTab === "liveMap" ? (
-          <button
-            type="button"
-            aria-label="Oturumu kapat"
-            onClick={() => setShowLogoutConfirm(true)}
-            className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-30 flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-400/30 bg-black/75 text-lg text-rose-200 backdrop-blur"
-          >
-            ↪
-          </button>
         ) : null}
 
         <div
@@ -392,8 +383,41 @@ function App() {
               <MapScreen
                 drivers={drivers}
                 driveHud={driveHud}
-                driveSessionPending={driveSessionPending}
                 driveSessionStatus={driveSessionStatus}
+                headerActions={(
+                  <div className="grid grid-cols-[3rem_minmax(4.5rem,1fr)_3rem] gap-2">
+                    <NotificationCenter
+                      feedback={notificationFeedback}
+                      notifications={notifications}
+                      onMarkAllRead={markAllNotificationsRead}
+                      onMarkRead={markNotificationRead}
+                      onNavigate={navigateFromNotification}
+                      unreadCount={unreadNotificationCount}
+                    />
+                    <button
+                      type="button"
+                      aria-label={driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}
+                      onClick={toggleDrive}
+                      disabled={driveSessionPending}
+                      className={`min-h-12 rounded-2xl px-3 text-xs font-bold transition ${
+                        isDriving
+                          ? "bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.42)]"
+                          : "bg-lime-400 text-black shadow-[0_0_20px_rgba(163,230,53,0.32)]"
+                      } disabled:cursor-wait disabled:opacity-60`}
+                    >
+                      {driveSessionPending ? "..." : isDriving ? "Durdur" : "Baslat"}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Oturumu kapat"
+                      title="Oturumu kapat"
+                      onClick={() => setShowLogoutConfirm(true)}
+                      className="flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-400/30 bg-black/75 text-lg text-rose-200 backdrop-blur transition hover:bg-rose-500/20"
+                    >
+                      ↪
+                    </button>
+                  </div>
+                )}
                 isDriving={isDriving}
                 joinCruise={joinCruise}
                 likeGalleryImage={likeGalleryImage}
@@ -427,7 +451,6 @@ function App() {
                 spotPhotoFeedback={spotPhotoFeedback}
                 spotPhotoForm={spotPhotoForm}
                 submitWashReview={submitWashReview}
-                toggleDrive={toggleDrive}
                 user={user}
                 washErrors={washErrors}
                 washFeedback={washFeedback}
