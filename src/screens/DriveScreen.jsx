@@ -28,6 +28,26 @@ function getConnectionTone(connection) {
   return "text-rose-300";
 }
 
+function formatTripDistance(distanceKm) {
+  const distance = Math.max(0, Number(distanceKm) || 0);
+  return `${distance < 1 ? distance.toFixed(2) : distance.toFixed(1)} KM`;
+}
+
+function getGpsStatusView(status) {
+  const views = {
+    denied: { label: "IZIN REDDEDILDI", tone: "border-rose-400/30 bg-rose-400/10 text-rose-200" },
+    error: { label: "GPS HATASI", tone: "border-rose-400/30 bg-rose-400/10 text-rose-200" },
+    idle: { label: "HAZIR", tone: "border-white/10 bg-white/[0.03] text-neutral-400" },
+    live: { label: "GPS CANLI", tone: "border-lime-400/30 bg-lime-400/10 text-lime-200" },
+    requesting: { label: "GPS ARANIYOR", tone: "border-amber-400/30 bg-amber-400/10 text-amber-200" },
+    timeout: { label: "BEKLENIYOR", tone: "border-amber-400/30 bg-amber-400/10 text-amber-200" },
+    unavailable: { label: "GPS YOK", tone: "border-rose-400/30 bg-rose-400/10 text-rose-200" },
+    weak: { label: "ZAYIF SINYAL", tone: "border-amber-400/30 bg-amber-400/10 text-amber-200" },
+  };
+
+  return views[status] ?? views.idle;
+}
+
 export function DriveScreen({
   driveHud,
   driveSessionFeedback,
@@ -38,6 +58,8 @@ export function DriveScreen({
   isDriving,
   user,
 }) {
+  const gpsView = getGpsStatusView(driveHud.gpsStatus);
+
   return (
     <section className="space-y-4">
       <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(160deg,#171717,#0b0b0b)] p-5 shadow-[inset_0_0_24px_rgba(163,230,53,0.05)]">
@@ -48,11 +70,21 @@ export function DriveScreen({
           </div>
           <div className={`h-3 w-3 rounded-full ${isDriving ? "bg-lime-400 shadow-[0_0_14px_#a3e635]" : "bg-neutral-600"}`} />
         </div>
+        <div className={`mt-4 flex min-h-12 items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${gpsView.tone}`}>
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.24em] opacity-70">Gercek Konum Telemetrisi</p>
+            <p className="mt-1 text-xs font-bold">{gpsView.label}</p>
+          </div>
+          <div className="text-right text-[11px]">
+            <p>{driveHud.accuracy ? `Dogruluk ±${Math.round(driveHud.accuracy)} m` : "Konum bekleniyor"}</p>
+            <p className="mt-1 opacity-70">Sahte hiz veya sabit KM artisi yok</p>
+          </div>
+        </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <HudStat label="Speed" value={`${driveHud.speed || 0} KM/H`} accent="lime" />
-          <HudStat label="Kat Edilen Mesafe" value={`${driveHud.sessionKm.toFixed(1)} KM`} accent="rose" />
+          <HudStat label="GPS Speed" value={`${Math.round(driveHud.speed || 0)} KM/H`} accent="lime" />
+          <HudStat label="Gercek Mesafe" value={formatTripDistance(driveHud.sessionKm)} accent="rose" />
           <HudStat label="Current Setup" value={`${user.tuningStage} / ${user.horsepower}HP`} accent="neutral" />
-          <HudStat label="Node" value={driveHud.etaNode} accent="lime" />
+          <HudStat label="GPS" value={driveHud.etaNode} accent="lime" />
         </div>
         <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
           <div className="mb-2 flex items-center justify-between text-sm">
@@ -66,7 +98,7 @@ export function DriveScreen({
             />
           </div>
           <p className="mt-3 text-sm text-neutral-400">
-            Surus aktifken kilometre sayaci ve bakim bilesen omru es zamanli guncellenir.
+            Odometre ve bakim omru yalnizca filtrelerden gecen gercek GPS mesafesiyle guncellenir.
           </p>
         </div>
 

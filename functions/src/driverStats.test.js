@@ -76,8 +76,8 @@ test("clamps reported distance to server elapsed time", () => {
   });
 
   assert.deepEqual(result, {
-    acceptedKm: 5.2,
-    rejectedKm: 14.8,
+    acceptedKm: 1.3,
+    rejectedKm: 18.7,
     elapsedSeconds: 10,
   });
 });

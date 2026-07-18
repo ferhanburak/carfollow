@@ -1,23 +1,42 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import {
-  advanceConvoySimulation,
-  buildDriveTickState,
   incrementClanKm,
   incrementUserOdometer,
 } from "../repositories/cruiserRepository";
+import { getGeolocationErrorStatus, processGpsPosition } from "../utils/driveTelemetry";
+
+function createInitialDriveHud() {
+  return {
+    accuracy: null,
+    etaNode: "GPS Hazir",
+    gpsStatus: "idle",
+    lastFixAt: null,
+    sessionKm: 0,
+    speed: 0,
+  };
+}
+
+function getGpsNodeLabel(status) {
+  if (status === "live") return "GPS Canli";
+  if (status === "weak") return "Zayif GPS";
+  if (status === "denied") return "Konum Kapali";
+  if (status === "timeout") return "GPS Bekleniyor";
+  if (status === "unavailable") return "GPS Yok";
+  if (status === "error") return "GPS Hatasi";
+  return "GPS Araniyor";
+}
 
 export function useDriveSession({
   user,
   setUser,
   setClans,
-  setMapPins,
   onTelemetrySync,
   onSessionStart,
   onSessionFinish,
   serverOwnedDriverStats = false,
 }) {
   const [isDriving, setIsDriving] = useState(false);
-  const [driveHud, setDriveHud] = useState({ speed: 0, sessionKm: 0, etaNode: "Hazir" });
+  const [driveHud, setDriveHud] = useState(createInitialDriveHud);
   const [driveSessionId, setDriveSessionId] = useState(null);
   const [driveSessionStatus, setDriveSessionStatus] = useState("idle");
   const [driveSessionFeedback, setDriveSessionFeedback] = useState("");
@@ -26,6 +45,8 @@ export function useDriveSession({
   const telemetrySyncRef = useRef(onTelemetrySync);
   const actionLockRef = useRef(false);
   const liveLocationRef = useRef(null);
+  const gpsPointRef = useRef(null);
+  const gpsStatusRef = useRef("idle");
 
   useEffect(() => {
     userRef.current = user;
@@ -36,30 +57,104 @@ export function useDriveSession({
   }, [onTelemetrySync]);
 
   useEffect(() => {
-    if (!isDriving || typeof navigator === "undefined" || !navigator.geolocation) {
+    if (!isDriving) {
       liveLocationRef.current = null;
+      gpsPointRef.current = null;
+      gpsStatusRef.current = "idle";
       return undefined;
     }
 
-    const watchId = navigator.geolocation.watchPosition(
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      gpsStatusRef.current = "unavailable";
+      setDriveHud((current) => ({
+        ...current,
+        etaNode: getGpsNodeLabel("unavailable"),
+        gpsStatus: "unavailable",
+        speed: 0,
+      }));
+      setDriveSessionFeedback("Bu cihaz veya tarayici GPS erisimi sunmuyor; mesafe kaydedilmiyor.");
+      return undefined;
+    }
+
+    setDriveHud((current) => ({
+      ...current,
+      etaNode: getGpsNodeLabel("requesting"),
+      gpsStatus: "requesting",
+      speed: 0,
+    }));
+    gpsStatusRef.current = "requesting";
+
+    const geolocation = navigator.geolocation;
+    const watchId = geolocation.watchPosition(
       (position) => {
-        liveLocationRef.current = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        };
+        const reading = processGpsPosition(gpsPointRef.current, position);
+        liveLocationRef.current = reading.location;
+        if (reading.accepted) {
+          gpsPointRef.current = reading.nextPoint;
+        }
+
+        const previousGpsStatus = gpsStatusRef.current;
+        gpsStatusRef.current = reading.gpsStatus;
+        startTransition(() => {
+          setDriveHud((current) => ({
+            ...current,
+            accuracy: reading.accuracy ?? null,
+            etaNode: getGpsNodeLabel(reading.gpsStatus),
+            gpsStatus: reading.gpsStatus,
+            lastFixAt: reading.timestamp ?? Date.now(),
+            sessionKm: Number((current.sessionKm + reading.distanceKm).toFixed(4)),
+            speed: reading.speedKmh,
+          }));
+
+          if (reading.distanceKm > 0) {
+            setUser((current) => (
+              current
+                ? incrementUserOdometer(current, {
+                  distanceKm: reading.distanceKm,
+                  incrementMonthlyKm: !serverOwnedDriverStats,
+                })
+                : current
+            ));
+
+            if (!serverOwnedDriverStats) {
+              setClans((current) => incrementClanKm(
+                current,
+                userRef.current?.clan,
+                reading.distanceKm,
+              ));
+            }
+          }
+        });
+
+        if (reading.gpsStatus === "live" && previousGpsStatus !== "live") {
+          setDriveSessionFeedback("Gercek GPS telemetrisi aktif; hiz ve mesafe cihaz konumundan hesaplaniyor.");
+        } else if (reading.gpsStatus === "weak" && previousGpsStatus !== "weak") {
+          setDriveSessionFeedback("GPS dogrulugu zayif; guvenilir olmayan hareket mesafeye eklenmiyor.");
+        }
       },
-      () => {
+      (error) => {
+        const gpsError = getGeolocationErrorStatus(error);
         liveLocationRef.current = null;
+        gpsStatusRef.current = gpsError.status;
+        setDriveHud((current) => ({
+          ...current,
+          accuracy: null,
+          etaNode: getGpsNodeLabel(gpsError.status),
+          gpsStatus: gpsError.status,
+          speed: 0,
+        }));
+        setDriveSessionFeedback(gpsError.message);
       },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 },
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 },
     );
 
     return () => {
-      navigator.geolocation.clearWatch(watchId);
+      geolocation.clearWatch(watchId);
       liveLocationRef.current = null;
+      gpsPointRef.current = null;
+      gpsStatusRef.current = "idle";
     };
-  }, [isDriving]);
+  }, [isDriving, serverOwnedDriverStats, setClans, setUser]);
 
   useEffect(() => {
     if (!isDriving || !userRef.current) {
@@ -73,40 +168,10 @@ export function useDriveSession({
       node: driveHud.etaNode,
       speed: driveHud.speed,
       location: liveLocationRef.current,
+      gpsAccuracy: driveHud.accuracy,
+      gpsStatus: driveHud.gpsStatus,
     });
-  }, [driveHud.etaNode, driveHud.speed, isDriving]);
-
-  useEffect(() => {
-    if (!isDriving || !userRef.current) {
-      return undefined;
-    }
-
-    const driveTimer = window.setInterval(() => {
-      startTransition(() => {
-        setDriveHud((current) => {
-          const nextDriveHud = buildDriveTickState(current);
-          setMapPins?.((currentPins) => advanceConvoySimulation(currentPins, nextDriveHud, userRef.current));
-          return nextDriveHud;
-        });
-
-        setUser((current) => {
-          if (!current) {
-            return current;
-          }
-
-          return incrementUserOdometer(current, {
-            incrementMonthlyKm: !serverOwnedDriverStats,
-          });
-        });
-
-        if (!serverOwnedDriverStats) {
-          setClans((current) => incrementClanKm(current, userRef.current?.clan));
-        }
-      });
-    }, 1000);
-
-    return () => window.clearInterval(driveTimer);
-  }, [isDriving, serverOwnedDriverStats, setClans, setMapPins, setUser]);
+  }, [driveHud.accuracy, driveHud.etaNode, driveHud.gpsStatus, driveHud.lastFixAt, driveHud.speed, isDriving]);
 
   const toggleDrive = async () => {
     if (!user || actionLockRef.current) {
@@ -122,7 +187,7 @@ export function useDriveSession({
         setDriveSessionFeedback(
           serverOwnedDriverStats
             ? "Guvenli surus oturumu Firebase backend'de aciliyor..."
-            : "Surus simulasyonu hazirlaniyor...",
+            : "GPS tabanli surus oturumu hazirlaniyor...",
         );
         const result = onSessionStart
           ? await onSessionStart({ user })
@@ -139,11 +204,11 @@ export function useDriveSession({
           result.resumed
             ? "Acik surus oturumuna yeniden baglanildi."
             : serverOwnedDriverStats
-              ? "Sunucu kontrollu surus kaydi aktif."
-              : "Surus simulasyonu aktif.",
+              ? "Sunucu kontrollu surus kaydi aktif; GPS bekleniyor."
+              : "GPS tabanli surus kaydi aktif; konum bekleniyor.",
         );
         if (!result.resumed) {
-          setDriveHud({ speed: 0, sessionKm: 0, etaNode: "Hazir" });
+          setDriveHud(createInitialDriveHud());
         }
         setIsDriving(true);
       } else {
@@ -195,7 +260,7 @@ export function useDriveSession({
       });
     }
     setIsDriving(false);
-    setDriveHud({ speed: 0, sessionKm: 0, etaNode: "Hazir" });
+    setDriveHud(createInitialDriveHud());
     setDriveSessionId(null);
     setDriveSessionStatus("idle");
     setDriveSessionFeedback("");

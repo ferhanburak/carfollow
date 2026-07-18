@@ -1,4 +1,5 @@
-const DRIVE_KM_PER_SECOND = 0.4;
+// Client distance comes from filtered GPS fixes; this remains a server-side anti-abuse ceiling.
+const DRIVE_KM_PER_SECOND = 0.1;
 const DRIVE_GRACE_SECONDS = 3;
 const MAX_SESSION_SECONDS = 6 * 60 * 60;
 const MAX_SESSION_KM = 2000;

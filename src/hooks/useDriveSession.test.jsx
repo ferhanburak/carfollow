@@ -1,6 +1,25 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useDriveSession } from "./useDriveSession";
+
+const geolocation = {
+  clearWatch: vi.fn(),
+  watchPosition: vi.fn(() => 42),
+};
+
+beforeEach(() => {
+  geolocation.clearWatch.mockClear();
+  geolocation.watchPosition.mockClear();
+  geolocation.watchPosition.mockReturnValue(42);
+  Object.defineProperty(navigator, "geolocation", {
+    configurable: true,
+    value: geolocation,
+  });
+});
+
+afterEach(() => {
+  delete navigator.geolocation;
+});
 
 function createHookProps(overrides = {}) {
   return {
@@ -94,5 +113,36 @@ describe("useDriveSession", () => {
     expect(result.current.driveSessionId).toBe("ride-user-1-123456");
     expect(result.current.driveSessionStatus).toBe("error");
     expect(result.current.driveSessionFeedback).toContain("Finalize failed");
+  });
+
+  it("updates speed, distance, and odometer from real GPS fixes", async () => {
+    let currentUser;
+    const props = createHookProps();
+    currentUser = props.user;
+    props.setUser.mockImplementation((updater) => {
+      currentUser = updater(currentUser);
+    });
+    const { result } = renderHook(() => useDriveSession(props));
+
+    await act(async () => {
+      await result.current.toggleDrive();
+    });
+
+    const onPosition = geolocation.watchPosition.mock.calls[0][0];
+    act(() => {
+      onPosition({
+        coords: { accuracy: 8, latitude: 39.92, longitude: 32.85, speed: 10 },
+        timestamp: 1_000,
+      });
+      onPosition({
+        coords: { accuracy: 8, latitude: 39.9209, longitude: 32.85, speed: null },
+        timestamp: 11_000,
+      });
+    });
+
+    expect(result.current.driveHud.gpsStatus).toBe("live");
+    expect(result.current.driveHud.speed).toBeGreaterThan(32);
+    expect(result.current.driveHud.sessionKm).toBeGreaterThan(0.09);
+    expect(currentUser.odometer).toBeGreaterThan(1000.09);
   });
 });

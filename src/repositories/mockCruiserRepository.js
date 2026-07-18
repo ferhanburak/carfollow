@@ -275,12 +275,13 @@ function resolveTripStatus(attendee, progressRatio, index, hostPlate) {
   return "ready";
 }
 
-export function incrementUserOdometer(user, { incrementMonthlyKm = true } = {}) {
+export function incrementUserOdometer(user, { distanceKm = 0.4, incrementMonthlyKm = true } = {}) {
+  const safeDistanceKm = Math.max(0, Number(distanceKm) || 0);
   return {
     ...user,
-    odometer: Number((user.odometer + 0.4).toFixed(1)),
+    odometer: Number((Number(user.odometer ?? 0) + safeDistanceKm).toFixed(3)),
     monthlyKm: incrementMonthlyKm
-      ? Number(((user.monthlyKm ?? 0) + 0.4).toFixed(1))
+      ? Number((Number(user.monthlyKm ?? 0) + safeDistanceKm).toFixed(3))
       : Number(user.monthlyKm ?? 0),
   };
 }
@@ -325,8 +326,13 @@ export function advanceConvoySimulation(mapPins, driveHud, user) {
   });
 }
 
-export function incrementClanKm(clans, clanName) {
-  return clans.map((clan) => (clan.name === clanName ? { ...clan, km: Number((clan.km + 0.4).toFixed(1)) } : clan));
+export function incrementClanKm(clans, clanName, distanceKm = 0.4) {
+  const safeDistanceKm = Math.max(0, Number(distanceKm) || 0);
+  return clans.map((clan) => (
+    clan.name === clanName
+      ? { ...clan, km: Number((Number(clan.km ?? 0) + safeDistanceKm).toFixed(3)) }
+      : clan
+  ));
 }
 
 export function incrementPinLike(mapPins, pinId) {

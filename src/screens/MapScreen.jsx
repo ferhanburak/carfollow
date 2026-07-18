@@ -35,8 +35,10 @@ function getLiveRouteMetrics(selectedPin, driveHud, isDriving) {
   const totalKm = getRouteDistanceKm(selectedPin?.routePath ?? []);
   const traveledKm = isDriving ? Math.min(totalKm || driveHud.sessionKm, driveHud.sessionKm) : 0;
   const remainingKm = totalKm > 0 ? Math.max(0, Number((totalKm - traveledKm).toFixed(1))) : 0;
-  const liveSpeed = Math.max(1, Number(driveHud.speed || 0));
-  const etaMinutes = remainingKm > 0 ? Math.max(1, Math.round((remainingKm / liveSpeed) * 60)) : 0;
+  const liveSpeed = Math.max(0, Number(driveHud.speed || 0));
+  const etaMinutes = remainingKm > 0 && liveSpeed >= 1
+    ? Math.max(1, Math.round((remainingKm / liveSpeed) * 60))
+    : null;
   const progress = totalKm > 0 ? Math.min(100, Math.round((traveledKm / totalKm) * 100)) : 0;
 
   return {
@@ -81,7 +83,9 @@ function buildNavigationSummary(selectedPin, driveHud, isDriving, user) {
     subtitle: isDriving
       ? `${driveHud.etaNode} · ${routeMetrics.remainingKm.toFixed(1)} km kaldi`
       : `${selectedPin.time} · ${selectedPin.attendees.length} katilimci`,
-    eta: isDriving ? `${routeMetrics.etaMinutes || 1} dk` : `${Math.max(4, stops.length * 3)} dk`,
+    eta: isDriving
+      ? routeMetrics.etaMinutes ? `${routeMetrics.etaMinutes} dk` : "GPS bekleniyor"
+      : `${Math.max(4, stops.length * 3)} dk`,
   };
 }
 
@@ -160,7 +164,9 @@ function buildConvoyTimeline(pin, user, driveHud, isDriving) {
     locked: false,
     title: `${getLifecycleLabel(pin.lifecycleStatus)} · ${attendees.length} surucu`,
     subtitle: isDriving
-      ? `${driveHud.etaNode} · ${routeMetrics.remainingKm.toFixed(1)} km kaldi · ETA ${routeMetrics.etaMinutes || 1} dk`
+      ? `${driveHud.etaNode} · ${routeMetrics.remainingKm.toFixed(1)} km kaldi · ${
+        routeMetrics.etaMinutes ? `ETA ${routeMetrics.etaMinutes} dk` : "ETA icin hareket bekleniyor"
+      }`
       : `${pin.route} · ${pin.time}`,
     progress,
     metrics: routeMetrics,

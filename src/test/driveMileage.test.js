@@ -18,4 +18,14 @@ describe("drive mileage updates", () => {
       monthlyKm: 20,
     });
   });
+
+  it("increments the odometer by the accepted GPS distance", () => {
+    expect(incrementUserOdometer(
+      { odometer: 1000, monthlyKm: 20 },
+      { distanceKm: 0.0174, incrementMonthlyKm: false },
+    )).toMatchObject({
+      odometer: 1000.017,
+      monthlyKm: 20,
+    });
+  });
 });

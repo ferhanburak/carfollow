@@ -131,7 +131,6 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     user,
     setUser,
     setClans,
-    setMapPins,
     onTelemetrySync: syncTelemetry,
     onSessionStart: startDriveSession,
     onSessionFinish: finishDriveSession,
