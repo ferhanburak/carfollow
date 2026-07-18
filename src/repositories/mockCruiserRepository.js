@@ -117,7 +117,7 @@ export function createSignedUpUser(signUpForm, identity = {}) {
     horsepower: Number(signUpForm.horsepower || 0),
     garage: signUpForm.garage,
     privacy: {
-      plateSearchEnabled: signUpForm.plateSearchConsent === true,
+      plateSearchEnabled: true,
       showModelInSearch: true,
       showRegionInSearch: false,
       locationPrecision: "approximate",
@@ -127,7 +127,7 @@ export function createSignedUpUser(signUpForm, identity = {}) {
     privacyConsent: {
       version: "2026-07",
       kvkkAcceptedAt: Date.now(),
-      plateSearchConsent: signUpForm.plateSearchConsent === true,
+      plateSearchConsent: true,
     },
     odometer: 12000,
     badges: ["Yeni Uye", "Garajda Aktif"],

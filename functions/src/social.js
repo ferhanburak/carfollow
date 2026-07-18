@@ -64,6 +64,7 @@ function projectPlateSearchResult(profile, fallbackUserId = "") {
   const privacy = normalizePrivacySettings(profile?.privacy);
   return {
     userId: String(profile?.id ?? profile?.userId ?? profile?.firebaseUid ?? fallbackUserId),
+    plate: String(profile?.plate ?? ""),
     plateMasked: maskPlate(profile?.plate),
     fullName: "CRUISER Driver",
     model: privacy.showModelInSearch ? String(profile?.model ?? "") : "",

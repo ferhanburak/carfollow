@@ -105,7 +105,7 @@ function buildRegistrationBundle({ uid, email, profile, acceptKvkk, timestamp })
     : "Stock";
   const vehicleId = `vehicle-${normalizeIdentifier(uid, "primary")}`;
   const privacy = {
-    plateSearchEnabled: profile?.privacy?.plateSearchEnabled === true,
+    plateSearchEnabled: true,
     showPlateOnLiveMap: false,
     showModelInSearch: profile?.privacy?.showModelInSearch !== false,
     showRegionInSearch: profile?.privacy?.showRegionInSearch === true,
@@ -161,7 +161,7 @@ function buildRegistrationBundle({ uid, email, profile, acceptKvkk, timestamp })
       privacyConsent: {
         version: KVKK_CONSENT_VERSION,
         kvkkAcceptedAt: timestamp,
-        plateSearchConsent: privacy.plateSearchEnabled,
+        plateSearchConsent: true,
       },
       createdAt: timestamp,
       updatedAt: timestamp,

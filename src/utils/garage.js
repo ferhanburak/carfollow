@@ -8,7 +8,6 @@ export const createSignUpState = () => ({
   horsepower: "",
   garage: "",
   privacyNoticeAccepted: false,
-  plateSearchConsent: false,
 });
 
 export const createWashForm = () => ({

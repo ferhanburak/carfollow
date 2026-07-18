@@ -460,7 +460,7 @@ export function StatsScreen({
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold">Kullanici Ara</p>
-              <p className="mt-1 text-xs text-neutral-500">Tam plakayla ara. Sonuclar maskeli gelir; detaylar arkadasliktan sonra acilir.</p>
+              <p className="mt-1 text-xs text-neutral-500">Tam plakayla ara. Yalnizca birebir eslesen kayit gosterilir.</p>
             </div>
             <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
               {hasSearchResults ? `${Math.min(friendSearchResults.length, 8)} sonuc` : "Hazir"}
@@ -528,7 +528,7 @@ export function StatsScreen({
             ))}
             {!hasSearchResults && friendSearchQuery.trim() ? (
               <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
-                Bu tam plakaya ait, aranabilir bir surucu bulunamadi.
+                Bu tam plakaya ait bir surucu bulunamadi.
               </div>
             ) : null}
           </div>

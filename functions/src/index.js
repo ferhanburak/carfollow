@@ -608,8 +608,7 @@ exports.searchDriverByPlate = secureCall("searchDriverByPlate", { rateLimit: { l
     return { ok: true, driver: null };
   }
   const target = targetSnapshot.data();
-  const privacy = normalizePrivacySettings(target.privacy);
-  if (!privacy.plateSearchEnabled) return { ok: true, driver: null };
+  if (target.privacyConsent?.withdrawnAt) return { ok: true, driver: null };
 
   return { ok: true, driver: projectPlateSearchResult(target, targetUserId) };
 });

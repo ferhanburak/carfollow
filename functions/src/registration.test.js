@@ -40,6 +40,7 @@ describe("registration", () => {
     assert.equal(bundle.claim.plateNormalized, "06PWA101");
     assert.equal(bundle.privateProfile.driverScore, 80);
     assert.equal(bundle.privateProfile.privacy.locationPrecision, "approximate");
+    assert.equal(bundle.privateProfile.privacy.plateSearchEnabled, true);
     assert.equal(bundle.privateProfile.privacyConsent.kvkkAcceptedAt, 123456);
     assert.equal(bundle.publicProfile.email, undefined);
     assert.equal(bundle.publicProfile.odometer, undefined);

@@ -79,15 +79,18 @@ export function ProfileScreen({
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold">Gizlilik ve Konum</p>
-            <p className="mt-1 text-xs text-neutral-500">Plaka kesfi ve Live Map gorunurlugunu sen belirlersin.</p>
+            <p className="mt-1 text-xs text-neutral-500">Konum ve Live Map gorunurlugunu sen belirlersin.</p>
           </div>
           <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-lime-300">KVKK</span>
         </div>
         <div className="mt-4 space-y-3">
-          <label className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-sm">
-            <span>Plakayla bulunabilir ol</span>
-            <input type="checkbox" checked={privacy.plateSearchEnabled} onChange={(event) => setPrivacy((current) => ({ ...current, plateSearchEnabled: event.target.checked }))} className="h-5 w-5 accent-lime-400" />
-          </label>
+          <div className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-lime-400/15 bg-lime-400/[0.04] px-4 py-3 text-sm">
+            <span>
+              <span className="block">Tam plakayla arkadas aramasi</span>
+              <span className="mt-1 block text-xs text-neutral-500">Giris yapmis kullanicilar icin aktif; toplu listeleme kapali.</span>
+            </span>
+            <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-lime-300">Aktif</span>
+          </div>
           <label className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-sm">
             <span>Aramada arac modelimi goster</span>
             <input type="checkbox" checked={privacy.showModelInSearch} onChange={(event) => setPrivacy((current) => ({ ...current, showModelInSearch: event.target.checked }))} className="h-5 w-5 accent-lime-400" />

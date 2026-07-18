@@ -11,7 +11,7 @@ import {
   unblockFirebaseDriver,
   updateFirebasePrivacySettings,
 } from "../repositories/cruiserRepository";
-import { maskPlate, normalizePlateForSearch, normalizePrivacySettings } from "../utils/privacy";
+import { normalizePlateForSearch, normalizePrivacySettings } from "../utils/privacy";
 import {
   acceptFriendRequest,
   blockCommunityMember,
@@ -89,7 +89,7 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
     () => firebaseEnabled
       ? firebaseSearchResults.map((entry) => ({
           ...entry,
-          plate: entry.plateMasked ?? maskPlate(entry.plate),
+          plate: entry.plate,
           friendshipStatus: getFriendshipStatusByUserId(safeUser, entry.userId),
         }))
       : searchCommunityMembers(friendSearchQuery, liveDirectory, safeUser),

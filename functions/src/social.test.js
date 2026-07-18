@@ -111,12 +111,13 @@ test("buildFriendshipMigrationDocument upgrades a legacy edge without changing i
   assert.equal(document.updatedAt, timestamp);
 });
 
-test("plate search always returns a masked, privacy-scoped profile", () => {
+test("plate search returns the exact requested plate with privacy-scoped profile fields", () => {
   const result = projectPlateSearchResult({
     ...target,
     privacy: { plateSearchEnabled: true, showModelInSearch: false, showRegionInSearch: true },
   });
 
+  assert.equal(result.plate, "34 TEST 01");
   assert.equal(result.plateMasked, "34 ••• 01");
   assert.equal(result.fullName, "CRUISER Driver");
   assert.equal(result.model, "");
