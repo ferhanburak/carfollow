@@ -227,6 +227,12 @@ function App() {
     withdrawFriendRequest,
   } = useCruiserWorld(user, setUser, setFuelForm);
 
+  useEffect(() => {
+    if (activeTab === "liveMap") {
+      setSelectedPinId(null);
+    }
+  }, [activeTab, setSelectedPinId]);
+
   const navigateFromNotification = (action) => {
     const targetTabs = {
       clan: "social",

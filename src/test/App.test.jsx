@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../App";
 
@@ -78,6 +78,16 @@ describe("App", () => {
     expect(await screen.findAllByRole("button", { name: "Bildirim merkezi" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Suruse Basla" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Oturumu kapat" })).toHaveLength(1);
+
+    const liveMap = screen.getByTestId("live-map-screen");
+    expect(within(liveMap).queryByText("Selected Node")).not.toBeInTheDocument();
+    expect(within(liveMap).queryByText("Serbest surus")).not.toBeInTheDocument();
+
+    await user.click(within(liveMap).getByRole("button", { name: "Mogan Lake Sunset (spot)" }));
+    expect(within(liveMap).getByTestId("live-map-node-overlay")).toBeInTheDocument();
+    await user.click(within(liveMap).getByRole("button", { name: "Kapat" }));
+    expect(within(liveMap).queryByTestId("live-map-node-overlay")).not.toBeInTheDocument();
+    expect(within(liveMap).getByText("Marker secilmedi")).toBeInTheDocument();
   });
 
   it("blocks invalid sign up and shows field errors", async () => {

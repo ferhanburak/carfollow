@@ -181,9 +181,9 @@ function buildConvoyTimeline(pin, user, driveHud, isDriving) {
 
 function OverlayCard({ children, title, onClose }) {
   return (
-    <div className="absolute inset-0 z-30 flex items-end bg-black/45 px-3 pb-3 pt-14 backdrop-blur-[2px]">
-      <div className="w-full overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#0d0d0d]/96 shadow-[0_24px_80px_rgba(0,0,0,0.58)] backdrop-blur">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+    <div data-testid="live-map-node-overlay" onClick={onClose} className="absolute inset-0 z-40 flex items-end bg-black/60 p-3 pt-12 backdrop-blur-[3px]">
+      <div onClick={(event) => event.stopPropagation()} className="flex max-h-full w-full flex-col overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#0d0d0d]/98 shadow-[0_24px_80px_rgba(0,0,0,0.72)] backdrop-blur-xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
           <div>
             <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Popup</p>
             <h3 className="mt-1 text-base font-black text-white">{title}</h3>
@@ -196,7 +196,7 @@ function OverlayCard({ children, title, onClose }) {
             Kapat
           </button>
         </div>
-        <div className="max-h-[calc(100vh-12rem)] overflow-y-auto px-4 py-4">{children}</div>
+        <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-4 py-4">{children}</div>
       </div>
     </div>
   );
@@ -267,7 +267,7 @@ export function MapScreen({
         : "Serbest mod";
 
   return (
-    <section className="live-map-screen relative flex h-full min-h-0 flex-col overflow-hidden bg-[#050505] px-3 pb-3">
+    <section data-testid="live-map-screen" className="live-map-screen relative flex h-full min-h-0 flex-col overflow-hidden bg-[#050505] px-3 pb-3">
       <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
         <div className="min-w-0 rounded-[1rem] border border-white/10 bg-black/35 px-3 py-2 backdrop-blur">
           <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">CRUISER LIVE MAP</p>
@@ -318,7 +318,7 @@ export function MapScreen({
         </div>
       ) : null}
 
-      <div className="relative flex-1 min-h-0">
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-[1.35rem] border border-white/10">
         <MapCard
           drivers={drivers}
           pins={mapPins}
@@ -333,55 +333,13 @@ export function MapScreen({
           user={user}
           driveHud={driveHud}
           draftRoutePath={[]}
+          fullScreen
           isDriving={isDriving}
           navigationMode
-          mapHeight="clamp(18rem, calc(100dvh - 19.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)), 42rem)"
         />
-
-        {activeOverlay === "details" && selectedPin ? (
-          <OverlayCard title={overlayTitle} onClose={() => setActiveOverlay(null)}>
-            <PinPanel
-              pin={selectedPin}
-              user={user}
-              convoyFeedback={convoyFeedback}
-              spotPhotoErrors={spotPhotoErrors}
-              spotPhotoFeedback={spotPhotoFeedback}
-              spotPhotoForm={spotPhotoForm}
-              washForm={washForm}
-              washErrors={washErrors}
-              washFeedback={washFeedback}
-              onApproveCruiseJoinRequest={onApproveCruiseJoinRequest}
-              onDeclineCruiseJoinRequest={onDeclineCruiseJoinRequest}
-              onDeleteSpotPhoto={onDeleteSpotPhoto}
-              onReportSpotPhoto={onReportSpotPhoto}
-              onRemoveConvoyMember={onRemoveConvoyMember}
-              onJoinCruise={joinCruise}
-              onLikeGallery={likeGalleryImage}
-              onLikePin={likePin}
-              onRateAttendee={rateAttendee}
-              onSetAttendeeTripStatus={onSetAttendeeTripStatus}
-              onSetConvoyLifecycleStatus={onSetConvoyLifecycleStatus}
-              onSpotPhotoFileChange={loadSpotPhotoFile}
-              onSpotPhotoFormChange={onSetSpotPhotoForm}
-              onSubmitSpotPhoto={onSubmitSpotPhoto}
-              onSubmitWashReview={submitWashReview ?? onSubmitWashReview}
-              onWashFormChange={onSetWashForm}
-            />
-          </OverlayCard>
-        ) : null}
-
-        {!selectedPin ? (
-          <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20 rounded-[1.1rem] border border-white/10 bg-[#090909]/88 px-4 py-3 backdrop-blur">
-            <p className="text-[10px] uppercase tracking-[0.24em] text-lime-400">Harita ipucu</p>
-            <p className="mt-1 text-sm font-semibold text-white">Mini ikonlara dokunarak node detaylarini acabilirsin.</p>
-            <p className="mt-1 text-[11px] text-neutral-400">
-              Konvoy, photo spot ve wash pinleri popup olarak acilir; surus modu aciksa rota durumu canli guncellenir.
-            </p>
-          </div>
-        ) : null}
       </div>
 
-      <div className="mt-3 rounded-[1rem] border border-white/10 bg-[#0b0b0b]/66 px-3 py-2 backdrop-blur">
+      {isDriving ? <div className="mt-3 rounded-[1rem] border border-white/10 bg-[#0b0b0b]/66 px-3 py-2 backdrop-blur">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-xs font-bold text-white">{navigation.title}</p>
@@ -392,9 +350,9 @@ export function MapScreen({
             <p className="mt-0.5 text-sm font-black text-lime-300">{navigation.eta}</p>
           </div>
         </div>
-      </div>
+      </div> : null}
 
-      {convoyTimeline ? (
+      {isDriving && convoyTimeline ? (
         <div className="mt-3 rounded-[1rem] border border-white/10 bg-[linear-gradient(180deg,rgba(18,18,18,0.94),rgba(10,10,10,0.94))] px-3 py-3 backdrop-blur">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -443,6 +401,44 @@ export function MapScreen({
             ))}
           </div>
         </div>
+      ) : null}
+
+      {activeOverlay === "details" && selectedPin ? (
+        <OverlayCard
+          title={overlayTitle}
+          onClose={() => {
+            setActiveOverlay(null);
+            onSelectPin(null);
+          }}
+        >
+          <PinPanel
+            pin={selectedPin}
+            user={user}
+            convoyFeedback={convoyFeedback}
+            spotPhotoErrors={spotPhotoErrors}
+            spotPhotoFeedback={spotPhotoFeedback}
+            spotPhotoForm={spotPhotoForm}
+            washForm={washForm}
+            washErrors={washErrors}
+            washFeedback={washFeedback}
+            onApproveCruiseJoinRequest={onApproveCruiseJoinRequest}
+            onDeclineCruiseJoinRequest={onDeclineCruiseJoinRequest}
+            onDeleteSpotPhoto={onDeleteSpotPhoto}
+            onReportSpotPhoto={onReportSpotPhoto}
+            onRemoveConvoyMember={onRemoveConvoyMember}
+            onJoinCruise={joinCruise}
+            onLikeGallery={likeGalleryImage}
+            onLikePin={likePin}
+            onRateAttendee={rateAttendee}
+            onSetAttendeeTripStatus={onSetAttendeeTripStatus}
+            onSetConvoyLifecycleStatus={onSetConvoyLifecycleStatus}
+            onSpotPhotoFileChange={loadSpotPhotoFile}
+            onSpotPhotoFormChange={onSetSpotPhotoForm}
+            onSubmitSpotPhoto={onSubmitSpotPhoto}
+            onSubmitWashReview={submitWashReview ?? onSubmitWashReview}
+            onWashFormChange={onSetWashForm}
+          />
+        </OverlayCard>
       ) : null}
     </section>
   );
