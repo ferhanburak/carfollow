@@ -1,5 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { normalizeFirebaseActiveDrivers } from "./firebaseCruiserRepository";
+import {
+  buildFirebaseTelemetryDisconnectPayload,
+  normalizeFirebaseActiveDrivers,
+} from "./firebaseCruiserRepository";
+
+describe("buildFirebaseTelemetryDisconnectPayload", () => {
+  it("removes live GPS coordinates before registering the inactive disconnect state", () => {
+    const payload = buildFirebaseTelemetryDisconnectPayload({
+      active: true,
+      plate: "06 *** 01",
+      lat: 39.925,
+      lng: 32.836,
+      gpsAccuracy: 8,
+      gpsStatus: "live",
+      locationVisibility: "exact",
+      safeZoneActive: false,
+      speed: 92,
+    }, "owner-id", 1720958400000);
+
+    expect(payload).toMatchObject({
+      active: false,
+      firebaseUid: "owner-id",
+      gpsStatus: "inactive",
+      locationVisibility: "inactive",
+      safeZoneActive: false,
+      speed: 0,
+      updatedAt: 1720958400000,
+    });
+    expect(payload).not.toHaveProperty("lat");
+    expect(payload).not.toHaveProperty("lng");
+    expect(payload).not.toHaveProperty("gpsAccuracy");
+  });
+});
 
 describe("normalizeFirebaseActiveDrivers", () => {
   it("returns only fresh active telemetry records", () => {

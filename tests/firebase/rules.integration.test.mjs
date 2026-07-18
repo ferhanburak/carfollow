@@ -809,6 +809,22 @@ describe("Realtime Database security rules", { concurrency: false }, () => {
       locationVisibility: "safe-zone",
       safeZoneActive: true,
     }));
+    await assertSucceeds(setDatabaseValue(databaseRef(ownerDb, telemetryPath), {
+      ...baseTelemetry,
+      active: false,
+      speed: 0,
+      locationVisibility: "inactive",
+      safeZoneActive: false,
+    }));
+    await assertFails(setDatabaseValue(databaseRef(ownerDb, telemetryPath), {
+      ...baseTelemetry,
+      active: false,
+      speed: 0,
+      lat: 39.9,
+      lng: 32.8,
+      locationVisibility: "inactive",
+      safeZoneActive: false,
+    }));
   });
 
   it("limits DM thread reads and writes to participants", async () => {

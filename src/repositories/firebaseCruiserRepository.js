@@ -118,6 +118,25 @@ export async function saveFirebaseCruiseJoin(pinId, plate) {
   );
 }
 
+export function buildFirebaseTelemetryDisconnectPayload(driver, firebaseUid, updatedAt) {
+  const payload = {
+    ...(driver ?? {}),
+    active: false,
+    firebaseUid,
+    gpsStatus: "inactive",
+    locationVisibility: "inactive",
+    safeZoneActive: false,
+    speed: 0,
+    updatedAt,
+  };
+
+  // Inactive telemetry must never retain the last known device coordinates.
+  delete payload.lat;
+  delete payload.lng;
+  delete payload.gpsAccuracy;
+  return payload;
+}
+
 export async function saveFirebaseActiveDriver(driver, privacy) {
   const services = await getFirebaseServices();
   if (!services || !driver?.plate) {
@@ -134,15 +153,11 @@ export async function saveFirebaseActiveDriver(driver, privacy) {
   const safeDriver = buildPrivacyAwareTelemetry(driver, privacy);
   const disconnect = onDisconnect(driverRef);
   if (driver.active) {
-    await disconnect.set({
-      ...safeDriver,
-      active: false,
-      firebaseUid: authUser.uid,
-      locationVisibility: "inactive",
-      safeZoneActive: false,
-      speed: 0,
-      updatedAt: serverTimestamp(),
-    });
+    await disconnect.set(buildFirebaseTelemetryDisconnectPayload(
+      safeDriver,
+      authUser.uid,
+      serverTimestamp(),
+    ));
   } else {
     await disconnect.cancel();
   }
