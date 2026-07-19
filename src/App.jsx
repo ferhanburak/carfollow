@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { appId, navItems, tuningOptions } from "./data/mockData";
 import { PublicDriverProfileOverlay } from "./components/PublicDriverProfileOverlay";
 import { NotificationCenter } from "./components/NotificationCenter";
+import { DirectMessageButton, DirectMessageCenter } from "./components/DirectMessageCenter";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
 import { AuthScreen } from "./screens/AuthScreen";
@@ -43,6 +44,8 @@ function ScreenLoader() {
 function App() {
   const [publicProfile, setPublicProfile] = useState(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [dmCenterOpen, setDmCenterOpen] = useState(false);
+  const [dmCenterView, setDmCenterView] = useState("list");
   const {
     authError,
     authFeedback,
@@ -94,6 +97,8 @@ function App() {
     // A sign-out can change the active Firebase user before this component rerenders.
     // Never carry an account-specific confirmation modal into the next session.
     setShowLogoutConfirm(false);
+    setDmCenterOpen(false);
+    setDmCenterView("list");
   }, [user?.firebaseUid]);
 
   const {
@@ -150,6 +155,7 @@ function App() {
     mapPinFeedback,
     mapPinForm,
     mapPins,
+    markConversationAsRead,
     messageDraft,
     markAllNotificationsRead,
     markNotificationRead,
@@ -213,7 +219,7 @@ function App() {
     submitSpotPhoto,
     submitWashReview,
     toggleDrive,
-    totalUnreadCount,
+    unreadConversationCount,
     unreadNotificationCount,
     upcomingMaintenance,
     useSelectedPinCoordinates,
@@ -233,10 +239,40 @@ function App() {
     }
   }, [activeTab, setSelectedPinId]);
 
+  const openDmInbox = () => {
+    setDmCenterView("list");
+    setDmCenterOpen(true);
+  };
+
+  const openDmConversation = async (profile) => {
+    const conversationId = await openConversation(profile);
+    if (!conversationId) return false;
+
+    setDmCenterView("chat");
+    setDmCenterOpen(true);
+    void markConversationAsRead(conversationId);
+    return true;
+  };
+
   const navigateFromNotification = (action) => {
+    if (action?.type === "conversation") {
+      const conversation = conversationList.find((entry) => entry.participantUserId === action.targetId);
+      if (conversation) {
+        void openDmConversation({
+          userId: conversation.participantUserId,
+          plate: conversation.participantPlate,
+          fullName: conversation.participantName,
+          model: conversation.participantModel,
+          avatar: conversation.participantAvatar,
+        });
+      } else {
+        openDmInbox();
+      }
+      return;
+    }
+
     const targetTabs = {
       clan: "social",
-      conversation: "social",
       convoy: "map",
       garage: "garage",
       profile: "profile",
@@ -278,12 +314,13 @@ function App() {
             <div className="relative flex items-start justify-between gap-2 sm:gap-4">
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] uppercase tracking-[0.35em] text-lime-400">CRUISER // {user.region}</p>
-                <h2 className="mt-2 truncate text-2xl font-black">{user.plate}</h2>
-                <p className="truncate text-sm text-neutral-400">
+                <h2 className="mt-2 truncate text-lg font-black sm:text-xl">{user.plate}</h2>
+                <p className="truncate text-xs text-neutral-400 sm:text-sm">
                   {user.model} / {user.horsepower} HP / {user.tuningStage}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex shrink-0 items-center gap-1.5">
+                <DirectMessageButton onClick={openDmInbox} unreadCount={unreadConversationCount} />
                 <NotificationCenter
                   feedback={notificationFeedback}
                   notifications={notifications}
@@ -297,14 +334,13 @@ function App() {
                   aria-label={driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}
                   onClick={toggleDrive}
                   disabled={driveSessionPending}
-                  className={`min-h-12 min-w-12 rounded-2xl px-3 text-sm font-bold transition sm:px-4 ${
+                  className={`h-12 w-12 shrink-0 rounded-2xl px-0 text-[10px] font-bold transition ${
                     isDriving
                       ? "bg-rose-500 text-white shadow-[0_0_24px_rgba(244,63,94,0.5)]"
                       : "bg-lime-400 text-black shadow-[0_0_24px_rgba(163,230,53,0.38)]"
                   } disabled:cursor-wait disabled:opacity-60`}
                 >
-                  <span aria-hidden="true" className="sm:hidden">{driveSessionPending ? "..." : isDriving ? "Durdur" : "Baslat"}</span>
-                  <span aria-hidden="true" className="hidden sm:inline">{driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}</span>
+                  <span aria-hidden="true">{driveSessionPending ? "..." : isDriving ? "Durdur" : "Baslat"}</span>
                 </button>
                 <button
                   type="button"
@@ -391,7 +427,8 @@ function App() {
                 driveHud={driveHud}
                 driveSessionStatus={driveSessionStatus}
                 headerActions={(
-                  <div className="grid grid-cols-[3rem_minmax(4.5rem,1fr)_3rem] gap-2">
+                  <div className="grid grid-cols-[3rem_3rem_3rem_3rem] gap-1.5">
+                    <DirectMessageButton onClick={openDmInbox} tone="map" unreadCount={unreadConversationCount} />
                     <NotificationCenter
                       feedback={notificationFeedback}
                       notifications={notifications}
@@ -431,8 +468,7 @@ function App() {
                 loadSpotPhotoFile={loadSpotPhotoFile}
                 mapPins={mapPins}
                 onGhostOpenConversation={(profile) => {
-                  openConversation(profile);
-                  setActiveTab("social");
+                  void openDmConversation(profile);
                 }}
                 onGhostOpenProfile={(profile) => void openPublicProfile({ ...profile, source: "live-map" })}
                 onGhostRequestFriend={(profile) => requestFriend(profile)}
@@ -479,18 +515,13 @@ function App() {
 
             {activeTab === "social" || activeTab === "leaderboard" ? (
               <StatsScreen
-                activeConversation={activeConversation}
-                activeConversationId={activeConversationId}
-                activeTypingUsers={activeTypingUsers}
                 acceptIncomingClanInvite={acceptIncomingClanInvite}
                 approveFriendRequest={approveFriendRequest}
                 blockDriver={blockDriver}
-                chatFeedback={chatFeedback}
                 clanFeedback={clanFeedback}
                 clanForm={clanForm}
                 clanPendingKey={clanPendingKey}
                 clans={clans}
-                conversationList={conversationList}
                 createNewClan={createNewClan}
                 currentClan={currentClan}
                 currentClanMembers={currentClanMembers}
@@ -501,13 +532,10 @@ function App() {
                 hostableConvoys={hostableConvoys}
                 inviteDriverToMeet={inviteDriverToMeet}
                 leaveCurrentClan={leaveCurrentClan}
-                messageDraft={messageDraft}
                 onClanFormChange={setClanForm}
                 onFriendSearchChange={setFriendSearchQuery}
-                onMessageDraftChange={setMessageDraft}
                 onOpenPublicProfile={(profile) => void openPublicProfile(profile, { convoyId: profile.convoyId })}
-                openConversation={openConversation}
-                presenceMap={presenceMap}
+                openConversation={openDmConversation}
                 inviteFriendToClan={inviteFriendToClan}
                 individualLeaderboardEntries={individualLeaderboard}
                 driverStatsStatus={driverStatsStatus}
@@ -515,10 +543,8 @@ function App() {
                 removeFriendship={removeFriendship}
                 removeClanMember={removeClanMember}
                 revokeClanInvite={revokeClanInvite}
-                sendMessage={sendMessage}
                 socialFeedback={socialFeedback}
                 socialPendingKey={socialPendingKey}
-                totalUnreadCount={totalUnreadCount}
                 transferClanOwnership={transferClanOwnership}
                 user={safeUser ?? user}
                 unblockDriver={unblockDriver}
@@ -618,6 +644,25 @@ function App() {
           </div>
         </nav>
       </div>
+      <DirectMessageCenter
+        activeConversation={activeConversation}
+        activeConversationId={activeConversationId}
+        activeTypingUsers={activeTypingUsers}
+        chatFeedback={chatFeedback}
+        conversationList={conversationList}
+        isOpen={dmCenterOpen}
+        messageDraft={messageDraft}
+        onClose={() => setDmCenterOpen(false)}
+        onMarkConversationRead={markConversationAsRead}
+        onMessageDraftChange={setMessageDraft}
+        onSelectConversation={openDmConversation}
+        onSendMessage={sendMessage}
+        onShowInbox={() => setDmCenterView("list")}
+        presenceMap={presenceMap}
+        unreadConversationCount={unreadConversationCount}
+        user={safeUser ?? user}
+        view={dmCenterView}
+      />
       <PublicDriverProfileOverlay
         hostableConvoy={hostableConvoys?.[0] ?? null}
         onClose={() => setPublicProfile(null)}
@@ -629,10 +674,9 @@ function App() {
         }}
         onInviteFriendToClan={inviteFriendToClan}
         onInviteToConvoy={inviteDriverToMeet}
-        onOpenConversation={(profile) => {
-          openConversation(profile);
-          setActiveTab("social");
-          setPublicProfile(null);
+        onOpenConversation={async (profile) => {
+          const opened = await openDmConversation(profile);
+          if (opened) setPublicProfile(null);
         }}
         onRequestFriend={(profile) => requestFriend(profile)}
         onReportDriver={reportDriver}

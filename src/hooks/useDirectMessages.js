@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ensureFirebaseDirectMessageThread,
   initializeFirebasePresence,
@@ -50,8 +50,8 @@ export function useDirectMessages({ user, setUser }) {
       : [],
     [allowedConversationPlates, normalizedConversations, user],
   );
-  const totalUnreadCount = useMemo(
-    () => conversationList.reduce((sum, conversation) => sum + Number(conversation.unreadCount ?? 0), 0),
+  const unreadConversationCount = useMemo(
+    () => conversationList.filter((conversation) => Number(conversation.unreadCount ?? 0) > 0).length,
     [conversationList],
   );
   const trackedPresencePlates = useMemo(
@@ -197,29 +197,30 @@ export function useDirectMessages({ user, setUser }) {
     [typingMap, user?.plate],
   );
 
-  useEffect(() => {
-    if (!activeConversationId || !activeConversation) {
-      return;
-    }
+  const markConversationAsRead = useCallback(async (conversationId) => {
+    const conversation = normalizedConversations[conversationId];
+    if (!conversation) return false;
 
-    const lastForeignMessage = [...(activeConversation.messages ?? [])]
+    const lastForeignMessage = [...(conversation.messages ?? [])]
       .filter((message) => message.authorPlate !== user?.plate)
       .at(-1);
+    if (!lastForeignMessage) return true;
 
-    if (!lastForeignMessage) {
-      return;
-    }
+    const readAt = Number(lastForeignMessage.createdAt ?? Date.now());
+    if (readAt <= Number(conversation.lastReadAt ?? 0)) return true;
 
-    if (Number(lastForeignMessage.createdAt ?? 0) <= Number(activeConversation.lastReadAt ?? 0)) {
-      return;
+    try {
+      if (firebaseMessagingEnabled) {
+        await markFirebaseConversationRead(conversationId);
+      } else {
+        setUser((current) => markConversationRead(current, conversationId, readAt));
+      }
+    } catch (error) {
+      setChatFeedback(error instanceof Error ? error.message : "Sohbet okundu bilgisi kaydedilemedi.");
+      return false;
     }
-
-    if (firebaseMessagingEnabled) {
-      void markFirebaseConversationRead(activeConversationId);
-    } else {
-      setUser((current) => markConversationRead(current, activeConversationId, Number(lastForeignMessage.createdAt ?? Date.now())));
-    }
-  }, [activeConversation, activeConversationId, firebaseMessagingEnabled, setUser, user?.plate]);
+    return true;
+  }, [firebaseMessagingEnabled, normalizedConversations, setUser, user?.plate]);
 
   useEffect(() => {
     if (!firebaseMessagingEnabled || !user?.plate || !activeConversationId) {
@@ -264,7 +265,7 @@ export function useDirectMessages({ user, setUser }) {
     setActiveConversationId(nextConversationId);
     if (!firebaseMessagingEnabled) setUser((current) => markConversationRead(current, nextConversationId));
     setChatFeedback(`${friend.fullName} ile sohbet hazir.`);
-    return true;
+    return nextConversationId;
   };
 
   const sendMessage = async (friend) => {
@@ -307,10 +308,11 @@ export function useDirectMessages({ user, setUser }) {
     chatFeedback,
     conversationList,
     messageDraft,
+    markConversationAsRead,
     openConversation,
     presenceMap,
     sendMessage,
     setMessageDraft,
-    totalUnreadCount,
+    unreadConversationCount,
   };
 }

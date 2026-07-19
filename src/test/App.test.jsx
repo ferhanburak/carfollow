@@ -76,6 +76,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /Live Map/i }));
 
     expect(await screen.findAllByRole("button", { name: "Bildirim merkezi" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "DM merkezi" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Suruse Basla" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Oturumu kapat" })).toHaveLength(1);
 
@@ -88,6 +89,36 @@ describe("App", () => {
     await user.click(within(liveMap).getByRole("button", { name: "Kapat" }));
     expect(within(liveMap).queryByTestId("live-map-node-overlay")).not.toBeInTheDocument();
     expect(within(liveMap).getByText("Marker secilmedi")).toBeInTheDocument();
+  });
+
+  it("opens recent conversations from the global DM button", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
+
+    const dmButton = screen.getByRole("button", { name: "DM merkezi" });
+    expect(within(dmButton).getByText("1")).toBeInTheDocument();
+    await user.click(dmButton);
+
+    expect(screen.getByRole("dialog", { name: "DM merkezi paneli" })).toBeInTheDocument();
+    expect(screen.getByText("Son Sohbetler")).toBeInTheDocument();
+    expect(screen.getByText("Olur, ben de route'u hazirliyorum.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Ece Yalin/i }));
+    expect(screen.getByRole("textbox", { name: "Mesaj yaz" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sohbet listesine don" })).toBeInTheDocument();
+  });
+
+  it("keeps the Social screen focused on friendships instead of embedding DM", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
+    await user.click(screen.getByRole("button", { name: /Social/i }));
+
+    expect(await screen.findByText("Arkadas Bul ve Baglan")).toBeInTheDocument();
+    expect(screen.queryByText("DM Panel")).not.toBeInTheDocument();
   });
 
   it("blocks invalid sign up and shows field errors", async () => {

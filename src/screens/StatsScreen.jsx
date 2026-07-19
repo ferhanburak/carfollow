@@ -33,79 +33,14 @@ function getClanRankTone(index) {
   return "bg-white/10 text-white";
 }
 
-function getPresenceTone(status) {
-  if (status === "online") {
-    return "bg-lime-400";
-  }
-  if (status === "away") {
-    return "bg-amber-400";
-  }
-  return "bg-neutral-500";
-}
-
-function formatPresenceLabel(presence) {
-  if (!presence) {
-    return "offline";
-  }
-  if (presence.status === "online") {
-    return "online";
-  }
-  if (presence.status === "away") {
-    return "away";
-  }
-
-  const lastSeen = Number(presence.lastSeen ?? 0);
-  if (!lastSeen) {
-    return "offline";
-  }
-
-  const diffMinutes = Math.max(1, Math.round((Date.now() - lastSeen) / 60000));
-  if (diffMinutes < 60) {
-    return `${diffMinutes} dk once`;
-  }
-
-  const diffHours = Math.round(diffMinutes / 60);
-  return `${diffHours} sa once`;
-}
-
-function formatMessageTime(timestamp) {
-  const time = Number(timestamp ?? 0);
-  if (!time) {
-    return "--";
-  }
-
-  const diffMinutes = Math.max(0, Math.round((Date.now() - time) / 60000));
-  if (diffMinutes < 1) {
-    return "simdi";
-  }
-  if (diffMinutes < 60) {
-    return `${diffMinutes} dk`;
-  }
-  if (diffMinutes < 1440) {
-    return `${Math.round(diffMinutes / 60)} sa`;
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(time));
-}
-
 export function StatsScreen({
-  activeConversation,
-  activeConversationId,
-  activeTypingUsers,
   acceptIncomingClanInvite,
   approveFriendRequest,
   blockDriver,
-  chatFeedback,
   clanFeedback,
   clanForm,
   clanPendingKey,
   clans,
-  conversationList,
   createNewClan,
   currentClan,
   currentClanMembers = [],
@@ -119,21 +54,16 @@ export function StatsScreen({
   individualLeaderboardEntries,
   leaveCurrentClan,
   driverStatsStatus,
-  messageDraft,
   onClanFormChange,
   onFriendSearchChange,
-  onMessageDraftChange,
   onOpenPublicProfile,
   openConversation,
-  presenceMap,
   requestFriend,
   removeClanMember,
   removeFriendship,
   revokeClanInvite,
-  sendMessage,
   socialFeedback,
   socialPendingKey,
-  totalUnreadCount,
   transferClanOwnership,
   user,
   unblockDriver,
@@ -667,136 +597,6 @@ export function StatsScreen({
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold">DM Panel</p>
-              <p className="text-xs text-neutral-500">Realtime Database baglantili dusuk gecikmeli sohbet akisi.</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
-              {conversationList.length} thread / {totalUnreadCount} unread
-            </div>
-          </div>
-          {chatFeedback ? (
-            <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-100">
-              {chatFeedback}
-            </div>
-          ) : null}
-          <div className="mt-4 grid gap-4 md:grid-cols-[0.9fr,1.1fr]">
-            <div className="space-y-3">
-              {conversationList.length ? (
-                conversationList.map((conversation) => (
-                  <button
-                    key={conversation.id}
-                    type="button"
-                    onClick={() =>
-                      openConversation({
-                        userId: conversation.participantUserId,
-                        plate: conversation.participantPlate,
-                        fullName: conversation.participantName,
-                        model: conversation.participantModel,
-                        avatar: conversation.participantAvatar,
-                      })
-                    }
-                    className={`w-full rounded-2xl border p-4 text-left transition ${
-                      activeConversationId === conversation.id ? "border-lime-400/30 bg-lime-400/10" : "border-white/8 bg-white/[0.03]"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-block h-2.5 w-2.5 rounded-full ${getPresenceTone(presenceMap?.[conversation.participantPlate]?.status)}`} />
-                          <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{conversation.participantPlate}</p>
-                        </div>
-                        <p className="mt-1 text-sm font-semibold">{conversation.participantName}</p>
-                        <p className="mt-1 line-clamp-2 text-xs text-neutral-500">{conversation.lastMessage?.body ?? "Mesaj yok"}</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <span className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
-                          {formatPresenceLabel(presenceMap?.[conversation.participantPlate])}
-                        </span>
-                        <span className="text-[10px] text-neutral-500">
-                          {formatMessageTime(conversation.lastMessage?.createdAt)}
-                        </span>
-                        {conversation.unreadCount ? (
-                          <span className="rounded-full bg-rose-500 px-2 py-1 text-[10px] font-bold text-white">
-                            {conversation.unreadCount}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  </button>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
-                  Henuz aktif DM thread yok.
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-              {activeConversation ? (
-                <>
-                  <div className="border-b border-white/8 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-block h-2.5 w-2.5 rounded-full ${getPresenceTone(presenceMap?.[activeConversation.participantPlate]?.status)}`} />
-                      <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{activeConversation.participantPlate}</p>
-                    </div>
-                    <p className="mt-1 text-sm font-semibold">{activeConversation.participantName}</p>
-                    <p className="text-xs text-neutral-500">
-                      {activeConversation.participantModel} / {formatPresenceLabel(presenceMap?.[activeConversation.participantPlate])}
-                    </p>
-                  </div>
-                  <div className="mt-4 max-h-72 space-y-3 overflow-y-auto pr-1">
-                    {(activeConversation.messages ?? []).map((message) => (
-                      <div
-                        key={message.id}
-                        className={`rounded-2xl px-4 py-3 text-sm ${
-                          message.authorPlate === user.plate ? "ml-8 bg-lime-400/10 text-lime-100" : "mr-8 bg-black/30 text-neutral-200"
-                        }`}
-                      >
-                        <p>{message.body}</p>
-                        <p className="mt-2 text-[10px] uppercase tracking-[0.16em] text-neutral-500">{message.authorPlate}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {activeTypingUsers.length ? (
-                    <p className="mt-3 text-xs text-lime-300">
-                      {activeTypingUsers.map((entry) => entry.plate).join(", ")} yaziyor...
-                    </p>
-                  ) : null}
-                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                    <input
-                      value={messageDraft}
-                      onChange={(event) => onMessageDraftChange(event.target.value)}
-                      placeholder="Mesaj yaz..."
-                      className="h-12 flex-1 rounded-2xl border border-white/10 bg-black/20 px-4 text-sm outline-none focus:border-lime-400"
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        sendMessage({
-                          userId: activeConversation.participantUserId,
-                          plate: activeConversation.participantPlate,
-                          fullName: activeConversation.participantName,
-                          model: activeConversation.participantModel,
-                          avatar: activeConversation.participantAvatar,
-                        })
-                      }
-                      className="min-h-12 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black sm:min-w-[7rem]"
-                    >
-                      Gonder
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
-                  Sohbet acmak icin bir arkadas sec.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
         <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
