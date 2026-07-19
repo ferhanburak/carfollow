@@ -239,6 +239,15 @@ function App() {
     withdrawFriendRequest,
   } = useCruiserWorld(user, setUser, setFuelForm);
 
+  const activeClanName = (safeUser ?? user)?.clan;
+  const activeClanId = (safeUser ?? user)?.clanId ?? currentClan?.id;
+  const clanEvents = mapPins.filter((pin) =>
+    pin.type === "meet" && (
+      (activeClanId && pin.clanId === activeClanId) ||
+      (activeClanName && pin.createdByClan === activeClanName)
+    ),
+  );
+
   useEffect(() => {
     if (activeTab === "liveMap") {
       setSelectedPinId(null);
@@ -517,6 +526,7 @@ function App() {
                 approveFriendRequest={approveFriendRequest}
                 blockDriver={blockDriver}
                 clanFeedback={clanFeedback}
+                clanEvents={clanEvents}
                 clanForm={clanForm}
                 clanPendingKey={clanPendingKey}
                 clans={clans}

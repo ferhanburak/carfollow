@@ -143,6 +143,15 @@ describe("App", () => {
 
     expect(await screen.findByText("Arkadas Bul ve Baglan")).toBeInTheDocument();
     expect(screen.queryByText("DM Panel")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Klani Kur" })).not.toBeInTheDocument();
+
+    const clanCard = screen.getByRole("button", { name: "Neon Wolves klan detaylarini ac" });
+    await user.click(clanCard);
+    expect(screen.getByRole("dialog", { name: "Klan merkezi paneli" })).toBeInTheDocument();
+    expect(screen.getByText("Klan Kadrosu")).toBeInTheDocument();
+    expect(screen.getByText("Klan Eventleri")).toBeInTheDocument();
+    expect(screen.getByText("Event Sayisi")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Klandan Ayril" })).toBeInTheDocument();
   });
 
   it("blocks invalid sign up and shows field errors", async () => {

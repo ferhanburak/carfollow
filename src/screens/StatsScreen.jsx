@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ClanCenter, ClanCreatePanel, ClanMembershipLoadingCard, ClanSummaryCard } from "../components/ClanCenter";
 import { individualDriverSeed } from "../data/mockData";
 import { formatNumber } from "../utils/garage";
 import { buildIndividualLeaderboard } from "../utils/socialStats";
@@ -38,6 +39,7 @@ export function StatsScreen({
   approveFriendRequest,
   blockDriver,
   clanFeedback,
+  clanEvents = [],
   clanForm,
   clanPendingKey,
   clans,
@@ -70,12 +72,15 @@ export function StatsScreen({
   withdrawFriendRequest,
   mode = "social",
 }) {
+  const [clanCenterOpen, setClanCenterOpen] = useState(false);
   const individualLeaderboard = Array.isArray(individualLeaderboardEntries)
     ? individualLeaderboardEntries
     : buildIndividualLeaderboard(user, individualDriverSeed);
   const sortedClans = [...clans].sort((a, b) => b.km - a.km);
   const canInviteToClan = ["owner", "captain"].includes(user.clanRole ?? "member");
   const isClanPending = Boolean(clanPendingKey);
+  const hasClanMembership = Boolean(currentClan || user.clanId || user.clan);
+  const clanMemberCount = currentClanMembers.length || Number(currentClan?.members ?? 0);
   const primaryHostableConvoy = hostableConvoys?.[0] ?? null;
   const socialSummary = [
     { key: "friends", label: "Arkadas", value: `${user.friends?.length ?? 0}` },
@@ -98,6 +103,10 @@ export function StatsScreen({
   const showSocial = mode === "social";
   const showLeaderboard = mode === "leaderboard";
 
+  useEffect(() => {
+    if (!hasClanMembership) setClanCenterOpen(false);
+  }, [hasClanMembership]);
+
   return (
     <section className="space-y-4">
       {showSocial ? (
@@ -111,12 +120,12 @@ export function StatsScreen({
           ))}
         </div>
 
-        {(user.clanInvites ?? []).length ? (
+        {!hasClanMembership && (user.clanInvites ?? []).length ? (
           <div
             data-testid="incoming-clan-invite-alert"
             className="mb-4 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100"
           >
-            {user.clanInvites.length} bekleyen klan davetin var. Kabul veya red islemini Klan Merkezi'nden yapabilirsin.
+            {user.clanInvites.length} bekleyen klan davetin var. Klan Kur alanindan kabul veya red islemi yapabilirsin.
           </div>
         ) : null}
 
@@ -126,245 +135,46 @@ export function StatsScreen({
             <h3 className="mt-2 text-xl font-black">Klan Merkezi</h3>
           </div>
           <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">
-            {user.clan ? user.clan : "Clanless"}
+            {hasClanMembership ? currentClan?.name ?? user.clan : "Clanless"}
           </div>
         </div>
 
-        {clanFeedback ? (
-          <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-100">
-            {clanFeedback}
-          </div>
-        ) : null}
-
-        {currentClan ? (
-          <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">Klan Kadrosu</p>
-                <p className="mt-1 text-xs text-neutral-500">Roller ve uye yetkileri sunucu tarafinda dogrulaniyor.</p>
-              </div>
-              <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
-                {currentClanMembers.length || currentClan.members} uye
-              </span>
-            </div>
-            <div className="mt-4 space-y-3">
-              {currentClanMembers.length ? currentClanMembers.map((member) => {
-                const isSelf = member.userId === (user.userId ?? user.firebaseUid ?? user.id);
-                const canManageMember = !isSelf && (
-                  user.clanRole === "owner" ? member.role !== "owner" : user.clanRole === "captain" && member.role === "member"
-                );
-                return (
-                  <div key={member.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <button type="button" onClick={() => onOpenPublicProfile?.(member)} className="min-w-0 text-left">
-                        <p className="font-mono text-xs tracking-[0.14em] text-lime-300">{member.plate}</p>
-                        <p className="mt-1 text-sm font-semibold">{member.fullName}{isSelf ? " (Sen)" : ""}</p>
-                        <p className="text-xs text-neutral-500">{member.model || "CRUISER driver"} / {member.region || "Unknown"}</p>
-                      </button>
-                      <span className="rounded-lg border border-white/10 bg-black/20 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-neutral-300">{member.role}</span>
-                    </div>
-                    {canManageMember ? (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {user.clanRole === "owner" ? (
-                          <button
-                            type="button"
-                            disabled={isClanPending}
-                            onClick={() => updateClanMemberRole(member, member.role === "captain" ? "member" : "captain")}
-                            className="min-h-12 rounded-xl border border-lime-400/25 bg-lime-400/10 px-3 py-2 text-xs font-semibold text-lime-200 disabled:opacity-50"
-                          >
-                            {member.role === "captain" ? "Uye Yap" : "Kaptan Yap"}
-                          </button>
-                        ) : null}
-                        {user.clanRole === "owner" ? (
-                          <button
-                            type="button"
-                            disabled={isClanPending}
-                            onClick={() => transferClanOwnership(member)}
-                            className="min-h-12 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-100 disabled:opacity-50"
-                          >
-                            Sahipligi Devret
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          disabled={isClanPending}
-                          onClick={() => removeClanMember(member)}
-                          className="min-h-12 rounded-xl border border-rose-400/25 bg-rose-400/10 px-3 py-2 text-xs font-semibold text-rose-100 disabled:opacity-50"
-                        >
-                          Cikar
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              }) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
-                  Uye listesi Firebase senkronizasyonu ile yuklenecek.
-                </div>
-              )}
-            </div>
-          </div>
-        ) : null}
-
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">Aktif Klan</p>
-                <p className="mt-1 text-xs text-neutral-500">Uyeligin, rolun ve aylik ekip ritmi.</p>
-              </div>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-300">
-                {user.clanRole ?? "member"}
-              </span>
-            </div>
-
-            {currentClan ? (
-              <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-black text-lime-200">{currentClan.name}</p>
-                    <p className="mt-1 text-xs uppercase tracking-[0.22em] text-lime-300">{currentClan.tag}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-black text-lime-200">{formatNumber(currentClan.km)} KM</p>
-                    <p className="text-xs text-lime-100/70">{currentClan.members} members</p>
-                  </div>
-                </div>
-                <p className="mt-3 text-xs text-lime-100/80">{currentClan.description}</p>
-                <button
-                  type="button"
-                  disabled={isClanPending}
-                  onClick={leaveCurrentClan}
-                  className="mt-4 min-h-12 w-full rounded-xl border border-rose-400/25 bg-rose-400/10 px-3 py-2 text-xs font-semibold text-rose-100 disabled:opacity-50"
-                >
-                  Klandan Ayril
-                </button>
-              </div>
-            ) : (
-              <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
-                Henuz aktif bir klan bulunmuyor. Yeni ekip kurabilir ya da gelen daveti kabul edebilirsin.
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-            <p className="text-sm font-semibold">Yeni Klan Kur</p>
-            <p className="mt-1 text-xs text-neutral-500">Yeni klan kurmak icin once mevcut klanindan ayrilmalisin.</p>
-            <div className="mt-4 space-y-3">
-              <input
-                value={clanForm.name}
-                onChange={(event) => onClanFormChange((current) => ({ ...current, name: event.target.value }))}
-                placeholder="Klan adi"
-                className="h-12 w-full rounded-2xl border border-white/10 bg-black/20 px-4 text-sm outline-none focus:border-lime-400"
-              />
-              <input
-                value={clanForm.tag}
-                onChange={(event) => onClanFormChange((current) => ({ ...current, tag: event.target.value.toUpperCase() }))}
-                placeholder="Kisa tag"
-                maxLength={6}
-                className="h-12 w-full rounded-2xl border border-white/10 bg-black/20 px-4 text-sm uppercase tracking-[0.16em] outline-none focus:border-lime-400"
-              />
-              <textarea
-                value={clanForm.description}
-                onChange={(event) => onClanFormChange((current) => ({ ...current, description: event.target.value }))}
-                placeholder="Kisa klan aciklamasi"
-                rows={3}
-                className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none focus:border-lime-400"
-              />
-              <button
-                type="button"
-                onClick={createNewClan}
-                disabled={Boolean(currentClan) || isClanPending}
-                className="min-h-12 w-full rounded-2xl bg-lime-400 px-4 py-3 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Klani Kur
-              </button>
-            </div>
-          </div>
+        <div className="mt-4">
+          {currentClan ? (
+            <ClanSummaryCard clan={currentClan} eventCount={clanEvents.length} memberCount={clanMemberCount} onOpen={() => setClanCenterOpen(true)} userRole={user.clanRole} />
+          ) : hasClanMembership ? (
+            <ClanMembershipLoadingCard clanName={user.clan} />
+          ) : (
+            <ClanCreatePanel
+              clanFeedback={clanFeedback}
+              clanForm={clanForm}
+              invites={user.clanInvites ?? []}
+              isPending={isClanPending}
+              onAcceptInvite={acceptIncomingClanInvite}
+              onCreateClan={createNewClan}
+              onDeclineInvite={declineIncomingClanInvite}
+              onFormChange={onClanFormChange}
+            />
+          )}
         </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-            <p className="text-sm font-semibold">Gelen Klan Davetleri</p>
-            <div className="mt-4 space-y-3">
-              {(user.clanInvites ?? []).length ? (
-                user.clanInvites.map((invite) => (
-                  <div key={invite.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold">{invite.clanName}</p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-lime-300">{invite.clanTag}</p>
-                        <p className="mt-2 text-xs text-neutral-500">Davet eden: {invite.fromName} / {invite.fromPlate}</p>
-                      </div>
-                      <span className="rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-amber-200">
-                        Pending
-                      </span>
-                    </div>
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => acceptIncomingClanInvite(invite.id)}
-                        className="min-h-12 flex-1 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black"
-                      >
-                        Kabul Et
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => declineIncomingClanInvite(invite.id)}
-                        className="min-h-12 flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
-                      >
-                        Reddet
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
-                  Bekleyen klan daveti yok.
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold">Giden Klan Davetleri</p>
-                <p className="mt-1 text-xs text-neutral-500">Liderler arkadas listesi uzerinden ekip daveti yollayabilir.</p>
-              </div>
-              <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
-                {canInviteToClan ? "Invite On" : "Leader Only"}
-              </span>
-            </div>
-            <div className="mt-4 space-y-3">
-              {(user.sentClanInvites ?? []).length ? (
-                user.sentClanInvites.map((invite) => (
-                  <div key={invite.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                    <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{invite.targetPlate}</p>
-                    <p className="mt-1 text-sm font-semibold">{invite.targetName}</p>
-                    <p className="text-xs text-neutral-500">{invite.targetModel}</p>
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                      <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-300">
-                        {invite.clanName}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => revokeClanInvite(invite.id)}
-                        className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200"
-                      >
-                        Iptal Et
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
-                  Henuz giden klan daveti yok.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <ClanCenter
+          clan={currentClan}
+          clanFeedback={clanFeedback}
+          events={clanEvents}
+          isOpen={clanCenterOpen}
+          isPending={isClanPending}
+          members={currentClanMembers}
+          onClose={() => setClanCenterOpen(false)}
+          onLeave={leaveCurrentClan}
+          onOpenProfile={onOpenPublicProfile}
+          onRemoveMember={removeClanMember}
+          onRevokeInvite={revokeClanInvite}
+          onTransferOwnership={transferClanOwnership}
+          onUpdateMemberRole={updateClanMemberRole}
+          outgoingInvites={user.sentClanInvites ?? []}
+          user={user}
+        />
 
       </div>
       ) : null}
