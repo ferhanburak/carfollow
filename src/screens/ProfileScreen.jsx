@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { AchievementProgressPanel } from "../components/AchievementCenter";
 import { VehiclePassportSummary } from "../components/garage/VehiclePassportSummary";
 import { InsightCard } from "../components/ui";
 import { buildAchievementProgress, buildPersonalStats } from "../utils/socialStats";
@@ -10,6 +12,7 @@ export function ProfileScreen({
   user,
   driverStatsStatus,
 }) {
+  const [achievementCenterOpen, setAchievementCenterOpen] = useState(false);
   const achievementProgress = buildAchievementProgress(user);
   const personalStats = buildPersonalStats(user);
   const socialSummary = [
@@ -115,63 +118,13 @@ export function ProfileScreen({
         </div>
       </div>
 
-      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold">Achievement Progress</p>
-            <p className="text-xs text-neutral-500">Unvanlari nasil kazanacagini ve ne kadar kaldigini net gor.</p>
-          </div>
-          <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">{(user.badges ?? []).length} aktif unvan</span>
-        </div>
-
-        <div className={`mt-4 rounded-2xl border px-4 py-3 text-xs ${
-          driverStatsStatus?.state === "error" || driverStatsStatus?.state === "degraded"
-            ? "border-amber-400/20 bg-amber-400/10 text-amber-100"
-            : "border-lime-400/20 bg-lime-400/10 text-lime-100"
-        }`}>
-          <div className="flex items-center justify-between gap-3">
-            <span>Achievement source</span>
-            <span className="font-semibold uppercase tracking-[0.16em]">
-              {driverStatsStatus?.mode === "firebase" ? driverStatsStatus.state : "demo"}
-            </span>
-          </div>
-          {driverStatsStatus?.error ? <p className="mt-2 text-amber-200">{driverStatsStatus.error}</p> : null}
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {achievementProgress.map((achievement) => (
-            <div key={achievement.key} className="rounded-2xl border border-white/8 bg-black/20 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-neutral-100">{achievement.title}</p>
-                  <p className="mt-1 text-xs text-neutral-500">{achievement.description}</p>
-                </div>
-                <span
-                  className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${
-                    achievement.unlocked ? "bg-lime-400/15 text-lime-200" : "bg-white/8 text-neutral-300"
-                  }`}
-                >
-                  {achievement.unlocked ? "Unlocked" : `%${achievement.percent}`}
-                </span>
-              </div>
-              <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/8">
-                <div
-                  className={`h-full rounded-full transition-all duration-700 ${
-                    achievement.unlocked ? "bg-lime-400" : achievement.percent >= 70 ? "bg-amber-400" : "bg-white/30"
-                  }`}
-                  style={{ width: `${achievement.percent}%` }}
-                />
-              </div>
-              <div className="mt-2 flex items-center justify-between text-xs text-neutral-500">
-                <span>
-                  {achievement.current} / {achievement.target} {achievement.unit}
-                </span>
-                <span>{achievement.unlocked ? "Tamamlandi" : "Devam ediyor"}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <AchievementProgressPanel
+        achievements={achievementProgress}
+        isOpen={achievementCenterOpen}
+        onClose={() => setAchievementCenterOpen(false)}
+        onOpen={() => setAchievementCenterOpen(true)}
+        status={driverStatsStatus}
+      />
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div className="flex items-center justify-between">

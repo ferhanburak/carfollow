@@ -223,6 +223,15 @@ describe("App", () => {
     expect(screen.getByText("Driver Stats Snapshot")).toBeInTheDocument();
     expect(screen.getByText("Social Cockpit")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Stats Ekranina Git" })).toBeInTheDocument();
+    expect(screen.getByText("2 / 5")).toBeInTheDocument();
+    expect(screen.getByText("Crew Apex")).toBeInTheDocument();
+    expect(screen.queryByText("Garaj Arsivi")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Basarim detaylarini ac" }));
+    expect(screen.getByRole("dialog", { name: "Basarim merkezi paneli" })).toBeInTheDocument();
+    expect(screen.getByText("Devam Edenler")).toBeInTheDocument();
+    expect(screen.getByText("Tamamlananlar")).toBeInTheDocument();
+    expect(screen.getByText("Garaj Arsivi")).toBeInTheDocument();
   });
 
   it("opens the shared public driver profile from stats", async () => {
