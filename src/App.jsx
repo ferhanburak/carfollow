@@ -3,6 +3,7 @@ import { appId, navItems, tuningOptions } from "./data/mockData";
 import { PublicDriverProfileOverlay } from "./components/PublicDriverProfileOverlay";
 import { NotificationCenter } from "./components/NotificationCenter";
 import { DirectMessageButton, DirectMessageCenter } from "./components/DirectMessageCenter";
+import { SettingsButton, SettingsCenter } from "./components/SettingsCenter";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
 import { AuthScreen } from "./screens/AuthScreen";
@@ -46,6 +47,8 @@ function App() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [dmCenterOpen, setDmCenterOpen] = useState(false);
   const [dmCenterView, setDmCenterView] = useState("list");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsSection, setSettingsSection] = useState(null);
   const {
     authError,
     authFeedback,
@@ -54,6 +57,7 @@ function App() {
     fuelForm,
     accountFeedback,
     accountPending,
+    handleAccountPasswordReset,
     handleAccountDeletion,
     handleAccountExport,
     handleConsentWithdrawal,
@@ -99,6 +103,8 @@ function App() {
     setShowLogoutConfirm(false);
     setDmCenterOpen(false);
     setDmCenterView("list");
+    setSettingsOpen(false);
+    setSettingsSection(null);
   }, [user?.firebaseUid]);
 
   const {
@@ -240,6 +246,7 @@ function App() {
   }, [activeTab, setSelectedPinId]);
 
   const openDmInbox = () => {
+    setSettingsOpen(false);
     setDmCenterView("list");
     setDmCenterOpen(true);
   };
@@ -250,8 +257,15 @@ function App() {
 
     setDmCenterView("chat");
     setDmCenterOpen(true);
+    setSettingsOpen(false);
     void markConversationAsRead(conversationId);
     return true;
+  };
+
+  const openSettings = () => {
+    setDmCenterOpen(false);
+    setSettingsSection(null);
+    setSettingsOpen(true);
   };
 
   const navigateFromNotification = (action) => {
@@ -342,15 +356,7 @@ function App() {
                 >
                   <span aria-hidden="true">{driveSessionPending ? "..." : isDriving ? "Durdur" : "Baslat"}</span>
                 </button>
-                <button
-                  type="button"
-                  aria-label="Oturumu kapat"
-                  title="Oturumu kapat"
-                  onClick={() => setShowLogoutConfirm(true)}
-                  className="flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-400/30 bg-rose-500/10 text-lg text-rose-200 transition hover:bg-rose-500/20"
-                >
-                  ↪
-                </button>
+                <SettingsButton onClick={openSettings} />
               </div>
             </div>
             <div className="relative mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-3">
@@ -450,15 +456,7 @@ function App() {
                     >
                       {driveSessionPending ? "..." : isDriving ? "Durdur" : "Baslat"}
                     </button>
-                    <button
-                      type="button"
-                      aria-label="Oturumu kapat"
-                      title="Oturumu kapat"
-                      onClick={() => setShowLogoutConfirm(true)}
-                      className="flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-400/30 bg-black/75 text-lg text-rose-200 backdrop-blur transition hover:bg-rose-500/20"
-                    >
-                      ↪
-                    </button>
+                    <SettingsButton onClick={openSettings} tone="map" />
                   </div>
                 )}
                 isDriving={isDriving}
@@ -547,7 +545,6 @@ function App() {
                 socialPendingKey={socialPendingKey}
                 transferClanOwnership={transferClanOwnership}
                 user={safeUser ?? user}
-                unblockDriver={unblockDriver}
                 updateClanMemberRole={updateClanMemberRole}
                 withdrawFriendRequest={withdrawFriendRequest}
                 mode={activeTab === "leaderboard" ? "leaderboard" : "social"}
@@ -584,25 +581,10 @@ function App() {
 
             {activeTab === "profile" ? (
               <ProfileScreen
-                accountFeedback={accountFeedback}
-                accountPending={accountPending}
-                isFirebaseAuth={isFirebaseAuth}
-                onDeleteAccount={handleAccountDeletion}
-                onExportAccount={handleAccountExport}
-                onSendEmailVerification={handleEmailVerification}
-                onWithdrawConsent={handleConsentWithdrawal}
-                onLogout={() => setShowLogoutConfirm(true)}
-                onProfileFormChange={setProfileForm}
-                onSavePrivacySettings={savePrivacySettings}
                 onOpenService={() => setActiveTab("garage")}
                 onOpenStats={() => setActiveTab("leaderboard")}
-                onSubmitProfile={submitProfile}
                 passportSummary={passportSummary}
                 profileCompletion={profileCompletion}
-                profileErrors={profileErrors}
-                profileFeedback={profileFeedback}
-                profileForm={profileForm}
-                tuningOptions={tuningOptions}
                 user={user}
                 driverStatsStatus={driverStatsStatus}
               />
@@ -644,6 +626,35 @@ function App() {
           </div>
         </nav>
       </div>
+      <SettingsCenter
+        accountFeedback={accountFeedback}
+        accountPending={accountPending}
+        isFirebaseAuth={isFirebaseAuth}
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onDeleteAccount={handleAccountDeletion}
+        onExportAccount={handleAccountExport}
+        onProfileFormChange={setProfileForm}
+        onRequestLogout={() => {
+          setSettingsOpen(false);
+          setShowLogoutConfirm(true);
+        }}
+        onSavePrivacySettings={savePrivacySettings}
+        onSelectSection={setSettingsSection}
+        onSendEmailVerification={handleEmailVerification}
+        onSendPasswordReset={handleAccountPasswordReset}
+        onSubmitProfile={submitProfile}
+        onUnblockDriver={unblockDriver}
+        onWithdrawConsent={handleConsentWithdrawal}
+        profileErrors={profileErrors}
+        profileFeedback={profileFeedback}
+        profileForm={profileForm}
+        section={settingsSection}
+        socialFeedback={socialFeedback}
+        socialPendingKey={socialPendingKey}
+        tuningOptions={tuningOptions}
+        user={safeUser ?? user}
+      />
       <DirectMessageCenter
         activeConversation={activeConversation}
         activeConversationId={activeConversationId}

@@ -318,6 +318,26 @@ export function useCruiserAuth() {
     }
   };
 
+  const handleAccountPasswordReset = async () => {
+    if (!firebaseAuthEnabled || !user?.email) {
+      setAccountFeedback("Sifre degistirme yalnizca Firebase hesabiyla kullanilabilir.");
+      return false;
+    }
+
+    setAccountPending(true);
+    setAccountFeedback("");
+    try {
+      await sendFirebasePasswordReset(user.email);
+      setAccountFeedback("Sifre degistirme baglantisi hesap e-postana gonderildi.");
+      return true;
+    } catch (error) {
+      setAccountFeedback(getAuthErrorMessage(error));
+      return false;
+    } finally {
+      setAccountPending(false);
+    }
+  };
+
   const handleAccountExport = async () => {
     setAccountPending(true);
     setAccountFeedback("");
@@ -386,6 +406,7 @@ export function useCruiserAuth() {
     fuelForm,
     accountFeedback,
     accountPending,
+    handleAccountPasswordReset,
     handleAccountDeletion,
     handleAccountExport,
     handleConsentWithdrawal,

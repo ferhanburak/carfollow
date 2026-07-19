@@ -66,7 +66,6 @@ export function StatsScreen({
   socialPendingKey,
   transferClanOwnership,
   user,
-  unblockDriver,
   updateClanMemberRole,
   withdrawFriendRequest,
   mode = "social",
@@ -597,42 +596,6 @@ export function StatsScreen({
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold">Engellenen Suruculer</p>
-              <p className="mt-1 text-xs text-neutral-500">Bu profiller aramada gorunmez ve yeni arkadaslik istegi olusturamaz.</p>
-            </div>
-            <span className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-rose-200">
-              {user.blockedDrivers?.length ?? 0} blocked
-            </span>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {(user.blockedDrivers ?? []).length ? (
-              user.blockedDrivers.map((entry) => (
-                <div key={`${entry.userId ?? entry.plate}-blocked`} className="flex items-center justify-between gap-3 rounded-2xl border border-rose-400/10 bg-rose-500/[0.04] p-4">
-                  <div>
-                    <p className="font-mono text-sm tracking-[0.14em] text-rose-200">{entry.plate}</p>
-                    <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
-                    <p className="text-xs text-neutral-500">{entry.model}</p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={isSocialEntryPending(entry)}
-                    onClick={() => unblockDriver(entry)}
-                    className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:cursor-wait disabled:opacity-50"
-                  >
-                    Engeli Kaldir
-                  </button>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500 md:col-span-2">
-                Engellenen surucu bulunmuyor.
-              </div>
-            )}
-          </div>
-        </div>
       </div>
       ) : null}
 

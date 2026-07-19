@@ -78,7 +78,7 @@ describe("App", () => {
     expect(await screen.findAllByRole("button", { name: "Bildirim merkezi" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "DM merkezi" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Suruse Basla" })).toHaveLength(1);
-    expect(screen.getAllByRole("button", { name: "Oturumu kapat" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Ayarlar merkezi" })).toHaveLength(1);
 
     const liveMap = screen.getByTestId("live-map-screen");
     expect(within(liveMap).queryByText("Selected Node")).not.toBeInTheDocument();
@@ -108,6 +108,30 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /Ece Yalin/i }));
     expect(screen.getByRole("textbox", { name: "Mesaj yaz" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sohbet listesine don" })).toBeInTheDocument();
+  });
+
+  it("opens profile controls from the global settings center", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
+    await user.click(screen.getByRole("button", { name: "Ayarlar merkezi" }));
+
+    expect(screen.getByRole("dialog", { name: "Ayarlar merkezi paneli" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Gizlilik ve Konum/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Engellenen Kullanicilar/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Arac ve Profil/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Hesap ve Veri Kontrolleri/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Sifre ve Guvenlik/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Oturum/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Arac ve Profil/i }));
+    expect(screen.getByRole("textbox", { name: "Vehicle Model" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Profili Guncelle" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Ayarlar listesine don" }));
+    await user.click(screen.getByRole("button", { name: /Oturum/i }));
+    expect(screen.getByRole("button", { name: "Oturumu Kapat" })).toBeInTheDocument();
   });
 
   it("keeps the Social screen focused on friendships instead of embedding DM", async () => {
