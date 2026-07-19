@@ -8,7 +8,6 @@ const sections = [
   { key: "vehicle", code: "03", title: "Arac ve Profil", description: "Arac setup'i, bolge, garaj ve profil gorunumu." },
   { key: "account", code: "04", title: "Hesap ve Veri Kontrolleri", description: "Dogrulama, veri aktarimi, KVKK ve hesap silme." },
   { key: "security", code: "05", title: "Sifre ve Guvenlik", description: "Hesap e-postasi ve guvenli sifre degistirme akisi." },
-  { key: "session", code: "06", title: "Oturum", description: "Bu cihazdaki CRUISER oturumunu guvenle kapat." },
 ];
 
 export function SettingsButton({ onClick, tone = "default" }) {
@@ -30,14 +29,13 @@ export function SettingsButton({ onClick, tone = "default" }) {
   );
 }
 
-function SettingsHome({ isFirebaseAuth, onSelect, user }) {
+function SettingsHome({ isFirebaseAuth, onRequestLogout, onSelect, user }) {
   const values = {
     privacy: user.privacy?.safeZoneEnabled ? "Safe Zone acik" : "Standart",
     blocked: `${user.blockedDrivers?.length ?? 0} surucu`,
     vehicle: user.model,
     account: isFirebaseAuth ? (user.emailVerified ? "Dogrulandi" : "Dogrulama gerekli") : "Demo hesap",
     security: isFirebaseAuth ? user.email : "Demo hesap",
-    session: "Aktif",
   };
 
   return (
@@ -63,6 +61,16 @@ function SettingsHome({ isFirebaseAuth, onSelect, user }) {
           <span className="text-lg text-neutral-600 transition group-hover:translate-x-1 group-hover:text-lime-300">&rsaquo;</span>
         </button>
       ))}
+      <div className="border-t border-white/10 pt-3">
+        <button
+          type="button"
+          onClick={onRequestLogout}
+          className="min-h-12 w-full rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 font-bold text-rose-200 transition hover:bg-rose-500/20"
+        >
+          Oturumu Kapat
+        </button>
+        <p className="mt-2 text-center text-[11px] leading-4 text-neutral-600">Hesap verilerin silinmez; yalnizca bu cihazdaki oturum kapanir.</p>
+      </div>
     </div>
   );
 }
@@ -267,19 +275,6 @@ function DemoAccountNotice() {
   return <div className="rounded-[1.5rem] border border-amber-400/15 bg-amber-400/10 px-4 py-8 text-center text-sm text-amber-100">Bu islem Firebase hesabiyla giris yapildiginda kullanilabilir.</div>;
 }
 
-function SessionSettings({ onRequestLogout, user }) {
-  return (
-    <div className="space-y-4">
-      <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.03] p-4">
-        <p className="text-sm font-semibold text-neutral-100">{user.fullName}</p>
-        <p className="mt-1 font-mono text-xs tracking-[0.16em] text-lime-300">{user.plate}</p>
-        <p className="mt-3 text-xs leading-5 text-neutral-500">Oturum kapatildiginda bu cihaz Firebase ve CRUISER hesabindan cikis yapar. Hesap verilerin silinmez.</p>
-      </div>
-      <button type="button" onClick={onRequestLogout} className="min-h-12 w-full rounded-2xl border border-rose-400/30 bg-rose-500/10 font-bold text-rose-200">Oturumu Kapat</button>
-    </div>
-  );
-}
-
 export function SettingsCenter({
   accountFeedback,
   accountPending,
@@ -330,13 +325,12 @@ export function SettingsCenter({
           </div>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {!activeSection ? <SettingsHome isFirebaseAuth={isFirebaseAuth} onSelect={onSelectSection} user={user} /> : null}
+          {!activeSection ? <SettingsHome isFirebaseAuth={isFirebaseAuth} onRequestLogout={onRequestLogout} onSelect={onSelectSection} user={user} /> : null}
           {section === "privacy" ? <PrivacySettings onSavePrivacySettings={onSavePrivacySettings} socialFeedback={socialFeedback} user={user} /> : null}
           {section === "blocked" ? <BlockedSettings onUnblockDriver={onUnblockDriver} socialFeedback={socialFeedback} socialPendingKey={socialPendingKey} user={user} /> : null}
           {section === "vehicle" ? <VehicleSettings onProfileFormChange={onProfileFormChange} onSubmitProfile={onSubmitProfile} profileErrors={profileErrors} profileFeedback={profileFeedback} profileForm={profileForm} tuningOptions={tuningOptions} /> : null}
           {section === "account" ? <AccountSettings accountFeedback={accountFeedback} accountPending={accountPending} isFirebaseAuth={isFirebaseAuth} onDeleteAccount={onDeleteAccount} onExportAccount={onExportAccount} onSendEmailVerification={onSendEmailVerification} onWithdrawConsent={onWithdrawConsent} user={user} /> : null}
           {section === "security" ? <SecuritySettings accountFeedback={accountFeedback} accountPending={accountPending} isFirebaseAuth={isFirebaseAuth} onSendPasswordReset={onSendPasswordReset} user={user} /> : null}
-          {section === "session" ? <SessionSettings onRequestLogout={onRequestLogout} user={user} /> : null}
         </div>
       </section>
     </div>

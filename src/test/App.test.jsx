@@ -123,15 +123,15 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: /Arac ve Profil/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Hesap ve Veri Kontrolleri/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Sifre ve Guvenlik/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Oturum/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Oturumu Kapat" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /Arac ve Profil/i }));
     expect(screen.getByRole("textbox", { name: "Vehicle Model" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Profili Guncelle" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Ayarlar listesine don" }));
-    await user.click(screen.getByRole("button", { name: /Oturum/i }));
-    expect(screen.getByRole("button", { name: "Oturumu Kapat" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Oturumu Kapat" }));
+    expect(screen.getByText("Oturumu kapat?")).toBeInTheDocument();
   });
 
   it("keeps the Social screen focused on friendships instead of embedding DM", async () => {
