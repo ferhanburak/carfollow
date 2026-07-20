@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ServiceHistoryList } from "../components/garage/ServiceHistoryList";
 import { ServiceLogForm } from "../components/garage/ServiceLogForm";
 import { UpcomingMaintenanceList } from "../components/garage/UpcomingMaintenanceList";
-import { VehicleHealthDiagram } from "../components/garage/VehicleHealthDiagram";
+import { VehicleHealthCenter } from "../components/garage/VehicleHealthCenter";
 import { VehiclePassportSummary } from "../components/garage/VehiclePassportSummary";
 import { CompactField, InsightCard } from "../components/ui";
 import { formatNumber } from "../utils/garage";
@@ -163,36 +163,13 @@ export function GarageScreen({
           <p className="text-sm font-semibold">Digital Maintenance Log</p>
           <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">Live Wear</span>
         </div>
-        <VehicleHealthDiagram
+        <VehicleHealthCenter
           odometer={user.odometer}
           onSelectPart={handleSelectPart}
           parts={safeParts}
           selectedPartKey={selectedPartKey}
           vehicleType={user.vehicleType ?? "car"}
         />
-        <div className="mt-4 space-y-4">
-          {safeParts.map((part) => {
-            const snapshot = getPartHealthSnapshot(part, user.odometer);
-            const tone =
-              snapshot.health > 50 ? "bg-lime-400" : snapshot.health > 20 ? "bg-amber-400" : "bg-rose-500 animate-pulse";
-
-            return (
-              <div key={part.key} className="rounded-2xl bg-black/20 p-4">
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span>{part.name}</span>
-                  <span className={snapshot.health <= 20 ? "text-rose-300" : "text-neutral-300"}>{snapshot.health}%</span>
-                </div>
-                <div className="h-3 overflow-hidden rounded-full bg-neutral-800">
-                  <div className={`h-full rounded-full ${tone} transition-all duration-700`} style={{ width: `${snapshot.health}%` }} />
-                </div>
-                <div className="mt-2 flex items-center justify-between text-xs text-neutral-500">
-                  <span>{formatNumber(snapshot.kmRemaining)} KM kaldi</span>
-                  <span>{snapshot.daysRemaining === null ? "--" : `${snapshot.daysRemaining} gun`}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">

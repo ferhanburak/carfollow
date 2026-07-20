@@ -50,7 +50,9 @@ function MotorcycleSilhouette() {
 }
 
 export function VehicleHealthDiagram({
+  compact = false,
   odometer,
+  onOpen,
   parts,
   selectedPartKey,
   onSelectPart,
@@ -59,9 +61,56 @@ export function VehicleHealthDiagram({
   const slots = getVehicleDiagramSlots(vehicleType);
   const selectedPart = parts.find((part) => part.key === selectedPartKey) ?? parts[0] ?? null;
   const selectedSnapshot = selectedPart ? getPartHealthSnapshot(selectedPart, odometer) : null;
+  const statusCounts = parts.reduce((counts, part) => {
+    const status = getPartHealthSnapshot(part, odometer).status;
+    counts[status] = (counts[status] ?? 0) + 1;
+    return counts;
+  }, { healthy: 0, warning: 0, critical: 0 });
+
+  if (compact) {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label="Arac parca sagligi detaylarini ac"
+        className="mt-4 w-full rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(163,230,53,0.1),transparent_44%),linear-gradient(180deg,#121212,#0c0c0c)] p-4 text-left transition hover:border-lime-400/30"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-lime-400">Interactive Vehicle Map</p>
+            <p className="mt-1 text-sm font-semibold text-neutral-200">Parca durumuna dokunarak bak</p>
+          </div>
+          <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-lime-300">Detay</span>
+        </div>
+
+        <div className="mt-3 rounded-[1.35rem] border border-white/8 bg-black/20 px-5 py-2">
+          <svg viewBox="0 0 100 100" className="h-36 w-full pointer-events-none">
+            {vehicleType === "motorcycle" ? <MotorcycleSilhouette /> : <CarSilhouette />}
+            {parts.map((part) => {
+              const slot = slots[part.key];
+              if (!slot) return null;
+              const snapshot = getPartHealthSnapshot(part, odometer);
+              return (
+                <g key={part.key}>
+                  <circle cx={slot.x} cy={slot.y} r="4.6" className={`${getPartTone(snapshot.status)} stroke-[1.5]`} />
+                  <circle cx={slot.x} cy={slot.y} r="7.4" fill="none" stroke={snapshot.status === "critical" ? "rgba(244,63,94,0.28)" : snapshot.status === "warning" ? "rgba(251,191,36,0.24)" : "rgba(163,230,53,0.22)"} strokeWidth="1" />
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-xl bg-lime-400/10 px-2 py-2 text-xs text-lime-200">{statusCounts.healthy} iyi</div>
+          <div className="rounded-xl bg-amber-400/10 px-2 py-2 text-xs text-amber-200">{statusCounts.warning} yaklasan</div>
+          <div className="rounded-xl bg-rose-500/10 px-2 py-2 text-xs text-rose-200">{statusCounts.critical} kritik</div>
+        </div>
+      </button>
+    );
+  }
 
   return (
-    <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(163,230,53,0.08),transparent_40%),linear-gradient(180deg,#121212,#0c0c0c)] p-4">
+    <div className="rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(163,230,53,0.08),transparent_40%),linear-gradient(180deg,#121212,#0c0c0c)] p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.22em] text-lime-400">Interactive Vehicle Map</p>

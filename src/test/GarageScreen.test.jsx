@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { GarageScreen } from "../screens/GarageScreen";
 import { createAuthenticatedUser, listQuickProfiles } from "../repositories/cruiserRepository";
@@ -53,5 +54,20 @@ describe("GarageScreen", () => {
     const pendingButtons = screen.getAllByRole("button", { name: "Kaydediliyor..." });
     expect(pendingButtons).toHaveLength(2);
     pendingButtons.forEach((button) => expect(button).toBeDisabled());
+  });
+
+  it("opens part percentages only after the compact vehicle map is selected", async () => {
+    const user = userEvent.setup();
+    render(<GarageScreen {...buildProps()} />);
+
+    expect(screen.queryByRole("dialog", { name: "Parca sagligi merkezi" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Arac parca sagligi detaylarini ac" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Parca sagligi merkezi" });
+    expect(within(dialog).getByText("Parca Sagligi")).toBeInTheDocument();
+    expect(within(dialog).getAllByText(/%\d+/).length).toBeGreaterThan(1);
+
+    await user.click(within(dialog).getByRole("button", { name: "Parca sagligi merkezini kapat" }));
+    expect(screen.queryByRole("dialog", { name: "Parca sagligi merkezi" })).not.toBeInTheDocument();
   });
 });
