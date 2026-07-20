@@ -61,20 +61,6 @@ export function MapHubScreen({
         mapPickMode={mapPickMode}
         onPickLocation={onPickLocation}
       />
-      <MapComposerPanel
-        draftLocation={draftLocation}
-        feedback={mapPinFeedback}
-        form={mapPinForm}
-        errors={mapPinErrors}
-        mapPickMode={mapPickMode}
-        onClearRouteDraft={clearDraftRoute}
-        onFormChange={onSetMapPinForm}
-        onRemoveLastRoutePoint={pickRouteBack}
-        onSetMapPickMode={onSetMapPickMode}
-        onSubmit={onSubmitMapPin}
-        onUseSelectedCoordinates={onUseSelectedCoordinates}
-        user={user}
-      />
       <PinPanel
         pin={selectedPin}
         user={user}
@@ -101,6 +87,20 @@ export function MapHubScreen({
         onSubmitSpotPhoto={onSubmitSpotPhoto}
         onSubmitWashReview={submitWashReview ?? onSubmitWashReview}
         onWashFormChange={onSetWashForm}
+      />
+      <MapComposerPanel
+        draftLocation={draftLocation}
+        feedback={mapPinFeedback}
+        form={mapPinForm}
+        errors={mapPinErrors}
+        mapPickMode={mapPickMode}
+        onClearRouteDraft={clearDraftRoute}
+        onFormChange={onSetMapPinForm}
+        onRemoveLastRoutePoint={pickRouteBack}
+        onSetMapPickMode={onSetMapPickMode}
+        onSubmit={onSubmitMapPin}
+        onUseSelectedCoordinates={onUseSelectedCoordinates}
+        user={user}
       />
     </section>
   );
