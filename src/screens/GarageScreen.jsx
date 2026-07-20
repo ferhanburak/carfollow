@@ -45,21 +45,20 @@ export function GarageScreen({
   const safeFuelLogs = user.fuelLogs ?? [];
   const partsByKey = new Map(safeParts.map((part) => [part.key, part]));
   const [selectedPartKey, setSelectedPartKey] = useState(safeParts[0]?.key ?? null);
+  const [historyPartFilter, setHistoryPartFilter] = useState("all");
   const [historyTypeFilter, setHistoryTypeFilter] = useState("all");
   const activeServicePart = safeParts.find((part) => part.key === serviceLogForm?.partKey) ?? null;
-  const selectedPart = safeParts.find((part) => part.key === selectedPartKey) ?? safeParts[0] ?? null;
-  const filteredServiceLogs = safeServiceLogs.filter((log) => {
-    const matchesPart = selectedPartKey ? log.partKey === selectedPartKey : true;
-    const matchesType = historyTypeFilter === "all" ? true : log.type === historyTypeFilter;
-    return matchesPart && matchesType;
-  });
-  const selectedPartLogCount = safeServiceLogs.filter((log) => log.partKey === selectedPartKey).length;
-  const selectedPartSpend = safeServiceLogs
-    .filter((log) => log.partKey === selectedPartKey)
+  const historySelectedPart = safeParts.find((part) => part.key === historyPartFilter) ?? null;
+  const partScopedServiceLogs = safeServiceLogs.filter((log) =>
+    historyPartFilter === "all" ? true : log.partKey === historyPartFilter,
+  );
+  const filteredServiceLogs = partScopedServiceLogs.filter((log) =>
+    historyTypeFilter === "all" ? true : log.type === historyTypeFilter,
+  );
+  const historySpend = partScopedServiceLogs
     .reduce((sum, log) => sum + Number(log.cost ?? 0), 0);
-  const lastSelectedPartLog =
-    [...safeServiceLogs]
-      .filter((log) => log.partKey === selectedPartKey)
+  const lastHistoryLog =
+    [...partScopedServiceLogs]
       .sort((left, right) => new Date(right.serviceDate) - new Date(left.serviceDate))[0] ?? null;
 
   const handleSelectPart = (partKey) => {
@@ -207,32 +206,49 @@ export function GarageScreen({
           <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">{filteredServiceLogs.length} gorunuyor</span>
         </div>
 
-        {selectedPart ? (
-          <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.22em] text-lime-400">Part History Explorer</p>
-                <p className="mt-2 text-lg font-semibold text-neutral-100">{selectedPart.name}</p>
-                <p className="mt-1 text-xs text-neutral-500">
-                  Diyagramdan secilen parcaya ait bakim akisini burada filtreleyebilirsin.
-                </p>
-              </div>
+        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-lime-400">Part History Explorer</p>
+              <p className="mt-2 text-lg font-semibold text-neutral-100">
+                {historySelectedPart?.name ?? "Tum Parcalar"}
+              </p>
+              <p className="mt-1 text-xs text-neutral-500">
+                Tum servis gecmisini gor veya asagidan belirli bir parcayi filtrele.
+              </p>
+            </div>
+            {historySelectedPart ? (
               <button
                 type="button"
-                onClick={() => onPrimeServiceLogForm(selectedPart.key, "replacement")}
-                className="min-h-12 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 text-xs font-semibold text-lime-200"
+                onClick={() => onPrimeServiceLogForm(historySelectedPart.key, "replacement")}
+                className="min-h-12 shrink-0 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 text-xs font-semibold text-lime-200"
               >
                 Bugun Degisti
               </button>
-            </div>
-
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <InsightCard label="Kayit" value={`${selectedPartLogCount}`} />
-              <InsightCard label="Toplam Masraf" value={`${formatNumber(selectedPartSpend)} TL`} />
-              <InsightCard label="Son Islem" value={lastSelectedPartLog ? formatServiceDate(lastSelectedPartLog.serviceDate) : "--"} />
-            </div>
+            ) : null}
           </div>
-        ) : null}
+
+          <label className="mt-4 block text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-500" htmlFor="service-history-part">
+            Gecmis Parcasi
+          </label>
+          <select
+            id="service-history-part"
+            value={historyPartFilter}
+            onChange={(event) => setHistoryPartFilter(event.target.value)}
+            className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 text-sm text-neutral-100 outline-none focus:border-lime-400"
+          >
+            <option value="all">Tum Parcalar</option>
+            {safeParts.map((part) => (
+              <option key={part.key} value={part.key}>{part.name}</option>
+            ))}
+          </select>
+
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <InsightCard label="Kayit" value={`${partScopedServiceLogs.length}`} />
+            <InsightCard label="Toplam Masraf" value={`${formatNumber(historySpend)} TL`} />
+            <InsightCard label="Son Islem" value={lastHistoryLog ? formatServiceDate(lastHistoryLog.serviceDate) : "--"} />
+          </div>
+        </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
           {["all", "replacement", "inspection", "repair"].map((type) => (

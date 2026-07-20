@@ -73,6 +73,27 @@ describe("GarageScreen", () => {
     expect(screen.queryByRole("dialog", { name: "Parca sagligi merkezi" })).not.toBeInTheDocument();
   });
 
+  it("shows every service record by default and filters history independently by part", async () => {
+    const userEventDriver = userEvent.setup();
+    const props = buildProps();
+    render(<GarageScreen {...props} />);
+
+    const historyPartFilter = screen.getByRole("combobox", { name: "Gecmis Parcasi" });
+    expect(historyPartFilter).toHaveValue("all");
+    props.user.serviceLogs.forEach((log) => {
+      const partName = props.user.parts.find((part) => part.key === log.partKey)?.name ?? log.partKey;
+      expect(screen.getByRole("button", { name: `${partName} servis kaydini sil` })).toBeInTheDocument();
+    });
+
+    const selectedLog = props.user.serviceLogs[1];
+    await userEventDriver.selectOptions(historyPartFilter, selectedLog.partKey);
+
+    expect(screen.getByRole("button", {
+      name: `${props.user.parts.find((part) => part.key === selectedLog.partKey)?.name} servis kaydini sil`,
+    })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /servis kaydini sil$/ })).toHaveLength(1);
+  });
+
   it("requires confirmation before deleting a mistaken service record", async () => {
     const userEventDriver = userEvent.setup();
     const props = buildProps();
