@@ -39,6 +39,8 @@ export function StatsScreen({
   approveFriendRequest,
   blockDriver,
   clanFeedback,
+  clanEventFeedback,
+  clanEventPendingId,
   clanEvents = [],
   clanForm,
   clanPendingKey,
@@ -48,6 +50,7 @@ export function StatsScreen({
   currentClanMembers = [],
   declineFriendRequest,
   declineIncomingClanInvite,
+  deleteClanEvent,
   friendSearchQuery,
   friendSearchResults,
   hostableConvoys,
@@ -159,12 +162,15 @@ export function StatsScreen({
 
         <ClanCenter
           clan={currentClan}
+          clanEventFeedback={clanEventFeedback}
           clanFeedback={clanFeedback}
+          eventPendingId={clanEventPendingId}
           events={clanEvents}
           isOpen={clanCenterOpen}
           isPending={isClanPending}
           members={currentClanMembers}
           onClose={() => setClanCenterOpen(false)}
+          onDeleteEvent={deleteClanEvent}
           onLeave={leaveCurrentClan}
           onOpenProfile={onOpenPublicProfile}
           onRemoveMember={removeClanMember}

@@ -222,8 +222,18 @@ function canSeeDetails(convoy, profile, membership = null) {
   if (convoy.hostUserId === userId) return true;
   if (membership?.membershipStatus === "approved") return true;
   if ((convoy.invitedUserIds ?? []).includes(userId)) return true;
+  if (convoy.clanId && profile?.clanId === convoy.clanId) return true;
   // Exact location is never exposed to a driver who fails the join threshold.
   return meetsTrust(convoy, profile);
+}
+
+function canDeleteConvoy(convoy, actorUserId, clanRole = "") {
+  if (convoy?.hostUserId === actorUserId) return true;
+  return Boolean(convoy?.clanId) && ["owner", "captain"].includes(clanRole);
+}
+
+function isClosedConvoy(convoy) {
+  return ["completed", "cancelled"].includes(convoy?.lifecycleStatus);
 }
 
 function buildPublicMapSummary(convoy) {
@@ -281,6 +291,6 @@ function presentConvoy(convoy, profile, membership, members) {
 module.exports = {
   ACCESS_POLICIES, ARRIVAL_CONFIRMATION_COUNT, CONVOY_SCHEMA_VERSION, DEFAULT_ARRIVAL_RADIUS_M, DETAIL_VISIBILITIES,
   LIFECYCLE_STATUSES, MAX_AUTO_ARRIVAL_ACCURACY_M, TRIP_STATUSES, VISIBILITIES,
-  buildConvoyDocument, buildConvoyMemberDocument, buildPublicMapSummary, canSeeConvoy, canSeeDetails,
-  getDistanceMeters, meetsTrust, presentConvoy, projectDriver, resolveConvoyLocationUpdate, safeText,
+  buildConvoyDocument, buildConvoyMemberDocument, buildPublicMapSummary, canDeleteConvoy, canSeeConvoy, canSeeDetails,
+  getDistanceMeters, isClosedConvoy, meetsTrust, presentConvoy, projectDriver, resolveConvoyLocationUpdate, safeText,
 };

@@ -98,4 +98,52 @@ describe("ClanCenter", () => {
     expect(screen.queryByRole("button", { name: "Kaptan Yap" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Klandan Cikar" })).not.toBeInTheDocument();
   });
+
+  it("reveals past event attendees and requires confirmation before deletion", async () => {
+    const user = userEvent.setup();
+    const onDeleteEvent = vi.fn();
+    const onOpenProfile = vi.fn();
+    const event = {
+      id: "event-1",
+      name: "Ankara Night Run",
+      route: "Golbasi - Incek",
+      time: "22:30",
+      lifecycleStatus: "completed",
+      attendees: [{ userId: "driver-1", plate: "06 TEST 01", fullName: "Test Driver", model: "Golf GTI", driverScore: 88, tripStatus: "arrived" }],
+    };
+
+    render(
+      <ClanCenter
+        clan={{ id: "clan-1", name: "Neon Wolves", tag: "WOLF", members: 1, km: 500 }}
+        clanEventFeedback=""
+        clanFeedback=""
+        eventPendingId=""
+        events={[event]}
+        isOpen
+        isPending={false}
+        members={[]}
+        onClose={vi.fn()}
+        onDeleteEvent={onDeleteEvent}
+        onLeave={vi.fn()}
+        onOpenProfile={onOpenProfile}
+        onRemoveMember={vi.fn()}
+        onRevokeInvite={vi.fn()}
+        onTransferOwnership={vi.fn()}
+        onUpdateMemberRole={vi.fn()}
+        outgoingInvites={[]}
+        user={{ id: "owner", plate: "06 OWNER 01", clanRole: "owner", driverScore: 90 }}
+      />,
+    );
+
+    expect(screen.getByText("Gecmis")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ankara Night Run katilimcilarini goster" }));
+    expect(screen.getByText("06 TEST 01")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /06 TEST 01/i }));
+    expect(onOpenProfile).toHaveBeenCalledWith(expect.objectContaining({ userId: "driver-1", convoyId: "event-1" }));
+
+    await user.click(screen.getByRole("button", { name: "Gecmisten Sil" }));
+    expect(onDeleteEvent).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Silmeyi Onayla" }));
+    expect(onDeleteEvent).toHaveBeenCalledWith("event-1");
+  });
 });

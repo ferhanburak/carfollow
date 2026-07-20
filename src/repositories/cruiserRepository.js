@@ -110,6 +110,7 @@ export {
   buildFirebaseMapState,
   createFirebaseConvoy,
   createFirebaseMapNode,
+  deleteFirebaseConvoy,
   deleteFirebaseMapSpotPhoto,
   inviteFirebaseConvoyMember,
   isFirebaseMapRepositoryEnabled,

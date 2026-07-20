@@ -1,4 +1,5 @@
 import { formatNumber } from "../utils/garage";
+import { ClanEventList } from "./ClanEventList";
 
 function StatTile({ label, value }) {
   return (
@@ -130,12 +131,15 @@ function ClanMemberCard({ isPending, member, onOpenProfile, onRemove, onTransfer
 
 export function ClanCenter({
   clan,
+  clanEventFeedback,
   clanFeedback,
+  eventPendingId,
   events,
   isOpen,
   isPending,
   members,
   onClose,
+  onDeleteEvent,
   onLeave,
   onOpenProfile,
   onRemoveMember,
@@ -165,7 +169,7 @@ export function ClanCenter({
         </header>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {clanFeedback ? <p className="rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-xs text-lime-100">{clanFeedback}</p> : null}
+          {clanFeedback || clanEventFeedback ? <p className="rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-xs text-lime-100">{clanEventFeedback || clanFeedback}</p> : null}
           <div className="grid grid-cols-2 gap-2">
             <StatTile label="Aylik KM" value={`${formatNumber(clan.km ?? 0)} KM`} />
             <StatTile label="Uye Sayisi" value={memberCount} />
@@ -194,20 +198,7 @@ export function ClanCenter({
 
           <div className="rounded-[1.5rem] border border-white/8 bg-black/20 p-4">
             <p className="text-sm font-semibold">Klan Eventleri</p>
-            <div className="mt-3 space-y-2">
-              {events.length ? events.map((event) => (
-                <div key={event.id} className="rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">{event.name}</p>
-                      <p className="mt-1 text-xs text-neutral-500">{event.route || "Rota bilgisi bekleniyor"}</p>
-                    </div>
-                    <span className="rounded-full border border-lime-400/15 bg-lime-400/10 px-3 py-1 text-[10px] uppercase text-lime-300">{event.lifecycleStatus || "planning"}</span>
-                  </div>
-                  <p className="mt-2 text-xs text-neutral-500">{event.time || "Saat bekleniyor"} / {event.attendees?.length ?? 0} katilimci</p>
-                </div>
-              )) : <div className="rounded-2xl border border-dashed border-white/10 p-4 text-sm text-neutral-500">Bu klana ait gorunur event bulunmuyor.</div>}
-            </div>
+            <div className="mt-3"><ClanEventList canManage={canInvite} eventPendingId={eventPendingId} events={events} onDelete={onDeleteEvent} onOpenProfile={onOpenProfile} userPlate={user.plate} /></div>
           </div>
 
           {canInvite ? (

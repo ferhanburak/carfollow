@@ -118,6 +118,8 @@ function App() {
     blockDriver,
     chatFeedback,
     clanFeedback,
+    clanEventFeedback,
+    clanEventPendingId,
     clanForm,
     clanPendingKey,
     clans,
@@ -130,6 +132,7 @@ function App() {
     currentClan,
     currentClanMembers,
     declineCruiseJoinRequest,
+    deleteClanEvent,
     deleteSpotPhoto,
     declineFriendRequest,
     declineIncomingClanInvite,
@@ -523,6 +526,8 @@ function App() {
                 approveFriendRequest={approveFriendRequest}
                 blockDriver={blockDriver}
                 clanFeedback={clanFeedback}
+                clanEventFeedback={clanEventFeedback}
+                clanEventPendingId={clanEventPendingId}
                 clanEvents={clanEvents}
                 clanForm={clanForm}
                 clanPendingKey={clanPendingKey}
@@ -532,6 +537,7 @@ function App() {
                 currentClanMembers={currentClanMembers}
                 declineFriendRequest={declineFriendRequest}
                 declineIncomingClanInvite={declineIncomingClanInvite}
+                deleteClanEvent={deleteClanEvent}
                 friendSearchQuery={friendSearchQuery}
                 friendSearchResults={friendSearchResults}
                 hostableConvoys={hostableConvoys}

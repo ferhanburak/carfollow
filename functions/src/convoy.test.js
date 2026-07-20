@@ -5,8 +5,10 @@ const {
   buildConvoyMemberDocument,
   buildPublicMapSummary,
   DEFAULT_ARRIVAL_RADIUS_M,
+  canDeleteConvoy,
   canSeeConvoy,
   getDistanceMeters,
+  isClosedConvoy,
   presentConvoy,
   resolveConvoyLocationUpdate,
 } = require("./convoy");
@@ -61,6 +63,25 @@ test("member documents preserve identity and reputation snapshots", () => {
   assert.equal(member.id, "convoy-1__guest");
   assert.equal(member.membershipStatus, "pending");
   assert.equal(member.scoreSnapshot, 80);
+});
+
+test("clan members can inspect attendee details for their clan events", () => {
+  const convoy = createConvoy({ visibility: "clan" });
+  const clanMate = { ...guest, id: "clan-mate", clanId: "clan-1", driverScore: 10, harmonyVotes: 0 };
+  const member = buildConvoyMemberDocument({ convoy, profile: guest, timestamp: "now" });
+  const presented = presentConvoy(convoy, clanMate, null, [member]);
+  assert.equal(presented.backendCanViewDetails, true);
+  assert.equal(presented.attendees.length, 1);
+});
+
+test("closed convoy deletion is limited to host or clan management", () => {
+  const completed = { ...createConvoy(), lifecycleStatus: "completed" };
+  assert.equal(isClosedConvoy(completed), true);
+  assert.equal(isClosedConvoy(createConvoy()), false);
+  assert.equal(canDeleteConvoy(completed, "host", "member"), true);
+  assert.equal(canDeleteConvoy(completed, "clan-owner", "owner"), true);
+  assert.equal(canDeleteConvoy(completed, "clan-captain", "captain"), true);
+  assert.equal(canDeleteConvoy(completed, "ordinary-member", "member"), false);
 });
 
 test("scheduled convoy waits for launch time before GPS tracking starts", () => {

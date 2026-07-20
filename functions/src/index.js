@@ -51,7 +51,9 @@ const {
   buildConvoyDocument,
   buildConvoyMemberDocument,
   buildPublicMapSummary,
+  canDeleteConvoy,
   canSeeConvoy,
+  isClosedConvoy,
   meetsTrust,
   presentConvoy,
   projectDriver,
@@ -1048,6 +1050,33 @@ exports.createConvoy = secureCall("createConvoy", { rateLimit: { limit: 10, wind
   if (convoy.visibility === "public") batch.set(publicDocument("mapPins", convoy.id), buildPublicMapSummary(convoy));
   await batch.commit();
   return { ok: true, convoyId: convoy.id };
+});
+
+exports.deleteConvoy = secureCall("deleteConvoy", { rateLimit: { limit: 12, windowSeconds: 3600 } }, async (request) => {
+  const actorUserId = requireAuth(request);
+  const convoyId = String(request.data?.convoyId ?? "");
+  if (!convoyId || convoyId.includes("/")) throw new HttpsError("invalid-argument", "A valid convoy is required.");
+
+  const convoyRef = publicDocument("convoys", convoyId);
+  const convoySnapshot = await convoyRef.get();
+  const convoy = requireSnapshot(convoySnapshot, "not-found", "Convoy not found.");
+  const clanMembership = convoy.clanId ? await clanMemberDocument(convoy.clanId, actorUserId).get() : null;
+  const clanRole = clanMembership?.exists ? clanMembership.data().role : "";
+  if (!canDeleteConvoy(convoy, actorUserId, clanRole)) {
+    throw new HttpsError("permission-denied", "Only the host or clan management can delete this event.");
+  }
+  if (!isClosedConvoy(convoy)) {
+    throw new HttpsError("failed-precondition", "Only completed or cancelled events can be deleted.");
+  }
+
+  const membersSnapshot = await publicCollection("convoyMembers").where("convoyId", "==", convoyId).get();
+  const batch = db.batch();
+  membersSnapshot.docs.forEach((document) => batch.delete(document.ref));
+  batch.delete(publicDocument("mapPins", convoyId));
+  batch.delete(convoyRef);
+  await batch.commit();
+
+  return { ok: true, convoyId, deletedMembers: membersSnapshot.size };
 });
 
 exports.listAccessibleConvoys = secureCall("listAccessibleConvoys", async (request) => {

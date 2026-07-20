@@ -71,6 +71,7 @@ export const submitFirebaseWashReview = (review) => callMapFunction("submitWashR
 export const toggleFirebaseMapLike = (data) => callMapFunction("toggleMapLike", data);
 export const deleteFirebaseMapSpotPhoto = (photoId) => callMapFunction("deleteMapSpotPhoto", { photoId });
 export const createFirebaseConvoy = (pin) => callMapFunction("createConvoy", { pin });
+export const deleteFirebaseConvoy = (convoyId) => callMapFunction("deleteConvoy", { convoyId });
 export const requestFirebaseConvoyJoin = (convoyId) => callMapFunction("requestConvoyJoin", { convoyId });
 export const respondFirebaseConvoyJoin = (convoyId, memberUserId, decision) => callMapFunction("respondConvoyJoinRequest", { convoyId, memberUserId, decision });
 export const removeFirebaseConvoyMember = (convoyId, memberUserId) => callMapFunction("removeConvoyMember", { convoyId, memberUserId });

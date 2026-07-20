@@ -17,6 +17,7 @@ import {
   addFirebaseMapSpotPhoto,
   createFirebaseConvoy,
   createFirebaseMapNode,
+  deleteFirebaseConvoy,
   deleteFirebaseMapSpotPhoto,
   inviteFirebaseConvoyMember,
   isFirebaseMapRepositoryEnabled,
@@ -104,6 +105,8 @@ export function useMapPins({ initialWorld, user }) {
   const [spotPhotoErrors, setSpotPhotoErrors] = useState({});
   const [spotPhotoFeedback, setSpotPhotoFeedback] = useState("");
   const [convoyFeedback, setConvoyFeedback] = useState("");
+  const [clanEventFeedback, setClanEventFeedback] = useState("");
+  const [clanEventPendingId, setClanEventPendingId] = useState("");
   const firebaseMapEnabled = isFirebaseMapRepositoryEnabled();
 
   const visibleMapPins = useMemo(() => filterVisibleMapPins(mapPins, user), [mapPins, user]);
@@ -406,6 +409,34 @@ export function useMapPins({ initialWorld, user }) {
     if (nextPin) {
       setConvoyFeedback(`${profile.fullName} aktif konvoya davet edildi.`);
       void saveFirebaseMapPin(nextPin);
+    }
+  };
+
+  const deleteClanEvent = async (convoyId) => {
+    const target = mapPins.find((pin) => pin.id === convoyId && pin.type === "meet");
+    if (!target || !["completed", "cancelled"].includes(target.lifecycleStatus)) {
+      setClanEventFeedback("Yalnizca tamamlanmis veya iptal edilmis etkinlikler silinebilir.");
+      return false;
+    }
+
+    setClanEventPendingId(convoyId);
+    setClanEventFeedback("Etkinlik klan gecmisinden siliniyor...");
+    try {
+      if (firebaseMapEnabled) {
+        await deleteFirebaseConvoy(convoyId);
+        await refreshFirebaseConvoys();
+      } else {
+        setMapPins((current) => current.filter((pin) => pin.id !== convoyId));
+      }
+      if (selectedPinId === convoyId) setSelectedPinId(null);
+      setClanEventFeedback(`${target.name} klan gecmisinden silindi.`);
+      return true;
+    } catch (error) {
+      console.error("Clan event could not be deleted", error);
+      setClanEventFeedback("Etkinlik su anda silinemedi. Lutfen tekrar dene.");
+      return false;
+    } finally {
+      setClanEventPendingId("");
     }
   };
 
@@ -783,9 +814,12 @@ export function useMapPins({ initialWorld, user }) {
 
   return {
     approveCruiseJoinRequest,
+    clanEventFeedback,
+    clanEventPendingId,
     clearDraftRoute,
     convoyFeedback,
     declineCruiseJoinRequest,
+    deleteClanEvent,
     deleteSpotPhoto,
     inviteDriverToMeet,
     joinCruise,
