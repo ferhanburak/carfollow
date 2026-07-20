@@ -96,13 +96,15 @@ export function getPartHealth(part, odometer, now = new Date()) {
     ? Math.max(0, 100 - (used / lifeExpectancy) * 100)
     : 100;
   const replacedAt = new Date(`${String(part.replacedAt ?? "").slice(0, 10)}T00:00:00.000Z`);
-  const lifeExpectancyMonths = Math.max(0, Number(part.lifeExpectancyMonths ?? 0));
+  const lifeExpectancyDays = Math.max(
+    0,
+    Number(part.lifeExpectancyDays ?? Number(part.lifeExpectancyMonths ?? 0) * 30),
+  );
   let timePercent = 100;
 
-  if (lifeExpectancyMonths && Number.isFinite(replacedAt.getTime())) {
-    const dueAt = new Date(replacedAt);
-    dueAt.setUTCMonth(dueAt.getUTCMonth() + lifeExpectancyMonths);
-    const totalLife = Math.max(1, dueAt.getTime() - replacedAt.getTime());
+  if (lifeExpectancyDays && Number.isFinite(replacedAt.getTime())) {
+    const totalLife = Math.max(1, lifeExpectancyDays * 24 * 60 * 60 * 1000);
+    const dueAt = new Date(replacedAt.getTime() + totalLife);
     const remainingLife = Math.max(0, dueAt.getTime() - new Date(now).getTime());
     timePercent = (remainingLife / totalLife) * 100;
   }

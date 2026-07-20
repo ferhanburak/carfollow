@@ -1,0 +1,14 @@
+{
+  "oil": { "maxKm": 15000, "maxDays": 365 },
+  "oilFilter": { "maxKm": 15000, "maxDays": 365 },
+  "airFilter": { "maxKm": 15000, "maxDays": 365 },
+  "cabinFilter": { "maxKm": 15000, "maxDays": 365 },
+  "spark": { "maxKm": 60000, "maxDays": 1095 },
+  "coolant": { "maxKm": 80000, "maxDays": 1095 },
+  "battery": { "maxKm": 999999, "maxDays": 1825 },
+  "transmissionFluid": { "maxKm": 90000, "maxDays": 1825 },
+  "frontBrakes": { "maxKm": 40000, "maxDays": 730 },
+  "rearBrakes": { "maxKm": 60000, "maxDays": 1095 },
+  "frontTires": { "maxKm": 50000, "maxDays": 1825 },
+  "rearTires": { "maxKm": 50000, "maxDays": 1825 }
+}

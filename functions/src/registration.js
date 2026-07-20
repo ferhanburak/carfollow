@@ -2,6 +2,7 @@ const REGISTRATION_SCHEMA_VERSION = 2;
 const VEHICLE_SCHEMA_VERSION = 1;
 const PASSPORT_SCHEMA_VERSION = 1;
 const KVKK_CONSENT_VERSION = "2026-07";
+const { resolveMaintenanceLimit } = require("./maintenanceLimits");
 
 class RegistrationError extends Error {
   constructor(code, message) {
@@ -52,6 +53,7 @@ function normalizePart(part, { uid, vehicleId, odometer }) {
   const replacedAt = /^\d{4}-\d{2}-\d{2}$/.test(String(part?.replacedAt ?? ""))
     ? String(part.replacedAt)
     : new Date().toISOString().slice(0, 10);
+  const maintenanceLimit = resolveMaintenanceLimit({ ...part, key });
 
   return {
     key,
@@ -64,12 +66,17 @@ function normalizePart(part, { uid, vehicleId, odometer }) {
       max: 40,
     }),
     zone: cleanText(part?.zone ?? "engine", { field: "Part zone", min: 1, max: 40 }),
-    lifeExpectancyKm: cleanNumber(part?.lifeExpectancyKm ?? part?.lifeExpectancy ?? 0, {
+    lifeExpectancyKm: cleanNumber(maintenanceLimit.lifeExpectancyKm, {
       field: "Part life expectancy",
       min: 0,
-      max: 500000,
+      max: 1000000,
     }),
-    lifeExpectancyMonths: cleanNumber(part?.lifeExpectancyMonths ?? 0, {
+    lifeExpectancyDays: cleanNumber(maintenanceLimit.lifeExpectancyDays, {
+      field: "Part time expectancy in days",
+      min: 0,
+      max: 7300,
+    }),
+    lifeExpectancyMonths: cleanNumber(maintenanceLimit.lifeExpectancyMonths, {
       field: "Part time expectancy",
       min: 0,
       max: 240,

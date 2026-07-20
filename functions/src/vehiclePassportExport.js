@@ -1,4 +1,5 @@
 const EXPORT_SCHEMA_VERSION = 1;
+const { resolveMaintenanceLimit } = require("./maintenanceLimits");
 
 function clampPercent(value) {
   return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
@@ -36,13 +37,14 @@ function toIsoDate(value) {
 }
 
 function getPartHealthSnapshot(part, odometer, now = Date.now()) {
-  const lifeExpectancyKm = Number(part.lifeExpectancyKm ?? 0);
-  const lifeExpectancyMonths = Number(part.lifeExpectancyMonths ?? 0);
+  const maintenanceLimit = resolveMaintenanceLimit(part);
+  const lifeExpectancyKm = maintenanceLimit.lifeExpectancyKm;
+  const lifeExpectancyDays = maintenanceLimit.lifeExpectancyDays || maintenanceLimit.lifeExpectancyMonths * 30;
   const kmProgress = lifeExpectancyKm
     ? Math.max(0, (Number(odometer ?? 0) - Number(part.replacedKm ?? 0)) / lifeExpectancyKm)
     : 0;
-  const timeProgress = lifeExpectancyMonths && part.replacedAt
-    ? Math.max(0, getDaysSince(part.replacedAt, now) / (lifeExpectancyMonths * 30))
+  const timeProgress = lifeExpectancyDays && part.replacedAt
+    ? Math.max(0, getDaysSince(part.replacedAt, now) / lifeExpectancyDays)
     : 0;
   const health = clampPercent(100 - Math.max(kmProgress, timeProgress) * 100);
 

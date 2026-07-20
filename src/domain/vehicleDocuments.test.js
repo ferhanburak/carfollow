@@ -67,6 +67,18 @@ describe("vehicle document contracts", () => {
     expect(dedupeVehicleParts([scopedPart, legacyPart], vehicleId)).toEqual([scopedPart]);
   });
 
+  it("persists exact day-based maintenance limits", () => {
+    const part = buildVehiclePartDocument({
+      key: "oil",
+      lifeExpectancyKm: 15000,
+      lifeExpectancyDays: 365,
+      lifeExpectancyMonths: 12,
+      replacedKm: 64000,
+    }, user.id, resolvePrimaryVehicleId(user));
+
+    expect(part).toMatchObject({ lifeExpectancyKm: 15000, lifeExpectancyDays: 365 });
+  });
+
   it("hydrates the active vehicle without replacing the account id", () => {
     const vehicle = buildVehicleDocument(user);
     const passport = buildVehiclePassportDocument(user);
@@ -78,5 +90,23 @@ describe("vehicle document contracts", () => {
     expect(hydrated.id).toBe(user.id);
     expect(hydrated.primaryVehicleId).toBe(vehicle.vehicleId);
     expect(hydrated.vehiclePassport).toEqual(passport);
+  });
+
+  it("hydrates legacy Firebase parts with current standard limits", () => {
+    const vehicle = buildVehicleDocument(user);
+    const hydrated = mergeVehiclePassportBundle(user, {
+      vehicle,
+      parts: [{
+        key: "battery",
+        vehicleId: vehicle.vehicleId,
+        lifeExpectancyKm: 50000,
+        lifeExpectancyMonths: 36,
+      }],
+    });
+
+    expect(hydrated.parts.find((part) => part.key === "battery")).toMatchObject({
+      lifeExpectancyKm: 999999,
+      lifeExpectancyDays: 1825,
+    });
   });
 });

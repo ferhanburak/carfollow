@@ -1,3 +1,16 @@
+import maintenanceLimits from "../../functions/src/maintenanceLimits.json";
+
+function applyStandardLimit(part) {
+  const standard = maintenanceLimits[part.key];
+  if (!standard) return part;
+  return {
+    ...part,
+    lifeExpectancyKm: standard.maxKm,
+    lifeExpectancyDays: standard.maxDays,
+    lifeExpectancyMonths: (standard.maxDays / 365) * 12,
+  };
+}
+
 const CAR_PART_CATALOG = [
   { key: "oil", name: "Engine Oil", shortLabel: "Oil", zone: "engine", lifeExpectancyKm: 8000, lifeExpectancyMonths: 12 },
   { key: "oilFilter", name: "Oil Filter", shortLabel: "Oil Filter", zone: "engine", lifeExpectancyKm: 8000, lifeExpectancyMonths: 12 },
@@ -11,7 +24,7 @@ const CAR_PART_CATALOG = [
   { key: "rearBrakes", name: "Rear Brake Pads", shortLabel: "R Brakes", zone: "rearAxle", lifeExpectancyKm: 24000, lifeExpectancyMonths: 18 },
   { key: "frontTires", name: "Front Tires", shortLabel: "F Tires", zone: "frontAxle", lifeExpectancyKm: 30000, lifeExpectancyMonths: 30 },
   { key: "rearTires", name: "Rear Tires", shortLabel: "R Tires", zone: "rearAxle", lifeExpectancyKm: 26000, lifeExpectancyMonths: 24 },
-];
+].map(applyStandardLimit);
 
 const MOTORCYCLE_PART_CATALOG = [
   { key: "oil", name: "Engine Oil", shortLabel: "Oil", zone: "engine", lifeExpectancyKm: 5000, lifeExpectancyMonths: 8 },
@@ -26,7 +39,7 @@ const MOTORCYCLE_PART_CATALOG = [
   { key: "rearBrakes", name: "Rear Brake Pads", shortLabel: "R Brakes", zone: "rearWheel", lifeExpectancyKm: 16000, lifeExpectancyMonths: 18 },
   { key: "frontTires", name: "Front Tire", shortLabel: "F Tire", zone: "frontWheel", lifeExpectancyKm: 18000, lifeExpectancyMonths: 18 },
   { key: "rearTires", name: "Rear Tire", shortLabel: "R Tire", zone: "rearWheel", lifeExpectancyKm: 12000, lifeExpectancyMonths: 12 },
-];
+].map(applyStandardLimit);
 
 const VEHICLE_KEYWORDS = {
   motorcycle: ["yamaha", "honda cbr", "r6", "ducati", "kawasaki", "s1000rr", "mt-07", "mt-09", "gsx", "ninja"],
@@ -62,8 +75,10 @@ export function normalizeVehiclePart(part, vehicleType) {
     shortLabel: part.name ?? part.key,
     zone: "engine",
     lifeExpectancyKm: Number(part.lifeExpectancyKm ?? part.lifeExpectancy ?? 0),
+    lifeExpectancyDays: Number(part.lifeExpectancyDays ?? 0),
     lifeExpectancyMonths: Number(part.lifeExpectancyMonths ?? 12),
   };
+  const standard = maintenanceLimits[part.key];
 
   return {
     ...reference,
@@ -71,8 +86,9 @@ export function normalizeVehiclePart(part, vehicleType) {
     name: part.name ?? reference.name,
     shortLabel: part.shortLabel ?? reference.shortLabel,
     zone: part.zone ?? reference.zone,
-    lifeExpectancyKm: Number(part.lifeExpectancyKm ?? part.lifeExpectancy ?? reference.lifeExpectancyKm),
-    lifeExpectancyMonths: Number(part.lifeExpectancyMonths ?? reference.lifeExpectancyMonths),
+    lifeExpectancyKm: Number(standard?.maxKm ?? part.lifeExpectancyKm ?? part.lifeExpectancy ?? reference.lifeExpectancyKm),
+    lifeExpectancyDays: Number(standard?.maxDays ?? part.lifeExpectancyDays ?? reference.lifeExpectancyDays ?? Number(reference.lifeExpectancyMonths) * 30),
+    lifeExpectancyMonths: Number(standard ? (standard.maxDays / 365) * 12 : part.lifeExpectancyMonths ?? reference.lifeExpectancyMonths),
     replacedKm: Number(part.replacedKm ?? 0),
     replacedAt: part.replacedAt ?? new Date().toISOString().slice(0, 10),
   };

@@ -5,6 +5,7 @@ const MAX_SESSION_SECONDS = 6 * 60 * 60;
 const MAX_SESSION_KM = 2000;
 const STATS_SCHEMA_VERSION = 1;
 const TIME_ZONE = "Europe/Istanbul";
+const { resolveMaintenanceLimit } = require("./maintenanceLimits");
 
 const ACHIEVEMENT_DEFINITIONS = Object.freeze([
   {
@@ -64,9 +65,10 @@ function addUtcMonths(date, months) {
 }
 
 function buildPartLifeSnapshot(part = {}, odometer = 0, now = new Date()) {
+  const maintenanceLimit = resolveMaintenanceLimit(part);
   const currentOdometer = roundKm(odometer);
   const replacedKm = roundKm(part.replacedKm);
-  const lifeExpectancyKm = Math.max(0, Number(part.lifeExpectancyKm ?? part.lifeExpectancy) || 0);
+  const lifeExpectancyKm = maintenanceLimit.lifeExpectancyKm;
   const usedKm = roundKm(Math.max(0, currentOdometer - replacedKm));
   const remainingKm = roundKm(Math.max(0, lifeExpectancyKm - usedKm));
   const kmHealthPercent = lifeExpectancyKm > 0
@@ -74,9 +76,14 @@ function buildPartLifeSnapshot(part = {}, odometer = 0, now = new Date()) {
     : 100;
 
   const replacedAt = new Date(`${String(part.replacedAt ?? "").slice(0, 10)}T00:00:00.000Z`);
-  const lifeExpectancyMonths = Math.max(0, Number(part.lifeExpectancyMonths) || 0);
-  const hasTimeLimit = lifeExpectancyMonths > 0 && Number.isFinite(replacedAt.getTime());
-  const dueDate = hasTimeLimit ? addUtcMonths(replacedAt, lifeExpectancyMonths) : null;
+  const lifeExpectancyDays = maintenanceLimit.lifeExpectancyDays;
+  const lifeExpectancyMonths = maintenanceLimit.lifeExpectancyMonths;
+  const hasTimeLimit = (lifeExpectancyDays > 0 || lifeExpectancyMonths > 0) && Number.isFinite(replacedAt.getTime());
+  const dueDate = !hasTimeLimit
+    ? null
+    : lifeExpectancyDays > 0
+      ? new Date(replacedAt.getTime() + lifeExpectancyDays * 24 * 60 * 60 * 1000)
+      : addUtcMonths(replacedAt, lifeExpectancyMonths);
   const totalLifeMs = hasTimeLimit ? Math.max(1, dueDate.getTime() - replacedAt.getTime()) : 0;
   const remainingTimeMs = hasTimeLimit ? Math.max(0, dueDate.getTime() - toDate(now).getTime()) : 0;
   const timeHealthPercent = hasTimeLimit

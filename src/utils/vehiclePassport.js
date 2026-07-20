@@ -39,16 +39,12 @@ export function getPartKmProgress(part, odometer) {
 }
 
 export function getPartTimeProgress(part, now = Date.now()) {
-  if (!part?.lifeExpectancyMonths || !part?.replacedAt) {
+  const lifeDays = Number(part?.lifeExpectancyDays ?? Number(part?.lifeExpectancyMonths ?? 0) * 30);
+  if (!lifeDays || !part?.replacedAt) {
     return 0;
   }
 
   const daysSince = getDaysSince(part.replacedAt, now);
-  const lifeDays = Number(part.lifeExpectancyMonths) * 30;
-  if (!lifeDays) {
-    return 0;
-  }
-
   return Math.max(0, daysSince / lifeDays);
 }
 
@@ -58,8 +54,9 @@ export function getPartHealthSnapshot(part, odometer, now = Date.now()) {
   const effectiveProgress = Math.max(kmProgress, timeProgress);
   const health = clampPercent(100 - effectiveProgress * 100);
   const kmRemaining = Math.max(0, Number(part.lifeExpectancyKm ?? 0) - (Number(odometer) - Number(part.replacedKm ?? 0)));
-  const daysRemaining = part.lifeExpectancyMonths
-    ? Math.max(0, Number(part.lifeExpectancyMonths) * 30 - getDaysSince(part.replacedAt, now))
+  const lifeDays = Number(part.lifeExpectancyDays ?? Number(part.lifeExpectancyMonths ?? 0) * 30);
+  const daysRemaining = lifeDays
+    ? Math.max(0, lifeDays - getDaysSince(part.replacedAt, now))
     : null;
 
   return {

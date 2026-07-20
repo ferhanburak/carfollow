@@ -1,4 +1,5 @@
 import { normalizePlate } from "./userDocuments";
+import { normalizeVehicleParts } from "../utils/vehicleParts";
 
 export const VEHICLE_SCHEMA_VERSION = 1;
 export const VEHICLE_PASSPORT_SCHEMA_VERSION = 1;
@@ -106,6 +107,7 @@ export function buildVehiclePartDocument(part, ownerId, vehicleId) {
     shortLabel: String(part?.shortLabel ?? part?.name ?? part?.key ?? "Part"),
     zone: String(part?.zone ?? "engine"),
     lifeExpectancyKm: numberOrZero(part?.lifeExpectancyKm ?? part?.lifeExpectancy),
+    lifeExpectancyDays: numberOrZero(part?.lifeExpectancyDays ?? Number(part?.lifeExpectancyMonths ?? 0) * 30),
     lifeExpectancyMonths: numberOrZero(part?.lifeExpectancyMonths),
     replacedKm: numberOrZero(part?.replacedKm),
     replacedAt: String(part?.replacedAt ?? new Date().toISOString().slice(0, 10)),
@@ -137,6 +139,7 @@ export function mergeVehiclePassportBundle(profile, bundle = {}) {
   const vehicleFields = Object.fromEntries(
     VEHICLE_USER_FIELDS.filter((field) => bundle.vehicle?.[field] !== undefined).map((field) => [field, bundle.vehicle[field]]),
   );
+  const vehicleType = vehicleFields.vehicleType ?? profile?.vehicleType ?? "car";
 
   return {
     ...profile,
@@ -144,7 +147,10 @@ export function mergeVehiclePassportBundle(profile, bundle = {}) {
     primaryVehicleId: vehicleId,
     vehiclePassport: bundle.passport ?? profile?.vehiclePassport ?? null,
     fuelLogs: scopeVehicleRecords(bundle.fuelLogs ?? profile?.fuelLogs ?? [], vehicleId),
-    parts: dedupeVehicleParts(bundle.parts ?? profile?.parts ?? [], vehicleId),
+    parts: normalizeVehicleParts(
+      dedupeVehicleParts(bundle.parts ?? profile?.parts ?? [], vehicleId),
+      vehicleType,
+    ),
     serviceLogs: scopeVehicleRecords(bundle.serviceLogs ?? profile?.serviceLogs ?? [], vehicleId),
   };
 }
