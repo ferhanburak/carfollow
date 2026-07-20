@@ -1,33 +1,5 @@
 import { HudStat } from "../components/ui";
 
-function formatSyncTime(timestamp) {
-  if (!timestamp) {
-    return "waiting";
-  }
-
-  return new Date(timestamp).toLocaleTimeString("tr-TR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-function getConnectionTone(connection) {
-  if (connection === "online") {
-    return "text-lime-300";
-  }
-
-  if (connection === "degraded" || connection === "partial" || connection === "configured") {
-    return "text-amber-300";
-  }
-
-  if (connection === "disabled") {
-    return "text-neutral-400";
-  }
-
-  return "text-rose-300";
-}
-
 function formatTripDistance(distanceKm) {
   const distance = Math.max(0, Number(distanceKm) || 0);
   return `${distance < 1 ? distance.toFixed(2) : distance.toFixed(1)} KM`;
@@ -54,7 +26,6 @@ export function DriveScreen({
   driveSessionPending,
   driveSessionStatus,
   drivers,
-  firebaseStatus,
   isDriving,
   user,
 }) {
@@ -120,29 +91,13 @@ export function DriveScreen({
           </p>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-neutral-400">
-          <div className="flex items-center justify-between">
-            <span className="uppercase tracking-[0.22em] text-neutral-500">Telemetry Sync</span>
-            <span className={firebaseStatus.telemetry === "error" ? "text-rose-300" : "text-lime-300"}>
-              {firebaseStatus.telemetry}
-            </span>
-          </div>
-          <p className={`mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] ${getConnectionTone(firebaseStatus.connection)}`}>
-            Connection: {firebaseStatus.connection}
-          </p>
-          <p className="mt-2 font-mono text-[11px] text-lime-300">
-            UID: {firebaseStatus.authUid ?? "authenticated session pending"}
-          </p>
-          <p className="mt-1">Last RTDB push: {formatSyncTime(firebaseStatus.lastTelemetrySyncAt)}</p>
-          {firebaseStatus.error ? <p className="mt-2 text-rose-300">{firebaseStatus.error}</p> : null}
-        </div>
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-semibold">Canli Aktif Suruculer</p>
           <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-lime-300">
-            Firebase Live
+            Canli Akis
           </span>
         </div>
         {drivers.length > 0 ? (
@@ -163,7 +118,7 @@ export function DriveScreen({
         ) : (
           <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-5 text-center">
             <p className="text-sm font-semibold text-neutral-300">Su anda aktif surucu yok</p>
-            <p className="mt-1 text-xs text-neutral-500">Liste yalnizca Firebase'e canli telemetri gonderen suruculeri gosterir.</p>
+            <p className="mt-1 text-xs text-neutral-500">Suruse baslayan suruculer burada gorunur.</p>
           </div>
         )}
       </div>

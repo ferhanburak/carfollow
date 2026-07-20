@@ -260,7 +260,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     try {
       const syncResult = await syncFuelLog(nextLog);
       if (syncResult?.ok === false) {
-        setFuelFeedback(`Kayit tamamlanamadi: ${syncResult.error}`);
+        setFuelFeedback("Yakit kaydi su anda tamamlanamadi. Lutfen tekrar dene.");
         return null;
       }
 

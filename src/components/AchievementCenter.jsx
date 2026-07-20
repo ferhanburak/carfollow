@@ -47,7 +47,7 @@ function AchievementGroup({ achievements, emptyText, title }) {
   );
 }
 
-export function AchievementProgressPanel({ achievements, isOpen, onClose, onOpen, status }) {
+export function AchievementProgressPanel({ achievements, isOpen, onClose, onOpen }) {
   const completed = achievements.filter((achievement) => achievement.unlocked);
   const remaining = achievements
     .filter((achievement) => !achievement.unlocked)
@@ -109,13 +109,6 @@ export function AchievementProgressPanel({ achievements, isOpen, onClose, onOpen
             </header>
 
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-              <div className={`rounded-2xl border px-4 py-3 text-xs ${status?.state === "error" || status?.state === "degraded" ? "border-amber-400/20 bg-amber-400/10 text-amber-100" : "border-lime-400/20 bg-lime-400/10 text-lime-100"}`}>
-                <div className="flex items-center justify-between gap-3">
-                  <span>Achievement source</span>
-                  <span className="font-semibold uppercase tracking-[0.16em]">{status?.mode === "firebase" ? status.state : "demo"}</span>
-                </div>
-                {status?.error ? <p className="mt-2 text-amber-200">{status.error}</p> : null}
-              </div>
               <AchievementGroup achievements={remaining} emptyText="Tum basarimlari tamamladin." title="Devam Edenler" />
               <AchievementGroup achievements={completed} emptyText="Henuz tamamlanan basarim yok." title="Tamamlananlar" />
             </div>

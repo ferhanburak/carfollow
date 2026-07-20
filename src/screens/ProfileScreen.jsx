@@ -10,7 +10,6 @@ export function ProfileScreen({
   passportSummary,
   profileCompletion,
   user,
-  driverStatsStatus,
 }) {
   const [achievementCenterOpen, setAchievementCenterOpen] = useState(false);
   const achievementProgress = buildAchievementProgress(user);
@@ -123,7 +122,6 @@ export function ProfileScreen({
         isOpen={achievementCenterOpen}
         onClose={() => setAchievementCenterOpen(false)}
         onOpen={() => setAchievementCenterOpen(true)}
-        status={driverStatsStatus}
       />
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">

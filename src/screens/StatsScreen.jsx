@@ -55,7 +55,6 @@ export function StatsScreen({
   inviteFriendToClan,
   individualLeaderboardEntries,
   leaveCurrentClan,
-  driverStatsStatus,
   onClanFormChange,
   onFriendSearchChange,
   onOpenPublicProfile,
@@ -411,25 +410,12 @@ export function StatsScreen({
 
       {showLeaderboard ? (
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <div className="flex items-center justify-between">
+        <div>
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Individual Leaderboard</p>
             <h3 className="mt-2 text-xl font-black">Monthly Driver Kilometers</h3>
           </div>
-          <div className={`rounded-2xl border px-3 py-2 text-xs ${
-            driverStatsStatus?.mode === "firebase" && driverStatsStatus?.state !== "error"
-              ? "border-lime-400/20 bg-lime-400/10 text-lime-300"
-              : "border-white/10 text-neutral-400"
-          }`}>
-            {driverStatsStatus?.mode === "firebase" ? "Backend Verified" : "Demo Ranking"}
-          </div>
         </div>
-
-        {driverStatsStatus?.error ? (
-          <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-xs text-amber-100">
-            {driverStatsStatus.error}
-          </div>
-        ) : null}
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
             <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Senin Rank</p>

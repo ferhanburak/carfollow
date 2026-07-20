@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { appId, navItems, tuningOptions } from "./data/mockData";
+import { navItems, tuningOptions } from "./data/mockData";
 import { PublicDriverProfileOverlay } from "./components/PublicDriverProfileOverlay";
 import { NotificationCenter } from "./components/NotificationCenter";
 import { DirectMessageButton, DirectMessageCenter } from "./components/DirectMessageCenter";
@@ -138,8 +138,6 @@ function App() {
     driveSessionPending,
     driveSessionStatus,
     drivers,
-    driverStatsStatus,
-    firebaseStatus,
     fuelErrors,
     fuelFeedback,
     fuelInsights,
@@ -514,7 +512,6 @@ function App() {
                 driveSessionPending={driveSessionPending}
                 driveSessionStatus={driveSessionStatus}
                 drivers={drivers}
-                firebaseStatus={firebaseStatus}
                 isDriving={isDriving}
                 user={user}
               />
@@ -546,7 +543,6 @@ function App() {
                 openConversation={openDmConversation}
                 inviteFriendToClan={inviteFriendToClan}
                 individualLeaderboardEntries={individualLeaderboard}
-                driverStatsStatus={driverStatsStatus}
                 requestFriend={requestFriend}
                 removeFriendship={removeFriendship}
                 removeClanMember={removeClanMember}
@@ -563,8 +559,6 @@ function App() {
 
             {activeTab === "garage" ? (
               <GarageScreen
-                appId={appId}
-                firebaseStatus={firebaseStatus}
                 fuelErrors={fuelErrors}
                 fuelFeedback={fuelFeedback}
                 fuelForm={fuelForm}
@@ -596,7 +590,6 @@ function App() {
                 passportSummary={passportSummary}
                 profileCompletion={profileCompletion}
                 user={user}
-                driverStatsStatus={driverStatsStatus}
               />
             ) : null}
           </Suspense>

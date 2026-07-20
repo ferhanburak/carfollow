@@ -8,37 +8,13 @@ import { CompactField, InsightCard } from "../components/ui";
 import { formatNumber } from "../utils/garage";
 import { formatServiceDate, getPartHealthSnapshot } from "../utils/vehiclePassport";
 
-function formatSyncTime(timestamp) {
-  if (!timestamp) {
-    return "waiting";
-  }
-
-  return new Date(timestamp).toLocaleTimeString("tr-TR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-function getConnectionTone(connection) {
-  if (connection === "online") {
-    return "text-lime-300";
-  }
-
-  if (connection === "degraded" || connection === "partial" || connection === "configured") {
-    return "text-amber-300";
-  }
-
-  if (connection === "disabled") {
-    return "text-neutral-400";
-  }
-
-  return "text-rose-300";
+function getFeedbackTone(message) {
+  return /(tamamlanamadi|olusturulamadi|basarisiz|tekrar dene)/i.test(message ?? "")
+    ? "border-amber-400/20 bg-amber-400/10 text-amber-100"
+    : "border-lime-400/20 bg-lime-400/10 text-lime-100";
 }
 
 export function GarageScreen({
-  appId,
-  firebaseStatus,
   fuelErrors,
   fuelFeedback,
   fuelForm,
@@ -65,7 +41,6 @@ export function GarageScreen({
   const safeParts = user.parts ?? [];
   const safeServiceLogs = user.serviceLogs ?? [];
   const safeFuelLogs = user.fuelLogs ?? [];
-  const hasFirebaseSyncError = [firebaseStatus.profile, firebaseStatus.fuel, firebaseStatus.service].includes("error");
   const partsByKey = new Map(safeParts.map((part) => [part.key, part]));
   const [selectedPartKey, setSelectedPartKey] = useState(safeParts[0]?.key ?? null);
   const [historyTypeFilter, setHistoryTypeFilter] = useState("all");
@@ -93,20 +68,12 @@ export function GarageScreen({
   return (
     <section className="space-y-4">
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Digital Garage</p>
-            <h3 className="mt-2 text-xl font-black">{user.fullName}</h3>
-            <p className="mt-1 text-sm text-neutral-400">
-              {user.model} / {user.tuningStage} / {user.horsepower} HP
-            </p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-right">
-            <p className="text-[10px] uppercase tracking-[0.24em] text-neutral-500">Vehicle ID</p>
-            <p className="max-w-32 truncate font-mono text-xs text-lime-300" title={user.primaryVehicleId}>
-              {user.primaryVehicleId}
-            </p>
-          </div>
+        <div>
+          <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Digital Garage</p>
+          <h3 className="mt-2 text-xl font-black">{user.fullName}</h3>
+          <p className="mt-1 text-sm text-neutral-400">
+            {user.model} / {user.tuningStage} / {user.horsepower} HP
+          </p>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           {safeBadges.map((badge) => (
@@ -114,25 +81,6 @@ export function GarageScreen({
               {badge}
             </span>
           ))}
-        </div>
-
-        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-neutral-400">
-          <div className="flex items-center justify-between">
-            <span className="uppercase tracking-[0.22em] text-neutral-500">Private Firebase Sync</span>
-            <span className={hasFirebaseSyncError ? "text-rose-300" : "text-lime-300"}>
-              {firebaseStatus.mode}
-            </span>
-          </div>
-          <p className={`mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] ${getConnectionTone(firebaseStatus.connection)}`}>
-            Connection: {firebaseStatus.connection}
-          </p>
-          <p className="mt-2 font-mono text-[11px] text-lime-300">
-            UID: {firebaseStatus.authUid ?? "authenticated session pending"}
-          </p>
-          <p className="mt-1">Profile sync: {firebaseStatus.profile} @ {formatSyncTime(firebaseStatus.lastProfileSyncAt)}</p>
-          <p className="mt-1">Fuel log sync: {firebaseStatus.fuel} @ {formatSyncTime(firebaseStatus.lastFuelSyncAt)}</p>
-          <p className="mt-1">Service sync: {firebaseStatus.service} @ {formatSyncTime(firebaseStatus.lastServiceSyncAt)}</p>
-          {firebaseStatus.error ? <p className="mt-2 text-rose-300">{firebaseStatus.error}</p> : null}
         </div>
       </div>
 
@@ -151,9 +99,9 @@ export function GarageScreen({
         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-neutral-500">Backend Export</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-neutral-500">Arac Gecmisi Raporu</p>
               <p className="mt-2 text-sm text-neutral-300">
-                Vehicle History snapshot'i Cloud Function ile private kayda donusturulur.
+                Servis, parca ve kilometre gecmisinin ozet raporunu olustur.
               </p>
             </div>
             <button
@@ -162,7 +110,7 @@ export function GarageScreen({
               onClick={onCreatePassportExport}
               className="min-h-12 shrink-0 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black shadow-[0_0_18px_rgba(163,230,53,0.28)] disabled:cursor-wait disabled:opacity-60"
             >
-              {passportExportPending ? "Export..." : "Export"}
+              {passportExportPending ? "Hazirlaniyor..." : "Rapor Olustur"}
             </button>
           </div>
 
@@ -181,7 +129,7 @@ export function GarageScreen({
               <div key={item.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate font-mono text-[11px] text-lime-300">{item.id}</p>
+                    <p className="text-xs font-semibold text-neutral-200">Arac gecmisi raporu</p>
                     <p className="mt-1 text-xs text-neutral-500">
                       {formatServiceDate(item.generatedAt)} / {formatNumber(item.odometer)} KM
                     </p>
@@ -193,7 +141,7 @@ export function GarageScreen({
               </div>
             ))}
             {(passportExports ?? []).length === 0 ? (
-              <p className="text-xs text-neutral-500">Henuz backend export snapshot'i yok.</p>
+              <p className="text-xs text-neutral-500">Henuz olusturulmus rapor yok.</p>
             ) : null}
           </div>
         </div>
@@ -256,11 +204,7 @@ export function GarageScreen({
           <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">Private Log</span>
         </div>
         {serviceLogFeedback ? (
-          <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
-            firebaseStatus.service === "error"
-              ? "border-rose-400/20 bg-rose-400/10 text-rose-200"
-              : "border-lime-400/20 bg-lime-400/10 text-lime-200"
-          }`}>
+          <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${getFeedbackTone(serviceLogFeedback)}`}>
             {serviceLogFeedback}
           </div>
         ) : null}
@@ -390,11 +334,7 @@ export function GarageScreen({
         </form>
 
         {fuelFeedback ? (
-          <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
-            firebaseStatus.fuel === "error"
-              ? "border-rose-400/20 bg-rose-400/10 text-rose-200"
-              : "border-lime-400/20 bg-lime-400/10 text-lime-200"
-          }`}>
+          <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${getFeedbackTone(fuelFeedback)}`}>
             {fuelFeedback}
           </div>
         ) : null}
@@ -419,15 +359,6 @@ export function GarageScreen({
             </div>
           ))}
         </div>
-      </div>
-
-      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4 text-xs text-neutral-500">
-        <p className="font-semibold text-neutral-300">Vehicle Passport Data Ownership</p>
-        <p className="mt-2">Servis, parca ve yakit kayitlari sadece bu Firebase hesabinin UID'si ile okunabilir.</p>
-        <p className="mt-2 break-all font-mono text-[11px] text-lime-300">
-          {appId} / {user.primaryVehicleId}
-        </p>
-        <p className="mt-2">Kayitlar sabit arac kimligine baglidir; sahiplik devri daha sonra guvenli backend akisi ile yapilabilir.</p>
       </div>
     </section>
   );

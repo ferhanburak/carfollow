@@ -8,19 +8,6 @@ import { buildVehiclePassportSummary, getUpcomingMaintenance } from "../utils/ve
 function buildProps(overrides = {}) {
   const user = createAuthenticatedUser(listQuickProfiles()[0]);
   return {
-    appId: "cruiser-app-prod",
-    firebaseStatus: {
-      mode: "mock",
-      connection: "disabled",
-      authUid: null,
-      profile: "idle",
-      fuel: "idle",
-      service: "idle",
-      lastProfileSyncAt: null,
-      lastFuelSyncAt: null,
-      lastServiceSyncAt: null,
-      error: null,
-    },
     fuelErrors: {},
     fuelFeedback: "",
     fuelForm: createFuelForm(user.odometer),
@@ -47,15 +34,15 @@ function buildProps(overrides = {}) {
 }
 
 describe("GarageScreen", () => {
-  it("renders the stable vehicle identity and passport integrity state", () => {
+  it("renders vehicle history without exposing internal identifiers", () => {
     const props = buildProps();
     render(<GarageScreen {...props} />);
 
-    expect(screen.getAllByText(props.user.primaryVehicleId)).toHaveLength(2);
+    expect(screen.queryByText(props.user.primaryVehicleId)).not.toBeInTheDocument();
     expect(screen.getByText("Records Match")).toBeInTheDocument();
     expect(screen.getByText("Vehicle History Report")).toBeInTheDocument();
-    expect(screen.getByText("Backend Export")).toBeInTheDocument();
-    expect(screen.getByText("Vehicle Passport Data Ownership")).toBeInTheDocument();
+    expect(screen.getByText("Arac Gecmisi Raporu")).toBeInTheDocument();
+    expect(screen.queryByText(/Firebase|UID:|Connection:/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Service Log Ekle" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Receipt Ekle" })).toBeEnabled();
   });

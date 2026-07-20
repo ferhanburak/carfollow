@@ -31,7 +31,7 @@ describe("Firebase authentication screen", () => {
   it("uses e-mail for secure account login and hides mock profiles", () => {
     renderFirebaseAuthScreen();
 
-    expect(screen.getByText("Firebase Secure Account")).toBeInTheDocument();
+    expect(screen.getByText("Guvenli Hesap")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "E-mail" })).toBeInTheDocument();
     expect(screen.queryByText("Quick Test Profiles")).not.toBeInTheDocument();
   });

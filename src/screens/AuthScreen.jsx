@@ -63,7 +63,7 @@ export function AuthScreen({
         <div className="flex-1 space-y-5 px-5 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           {isFirebaseAuth ? (
             <div className="rounded-2xl border border-lime-400/20 bg-lime-400/8 px-4 py-3 text-sm text-neutral-300">
-              <p className="font-semibold text-lime-200">Firebase Secure Account</p>
+              <p className="font-semibold text-lime-200">Guvenli Hesap</p>
               <p className="mt-1 text-xs text-neutral-500">
                 E-posta hesap anahtarin, plaka ise CRUISER icindeki aranabilir surucu kimligindir.
               </p>

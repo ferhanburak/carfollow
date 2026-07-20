@@ -15,13 +15,8 @@ export function VehiclePassportSummary({ summary }) {
       </div>
 
       <div className="rounded-2xl border border-lime-400/20 bg-lime-400/[0.06] p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.24em] text-lime-400">Persistent Vehicle Identity</p>
-            <p className="mt-2 truncate font-mono text-xs text-neutral-200" title={summary.vehicleId}>
-              {summary.vehicleId}
-            </p>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[10px] uppercase tracking-[0.24em] text-lime-400">Kayit Durumu</p>
           <span className={`shrink-0 rounded-full border px-3 py-2 text-[10px] uppercase tracking-[0.18em] ${
             summary.recordIntegrity
               ? "border-lime-400/20 bg-lime-400/10 text-lime-200"

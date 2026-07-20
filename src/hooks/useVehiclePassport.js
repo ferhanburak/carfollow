@@ -94,7 +94,7 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
         ? await syncServiceLog(nextLog, servicedPart)
         : { ok: true, mode: "mock" };
       if (syncResult?.ok === false) {
-        setServiceLogFeedback(`Kayit tamamlanamadi: ${syncResult.error}`);
+        setServiceLogFeedback("Servis kaydi su anda tamamlanamadi. Lutfen tekrar dene.");
         return null;
       }
 
@@ -144,18 +144,18 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
     }
 
     setPassportExportPending(true);
-    setPassportExportFeedback("Backend Vehicle Passport export hazirlaniyor...");
+    setPassportExportFeedback("Arac gecmisi raporu hazirlaniyor...");
     try {
       const result = await createFirebaseVehiclePassportExport();
       const nextExport = result?.export;
       if (nextExport) {
         setPassportExports((current) => [nextExport, ...current.filter((item) => item.id !== nextExport.id)]);
       }
-      setPassportExportFeedback("Vehicle Passport export backend tarafinda olusturuldu.");
+      setPassportExportFeedback("Arac gecmisi raporu olusturuldu.");
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Vehicle Passport export olusturulamadi.";
-      setPassportExportFeedback(message);
+      console.error("Vehicle history report could not be created", error);
+      setPassportExportFeedback("Arac gecmisi raporu su anda olusturulamadi. Lutfen tekrar dene.");
       return null;
     } finally {
       setPassportExportPending(false);

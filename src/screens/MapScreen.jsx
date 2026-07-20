@@ -291,7 +291,7 @@ export function MapScreen({
                 ? "Hedefe varildi"
                 : convoyTracking?.status === "completed"
                   ? "Konvoy tamamlandi"
-                  : driveSessionStatus === "error" ? "Backend hatasi" : liveStatusLabel}
+                  : driveSessionStatus === "error" ? "Baglanti sorunu" : liveStatusLabel}
           </p>
         </div>
         <div className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-3 py-2">

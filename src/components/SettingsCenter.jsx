@@ -263,7 +263,7 @@ function SecuritySettings({ accountFeedback, accountPending, isFirebaseAuth, onS
       <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.03] p-4">
         <p className="text-[10px] uppercase tracking-[0.22em] text-neutral-500">Hesap E-postasi</p>
         <p className="mt-2 break-all text-sm font-semibold text-neutral-100">{user.email}</p>
-        <p className="mt-2 text-xs leading-5 text-neutral-500">Sifre degistirme baglantisi yalnizca bu dogrulanmis Firebase hesabina gonderilir.</p>
+        <p className="mt-2 text-xs leading-5 text-neutral-500">Sifre degistirme baglantisi yalnizca dogrulanmis hesap e-postana gonderilir.</p>
       </div>
       <button type="button" disabled={accountPending} onClick={onSendPasswordReset} className="min-h-12 w-full rounded-2xl bg-lime-400 px-4 text-sm font-bold text-black disabled:opacity-50">Sifre Degistirme Baglantisi Gonder</button>
       <p className="rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-xs leading-5 text-neutral-500">E-postadaki baglanti tek kullanimliktir. CRUISER mevcut sifreni uygulama icinde saklamaz.</p>
@@ -272,7 +272,7 @@ function SecuritySettings({ accountFeedback, accountPending, isFirebaseAuth, onS
 }
 
 function DemoAccountNotice() {
-  return <div className="rounded-[1.5rem] border border-amber-400/15 bg-amber-400/10 px-4 py-8 text-center text-sm text-amber-100">Bu islem Firebase hesabiyla giris yapildiginda kullanilabilir.</div>;
+  return <div className="rounded-[1.5rem] border border-amber-400/15 bg-amber-400/10 px-4 py-8 text-center text-sm text-amber-100">Bu islem guvenli hesapla giris yapildiginda kullanilabilir.</div>;
 }
 
 export function SettingsCenter({

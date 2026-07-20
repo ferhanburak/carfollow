@@ -41,9 +41,9 @@ export function ClanSummaryCard({ clan, eventCount, memberCount, onOpen, userRol
 export function ClanMembershipLoadingCard({ clanName }) {
   return (
     <div className="rounded-[1.5rem] border border-lime-400/15 bg-lime-400/[0.05] p-4">
-      <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">CLAN SYNC</p>
+      <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">KLAN GUNCELLENIYOR</p>
       <p className="mt-2 text-sm font-bold">{clanName || "Klan uyeligi"}</p>
-      <p className="mt-2 text-xs text-neutral-500">Klan profili ve kadro bilgileri Firebase'den yukleniyor.</p>
+      <p className="mt-2 text-xs text-neutral-500">Klan profili ve kadro bilgileri yukleniyor.</p>
       <div className="mt-4 h-2 animate-pulse rounded-full bg-lime-400/20" />
     </div>
   );
@@ -188,7 +188,7 @@ export function ClanCenter({
               <span className="text-xs text-neutral-500">{memberCount} uye</span>
             </div>
             <div className="mt-4 space-y-3">
-              {members.length ? members.map((member) => <ClanMemberCard key={member.id ?? member.userId} isPending={isPending} member={member} onOpenProfile={onOpenProfile} onRemove={onRemoveMember} onTransfer={onTransferOwnership} onUpdateRole={onUpdateMemberRole} user={user} />) : <div className="rounded-2xl border border-dashed border-white/10 p-4 text-sm text-neutral-500">Uye listesi Firebase senkronizasyonu ile yuklenecek.</div>}
+              {members.length ? members.map((member) => <ClanMemberCard key={member.id ?? member.userId} isPending={isPending} member={member} onOpenProfile={onOpenProfile} onRemove={onRemoveMember} onTransfer={onTransferOwnership} onUpdateRole={onUpdateMemberRole} user={user} />) : <div className="rounded-2xl border border-dashed border-white/10 p-4 text-sm text-neutral-500">Uye listesi yukleniyor.</div>}
             </div>
           </div>
 
