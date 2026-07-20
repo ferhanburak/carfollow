@@ -98,7 +98,8 @@ function buildRegistrationBundle({ uid, email, profile, acceptKvkk, timestamp })
   const garage = cleanText(profile?.garage, { field: "Garage", min: 2, max: 100 });
   const region = cleanText(profile?.region ?? "Belirtilmedi", { field: "Region", min: 2, max: 80 });
   const horsepower = cleanNumber(profile?.horsepower, { field: "Horsepower", min: 1, max: 5000 });
-  const odometer = cleanNumber(profile?.odometer ?? 0, { field: "Odometer", min: 0, max: 5000000 });
+  const odometer = cleanNumber(profile?.odometer, { field: "Odometer", min: 0, max: 5000000 });
+  const avatar = cleanText(profile?.avatar ?? "", { field: "Avatar", min: 0, max: 2048 });
   const vehicleType = profile?.vehicleType === "motorcycle" ? "motorcycle" : "car";
   const tuningStage = ["Stock", "Stage 1", "Stage 2+", "Stage 3"].includes(profile?.tuningStage)
     ? profile.tuningStage
@@ -127,6 +128,7 @@ function buildRegistrationBundle({ uid, email, profile, acceptKvkk, timestamp })
     tuningStage,
     vehicleType,
     horsepower,
+    avatar,
     driverScore: 80,
     harmonyVotes: 1,
     alertVotes: 0,
@@ -157,6 +159,7 @@ function buildRegistrationBundle({ uid, email, profile, acceptKvkk, timestamp })
       ...identity,
       email,
       odometer,
+      odometerOrigin: "user-entered",
       privacy,
       privacyConsent: {
         version: KVKK_CONSENT_VERSION,
@@ -179,6 +182,7 @@ function buildRegistrationBundle({ uid, email, profile, acceptKvkk, timestamp })
       tuningStage,
       horsepower,
       odometer,
+      odometerOrigin: "user-entered",
       garage,
       schemaVersion: VEHICLE_SCHEMA_VERSION,
       createdAt: timestamp,

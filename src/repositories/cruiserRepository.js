@@ -140,3 +140,10 @@ export {
   subscribeFirebaseAuthState,
   withdrawFirebasePrivacyConsent,
 } from "./firebaseAuthRepository";
+
+export {
+  deleteFirebaseProfileAvatar,
+  isFirebaseProfileRepositoryEnabled,
+  updateFirebaseVehicleProfile,
+  uploadFirebaseProfileAvatar,
+} from "./firebaseProfileRepository";

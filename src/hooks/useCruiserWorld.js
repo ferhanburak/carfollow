@@ -43,6 +43,8 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     profileErrors,
     profileFeedback,
     profileForm,
+    profilePending,
+    loadProfileAvatarFile,
     setProfileForm,
     submitProfile,
   } = useProfileEditor({
@@ -365,6 +367,8 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     profileErrors,
     profileFeedback,
     profileForm,
+    profilePending,
+    loadProfileAvatarFile,
     presenceMap,
     primeServiceLogForm,
     approveCruiseJoinRequest,

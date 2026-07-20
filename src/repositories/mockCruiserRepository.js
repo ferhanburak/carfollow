@@ -101,6 +101,7 @@ export function getQuickProfileByCredentials(plate, password) {
 
 export function createSignedUpUser(signUpForm, identity = {}) {
   const vehicleType = inferVehicleType(signUpForm.model);
+  const odometer = Number(signUpForm.odometer);
   const id = identity.id ?? `signup-${Date.now()}`;
   const primaryVehicleId = resolvePrimaryVehicleId(
     { primaryVehicleId: identity.primaryVehicleId, id },
@@ -129,16 +130,15 @@ export function createSignedUpUser(signUpForm, identity = {}) {
       kvkkAcceptedAt: Date.now(),
       plateSearchConsent: true,
     },
-    odometer: 12000,
+    odometer,
     badges: ["Yeni Uye", "Garajda Aktif"],
     clan: "Lowline Union",
     clanRole: "member",
     region: "Ankara Merkez",
-    avatar:
-      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=900&q=80",
+    avatar: signUpForm.avatarPreview || "",
     vehicleType,
     primaryVehicleId,
-    parts: createDefaultParts(vehicleType, 12000, "2026-07-11"),
+    parts: createDefaultParts(vehicleType, odometer, new Date().toISOString().slice(0, 10)),
     serviceLogs: [],
     fuelLogs: [],
     monthlyKm: 0,

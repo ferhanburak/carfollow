@@ -203,7 +203,7 @@ function BlockedSettings({ onUnblockDriver, socialFeedback, socialPendingKey, us
   );
 }
 
-function VehicleSettings({ onProfileFormChange, onSubmitProfile, profileErrors, profileFeedback, profileForm, tuningOptions }) {
+function VehicleSettings({ onProfileAvatarFileChange, onProfileFormChange, onSubmitProfile, profileErrors, profileFeedback, profileForm, profilePending, tuningOptions }) {
   return (
     <div>
       {profileFeedback ? <p className="mb-4 rounded-2xl border border-lime-400/15 bg-lime-400/10 px-4 py-3 text-xs text-lime-100">{profileFeedback}</p> : null}
@@ -218,8 +218,22 @@ function VehicleSettings({ onProfileFormChange, onSubmitProfile, profileErrors, 
           </select>
         </CompactField>
         <ProfileInput label="Garage / Shop" value={profileForm.garage} error={profileErrors.garage} onChange={(value) => onProfileFormChange((current) => ({ ...current, garage: value }))} />
-        <ProfileInput label="Avatar URL" value={profileForm.avatar} onChange={(value) => onProfileFormChange((current) => ({ ...current, avatar: value }))} />
-        <button type="submit" className="min-h-12 rounded-2xl bg-lime-400 font-bold text-black shadow-[0_0_20px_rgba(163,230,53,0.3)]">Profili Guncelle</button>
+        <ProfileInput label="Mevcut KM" type="number" value={profileForm.odometer} error={profileErrors.odometer} onChange={(value) => onProfileFormChange((current) => ({ ...current, odometer: value }))} />
+        <CompactField label="Profil Fotografi">
+          <input aria-label="Profil Fotografi" type="file" accept="image/*" onChange={(event) => onProfileAvatarFileChange?.(event.target.files?.[0] ?? null)} className="block min-h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-3 py-2 text-sm text-neutral-300 file:mr-3 file:rounded-xl file:border-0 file:bg-lime-400 file:px-3 file:py-2 file:font-semibold file:text-black" />
+          {profileErrors.avatar ? <p className="text-xs text-rose-300">{profileErrors.avatar}</p> : null}
+          {profileForm.avatarPreview ? (
+            <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+              <img src={profileForm.avatarPreview} alt="Profil fotografi onizleme" className="h-16 w-16 rounded-2xl object-cover" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{profileForm.avatarFileName || "Mevcut profil fotografi"}</p>
+                <p className="mt-1 text-xs text-neutral-500">Cihazdan JPG, PNG veya WebP / en fazla 5 MB</p>
+              </div>
+            </div>
+          ) : null}
+        </CompactField>
+        <p className="rounded-2xl border border-amber-400/15 bg-amber-400/[0.06] px-4 py-3 text-xs leading-5 text-amber-100">Kilometre artirilabilir. Eski 12.000 KM varsayimina sahip hesaplar kilometreyi bir kez asagi yonlu duzeltebilir.</p>
+        <button type="submit" disabled={profilePending} className="min-h-12 rounded-2xl bg-lime-400 font-bold text-black shadow-[0_0_20px_rgba(163,230,53,0.3)] disabled:cursor-wait disabled:opacity-50">{profilePending ? "Guncelleniyor..." : "Profili Guncelle"}</button>
       </form>
     </div>
   );
@@ -283,6 +297,7 @@ export function SettingsCenter({
   onClose,
   onDeleteAccount,
   onExportAccount,
+  onProfileAvatarFileChange,
   onProfileFormChange,
   onRequestLogout,
   onSavePrivacySettings,
@@ -295,6 +310,7 @@ export function SettingsCenter({
   profileErrors,
   profileFeedback,
   profileForm,
+  profilePending,
   section,
   socialFeedback,
   socialPendingKey,
@@ -328,7 +344,7 @@ export function SettingsCenter({
           {!activeSection ? <SettingsHome isFirebaseAuth={isFirebaseAuth} onRequestLogout={onRequestLogout} onSelect={onSelectSection} user={user} /> : null}
           {section === "privacy" ? <PrivacySettings onSavePrivacySettings={onSavePrivacySettings} socialFeedback={socialFeedback} user={user} /> : null}
           {section === "blocked" ? <BlockedSettings onUnblockDriver={onUnblockDriver} socialFeedback={socialFeedback} socialPendingKey={socialPendingKey} user={user} /> : null}
-          {section === "vehicle" ? <VehicleSettings onProfileFormChange={onProfileFormChange} onSubmitProfile={onSubmitProfile} profileErrors={profileErrors} profileFeedback={profileFeedback} profileForm={profileForm} tuningOptions={tuningOptions} /> : null}
+          {section === "vehicle" ? <VehicleSettings onProfileAvatarFileChange={onProfileAvatarFileChange} onProfileFormChange={onProfileFormChange} onSubmitProfile={onSubmitProfile} profileErrors={profileErrors} profileFeedback={profileFeedback} profileForm={profileForm} profilePending={profilePending} tuningOptions={tuningOptions} /> : null}
           {section === "account" ? <AccountSettings accountFeedback={accountFeedback} accountPending={accountPending} isFirebaseAuth={isFirebaseAuth} onDeleteAccount={onDeleteAccount} onExportAccount={onExportAccount} onSendEmailVerification={onSendEmailVerification} onWithdrawConsent={onWithdrawConsent} user={user} /> : null}
           {section === "security" ? <SecuritySettings accountFeedback={accountFeedback} accountPending={accountPending} isFirebaseAuth={isFirebaseAuth} onSendPasswordReset={onSendPasswordReset} user={user} /> : null}
         </div>

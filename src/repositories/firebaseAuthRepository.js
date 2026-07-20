@@ -6,6 +6,7 @@ import {
   privateUserDocumentPath,
   resolveAppId,
 } from "../services/firebasePaths";
+import { deleteFirebaseProfileAvatar, uploadFirebaseProfileAvatar } from "./firebaseProfileRepository";
 
 function createCruiserAuthError(code, message, cause) {
   const error = new Error(message, cause ? { cause } : undefined);
@@ -66,7 +67,7 @@ export async function loadFirebaseAuthenticatedProfile(firebaseUser) {
   );
 }
 
-export async function registerFirebaseAccount({ email, password, user }) {
+export async function registerFirebaseAccount({ email, password, user, avatarFile = null }) {
   const services = await getFirebaseCoreServices();
   if (!services) {
     throw createCruiserAuthError("cruiser/firebase-unavailable", "Firebase services are unavailable.");
@@ -74,6 +75,7 @@ export async function registerFirebaseAccount({ email, password, user }) {
 
   const { createUserWithEmailAndPassword, deleteUser } = await import("firebase/auth");
   let credential = null;
+  let uploadedAvatarPath = "";
 
   try {
     credential = await createUserWithEmailAndPassword(services.auth, email.trim(), password);
@@ -84,6 +86,11 @@ export async function registerFirebaseAccount({ email, password, user }) {
       primaryVehicleId: `vehicle-${credential.user.uid}`,
       email: credential.user.email ?? email.trim(),
     };
+    if (avatarFile) {
+      const uploadedAvatar = await uploadFirebaseProfileAvatar(avatarFile);
+      nextUser.avatar = uploadedAvatar.avatarUrl;
+      uploadedAvatarPath = uploadedAvatar.storagePath;
+    }
     const { httpsCallable } = await import("firebase/functions");
     await httpsCallable(services.functions, "finalizeRegistration")({
       profile: nextUser,
@@ -91,6 +98,9 @@ export async function registerFirebaseAccount({ email, password, user }) {
     });
     return loadFirebaseAuthenticatedProfile(credential.user);
   } catch (error) {
+    if (uploadedAvatarPath) {
+      await deleteFirebaseProfileAvatar(uploadedAvatarPath);
+    }
     if (credential?.user) {
       try {
         await deleteUser(credential.user);

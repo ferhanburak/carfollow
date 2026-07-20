@@ -76,6 +76,10 @@ const {
   buildRegistrationBundle,
 } = require("./registration");
 const {
+  VehicleProfileError,
+  buildVehicleProfileUpdate,
+} = require("./vehicleProfile");
+const {
   ACCOUNT_DELETE_CONFIRMATION,
   buildAccountExport,
   buildWithdrawnPrivacySettings,
@@ -324,6 +328,64 @@ exports.finalizeRegistration = secureCall("finalizeRegistration", { rateLimit: {
     plateNormalized: bundle.claim.plateNormalized,
     vehicleId: bundle.vehicle.vehicleId,
   };
+});
+
+exports.updateVehicleProfile = secureCall("updateVehicleProfile", { rateLimit: { limit: 20, windowSeconds: 3600 } }, async (request) => {
+  const userId = requireAuth(request);
+  const privateProfileRef = privateUserDocument(userId, "profile", "current");
+  const publicProfileRef = publicDocument("publicProfiles", userId);
+  const adjustmentRef = privateUserCollection(userId, "odometerAdjustments").doc();
+  let response = null;
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const profileSnapshot = await transaction.get(privateProfileRef);
+      const profile = requireSnapshot(profileSnapshot, "not-found", "User profile not found.");
+      const vehicleId = profile.primaryVehicleId;
+      if (!vehicleId) throw new HttpsError("failed-precondition", "Primary vehicle is missing.");
+      const vehicleRef = privateUserDocument(userId, "vehicles", vehicleId);
+      const vehicleSnapshot = await transaction.get(vehicleRef);
+      const vehicle = requireSnapshot(vehicleSnapshot, "not-found", "Primary vehicle not found.");
+      const partsSnapshot = await transaction.get(privateUserCollection(userId, "parts").where("vehicleId", "==", vehicleId));
+      const update = buildVehicleProfileUpdate({ input: request.data?.profile, profile, vehicle });
+      const timestamp = admin.firestore.FieldValue.serverTimestamp();
+
+      transaction.set(privateProfileRef, {
+        ...update.privatePatch,
+        ...(update.correctionApplied ? { odometerCorrectionUsedAt: timestamp } : {}),
+        updatedAt: timestamp,
+      }, { merge: true });
+      transaction.set(publicProfileRef, { ...update.publicPatch, updatedAt: timestamp }, { merge: true });
+      transaction.update(vehicleRef, { ...update.vehiclePatch, updatedAt: timestamp });
+
+      if (update.odometer !== update.currentOdometer) {
+        transaction.set(adjustmentRef, {
+          id: adjustmentRef.id,
+          userId,
+          vehicleId,
+          previousOdometer: update.currentOdometer,
+          odometer: update.odometer,
+          direction: update.correctionApplied ? "correction-down" : "manual-up",
+          source: "profile-settings",
+          createdAt: timestamp,
+        });
+      }
+      if (update.correctionApplied) {
+        partsSnapshot.docs.forEach((partSnapshot) => {
+          const part = partSnapshot.data();
+          if (!part.lastServiceLogId && Number(part.replacedKm) === update.currentOdometer) {
+            transaction.update(partSnapshot.ref, { replacedKm: update.odometer, updatedAt: timestamp });
+          }
+        });
+      }
+      response = { ok: true, odometer: update.odometer, correctionApplied: update.correctionApplied };
+    });
+  } catch (error) {
+    if (error instanceof VehicleProfileError) throw new HttpsError(error.code, error.message);
+    throw error;
+  }
+
+  return response;
 });
 
 function assertClanId(clanId) {

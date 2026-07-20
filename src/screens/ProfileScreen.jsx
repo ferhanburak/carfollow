@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AchievementProgressPanel } from "../components/AchievementCenter";
+import { ProfileAvatar } from "../components/ProfileAvatar";
 import { VehiclePassportSummary } from "../components/garage/VehiclePassportSummary";
 import { InsightCard } from "../components/ui";
 import { buildAchievementProgress, buildPersonalStats } from "../utils/socialStats";
@@ -37,7 +38,7 @@ export function ProfileScreen({
               {user.plate} / {user.model}
             </p>
           </div>
-          <img src={user.avatar} alt={user.model} className="h-16 w-16 rounded-2xl object-cover" />
+          <ProfileAvatar src={user.avatar} label={user.fullName} className="h-16 w-16" />
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2">

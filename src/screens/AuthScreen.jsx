@@ -20,6 +20,7 @@ export function AuthScreen({
   onLoginFormChange,
   onQuickLogin,
   onSignUp,
+  onSignUpAvatarChange,
   onSignUpFormChange,
   quickProfiles,
   signUpErrors,
@@ -218,6 +219,42 @@ export function AuthScreen({
                     <FieldError>{signUpErrors.horsepower}</FieldError>
                   </Field>
                 </div>
+
+                <Field label="Mevcut KM">
+                  <input
+                    type="number"
+                    min="0"
+                    max="5000000"
+                    inputMode="numeric"
+                    value={signUpForm.odometer}
+                    onChange={(event) =>
+                      onSignUpFormChange((current) => ({ ...current, odometer: event.target.value }))
+                    }
+                    className={`${inputClassName} font-mono`}
+                    placeholder="Orn. 68420"
+                  />
+                  <FieldError>{signUpErrors.odometer}</FieldError>
+                </Field>
+
+                <Field label="Profil Fotografi">
+                  <input
+                    aria-label="Profil Fotografi"
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => onSignUpAvatarChange?.(event.target.files?.[0] ?? null)}
+                    className="block min-h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-3 py-2 text-sm text-neutral-300 file:mr-3 file:rounded-xl file:border-0 file:bg-lime-400 file:px-3 file:py-2 file:font-semibold file:text-black"
+                  />
+                  <FieldError>{signUpErrors.avatar}</FieldError>
+                  {signUpForm.avatarPreview ? (
+                    <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
+                      <img src={signUpForm.avatarPreview} alt="Profil fotografi onizleme" className="h-16 w-16 rounded-2xl object-cover" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-neutral-200">{signUpForm.avatarFileName}</p>
+                        <p className="mt-1 text-xs text-neutral-500">En fazla 5 MB</p>
+                      </div>
+                    </div>
+                  ) : null}
+                </Field>
 
                 <Field label="Primary Garage/Tuning Shop">
                   <input

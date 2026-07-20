@@ -4,6 +4,7 @@ import { PublicDriverProfileOverlay } from "./components/PublicDriverProfileOver
 import { NotificationCenter } from "./components/NotificationCenter";
 import { DirectMessageButton, DirectMessageCenter } from "./components/DirectMessageCenter";
 import { SettingsButton, SettingsCenter } from "./components/SettingsCenter";
+import { ProfileAvatar } from "./components/ProfileAvatar";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
 import { AuthScreen } from "./screens/AuthScreen";
@@ -67,6 +68,7 @@ function App() {
     handleQuickLogin,
     handlePasswordReset,
     handleSignUp,
+    handleSignUpAvatarChange,
     isFirebaseAuth,
     loginForm,
     quickProfiles,
@@ -180,6 +182,8 @@ function App() {
     profileErrors,
     profileFeedback,
     profileForm,
+    profilePending,
+    loadProfileAvatarFile,
     presenceMap,
     primeServiceLogForm,
     rateAttendee,
@@ -320,6 +324,7 @@ function App() {
         onLoginFormChange={setLoginForm}
         onQuickLogin={(profile) => handleQuickLogin(profile, { onAuthenticated: resetSessionView })}
         onSignUp={(event) => handleSignUp(event, { onAuthenticated: resetSessionView })}
+        onSignUpAvatarChange={handleSignUpAvatarChange}
         onSignUpFormChange={setSignUpForm}
         quickProfiles={quickProfiles}
         signUpErrors={signUpErrors}
@@ -370,7 +375,7 @@ function App() {
               </div>
             </div>
             <div className="relative mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-3">
-              <img src={user.avatar} alt={user.model} className="h-14 w-14 rounded-2xl object-cover" />
+              <ProfileAvatar src={user.avatar} label={user.fullName} className="h-14 w-14" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{user.fullName}</p>
                 <p className="text-xs text-neutral-400">Primary garage: {user.garage}</p>
@@ -643,6 +648,7 @@ function App() {
         onClose={() => setSettingsOpen(false)}
         onDeleteAccount={handleAccountDeletion}
         onExportAccount={handleAccountExport}
+        onProfileAvatarFileChange={loadProfileAvatarFile}
         onProfileFormChange={setProfileForm}
         onRequestLogout={() => {
           setSettingsOpen(false);
@@ -658,6 +664,7 @@ function App() {
         profileErrors={profileErrors}
         profileFeedback={profileFeedback}
         profileForm={profileForm}
+        profilePending={profilePending}
         section={settingsSection}
         socialFeedback={socialFeedback}
         socialPendingKey={socialPendingKey}

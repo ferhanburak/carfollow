@@ -18,6 +18,7 @@ import {
 } from "../repositories/cruiserRepository";
 import { clearCruiserSession, loadCruiserSession, saveCruiserSession } from "../services/storage";
 import { createFuelForm, createSignUpState } from "../utils/garage";
+import { readImageFileAsDataUrl, validateProfileImageFile } from "../utils/profileImages";
 import { validateSignUpForm } from "../utils/validation";
 
 function getAuthErrorMessage(error) {
@@ -250,6 +251,7 @@ export function useCruiserAuth() {
         email: signUpForm.email,
         password: signUpForm.password,
         user: baseUser,
+        avatarFile: signUpForm.avatarFile,
       });
       const createdUser = finishAuthentication(remoteProfile, options);
       setSignUpForm(createSignUpState());
@@ -262,6 +264,29 @@ export function useCruiserAuth() {
       return null;
     } finally {
       authActionRef.current = false;
+    }
+  };
+
+  const handleSignUpAvatarChange = async (file) => {
+    const avatarError = validateProfileImageFile(file);
+    if (avatarError) {
+      setSignUpErrors((current) => ({ ...current, avatar: avatarError }));
+      setSignUpForm((current) => ({ ...current, avatarFile: null, avatarFileName: "", avatarPreview: "" }));
+      return false;
+    }
+    if (!file) {
+      setSignUpErrors((current) => ({ ...current, avatar: undefined }));
+      setSignUpForm((current) => ({ ...current, avatarFile: null, avatarFileName: "", avatarPreview: "" }));
+      return true;
+    }
+    try {
+      const avatarPreview = await readImageFileAsDataUrl(file);
+      setSignUpErrors((current) => ({ ...current, avatar: undefined }));
+      setSignUpForm((current) => ({ ...current, avatarFile: file, avatarFileName: file.name, avatarPreview }));
+      return true;
+    } catch (error) {
+      setSignUpErrors((current) => ({ ...current, avatar: error instanceof Error ? error.message : "Fotograf okunamadi." }));
+      return false;
     }
   };
 
@@ -416,6 +441,7 @@ export function useCruiserAuth() {
     handleQuickLogin,
     handlePasswordReset,
     handleSignUp,
+    handleSignUpAvatarChange,
     isFirebaseAuth: firebaseAuthEnabled,
     loginForm,
     quickProfiles,

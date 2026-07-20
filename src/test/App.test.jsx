@@ -174,6 +174,40 @@ describe("App", () => {
     expect(screen.getByText("Full name is required.")).toBeInTheDocument();
     expect(screen.getByText("Plate is required.")).toBeInTheDocument();
     expect(screen.getByText("Primary garage is required.")).toBeInTheDocument();
+    expect(screen.getByText("Mevcut KM 0 ile 5.000.000 arasinda olmali.")).toBeInTheDocument();
+  });
+
+  it("registers a mock driver with entered mileage and a device photo", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Sign Up" }));
+    await user.type(screen.getByLabelText("Full Name"), "Yeni Surucu");
+    await user.type(screen.getByLabelText("Plate"), "06 NEW 606");
+    await user.type(screen.getByLabelText("Password"), "secure123");
+    await user.type(screen.getByLabelText("Car/Bike Model"), "Honda Civic");
+    await user.type(screen.getByLabelText("Horsepower"), "182");
+    await user.type(screen.getByLabelText("Mevcut KM"), "54321");
+    await user.type(screen.getByLabelText("Primary Garage/Tuning Shop"), "Ankara Garage");
+    await user.upload(screen.getByLabelText("Profil Fotografi"), new File(["avatar"], "avatar.png", { type: "image/png" }));
+    await user.click(screen.getByRole("checkbox"));
+    expect(await screen.findByAltText("Profil fotografi onizleme")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Build My Garage" }));
+    expect(await screen.findByText("54.321 KM")).toBeInTheDocument();
+  });
+
+  it("offers mileage editing and device photo upload in vehicle settings", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
+    await user.click(screen.getByRole("button", { name: "Ayarlar merkezi" }));
+    await user.click(screen.getByRole("button", { name: /Arac ve Profil/i }));
+
+    expect(screen.getByRole("spinbutton", { name: "Mevcut KM" })).toHaveValue(68420);
+    expect(screen.getByLabelText("Profil Fotografi")).toHaveAttribute("type", "file");
+    expect(screen.queryByLabelText("Avatar URL")).not.toBeInTheDocument();
   });
 
   it("blocks invalid fuel log submission and shows validation errors", async () => {

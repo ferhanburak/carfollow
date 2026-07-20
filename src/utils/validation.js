@@ -17,6 +17,9 @@ export function validateSignUpForm(form, options = {}) {
   if (!String(form.horsepower).trim() || Number(form.horsepower) <= 0) {
     errors.horsepower = "Horsepower must be greater than 0.";
   }
+  if (!String(form.odometer).trim() || !Number.isFinite(Number(form.odometer)) || Number(form.odometer) < 0 || Number(form.odometer) > 5000000) {
+    errors.odometer = "Mevcut KM 0 ile 5.000.000 arasinda olmali.";
+  }
   if (!form.garage.trim()) errors.garage = "Primary garage is required.";
   if (form.privacyNoticeAccepted !== true) {
     errors.privacyNoticeAccepted = "Kaydi tamamlamak icin KVKK aydinlatma metnini okudugunu onaylamalisin.";

@@ -6,7 +6,11 @@ export const createSignUpState = () => ({
   model: "",
   tuningStage: "Stock",
   horsepower: "",
+  odometer: "",
   garage: "",
+  avatarFile: null,
+  avatarFileName: "",
+  avatarPreview: "",
   privacyNoticeAccepted: false,
 });
 

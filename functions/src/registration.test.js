@@ -20,6 +20,7 @@ function buildInput(overrides = {}) {
       region: "Ankara Bati",
       horsepower: 248,
       odometer: 12000,
+      avatar: "https://firebasestorage.googleapis.com/avatar.jpg",
       tuningStage: "Stage 2+",
       vehicleType: "car",
       driverScore: 999,
@@ -42,6 +43,9 @@ describe("registration", () => {
     assert.equal(bundle.privateProfile.privacy.locationPrecision, "approximate");
     assert.equal(bundle.privateProfile.privacy.plateSearchEnabled, true);
     assert.equal(bundle.privateProfile.privacyConsent.kvkkAcceptedAt, 123456);
+    assert.equal(bundle.privateProfile.odometer, 12000);
+    assert.equal(bundle.privateProfile.odometerOrigin, "user-entered");
+    assert.equal(bundle.publicProfile.avatar, "https://firebasestorage.googleapis.com/avatar.jpg");
     assert.equal(bundle.publicProfile.email, undefined);
     assert.equal(bundle.publicProfile.odometer, undefined);
     assert.equal(bundle.parts[0].id, "vehicle-driver-uid--engine-oil");
