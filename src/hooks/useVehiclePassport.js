@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import {
   appendServiceLog,
   createFirebaseVehiclePassportExport,
+  deleteFirebaseServiceLog,
   loadFirebaseVehiclePassportExports,
 } from "../repositories/cruiserRepository";
 import { createServiceLogForm } from "../utils/garage";
 import {
   buildVehiclePassportSummary,
   getUpcomingMaintenance,
+  removeServiceLogFromUser,
 } from "../utils/vehiclePassport";
 import { validateServiceLogForm } from "../utils/validation";
 
@@ -16,6 +18,7 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
   const [serviceLogErrors, setServiceLogErrors] = useState({});
   const [serviceLogFeedback, setServiceLogFeedback] = useState("");
   const [serviceLogPending, setServiceLogPending] = useState(false);
+  const [serviceLogDeletePendingId, setServiceLogDeletePendingId] = useState("");
   const [passportExportFeedback, setPassportExportFeedback] = useState("");
   const [passportExportPending, setPassportExportPending] = useState(false);
   const [passportExports, setPassportExports] = useState([]);
@@ -25,6 +28,7 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
     setServiceLogErrors({});
     setServiceLogFeedback("");
     setServiceLogPending(false);
+    setServiceLogDeletePendingId("");
     setPassportExportFeedback("");
     setPassportExportPending(false);
     setPassportExports([]);
@@ -120,6 +124,27 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
     await commitServiceLog(serviceLogForm);
   };
 
+  const deleteServiceLog = async (serviceLogId) => {
+    const targetLog = user?.serviceLogs?.find((log) => log.id === serviceLogId);
+    if (!targetLog || serviceLogPending || serviceLogDeletePendingId) return false;
+
+    setServiceLogDeletePendingId(serviceLogId);
+    setServiceLogFeedback("Servis kaydi ve bagli hesaplamalar siliniyor...");
+    try {
+      if (user.firebaseUid) {
+        await deleteFirebaseServiceLog(serviceLogId);
+      }
+      setUser((current) => current ? removeServiceLogFromUser(current, serviceLogId) : current);
+      setServiceLogFeedback("Secilen servis kaydi gecmisten silindi ve Vehicle Passport yeniden hesaplandi.");
+      return true;
+    } catch (error) {
+      setServiceLogFeedback(error instanceof Error ? error.message : "Servis kaydi silinemedi. Lutfen tekrar dene.");
+      return false;
+    } finally {
+      setServiceLogDeletePendingId("");
+    }
+  };
+
   const primeServiceLogForm = (partKey, type = "inspection") => {
     const selectedPart = (user?.parts ?? []).find((part) => part.key === partKey);
     setServiceLogForm((current) => ({
@@ -164,12 +189,14 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
 
   return {
     createPassportExport,
+    deleteServiceLog,
     passportSummary,
     passportExportFeedback,
     passportExportPending,
     passportExports,
     primeServiceLogForm,
     serviceLogErrors,
+    serviceLogDeletePendingId,
     serviceLogFeedback,
     serviceLogForm,
     serviceLogPending,

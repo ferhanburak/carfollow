@@ -222,6 +222,60 @@ export function applyPartServiceToUser(user, serviceLog) {
   };
 }
 
+function newestServiceLog(logs) {
+  return [...logs].sort((left, right) =>
+    new Date(right.serviceDate).getTime() - new Date(left.serviceDate).getTime() ||
+    Number(right.serviceKm ?? 0) - Number(left.serviceKm ?? 0),
+  )[0] ?? null;
+}
+
+export function removeServiceLogFromUser(user, serviceLogId) {
+  const targetLog = (user.serviceLogs ?? []).find((log) => log.id === serviceLogId);
+  if (!targetLog) return user;
+
+  const remainingLogs = (user.serviceLogs ?? []).filter((log) => log.id !== serviceLogId);
+  const latestService = newestServiceLog(remainingLogs);
+  const nextParts = (user.parts ?? []).map((part) => {
+    if (targetLog.type !== "replacement" || part.key !== targetLog.partKey || part.lastServiceLogId !== serviceLogId) {
+      return part;
+    }
+
+    const previousReplacement = newestServiceLog(
+      remainingLogs.filter((log) => log.type === "replacement" && log.partKey === targetLog.partKey),
+    );
+    const previousState = previousReplacement ?? targetLog.previousPartState;
+    if (!previousState) {
+      const { lastServiceLogId, lastServiceCost, lastServiceShop, ...baselinePart } = part;
+      return baselinePart;
+    }
+
+    return {
+      ...part,
+      replacedKm: Number(previousState.serviceKm ?? previousState.replacedKm ?? part.replacedKm),
+      replacedAt: previousState.serviceDate ?? previousState.replacedAt ?? part.replacedAt,
+      lastServiceLogId: previousState.id ?? previousState.lastServiceLogId,
+      lastServiceCost: Number(previousState.cost ?? previousState.lastServiceCost ?? 0),
+      lastServiceShop: previousState.serviceShop ?? previousState.lastServiceShop ?? "",
+      notes: previousState.notes ?? part.notes ?? "",
+    };
+  });
+
+  return {
+    ...user,
+    lastServiceDate: latestService?.serviceDate ?? null,
+    parts: nextParts,
+    serviceLogs: remainingLogs,
+    vehiclePassport: {
+      ...(user.vehiclePassport ?? {}),
+      serviceLogCount: remainingLogs.length,
+      totalServiceSpend: remainingLogs.reduce((sum, log) => sum + Number(log.cost ?? 0), 0),
+      lastServiceDate: latestService?.serviceDate ?? null,
+      lastMutationId: `service-delete-${serviceLogId}`,
+      lastMutationType: "service-delete",
+    },
+  };
+}
+
 export function formatServiceDate(dateValue) {
   if (!dateValue) {
     return "--";

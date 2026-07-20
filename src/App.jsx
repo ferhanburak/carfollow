@@ -133,6 +133,7 @@ function App() {
     conversationList,
     createNewClan,
     createPassportExport,
+    deleteServiceLog,
     currentClan,
     currentClanMembers,
     declineCruiseJoinRequest,
@@ -203,6 +204,7 @@ function App() {
     selectedPinId,
     sendMessage,
     serviceLogErrors,
+    serviceLogDeletePendingId,
     serviceLogFeedback,
     serviceLogForm,
     serviceLogPending,
@@ -601,6 +603,7 @@ function App() {
                 fuelInsights={fuelInsights}
                 fuelPending={fuelPending}
                 onCreatePassportExport={createPassportExport}
+                onDeleteServiceLog={deleteServiceLog}
                 onFuelFormChange={setFuelForm}
                 onPrimeServiceLogForm={primeServiceLogForm}
                 onServiceLogFormChange={setServiceLogForm}
@@ -611,6 +614,7 @@ function App() {
                 passportExports={passportExports}
                 passportSummary={passportSummary}
                 serviceLogErrors={serviceLogErrors}
+                serviceLogDeletePendingId={serviceLogDeletePendingId}
                 serviceLogFeedback={serviceLogFeedback}
                 serviceLogForm={serviceLogForm}
                 serviceLogPending={serviceLogPending}

@@ -5,7 +5,9 @@ import { ActionToast, inferActionToastTone } from "./ActionToast";
 describe("ActionToast", () => {
   it("classifies request progress, success and errors", () => {
     expect(inferActionToastTone("İstek gönderiliyor...")).toBe("pending");
+    expect(inferActionToastTone("Servis kaydi siliniyor...")).toBe("pending");
     expect(inferActionToastTone("Arkadaşlık isteği gönderildi.")).toBe("success");
+    expect(inferActionToastTone("Secilen servis kaydi gecmisten silindi ve Vehicle Passport yeniden hesaplandi.")).toBe("success");
     expect(inferActionToastTone("İstek gönderilemedi.")).toBe("error");
   });
 

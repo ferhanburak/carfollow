@@ -35,7 +35,7 @@ export function inferActionToastTone(message) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/ı/g, "i");
-  if (/isleniyor|dogrulaniyor|gonderiliyor|hazirlaniyor|kaydediliyor|yukleniyor|alin(?:iyor|makta)|checking|loading/.test(value)) {
+  if (/isleniyor|dogrulaniyor|gonderiliyor|hazirlaniyor|kaydediliyor|yukleniyor|siliniyor|alin(?:iyor|makta)|checking|loading/.test(value)) {
     return "pending";
   }
   if (/hata|olamadi|bulunamadi|gecersiz|gonderilemedi|kaydedilemedi|guncellenemedi|yuklenemedi|silinemedi|tamamlanamadi|denied|failed|could not|izin verilm|eksik|missing/.test(value)) {

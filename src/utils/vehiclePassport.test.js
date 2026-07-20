@@ -6,6 +6,7 @@ import {
   formatServiceDate,
   getPartHealthSnapshot,
   getUpcomingMaintenance,
+  removeServiceLogFromUser,
 } from "./vehiclePassport";
 
 describe("vehiclePassport utils", () => {
@@ -81,6 +82,39 @@ describe("vehiclePassport utils", () => {
     expect(nextUser.parts[0].replacedKm).toBe(basePart.replacedKm);
     expect(nextUser.parts[0].replacedAt).toBe(basePart.replacedAt);
     expect(nextUser.serviceLogs).toHaveLength(1);
+  });
+
+  it("removes a mistaken service record and restores the previous replacement", () => {
+    const previousLog = {
+      id: "svc-old",
+      partKey: "oil",
+      type: "replacement",
+      serviceDate: "2026-05-01",
+      serviceKm: 15000,
+      cost: 1500,
+      serviceShop: "Apex",
+    };
+    const mistakenLog = {
+      id: "svc-wrong",
+      partKey: "oil",
+      type: "replacement",
+      serviceDate: "2026-07-20",
+      serviceKm: 25000,
+      cost: 2500,
+      serviceShop: "Wrong Shop",
+    };
+    const nextUser = removeServiceLogFromUser({
+      odometer: 25000,
+      parts: [{ ...basePart, replacedKm: 25000, replacedAt: "2026-07-20", lastServiceLogId: "svc-wrong" }],
+      serviceLogs: [mistakenLog, previousLog],
+      vehiclePassport: { serviceLogCount: 2, totalServiceSpend: 4000 },
+    }, "svc-wrong");
+
+    expect(nextUser.serviceLogs).toEqual([previousLog]);
+    expect(nextUser.parts[0].lastServiceLogId).toBe("svc-old");
+    expect(nextUser.parts[0].replacedKm).toBe(15000);
+    expect(nextUser.vehiclePassport.serviceLogCount).toBe(1);
+    expect(nextUser.vehiclePassport.totalServiceSpend).toBe(1500);
   });
 
   it("builds a maintenance summary", () => {

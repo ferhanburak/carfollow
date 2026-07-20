@@ -80,6 +80,7 @@ export {
 
 export {
   createFirebaseVehiclePassportExport,
+  deleteFirebaseServiceLog,
   loadFirebaseVehiclePassportExports,
   loadFirebaseVehiclePassportBundle,
   saveFirebaseFuelLog,

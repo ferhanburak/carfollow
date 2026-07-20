@@ -433,6 +433,7 @@ export async function saveFirebaseServiceLog(serviceLog, servicedPart) {
     const serviceKm = Number(serviceLog.serviceKm);
     const serviceCost = Number(serviceLog.cost ?? 0);
     const nextOdometer = Math.max(Number(vehicle.odometer ?? 0), Number(profile.odometer ?? 0), serviceKm);
+    const previousPart = partSnapshot?.exists() ? partSnapshot.data() : null;
     transaction.set(serviceLogRef, {
       id: serviceLog.id,
       vehicleId,
@@ -445,6 +446,16 @@ export async function saveFirebaseServiceLog(serviceLog, servicedPart) {
       cost: serviceCost,
       notes: String(serviceLog.notes ?? "").trim(),
       receiptImageUrl: String(serviceLog.receiptImageUrl ?? "").trim(),
+      ...(isReplacement && previousPart ? {
+        previousPartState: {
+          replacedKm: Number(previousPart.replacedKm ?? 0),
+          replacedAt: String(previousPart.replacedAt ?? ""),
+          lastServiceLogId: previousPart.lastServiceLogId ?? null,
+          lastServiceCost: Number(previousPart.lastServiceCost ?? 0),
+          lastServiceShop: String(previousPart.lastServiceShop ?? ""),
+          notes: String(previousPart.notes ?? ""),
+        },
+      } : {}),
       createdAt: timestamp,
     });
     transaction.update(vehicleRef, {
@@ -487,6 +498,25 @@ export async function saveFirebaseServiceLog(serviceLog, servicedPart) {
     ...mutation,
     syncedAt: Date.now(),
   };
+}
+
+export async function deleteFirebaseServiceLog(serviceLogId) {
+  const services = await getFirebaseServices();
+  if (!services) {
+    throw createRepositoryError("cruiser/firebase-unavailable", "Service log deletion service is unavailable.");
+  }
+
+  const { httpsCallable } = await import("firebase/functions");
+  try {
+    const callable = httpsCallable(services.functions, "deleteServiceLog");
+    const result = await callable({ serviceLogId });
+    return result.data;
+  } catch (error) {
+    throw createRepositoryError(
+      error?.code ?? "cruiser/service-log-delete-failed",
+      error instanceof Error ? error.message : "Service log could not be deleted.",
+    );
+  }
 }
 
 function sortPassportExports(exports) {

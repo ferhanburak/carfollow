@@ -15,6 +15,7 @@ function buildProps(overrides = {}) {
     fuelInsights: computeFuelInsights(user.fuelLogs),
     fuelPending: false,
     onCreatePassportExport: vi.fn(),
+    onDeleteServiceLog: vi.fn().mockResolvedValue(true),
     onFuelFormChange: vi.fn(),
     onPrimeServiceLogForm: vi.fn(),
     onSubmitFuelLog: vi.fn(),
@@ -25,6 +26,7 @@ function buildProps(overrides = {}) {
     passportExports: [],
     passportSummary: buildVehiclePassportSummary(user),
     serviceLogErrors: {},
+    serviceLogDeletePendingId: "",
     serviceLogFeedback: "",
     serviceLogForm: createServiceLogForm(user),
     serviceLogPending: false,
@@ -69,5 +71,22 @@ describe("GarageScreen", () => {
 
     await user.click(within(dialog).getByRole("button", { name: "Parca sagligi merkezini kapat" }));
     expect(screen.queryByRole("dialog", { name: "Parca sagligi merkezi" })).not.toBeInTheDocument();
+  });
+
+  it("requires confirmation before deleting a mistaken service record", async () => {
+    const userEventDriver = userEvent.setup();
+    const props = buildProps();
+    const firstLog = props.user.serviceLogs[0];
+    const partName = props.user.parts.find((part) => part.key === firstLog.partKey)?.name ?? firstLog.partKey;
+    render(<GarageScreen {...props} />);
+
+    await userEventDriver.click(screen.getByRole("button", { name: `${partName} servis kaydini sil` }));
+
+    const warning = screen.getByRole("alert");
+    expect(within(warning).getByText("Bu servis kaydi kalici olarak silinecek.")).toBeInTheDocument();
+    expect(props.onDeleteServiceLog).not.toHaveBeenCalled();
+
+    await userEventDriver.click(within(warning).getByRole("button", { name: "Silmeyi Onayla" }));
+    expect(props.onDeleteServiceLog).toHaveBeenCalledWith(firstLog.id);
   });
 });

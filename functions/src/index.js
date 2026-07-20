@@ -80,6 +80,9 @@ const {
   buildVehicleProfileUpdate,
 } = require("./vehicleProfile");
 const {
+  buildServiceLogDeletionPlan,
+} = require("./serviceLogDeletion");
+const {
   ACCOUNT_DELETE_CONFIRMATION,
   buildAccountExport,
   buildWithdrawnPrivacySettings,
@@ -2031,6 +2034,89 @@ exports.createVehiclePassportExport = secureCall("createVehiclePassportExport", 
       ok: true,
       exportId,
       export: exportDocument,
+    };
+  });
+
+  return response;
+});
+
+exports.deleteServiceLog = secureCall("deleteServiceLog", { rateLimit: { limit: 20, windowSeconds: 3600 } }, async (request) => {
+  const userId = requireAuth(request);
+  const serviceLogId = String(request.data?.serviceLogId ?? "");
+  if (!serviceLogId || serviceLogId.length > 180 || serviceLogId.includes("/")) {
+    throw new HttpsError("invalid-argument", "A valid serviceLogId is required.");
+  }
+
+  const profileRef = privateUserDocument(userId, "profile", "current");
+  const serviceLogRef = privateUserDocument(userId, "serviceLogs", serviceLogId);
+  const deletionRef = privateUserDocument(userId, "serviceLogDeletions", serviceLogId);
+  let response = null;
+
+  await db.runTransaction(async (transaction) => {
+    const [profileSnapshot, serviceLogSnapshot] = await Promise.all([
+      transaction.get(profileRef),
+      transaction.get(serviceLogRef),
+    ]);
+    const profile = requireSnapshot(profileSnapshot, "not-found", "User profile not found.");
+    const targetLog = requireSnapshot(serviceLogSnapshot, "not-found", "Service log not found.");
+    const vehicleId = profile.primaryVehicleId;
+    if (!vehicleId || targetLog.userId !== userId || targetLog.vehicleId !== vehicleId || targetLog.id !== serviceLogId) {
+      throw new HttpsError("permission-denied", "Service log ownership does not match.");
+    }
+
+    const vehicleRef = privateUserDocument(userId, "vehicles", vehicleId);
+    const passportRef = privateUserDocument(userId, "vehiclePassports", vehicleId);
+    const partRef = targetLog.type === "replacement"
+      ? privateUserDocument(userId, "parts", `${vehicleId}--${targetLog.partKey}`)
+      : null;
+    const [vehicleSnapshot, passportSnapshot, serviceLogsSnapshot, partSnapshot] = await Promise.all([
+      transaction.get(vehicleRef),
+      transaction.get(passportRef),
+      transaction.get(privateUserCollection(userId, "serviceLogs")),
+      partRef ? transaction.get(partRef) : Promise.resolve(null),
+    ]);
+    const vehicle = requireSnapshot(vehicleSnapshot, "not-found", "Primary vehicle not found.");
+    const passport = requireSnapshot(passportSnapshot, "not-found", "Vehicle Passport not found.");
+    if (vehicle.ownerId !== userId || passport.ownerId !== userId) {
+      throw new HttpsError("permission-denied", "Vehicle ownership validation failed.");
+    }
+
+    const serviceLogs = serviceLogsSnapshot.docs
+      .map((document) => ({ id: document.data().id ?? document.id, ...document.data() }))
+      .filter((log) => log.vehicleId === vehicleId);
+    const plan = buildServiceLogDeletionPlan({
+      targetLog,
+      serviceLogs,
+      passport,
+      part: partSnapshot?.exists ? partSnapshot.data() : null,
+    });
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    transaction.delete(serviceLogRef);
+    transaction.set(passportRef, { ...plan.passportPatch, updatedAt: timestamp }, { merge: true });
+    transaction.set(vehicleRef, { lastServiceDate: plan.latestService?.serviceDate ?? null, updatedAt: timestamp }, { merge: true });
+    transaction.set(deletionRef, {
+      id: serviceLogId,
+      userId,
+      vehicleId,
+      source: "owner-correction",
+      deletedAt: timestamp,
+    });
+
+    if (partRef && plan.partPatch) {
+      const optionalFields = ["lastServiceLogId", "lastServiceCost", "lastServiceShop", "notes"];
+      const partPatch = { ...plan.partPatch, updatedAt: timestamp };
+      optionalFields.forEach((field) => {
+        if (partPatch[field] === null) partPatch[field] = admin.firestore.FieldValue.delete();
+      });
+      transaction.set(partRef, partPatch, { merge: true });
+    }
+
+    response = {
+      ok: true,
+      serviceLogId,
+      serviceLogCount: plan.passportPatch.serviceLogCount,
+      totalServiceSpend: plan.passportPatch.totalServiceSpend,
+      rollbackMode: plan.rollbackMode,
     };
   });
 

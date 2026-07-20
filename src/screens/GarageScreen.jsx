@@ -21,6 +21,7 @@ export function GarageScreen({
   fuelInsights,
   fuelPending,
   onCreatePassportExport,
+  onDeleteServiceLog,
   onFuelFormChange,
   onPrimeServiceLogForm,
   onSubmitFuelLog,
@@ -31,6 +32,7 @@ export function GarageScreen({
   passportExports,
   passportSummary,
   serviceLogErrors,
+  serviceLogDeletePendingId,
   serviceLogFeedback,
   serviceLogForm,
   serviceLogPending,
@@ -249,7 +251,12 @@ export function GarageScreen({
           ))}
         </div>
 
-        <ServiceHistoryList logs={filteredServiceLogs} partsByKey={partsByKey} />
+        <ServiceHistoryList
+          logs={filteredServiceLogs}
+          onDelete={onDeleteServiceLog}
+          partsByKey={partsByKey}
+          pendingId={serviceLogDeletePendingId}
+        />
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">

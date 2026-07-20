@@ -38,6 +38,7 @@ vi.mock("firebase/functions", () => ({
 
 import {
   createFirebaseVehiclePassportExport,
+  deleteFirebaseServiceLog,
   loadFirebaseVehiclePassportExports,
   saveFirebaseFuelLog,
   saveFirebaseServiceLog,
@@ -142,6 +143,15 @@ describe("Firebase Vehicle Passport repository", () => {
     );
 
     expect(result).toMatchObject({ vehicleId, duplicate: false, odometer: 68420 });
+    expect(mocks.transaction.set).toHaveBeenCalledWith(
+      expect.objectContaining({ path: `${basePath}/serviceLogs/service-1` }),
+      expect.objectContaining({
+        previousPartState: expect.objectContaining({
+          replacedKm: 0,
+          replacedAt: "",
+        }),
+      }),
+    );
     expect(mocks.transaction.set).toHaveBeenCalledWith(
       expect.objectContaining({ path: `${basePath}/parts/${vehicleId}--oil` }),
       expect.objectContaining({
@@ -255,6 +265,17 @@ describe("Firebase Vehicle Passport repository", () => {
 
     expect(mocks.invokeCallable).toHaveBeenCalledWith("createVehiclePassportExport", {});
     expect(result.export.readinessScore).toBe(88);
+  });
+
+  it("deletes a mistaken service record through the owner-only callable", async () => {
+    mocks.invokeCallable.mockResolvedValue({
+      data: { ok: true, serviceLogId: "service-1", serviceLogCount: 1 },
+    });
+
+    const result = await deleteFirebaseServiceLog("service-1");
+
+    expect(mocks.invokeCallable).toHaveBeenCalledWith("deleteServiceLog", { serviceLogId: "service-1" });
+    expect(result).toMatchObject({ ok: true, serviceLogId: "service-1", serviceLogCount: 1 });
   });
 
   it("loads private Vehicle Passport export history newest first", async () => {
