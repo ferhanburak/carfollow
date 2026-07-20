@@ -414,8 +414,8 @@ export function useMapPins({ initialWorld, user }) {
 
   const deleteClanEvent = async (convoyId) => {
     const target = mapPins.find((pin) => pin.id === convoyId && pin.type === "meet");
-    if (!target || !["completed", "cancelled"].includes(target.lifecycleStatus)) {
-      setClanEventFeedback("Yalnizca tamamlanmis veya iptal edilmis etkinlikler silinebilir.");
+    if (!target || !["planning", "completed", "cancelled"].includes(target.lifecycleStatus ?? "planning")) {
+      setClanEventFeedback("Surus halindeki etkinlikler silinemez.");
       return false;
     }
 

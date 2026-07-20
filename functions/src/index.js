@@ -53,7 +53,6 @@ const {
   buildPublicMapSummary,
   canDeleteConvoy,
   canSeeConvoy,
-  isClosedConvoy,
   meetsTrust,
   presentConvoy,
   projectDriver,
@@ -1063,10 +1062,7 @@ exports.deleteConvoy = secureCall("deleteConvoy", { rateLimit: { limit: 12, wind
   const clanMembership = convoy.clanId ? await clanMemberDocument(convoy.clanId, actorUserId).get() : null;
   const clanRole = clanMembership?.exists ? clanMembership.data().role : "";
   if (!canDeleteConvoy(convoy, actorUserId, clanRole)) {
-    throw new HttpsError("permission-denied", "Only the host or clan management can delete this event.");
-  }
-  if (!isClosedConvoy(convoy)) {
-    throw new HttpsError("failed-precondition", "Only completed or cancelled events can be deleted.");
+    throw new HttpsError("permission-denied", "Only clan management can delete planned events; closed events can also be deleted by the host.");
   }
 
   const membersSnapshot = await publicCollection("convoyMembers").where("convoyId", "==", convoyId).get();

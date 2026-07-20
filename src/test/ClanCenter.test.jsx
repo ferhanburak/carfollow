@@ -146,4 +146,45 @@ describe("ClanCenter", () => {
     await user.click(screen.getByRole("button", { name: "Silmeyi Onayla" }));
     expect(onDeleteEvent).toHaveBeenCalledWith("event-1");
   });
+
+  it("lets clan management delete a planned event", async () => {
+    const user = userEvent.setup();
+    const onDeleteEvent = vi.fn();
+    const event = {
+      id: "planned-1",
+      name: "Test Cruise",
+      route: "Ankara - Mogan",
+      time: "22:00",
+      lifecycleStatus: "planning",
+      attendees: [],
+    };
+
+    render(
+      <ClanCenter
+        clan={{ id: "clan-1", name: "Neon Wolves", tag: "WOLF", members: 1, km: 500 }}
+        clanEventFeedback=""
+        clanFeedback=""
+        eventPendingId=""
+        events={[event]}
+        isOpen
+        isPending={false}
+        members={[]}
+        onClose={vi.fn()}
+        onDeleteEvent={onDeleteEvent}
+        onLeave={vi.fn()}
+        onOpenProfile={vi.fn()}
+        onRemoveMember={vi.fn()}
+        onRevokeInvite={vi.fn()}
+        onTransferOwnership={vi.fn()}
+        onUpdateMemberRole={vi.fn()}
+        outgoingInvites={[]}
+        user={{ id: "owner", plate: "06 OWNER 01", clanRole: "owner", driverScore: 90 }}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Test Cruise katilimcilarini goster" }));
+    await user.click(screen.getByRole("button", { name: "Planlanan Eventi Sil" }));
+    await user.click(screen.getByRole("button", { name: "Silmeyi Onayla" }));
+    expect(onDeleteEvent).toHaveBeenCalledWith("planned-1");
+  });
 });

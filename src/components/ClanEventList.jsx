@@ -32,13 +32,15 @@ function AttendeeCard({ attendee, eventId, onOpenProfile }) {
   );
 }
 
-function ClanEventCard({ canManage, event, isPending, onDelete, onOpenProfile }) {
+function ClanEventCard({ canManage, event, isHost, isPending, onDelete, onOpenProfile }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const status = event.lifecycleStatus ?? "planning";
   const statusView = getStatusView(status);
   const attendees = event.attendees ?? [];
-  const canDelete = canManage && CLOSED_EVENT_STATUSES.has(status);
+  const isClosed = CLOSED_EVENT_STATUSES.has(status);
+  const canDelete = status === "planning" ? canManage : isClosed && (canManage || isHost);
+  const deleteLabel = status === "planning" ? "Planlanan Eventi Sil" : "Gecmisten Sil";
 
   return (
     <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
@@ -78,14 +80,14 @@ function ClanEventCard({ canManage, event, isPending, onDelete, onOpenProfile })
             <div className="mt-3">
               {confirmingDelete ? (
                 <div className="rounded-xl border border-rose-400/20 bg-rose-500/[0.06] p-3">
-                  <p className="text-xs leading-5 text-rose-100">Bu etkinlik ve katilimci baglantilari klan gecmisinden silinecek.</p>
+                  <p className="text-xs leading-5 text-rose-100">Bu etkinlik ve katilimci baglantilari kalici olarak silinecek.</p>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <button type="button" disabled={isPending} onClick={() => setConfirmingDelete(false)} className="min-h-12 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold disabled:opacity-50">Vazgec</button>
                     <button type="button" disabled={isPending} onClick={() => onDelete(event.id)} className="min-h-12 rounded-xl bg-rose-500 text-xs font-bold text-white disabled:opacity-50">{isPending ? "Siliniyor..." : "Silmeyi Onayla"}</button>
                   </div>
                 </div>
               ) : (
-                <button type="button" onClick={() => setConfirmingDelete(true)} className="min-h-12 w-full rounded-xl border border-rose-400/20 bg-rose-500/10 text-xs font-semibold text-rose-200">Gecmisten Sil</button>
+                <button type="button" onClick={() => setConfirmingDelete(true)} className="min-h-12 w-full rounded-xl border border-rose-400/20 bg-rose-500/10 text-xs font-semibold text-rose-200">{deleteLabel}</button>
               )}
             </div>
           ) : null}
@@ -104,7 +106,7 @@ function EventGroup({ canManage, emptyText, events, eventPendingId, onDelete, on
       </div>
       <div className="mt-2 space-y-2">
         {events.length
-          ? events.map((event) => <ClanEventCard key={event.id} canManage={canManage || event.createdByPlate === userPlate} event={event} isPending={eventPendingId === event.id} onDelete={onDelete} onOpenProfile={onOpenProfile} />)
+          ? events.map((event) => <ClanEventCard key={event.id} canManage={canManage} event={event} isHost={event.createdByPlate === userPlate} isPending={eventPendingId === event.id} onDelete={onDelete} onOpenProfile={onOpenProfile} />)
           : <div className="rounded-2xl border border-dashed border-white/10 p-4 text-sm text-neutral-500">{emptyText}</div>}
       </div>
     </div>

@@ -228,8 +228,11 @@ function canSeeDetails(convoy, profile, membership = null) {
 }
 
 function canDeleteConvoy(convoy, actorUserId, clanRole = "") {
-  if (convoy?.hostUserId === actorUserId) return true;
-  return Boolean(convoy?.clanId) && ["owner", "captain"].includes(clanRole);
+  const status = convoy?.lifecycleStatus ?? "planning";
+  const isClanManager = Boolean(convoy?.clanId) && ["owner", "captain"].includes(clanRole);
+  if (status === "planning") return isClanManager;
+  if (!isClosedConvoy(convoy)) return false;
+  return convoy?.hostUserId === actorUserId || isClanManager;
 }
 
 function isClosedConvoy(convoy) {

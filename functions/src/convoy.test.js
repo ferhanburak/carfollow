@@ -76,12 +76,19 @@ test("clan members can inspect attendee details for their clan events", () => {
 
 test("closed convoy deletion is limited to host or clan management", () => {
   const completed = { ...createConvoy(), lifecycleStatus: "completed" };
+  const planning = createConvoy();
+  const rolling = { ...createConvoy(), lifecycleStatus: "rolling" };
   assert.equal(isClosedConvoy(completed), true);
-  assert.equal(isClosedConvoy(createConvoy()), false);
+  assert.equal(isClosedConvoy(planning), false);
   assert.equal(canDeleteConvoy(completed, "host", "member"), true);
   assert.equal(canDeleteConvoy(completed, "clan-owner", "owner"), true);
   assert.equal(canDeleteConvoy(completed, "clan-captain", "captain"), true);
   assert.equal(canDeleteConvoy(completed, "ordinary-member", "member"), false);
+  assert.equal(canDeleteConvoy(planning, "host", "member"), false);
+  assert.equal(canDeleteConvoy(planning, "clan-owner", "owner"), true);
+  assert.equal(canDeleteConvoy(planning, "clan-captain", "captain"), true);
+  assert.equal(canDeleteConvoy(planning, "ordinary-member", "member"), false);
+  assert.equal(canDeleteConvoy(rolling, "clan-owner", "owner"), false);
 });
 
 test("scheduled convoy waits for launch time before GPS tracking starts", () => {
