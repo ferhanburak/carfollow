@@ -353,36 +353,6 @@ function getMarkerLabel(pin) {
   };
 }
 
-function formatDistance(distanceMeters) {
-  if (!distanceMeters) {
-    return "-- km";
-  }
-
-  return `${(distanceMeters / 1000).toFixed(1)} km`;
-}
-
-function formatDuration(durationValue) {
-  if (!durationValue) {
-    return "-- dk";
-  }
-
-  const rawSeconds = Number.parseInt(String(durationValue).replace("s", ""), 10);
-
-  if (Number.isNaN(rawSeconds)) {
-    return "-- dk";
-  }
-
-  const totalMinutes = Math.max(1, Math.round(rawSeconds / 60));
-
-  if (totalMinutes >= 60) {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return minutes > 0 ? `${hours}s ${minutes}dk` : `${hours}s`;
-  }
-
-  return `${totalMinutes} dk`;
-}
-
 function getCurrentLocationIcon() {
   if (typeof window === "undefined" || !window.google?.maps) {
     return undefined;
@@ -719,7 +689,6 @@ export function GoogleMapCard({
   const hasMockRoute = activeRoutePath.length > 1;
   const displayedRoutePath = routeState.path.length > 1 ? routeState.path : activeRoutePath;
   const hasDisplayedRoute = displayedRoutePath.length > 1;
-  const convoyAccess = selectedPin?.type === "meet" ? getConvoyAccessState(selectedPin, user) : null;
   const convoyGhostMarkers = getConvoyGhostMarkers(selectedPin, user, driveHud, isDriving);
   const selectedGhostMarker = convoyGhostMarkers.find((marker) => marker.id === selectedGhostMarkerId) ?? null;
   const selectedGhostFriendship = selectedGhostMarker ? getFriendshipStatus(user, selectedGhostMarker.plate) : "none";
@@ -1157,49 +1126,6 @@ export function GoogleMapCard({
               </InfoWindowF>
             ) : null}
           </GoogleMap>
-          {!fullScreen ? (
-            <div className="absolute inset-x-3 bottom-3 z-10 rounded-2xl border border-white/10 bg-black/70 px-4 py-3 backdrop-blur">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Selected Node</p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-100">
-                    {selectedPin?.type === "meet" && !convoyAccess?.canViewDetails ? "Restricted Convoy" : selectedPin?.name}
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-400">
-                    {selectedPin?.type === "meet" && !convoyAccess?.canViewDetails
-                      ? "Rota ve lokasyon detaylari yalnizca guvenilir suruculere acik."
-                      : hasMockRoute
-                        ? selectedPin.route
-                        : "Tap a cruise meet to preview its live convoy route."}
-                  </p>
-                  {routeState.source === "fallback" ? (
-                    <p className="mt-2 text-[11px] text-amber-300">Google route unavailable, showing mock cruise path.</p>
-                  ) : null}
-                  {locationState.source === "ready" ? (
-                    <p className="mt-2 text-[11px] text-rose-200">Live location locked and visible on the map.</p>
-                  ) : null}
-                  {draftLocation ? (
-                    <p className="mt-2 text-[11px] text-lime-200">
-                      {mapPickMode === "route"
-                        ? "Route builder aktif. Haritaya dokundukca event rota dugumleri ekleniyor."
-                        : "Map uzerine dokunarak yeni node konumu secili halde tutuluyor."}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className={`rounded-2xl border px-3 py-2 text-[11px] ${routeState.source === "google" ? "border-lime-400/40 bg-lime-400/10 text-lime-300" : "border-white/10 bg-white/5 text-neutral-400"}`}>
-                    {routeState.source === "loading" ? "Syncing route" : hasDisplayedRoute ? `${displayedRoutePath.length} route nodes` : "No route"}
-                  </div>
-                  {routeState.source === "google" ? (
-                    <div className="rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-right text-[11px] text-neutral-300">
-                      <div>{formatDistance(routeState.distanceMeters)}</div>
-                      <div>{formatDuration(routeState.duration)}</div>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          ) : null}
         </div>
       ) : null}
 

@@ -78,6 +78,7 @@ describe("GoogleMapCard convoy overlays", () => {
     );
 
     expect(screen.getByTestId("google-map")).toBeInTheDocument();
+    expect(screen.queryByText("Selected Node")).not.toBeInTheDocument();
     const convoyMarker = screen.getAllByTestId("map-marker").find((marker) =>
       marker.dataset.title.includes("Ankara test convoy"));
     expect(JSON.parse(convoyMarker.dataset.position)).toEqual(routePath[0]);

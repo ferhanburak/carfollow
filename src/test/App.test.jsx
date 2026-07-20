@@ -41,7 +41,8 @@ describe("App", () => {
     expect(await screen.findByText("CRUISER MAP")).toBeInTheDocument();
     expect(screen.getByText("Node Management Hub")).toBeInTheDocument();
     expect(screen.queryByText(/Event, photo spot ve wash noktalarini burada yonet/i)).not.toBeInTheDocument();
-    expect((await screen.findAllByText("Mogan Lake Sunset")).length).toBeGreaterThan(0);
+    expect(await screen.findByRole("button", { name: "Mogan Lake Sunset (spot)" })).toBeInTheDocument();
+    expect(screen.queryByText("Mogan Lake Sunset")).not.toBeInTheDocument();
   });
 
   it("does not persist quick profile passwords in the local session", async () => {
