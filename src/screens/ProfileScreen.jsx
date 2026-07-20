@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { AchievementProgressPanel } from "../components/AchievementCenter";
 import { ProfileAvatar } from "../components/ProfileAvatar";
-import { VehiclePassportSummary } from "../components/garage/VehiclePassportSummary";
 import { InsightCard } from "../components/ui";
 import { buildAchievementProgress, buildPersonalStats } from "../utils/socialStats";
 
 export function ProfileScreen({
   onOpenService,
   onOpenStats,
-  passportSummary,
   profileCompletion,
   user,
 }) {
@@ -23,7 +21,6 @@ export function ProfileScreen({
   ];
   const profileHealth = [
     { key: "completion", label: "Profil", value: `%${profileCompletion}` },
-    { key: "passport", label: "Pasaport", value: passportSummary ? "Hazir" : "Bos" },
     { key: "badges", label: "Unvan", value: `${user.badges?.length ?? 0}` },
   ];
 
@@ -41,7 +38,7 @@ export function ProfileScreen({
           <ProfileAvatar src={user.avatar} label={user.fullName} className="h-16 w-16" />
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2">
+        <div className="mt-4 grid grid-cols-2 gap-2">
           {profileHealth.map((item) => (
             <div key={item.key} className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
               <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-500">{item.label}</p>
@@ -87,19 +84,6 @@ export function ProfileScreen({
             Servis Defterini Ac
           </button>
         </div>
-      </div>
-
-      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold">Vehicle Passport Snapshot</p>
-            <p className="text-xs text-neutral-500">Profil ekraninda da hizli arac guven ozeti gorebilirsin.</p>
-          </div>
-          <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.22em] text-lime-300">
-            Verified
-          </span>
-        </div>
-        {passportSummary ? <VehiclePassportSummary summary={passportSummary} /> : null}
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">

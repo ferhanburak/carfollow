@@ -627,7 +627,6 @@ function App() {
               <ProfileScreen
                 onOpenService={() => setActiveTab("garage")}
                 onOpenStats={() => setActiveTab("leaderboard")}
-                passportSummary={passportSummary}
                 profileCompletion={profileCompletion}
                 user={user}
               />

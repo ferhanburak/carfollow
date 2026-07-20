@@ -271,6 +271,8 @@ describe("App", () => {
     expect(screen.getByText("Driver Stats Snapshot")).toBeInTheDocument();
     expect(screen.getByText("Social Cockpit")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Stats Ekranina Git" })).toBeInTheDocument();
+    expect(screen.queryByText("Vehicle Passport Snapshot")).not.toBeInTheDocument();
+    expect(screen.queryByText("Pasaport")).not.toBeInTheDocument();
     expect(screen.getByText("2 / 5")).toBeInTheDocument();
     expect(screen.getByText("Crew Apex")).toBeInTheDocument();
     expect(screen.queryByText("Garaj Arsivi")).not.toBeInTheDocument();
