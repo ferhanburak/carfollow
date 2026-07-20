@@ -5,6 +5,8 @@ import { NotificationCenter } from "./components/NotificationCenter";
 import { DirectMessageButton, DirectMessageCenter } from "./components/DirectMessageCenter";
 import { SettingsButton, SettingsCenter } from "./components/SettingsCenter";
 import { ProfileAvatar } from "./components/ProfileAvatar";
+import { ActionToast } from "./components/ActionToast";
+import { useActionToast } from "./hooks/useActionToast";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
 import { AuthScreen } from "./screens/AuthScreen";
@@ -244,6 +246,26 @@ function App() {
     withdrawFriendRequest,
   } = useCruiserWorld(user, setUser, setFuelForm);
 
+  const { dismissToast, toast } = useActionToast({
+    account: accountFeedback,
+    auth: authFeedback || authError,
+    chat: chatFeedback,
+    clan: clanFeedback,
+    clanEvent: clanEventFeedback,
+    convoy: convoyFeedback,
+    drive: driveSessionFeedback,
+    fuel: fuelFeedback,
+    map: mapPinFeedback,
+    moderation: moderationFeedback,
+    notification: notificationFeedback,
+    passport: passportExportFeedback,
+    profile: profileFeedback,
+    service: serviceLogFeedback,
+    social: socialFeedback,
+    spotPhoto: spotPhotoFeedback,
+    wash: washFeedback,
+  });
+
   const activeClanName = (safeUser ?? user)?.clan;
   const activeClanId = (safeUser ?? user)?.clanId ?? currentClan?.id;
   const clanEvents = mapPins.filter((pin) =>
@@ -311,26 +333,29 @@ function App() {
 
   if (authMode !== "authenticated" || !user) {
     return (
-      <AuthScreen
-        authError={authError}
-        authFeedback={authFeedback}
-        authMode={authMode}
-        authTab={authTab}
-        isFirebaseAuth={isFirebaseAuth}
-        loginForm={loginForm}
-        onAuthTabChange={setAuthTab}
-        onLogin={(event) => handleLogin(event, { onAuthenticated: resetSessionView })}
-        onPasswordReset={handlePasswordReset}
-        onLoginFormChange={setLoginForm}
-        onQuickLogin={(profile) => handleQuickLogin(profile, { onAuthenticated: resetSessionView })}
-        onSignUp={(event) => handleSignUp(event, { onAuthenticated: resetSessionView })}
-        onSignUpAvatarChange={handleSignUpAvatarChange}
-        onSignUpFormChange={setSignUpForm}
-        quickProfiles={quickProfiles}
-        signUpErrors={signUpErrors}
-        signUpForm={signUpForm}
-        tuningOptions={tuningOptions}
-      />
+      <>
+        <AuthScreen
+          authError={authError}
+          authFeedback={authFeedback}
+          authMode={authMode}
+          authTab={authTab}
+          isFirebaseAuth={isFirebaseAuth}
+          loginForm={loginForm}
+          onAuthTabChange={setAuthTab}
+          onLogin={(event) => handleLogin(event, { onAuthenticated: resetSessionView })}
+          onPasswordReset={handlePasswordReset}
+          onLoginFormChange={setLoginForm}
+          onQuickLogin={(profile) => handleQuickLogin(profile, { onAuthenticated: resetSessionView })}
+          onSignUp={(event) => handleSignUp(event, { onAuthenticated: resetSessionView })}
+          onSignUpAvatarChange={handleSignUpAvatarChange}
+          onSignUpFormChange={setSignUpForm}
+          quickProfiles={quickProfiles}
+          signUpErrors={signUpErrors}
+          signUpForm={signUpForm}
+          tuningOptions={tuningOptions}
+        />
+        <ActionToast onDismiss={dismissToast} toast={toast} />
+      </>
     );
   }
 
@@ -729,6 +754,7 @@ function App() {
           </div>
         </div>
       ) : null}
+      <ActionToast onDismiss={dismissToast} toast={toast} />
     </main>
   );
 }

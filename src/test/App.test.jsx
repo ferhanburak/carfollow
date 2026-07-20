@@ -28,7 +28,7 @@ describe("App", () => {
     await user.type(passwordInput, "wrongpass");
     await user.click(screen.getByRole("button", { name: "Enter CRUISER" }));
 
-    expect(screen.getByText(/Profil bulunamadi/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Profil bulunamadi/i)).toHaveLength(2);
   });
 
   it("logs in from a quick profile and shows the map shell", async () => {
@@ -208,6 +208,10 @@ describe("App", () => {
     expect(screen.getByRole("spinbutton", { name: "Mevcut KM" })).toHaveValue(68420);
     expect(screen.getByLabelText("Profil Fotografi")).toHaveAttribute("type", "file");
     expect(screen.queryByLabelText("Avatar URL")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Profili Guncelle" }));
+    const actionToast = await screen.findByRole("status");
+    expect(within(actionToast).getByText("Profil, fotograf ve kilometre bilgileri guncellendi.")).toBeInTheDocument();
   });
 
   it("blocks invalid fuel log submission and shows validation errors", async () => {
@@ -252,7 +256,7 @@ describe("App", () => {
     await user.type(waterInput, "4");
     await user.click(screen.getByRole("button", { name: "Review Ekle" }));
 
-    expect(screen.getByText("Review added successfully.")).toBeInTheDocument();
+    expect(screen.getAllByText("Review added successfully.")).toHaveLength(2);
     expect(screen.getByText("Foam was dense and rinse quality stayed stable.")).toBeInTheDocument();
   });
 
