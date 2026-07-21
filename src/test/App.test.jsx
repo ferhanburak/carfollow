@@ -37,7 +37,12 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
 
-    expect(screen.getByText("CRUISER // Ankara Bati")).toBeInTheDocument();
+    const compactHeader = screen.getByTestId("compact-app-header");
+    expect(within(compactHeader).getByText("Poyraz Alkan")).toBeInTheDocument();
+    expect(within(compactHeader).getByText("Seat Ibiza Cupra")).toBeInTheDocument();
+    expect(within(compactHeader).queryByText(/CRUISER \/\//i)).not.toBeInTheDocument();
+    expect(within(compactHeader).queryByText("Odometer")).not.toBeInTheDocument();
+    expect(within(within(compactHeader).getByRole("button", { name: "Suruse Basla" })).queryByText("Baslat")).not.toBeInTheDocument();
     expect(screen.queryByText("Node Management Hub")).not.toBeInTheDocument();
     expect(screen.queryByText(/Event, photo spot ve wash noktalarini burada yonet/i)).not.toBeInTheDocument();
     const spotMarker = await screen.findByRole("button", { name: "Mogan Lake Sunset (spot)" });
@@ -91,6 +96,9 @@ describe("App", () => {
     expect(screen.getAllByRole("button", { name: "Ayarlar merkezi" })).toHaveLength(1);
 
     const liveMap = screen.getByTestId("live-map-screen");
+    expect(within(liveMap).getByText("Poyraz Alkan")).toBeInTheDocument();
+    expect(within(liveMap).getByText("Seat Ibiza Cupra")).toBeInTheDocument();
+    expect(within(liveMap).queryByText("CRUISER LIVE MAP")).not.toBeInTheDocument();
     expect(within(liveMap).queryByText("Selected Node")).not.toBeInTheDocument();
     expect(within(liveMap).queryByText("Serbest surus")).not.toBeInTheDocument();
 
@@ -199,7 +207,9 @@ describe("App", () => {
     expect(await screen.findByAltText("Profil fotografi onizleme")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Build My Garage" }));
-    expect(await screen.findByText("54.321 KM")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Ayarlar merkezi" }));
+    await user.click(screen.getByRole("button", { name: /Arac ve Profil/i }));
+    expect(screen.getByRole("spinbutton", { name: "Mevcut KM" })).toHaveValue(54321);
   });
 
   it("shows a general required-fields notification for an incomplete event", async () => {

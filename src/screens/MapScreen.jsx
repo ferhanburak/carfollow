@@ -269,10 +269,9 @@ export function MapScreen({
   return (
     <section data-testid="live-map-screen" className="live-map-screen relative flex h-full min-h-0 flex-col overflow-hidden bg-[#050505] px-3 pb-3">
       <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-        <div className="min-w-0 rounded-[1rem] border border-white/10 bg-black/35 px-3 py-2 backdrop-blur">
-          <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">CRUISER LIVE MAP</p>
-          <p className="mt-1 truncate text-sm font-black text-white">{user.plate}</p>
-          <p className="text-[10px] text-neutral-400">{user.region}</p>
+        <div className="flex h-12 min-w-0 flex-col justify-center rounded-[1rem] border border-white/10 bg-black/35 px-3 backdrop-blur">
+          <p className="truncate text-xs font-black text-white">{user.fullName}</p>
+          <p className="mt-0.5 truncate text-[10px] text-neutral-400">{user.model}</p>
         </div>
         {headerActions}
       </div>

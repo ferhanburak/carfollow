@@ -4,7 +4,6 @@ import { PublicDriverProfileOverlay } from "./components/PublicDriverProfileOver
 import { NotificationCenter } from "./components/NotificationCenter";
 import { DirectMessageButton, DirectMessageCenter } from "./components/DirectMessageCenter";
 import { SettingsButton, SettingsCenter } from "./components/SettingsCenter";
-import { ProfileAvatar } from "./components/ProfileAvatar";
 import { ActionToast } from "./components/ActionToast";
 import { useActionToast } from "./hooks/useActionToast";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
@@ -42,6 +41,23 @@ function ScreenLoader() {
         </div>
       </div>
     </div>
+  );
+}
+
+function DriveActionIcon({ pending = false }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={`mx-auto h-6 w-6 ${pending ? "animate-pulse" : ""}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
+      <path d="M5.2 10.2 6.8 6h10.4l1.6 4.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 11.5c0-.8.7-1.5 1.5-1.5h13c.8 0 1.5.7 1.5 1.5V17H4v-5.5Z" strokeLinejoin="round" />
+      <path d="M6.5 17v1.5M17.5 17v1.5M7.5 13.5h.01M16.5 13.5h.01" strokeLinecap="round" strokeWidth="2.2" />
+    </svg>
   );
 }
 
@@ -365,15 +381,16 @@ function App() {
     <main className="min-h-[100dvh] bg-[#050505] text-neutral-100 md:px-3 md:py-6">
       <div className="app-shell relative mx-auto flex w-full max-w-md flex-col overflow-hidden bg-[#0a0a0a] shadow-[0_0_90px_rgba(163,230,53,0.08)] md:rounded-[2rem] md:border md:border-white/10">
         {activeTab !== "liveMap" ? (
-          <header className="app-safe-top relative overflow-hidden border-b border-white/10 px-4 pb-4 sm:px-5 sm:pb-5">
+          <header
+            aria-label="Uygulama kontrolleri"
+            className="app-safe-top relative overflow-hidden border-b border-white/10 px-3 pb-3 sm:px-4 sm:pb-3"
+            data-testid="compact-app-header"
+          >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.18),_transparent_34%),radial-gradient(circle_at_bottom_left,_rgba(244,63,94,0.14),_transparent_28%),linear-gradient(180deg,#171717,#0a0a0a)]" />
-            <div className="relative flex items-start justify-between gap-2 sm:gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] uppercase tracking-[0.35em] text-lime-400">CRUISER // {user.region}</p>
-                <h2 className="mt-2 truncate text-lg font-black sm:text-xl">{user.plate}</h2>
-                <p className="truncate text-xs text-neutral-400 sm:text-sm">
-                  {user.model} / {user.horsepower} HP / {user.tuningStage}
-                </p>
+            <div className="relative flex items-center gap-1.5">
+              <div className="flex h-12 min-w-0 flex-1 flex-col justify-center rounded-2xl border border-white/10 bg-black/30 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                <p className="truncate text-xs font-black text-white">{user.fullName}</p>
+                <p className="mt-0.5 truncate text-[10px] text-neutral-400">{user.model}</p>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
                 <DirectMessageButton onClick={openDmInbox} unreadCount={unreadConversationCount} />
@@ -396,20 +413,9 @@ function App() {
                       : "bg-lime-400 text-black shadow-[0_0_24px_rgba(163,230,53,0.38)]"
                   } disabled:cursor-wait disabled:opacity-60`}
                 >
-                  <span aria-hidden="true">{driveSessionPending ? "..." : isDriving ? "Durdur" : "Baslat"}</span>
+                  <DriveActionIcon pending={driveSessionPending} />
                 </button>
                 <SettingsButton onClick={openSettings} />
-              </div>
-            </div>
-            <div className="relative mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 px-3 py-3">
-              <ProfileAvatar src={user.avatar} label={user.fullName} className="h-14 w-14" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{user.fullName}</p>
-                <p className="text-xs text-neutral-400">Primary garage: {user.garage}</p>
-              </div>
-              <div className="rounded-2xl border border-lime-400/30 bg-lime-400/10 px-3 py-2 text-right">
-                <p className="text-[10px] uppercase tracking-[0.24em] text-neutral-400">Odometer</p>
-                <p className="text-sm font-bold text-lime-300">{user.odometer.toLocaleString("tr-TR")} KM</p>
               </div>
             </div>
           </header>
@@ -490,13 +496,13 @@ function App() {
                       aria-label={driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}
                       onClick={toggleDrive}
                       disabled={driveSessionPending}
-                      className={`min-h-12 rounded-2xl px-3 text-xs font-bold transition ${
+                      className={`h-12 w-12 rounded-2xl px-0 text-xs font-bold transition ${
                         isDriving
                           ? "bg-rose-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.42)]"
                           : "bg-lime-400 text-black shadow-[0_0_20px_rgba(163,230,53,0.32)]"
                       } disabled:cursor-wait disabled:opacity-60`}
                     >
-                      {driveSessionPending ? "..." : isDriving ? "Durdur" : "Baslat"}
+                      <DriveActionIcon pending={driveSessionPending} />
                     </button>
                     <SettingsButton onClick={openSettings} tone="map" />
                   </div>
