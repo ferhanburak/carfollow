@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getMeetAccessPolicyLabel,
   getMeetAccessPolicyOptions,
@@ -8,6 +8,7 @@ import {
   getMeetVisibilityOptions,
 } from "../utils/meetVisibility";
 import { CompactField } from "./ui";
+import { validateMapPinForm } from "../utils/validation";
 
 const nodeTypes = [
   { key: "meet", label: "Event" },
@@ -34,11 +35,18 @@ export function MapComposerPanel({
   user,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showRequiredNotice, setShowRequiredNotice] = useState(false);
   const resolvedOpen = alwaysOpen || isOpen;
   const isSpot = form.type === "spot";
   const isMeet = form.type === "meet";
   const isWash = form.type === "wash";
   const routePointCount = form.routePoints.length;
+  const hasErrors = showRequiredNotice || Object.values(errors ?? {}).some(Boolean);
+  const visibleFeedback = showRequiredNotice ? "Zorunlu alanlari doldurunuz." : feedback;
+
+  useEffect(() => {
+    setShowRequiredNotice(false);
+  }, [form]);
 
   return (
     <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
@@ -122,14 +130,29 @@ export function MapComposerPanel({
             ))}
           </div>
 
-          <form className="mt-4 space-y-3" onSubmit={onSubmit}>
-            {feedback ? (
-              <div className="rounded-2xl border border-lime-400/30 bg-lime-400/10 px-4 py-3 text-sm text-lime-200">
-                {feedback}
+          <form
+            className="mt-4 space-y-3"
+            onSubmit={(event) => {
+              const nextErrors = validateMapPinForm(form);
+              setShowRequiredNotice(Object.keys(nextErrors).length > 0);
+              onSubmit(event);
+            }}
+          >
+            {visibleFeedback ? (
+              <div className={`rounded-2xl border px-4 py-3 text-sm ${
+                hasErrors
+                  ? "border-rose-400/30 bg-rose-500/10 text-rose-200"
+                  : "border-lime-400/30 bg-lime-400/10 text-lime-200"
+              }`} role={hasErrors ? "alert" : "status"}>
+                {visibleFeedback}
               </div>
             ) : null}
 
-            <CompactField label="Node Name">
+            <p className="text-xs text-neutral-500">
+              <span className="font-bold text-rose-400">*</span> Zorunlu alan
+            </p>
+
+            <CompactField label="Node Name" required>
               <input
                 value={form.name}
                 onChange={(event) => onFormChange((current) => ({ ...current, name: event.target.value }))}
@@ -140,7 +163,7 @@ export function MapComposerPanel({
             </CompactField>
 
             <div className="grid grid-cols-2 gap-3">
-              <CompactField label="Latitude">
+              <CompactField label="Latitude" required>
                 <input
                   type="number"
                   step="0.0001"
@@ -150,7 +173,7 @@ export function MapComposerPanel({
                 />
                 {errors.lat ? <p className="text-xs text-rose-300">{errors.lat}</p> : null}
               </CompactField>
-              <CompactField label="Longitude">
+              <CompactField label="Longitude" required>
                 <input
                   type="number"
                   step="0.0001"
@@ -164,7 +187,7 @@ export function MapComposerPanel({
 
             {isSpot ? (
               <>
-                <CompactField label="Spot Story">
+                <CompactField label="Spot Story" required>
                   <input
                     value={form.description}
                     onChange={(event) => onFormChange((current) => ({ ...current, description: event.target.value }))}
@@ -173,7 +196,7 @@ export function MapComposerPanel({
                   />
                   {errors.description ? <p className="text-xs text-rose-300">{errors.description}</p> : null}
                 </CompactField>
-                <CompactField label="Quick Tags">
+                <CompactField label="Quick Tags" optional>
                   <input
                     value={form.tags}
                     onChange={(event) => onFormChange((current) => ({ ...current, tags: event.target.value }))}
@@ -187,7 +210,7 @@ export function MapComposerPanel({
             {isMeet ? (
               <>
                 <div className="grid grid-cols-2 gap-3">
-                  <CompactField label="Launch Time">
+                  <CompactField label="Launch Time" required>
                     <input
                       type="datetime-local"
                       value={form.time}
@@ -196,7 +219,7 @@ export function MapComposerPanel({
                     />
                     {errors.time ? <p className="text-xs text-rose-300">{errors.time}</p> : null}
                   </CompactField>
-                  <CompactField label="Route Summary">
+                  <CompactField label="Route Summary" required>
                     <input
                       value={form.route}
                       onChange={(event) => onFormChange((current) => ({ ...current, route: event.target.value }))}
@@ -207,7 +230,7 @@ export function MapComposerPanel({
                   </CompactField>
                 </div>
 
-                <CompactField label="Capacity">
+                <CompactField label="Capacity" required>
                   <input
                     type="number"
                     min="2"
@@ -219,7 +242,7 @@ export function MapComposerPanel({
                   {errors.capacity ? <p className="text-xs text-rose-300">{errors.capacity}</p> : null}
                 </CompactField>
 
-                <CompactField label="Visibility">
+                <CompactField label="Visibility" required>
                   <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/8 bg-black/20 p-2">
                     {visibilityOptions.map((visibility) => (
                       <button
@@ -238,7 +261,7 @@ export function MapComposerPanel({
                 </CompactField>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <CompactField label="Join Policy">
+                  <CompactField label="Join Policy" required>
                     <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/8 bg-black/20 p-2">
                       {accessPolicyOptions.map((policy) => (
                         <button
@@ -256,7 +279,7 @@ export function MapComposerPanel({
                     {errors.accessPolicy ? <p className="text-xs text-rose-300">{errors.accessPolicy}</p> : null}
                   </CompactField>
 
-                  <CompactField label="Detail Access">
+                  <CompactField label="Detail Access" required>
                     <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/8 bg-black/20 p-2">
                       {detailVisibilityOptions.map((mode) => (
                         <button
@@ -276,7 +299,7 @@ export function MapComposerPanel({
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
-                  <CompactField label="Min Score">
+                  <CompactField label="Min Score" required>
                     <input
                       type="number"
                       min="0"
@@ -287,7 +310,7 @@ export function MapComposerPanel({
                     />
                     {errors.minDriverScore ? <p className="text-xs text-rose-300">{errors.minDriverScore}</p> : null}
                   </CompactField>
-                  <CompactField label="Min Uyum">
+                  <CompactField label="Min Uyum" required>
                     <input
                       type="number"
                       min="0"
@@ -297,7 +320,7 @@ export function MapComposerPanel({
                     />
                     {errors.minHarmonyVotes ? <p className="text-xs text-rose-300">{errors.minHarmonyVotes}</p> : null}
                   </CompactField>
-                  <CompactField label="Max Alert">
+                  <CompactField label="Max Alert" required>
                     <input
                       type="number"
                       min="0"
@@ -309,7 +332,7 @@ export function MapComposerPanel({
                   </CompactField>
                 </div>
 
-                <CompactField label="Invite Friends">
+                <CompactField label="Invite Friends" optional>
                   <div className="space-y-2 rounded-2xl border border-white/8 bg-black/20 p-3">
                     {(user?.friends ?? []).length ? (
                       user.friends.map((friend) => {
@@ -352,7 +375,9 @@ export function MapComposerPanel({
                 <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-lime-300">Route Builder</p>
+                      <p className="text-xs uppercase tracking-[0.18em] text-lime-300">
+                        Route Builder <span className="text-rose-400">*</span>
+                      </p>
                       <p className="mt-1 text-sm text-neutral-300">
                         Mod:
                         {" "}
@@ -417,7 +442,7 @@ export function MapComposerPanel({
             {isWash ? (
               <>
                 <div className="grid grid-cols-2 gap-3">
-                  <CompactField label="Foam">
+                  <CompactField label="Foam" required>
                     <input
                       type="number"
                       min="1"
@@ -428,7 +453,7 @@ export function MapComposerPanel({
                     />
                     {errors.foam ? <p className="text-xs text-rose-300">{errors.foam}</p> : null}
                   </CompactField>
-                  <CompactField label="Water">
+                  <CompactField label="Water" required>
                     <input
                       type="number"
                       min="1"
@@ -440,7 +465,7 @@ export function MapComposerPanel({
                     {errors.water ? <p className="text-xs text-rose-300">{errors.water}</p> : null}
                   </CompactField>
                 </div>
-                <CompactField label="Launch Review">
+                <CompactField label="Launch Review" required>
                   <input
                     value={form.note}
                     onChange={(event) => onFormChange((current) => ({ ...current, note: event.target.value }))}

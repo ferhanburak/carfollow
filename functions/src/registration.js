@@ -1,7 +1,9 @@
-const REGISTRATION_SCHEMA_VERSION = 2;
+const REGISTRATION_SCHEMA_VERSION = 3;
 const VEHICLE_SCHEMA_VERSION = 1;
 const PASSPORT_SCHEMA_VERSION = 1;
 const KVKK_CONSENT_VERSION = "2026-07";
+const TERMS_VERSION = "2026-07";
+const PRIVACY_NOTICE_VERSION = "2026-07";
 const { resolveMaintenanceLimit } = require("./maintenanceLimits");
 
 class RegistrationError extends Error {
@@ -87,12 +89,21 @@ function normalizePart(part, { uid, vehicleId, odometer }) {
   };
 }
 
-function buildRegistrationBundle({ uid, email, profile, acceptKvkk, timestamp }) {
+function buildRegistrationBundle({
+  uid,
+  email,
+  profile,
+  acceptTerms,
+  acceptPlateSearch,
+  acceptKvkk,
+  timestamp,
+}) {
   if (!uid || !email) {
     throw new RegistrationError("unauthenticated", "A verified Firebase identity is required.");
   }
-  if (acceptKvkk !== true) {
-    throw new RegistrationError("failed-precondition", "Privacy notice consent is required.");
+  const legacyRegistration = acceptTerms !== true && acceptKvkk === true;
+  if (acceptTerms !== true && !legacyRegistration) {
+    throw new RegistrationError("failed-precondition", "Terms acceptance is required.");
   }
 
   const fullName = cleanText(profile?.fullName, { field: "Full name", min: 2, max: 80 });
@@ -102,18 +113,22 @@ function buildRegistrationBundle({ uid, email, profile, acceptKvkk, timestamp })
     throw new RegistrationError("invalid-argument", "Plate is invalid.");
   }
   const model = cleanText(profile?.model, { field: "Vehicle model", min: 2, max: 100 });
-  const garage = cleanText(profile?.garage, { field: "Garage", min: 2, max: 100 });
+  const garage = cleanText(profile?.garage ?? "", { field: "Garage", min: 0, max: 100 });
   const region = cleanText(profile?.region ?? "Belirtilmedi", { field: "Region", min: 2, max: 80 });
-  const horsepower = cleanNumber(profile?.horsepower, { field: "Horsepower", min: 1, max: 5000 });
+  const horsepower = cleanNumber(profile?.horsepower ?? 0, { field: "Horsepower", min: 0, max: 5000 });
   const odometer = cleanNumber(profile?.odometer, { field: "Odometer", min: 0, max: 5000000 });
   const avatar = cleanText(profile?.avatar ?? "", { field: "Avatar", min: 0, max: 2048 });
-  const vehicleType = profile?.vehicleType === "motorcycle" ? "motorcycle" : "car";
+  if (!["car", "motorcycle"].includes(profile?.vehicleType)) {
+    throw new RegistrationError("invalid-argument", "Vehicle type is invalid.");
+  }
+  const vehicleType = profile.vehicleType;
   const tuningStage = ["Stock", "Stage 1", "Stage 2+", "Stage 3"].includes(profile?.tuningStage)
     ? profile.tuningStage
     : "Stock";
   const vehicleId = `vehicle-${normalizeIdentifier(uid, "primary")}`;
+  const plateSearchEnabled = acceptPlateSearch === true || legacyRegistration;
   const privacy = {
-    plateSearchEnabled: true,
+    plateSearchEnabled,
     showPlateOnLiveMap: false,
     showModelInSearch: profile?.privacy?.showModelInSearch !== false,
     showRegionInSearch: profile?.privacy?.showRegionInSearch === true,
@@ -168,11 +183,19 @@ function buildRegistrationBundle({ uid, email, profile, acceptKvkk, timestamp })
       odometer,
       odometerOrigin: "user-entered",
       privacy,
-      privacyConsent: {
-        version: KVKK_CONSENT_VERSION,
-        kvkkAcceptedAt: timestamp,
-        plateSearchConsent: true,
+      legalAcceptance: {
+        termsVersion: TERMS_VERSION,
+        termsAcceptedAt: timestamp,
+        privacyNoticeVersion: PRIVACY_NOTICE_VERSION,
+        privacyNoticePresentedAt: timestamp,
       },
+      ...(plateSearchEnabled ? {
+        privacyConsent: {
+          version: KVKK_CONSENT_VERSION,
+          kvkkAcceptedAt: timestamp,
+          plateSearchConsent: true,
+        },
+      } : {}),
       createdAt: timestamp,
       updatedAt: timestamp,
     },
@@ -218,6 +241,8 @@ function buildRegistrationBundle({ uid, email, profile, acceptKvkk, timestamp })
 
 module.exports = {
   KVKK_CONSENT_VERSION,
+  PRIVACY_NOTICE_VERSION,
+  TERMS_VERSION,
   RegistrationError,
   buildRegistrationBundle,
   normalizePlate,

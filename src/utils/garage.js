@@ -3,6 +3,7 @@ export const createSignUpState = () => ({
   fullName: "",
   plate: "",
   password: "",
+  vehicleType: "car",
   model: "",
   tuningStage: "Stock",
   horsepower: "",
@@ -11,7 +12,8 @@ export const createSignUpState = () => ({
   avatarFile: null,
   avatarFileName: "",
   avatarPreview: "",
-  privacyNoticeAccepted: false,
+  termsAccepted: false,
+  plateSearchEnabled: false,
 });
 
 export const createWashForm = () => ({

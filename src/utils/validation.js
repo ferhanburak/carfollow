@@ -8,21 +8,21 @@ export function validateSignUpForm(form, options = {}) {
       errors.email = "Enter a valid e-mail address.";
     }
   }
-  if (!form.fullName.trim()) errors.fullName = "Full name is required.";
+  if (!form.fullName.trim()) errors.fullName = "Gorunen ad zorunludur.";
   if (!form.plate.trim()) errors.plate = "Plate is required.";
-  if (!form.password.trim() || form.password.trim().length < 6) {
-    errors.password = "Password must be at least 6 characters.";
+  if (!form.password.trim() || form.password.trim().length < 8) {
+    errors.password = "Sifre en az 8 karakter olmali.";
   }
+  if (!["car", "motorcycle"].includes(form.vehicleType)) errors.vehicleType = "Arac turu zorunludur.";
   if (!form.model.trim()) errors.model = "Car/Bike model is required.";
-  if (!String(form.horsepower).trim() || Number(form.horsepower) <= 0) {
+  if (String(form.horsepower).trim() && Number(form.horsepower) <= 0) {
     errors.horsepower = "Horsepower must be greater than 0.";
   }
   if (!String(form.odometer).trim() || !Number.isFinite(Number(form.odometer)) || Number(form.odometer) < 0 || Number(form.odometer) > 5000000) {
     errors.odometer = "Mevcut KM 0 ile 5.000.000 arasinda olmali.";
   }
-  if (!form.garage.trim()) errors.garage = "Primary garage is required.";
-  if (form.privacyNoticeAccepted !== true) {
-    errors.privacyNoticeAccepted = "Kaydi tamamlamak icin KVKK aydinlatma metnini okudugunu onaylamalisin.";
+  if (form.termsAccepted !== true) {
+    errors.termsAccepted = "Kaydi tamamlamak icin Kullanim Kosullarini kabul etmelisin.";
   }
   return errors;
 }

@@ -109,7 +109,7 @@ function App() {
     setDmCenterView("list");
     setSettingsOpen(false);
     setSettingsSection(null);
-  }, [user?.firebaseUid]);
+  }, [user?.firebaseUid, user?.id]);
 
   const {
     activeConversation,
@@ -749,7 +749,16 @@ function App() {
             <p className="mt-2 text-sm text-neutral-400">Bu cihazdaki CRUISER oturumun kapanacak. Daha sonra e-posta ve sifrenle tekrar giris yapabilirsin.</p>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button type="button" onClick={() => setShowLogoutConfirm(false)} className="min-h-12 rounded-2xl border border-white/10 bg-white/5 font-semibold text-neutral-200">Vazgec</button>
-              <button type="button" onClick={() => void handleLogout()} className="min-h-12 rounded-2xl bg-rose-500 font-bold text-white shadow-[0_0_20px_rgba(244,63,94,0.35)]">Oturumu Kapat</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  void handleLogout();
+                }}
+                className="min-h-12 rounded-2xl bg-rose-500 font-bold text-white shadow-[0_0_20px_rgba(244,63,94,0.35)]"
+              >
+                Oturumu Kapat
+              </button>
             </div>
           </div>
         </div>

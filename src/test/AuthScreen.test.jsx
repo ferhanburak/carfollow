@@ -44,12 +44,14 @@ describe("Firebase authentication screen", () => {
       password: "seat1907",
       model: "Seat Ibiza Cupra",
       horsepower: "248",
+      odometer: "68420",
       garage: "Ankara Apex Garage",
+      termsAccepted: true,
     };
 
     expect(validateSignUpForm(baseForm, { requireEmail: true }).email).toBe("E-mail is required.");
     expect(validateSignUpForm({ ...baseForm, email: "driver@example.com" }, { requireEmail: true }).email).toBeUndefined();
-    expect(validateSignUpForm({ ...baseForm, email: "driver@example.com" }, { requireEmail: true }).privacyNoticeAccepted).toBeTruthy();
-    expect(validateSignUpForm({ ...baseForm, email: "driver@example.com", privacyNoticeAccepted: true }, { requireEmail: true }).privacyNoticeAccepted).toBeUndefined();
+    expect(validateSignUpForm({ ...baseForm, email: "driver@example.com", termsAccepted: false }, { requireEmail: true }).termsAccepted).toBeTruthy();
+    expect(validateSignUpForm({ ...baseForm, email: "driver@example.com", horsepower: "", garage: "" }, { requireEmail: true })).toEqual({});
   });
 });

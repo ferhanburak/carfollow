@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../App";
 
@@ -142,6 +142,10 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Ayarlar listesine don" }));
     await user.click(screen.getByRole("button", { name: "Oturumu Kapat" }));
     expect(screen.getByText("Oturumu kapat?")).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: "Oturumu Kapat" }).at(-1));
+    expect(await screen.findByText("CRUISER // ACCESS")).toBeInTheDocument();
+    expect(screen.queryByText("Oturumu kapat?")).not.toBeInTheDocument();
   });
 
   it("keeps the Social screen focused on friendships instead of embedding DM", async () => {
@@ -171,9 +175,10 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Sign Up" }));
     await user.click(screen.getByRole("button", { name: "Build My Garage" }));
 
-    expect(screen.getByText("Full name is required.")).toBeInTheDocument();
+    expect(screen.getAllByText("Zorunlu alanlari doldurunuz.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Gorunen ad zorunludur.")).toBeInTheDocument();
     expect(screen.getByText("Plate is required.")).toBeInTheDocument();
-    expect(screen.getByText("Primary garage is required.")).toBeInTheDocument();
+    expect(screen.queryByText("Primary garage is required.")).not.toBeInTheDocument();
     expect(screen.getByText("Mevcut KM 0 ile 5.000.000 arasinda olmali.")).toBeInTheDocument();
   });
 
@@ -182,19 +187,33 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: "Sign Up" }));
-    await user.type(screen.getByLabelText("Full Name"), "Yeni Surucu");
-    await user.type(screen.getByLabelText("Plate"), "06 NEW 606");
-    await user.type(screen.getByLabelText("Password"), "secure123");
-    await user.type(screen.getByLabelText("Car/Bike Model"), "Honda Civic");
-    await user.type(screen.getByLabelText("Horsepower"), "182");
-    await user.type(screen.getByLabelText("Mevcut KM"), "54321");
-    await user.type(screen.getByLabelText("Primary Garage/Tuning Shop"), "Ankara Garage");
+    await user.type(screen.getByLabelText(/Gorunen Ad/), "Yeni Surucu");
+    await user.type(screen.getByLabelText(/Plate/), "06 NEW 606");
+    await user.type(screen.getByLabelText(/Password/), "secure123");
+    await user.type(screen.getByLabelText(/Car\/Bike Model/), "Honda Civic");
+    await user.type(screen.getByLabelText(/Horsepower/), "182");
+    await user.type(screen.getByLabelText(/Mevcut KM/), "54321");
+    await user.type(screen.getByLabelText(/Primary Garage\/Tuning Shop/), "Ankara Garage");
     await user.upload(screen.getByLabelText("Profil Fotografi"), new File(["avatar"], "avatar.png", { type: "image/png" }));
-    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("checkbox", { name: /Kullanim Kosullarini kabul ediyorum/i }));
     expect(await screen.findByAltText("Profil fotografi onizleme")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Build My Garage" }));
     expect(await screen.findByText("54.321 KM")).toBeInTheDocument();
+  });
+
+  it("shows a general required-fields notification for an incomplete event", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
+    await user.click(await screen.findByRole("button", { name: "Editoru Ac" }));
+    fireEvent.submit(screen.getByRole("button", { name: "Event Ekle" }).closest("form"));
+
+    expect((await screen.findAllByText("Zorunlu alanlari doldurunuz.")).length).toBeGreaterThan(0);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Zorunlu alanlari doldurunuz.");
+    expect(await screen.findByText("Node name is required.")).toBeInTheDocument();
+    expect(await screen.findByText("Route summary is required.")).toBeInTheDocument();
   });
 
   it("offers mileage editing and device photo upload in vehicle settings", async () => {

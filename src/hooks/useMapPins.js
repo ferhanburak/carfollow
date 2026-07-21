@@ -609,6 +609,7 @@ export function useMapPins({ initialWorld, user }) {
     const validationErrors = validateMapPinForm(mapPinForm);
     setMapPinErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
+      setMapPinFeedback("Zorunlu alanlari doldurunuz.");
       return;
     }
 

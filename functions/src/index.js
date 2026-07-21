@@ -276,6 +276,9 @@ exports.finalizeRegistration = secureCall("finalizeRegistration", { rateLimit: {
       uid: userId,
       email: request.auth?.token?.email,
       profile: request.data?.profile,
+      acceptTerms: request.data?.acceptTerms,
+      acceptPlateSearch: request.data?.acceptPlateSearch,
+      // Temporary rolling-deploy compatibility for older web clients.
       acceptKvkk: request.data?.acceptKvkk,
       timestamp,
     });

@@ -131,9 +131,12 @@ export function AuthScreen({
             </form>
           ) : (
             <form className="space-y-4" onSubmit={onSignUp}>
+              <p className="text-xs text-neutral-500">
+                <span className="font-bold text-rose-400">*</span> Zorunlu alan
+              </p>
               <div className="grid grid-cols-1 gap-4">
                 {isFirebaseAuth ? (
-                  <Field label="E-mail">
+                  <Field label="E-mail" required>
                     <input
                       type="email"
                       autoComplete="email"
@@ -147,7 +150,7 @@ export function AuthScreen({
                   </Field>
                 ) : null}
 
-                <Field label="Full Name">
+                <Field label="Gorunen Ad" required>
                   <input
                     value={signUpForm.fullName}
                     onChange={(event) =>
@@ -158,7 +161,7 @@ export function AuthScreen({
                   <FieldError>{signUpErrors.fullName}</FieldError>
                 </Field>
 
-                <Field label="Plate">
+                <Field label="Plate" required>
                   <input
                     value={signUpForm.plate}
                     onChange={(event) =>
@@ -169,7 +172,7 @@ export function AuthScreen({
                   <FieldError>{signUpErrors.plate}</FieldError>
                 </Field>
 
-                <Field label="Password">
+                <Field label="Password" required>
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -178,11 +181,36 @@ export function AuthScreen({
                       onSignUpFormChange((current) => ({ ...current, password: event.target.value }))
                     }
                     className={inputClassName}
+                    placeholder="En az 8 karakter"
                   />
                   <FieldError>{signUpErrors.password}</FieldError>
                 </Field>
 
-                <Field label="Car/Bike Model">
+                <Field label="Arac Turu" required>
+                  <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-black/20 p-2">
+                    {[
+                      ["car", "Otomobil"],
+                      ["motorcycle", "Motosiklet"],
+                    ].map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        aria-label={`${label} sec`}
+                        onClick={() => onSignUpFormChange((current) => ({ ...current, vehicleType: value }))}
+                        className={`min-h-12 rounded-xl text-sm font-semibold transition ${
+                          signUpForm.vehicleType === value
+                            ? "bg-lime-400 text-black"
+                            : "bg-white/[0.04] text-neutral-400"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <FieldError>{signUpErrors.vehicleType}</FieldError>
+                </Field>
+
+                <Field label="Car/Bike Model" required>
                   <input
                     value={signUpForm.model}
                     onChange={(event) =>
@@ -194,7 +222,7 @@ export function AuthScreen({
                 </Field>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="Tuning Stage">
+                  <Field label="Tuning Stage" optional>
                     <select
                       value={signUpForm.tuningStage}
                       onChange={(event) =>
@@ -207,7 +235,7 @@ export function AuthScreen({
                       ))}
                     </select>
                   </Field>
-                  <Field label="Horsepower">
+                  <Field label="Horsepower" optional>
                     <input
                       type="number"
                       value={signUpForm.horsepower}
@@ -220,7 +248,7 @@ export function AuthScreen({
                   </Field>
                 </div>
 
-                <Field label="Mevcut KM">
+                <Field label="Mevcut KM" required>
                   <input
                     type="number"
                     min="0"
@@ -236,7 +264,7 @@ export function AuthScreen({
                   <FieldError>{signUpErrors.odometer}</FieldError>
                 </Field>
 
-                <Field label="Profil Fotografi">
+                <Field label="Profil Fotografi" optional>
                   <input
                     aria-label="Profil Fotografi"
                     type="file"
@@ -256,7 +284,7 @@ export function AuthScreen({
                   ) : null}
                 </Field>
 
-                <Field label="Primary Garage/Tuning Shop">
+                <Field label="Primary Garage/Tuning Shop" optional>
                   <input
                     value={signUpForm.garage}
                     onChange={(event) =>
@@ -276,19 +304,37 @@ export function AuthScreen({
                   </div>
                 </details>
 
+                <details className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs text-neutral-400">
+                  <summary className="cursor-pointer font-semibold text-neutral-200">Kullanim Kosullari</summary>
+                  <div className="mt-3 space-y-2 leading-5">
+                    <p>CRUISER topluluk, surus ve arac kaydi ozellikleri guvenli ve hukuka uygun bicimde kullanilmalidir.</p>
+                    <p>Yaniltici arac bilgisi, taciz, tehlikeli surus organizasyonu ve diger kullanicilarin guvenligini riske atan davranislar hesap kisitlamasina neden olabilir.</p>
+                  </div>
+                </details>
+
                 <label className="flex gap-3 rounded-2xl border border-lime-400/20 bg-lime-400/[0.06] p-4 text-xs text-neutral-300">
                   <input
                     type="checkbox"
-                    checked={signUpForm.privacyNoticeAccepted}
-                    onChange={(event) => onSignUpFormChange((current) => ({ ...current, privacyNoticeAccepted: event.target.checked }))}
+                    checked={signUpForm.termsAccepted}
+                    onChange={(event) => onSignUpFormChange((current) => ({ ...current, termsAccepted: event.target.checked }))}
                     className="mt-0.5 h-5 w-5 shrink-0 accent-lime-400"
                   />
-                  <span>KVKK aydinlatma metnini okudum ve kisisel verilerimin hesap hizmetinin sunulmasi kapsaminda islenmesi hakkinda bilgilendirildim.</span>
+                  <span><span className="mr-1 font-bold text-rose-400">*</span>Kullanim Kosullarini kabul ediyorum.</span>
                 </label>
-                <FieldError>{signUpErrors.privacyNoticeAccepted}</FieldError>
+                <FieldError>{signUpErrors.termsAccepted}</FieldError>
+
+                <label className="flex gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-xs text-neutral-300">
+                  <input
+                    type="checkbox"
+                    checked={signUpForm.plateSearchEnabled}
+                    onChange={(event) => onSignUpFormChange((current) => ({ ...current, plateSearchEnabled: event.target.checked }))}
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-lime-400"
+                  />
+                  <span>Tam plakam yazildiginda diger kullanicilarin beni bulabilmesini istiyorum. <span className="text-neutral-500">Istege bagli</span></span>
+                </label>
 
                 <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-xs leading-5 text-neutral-400">
-                  Plaka aramasi arkadaslik sisteminin temelidir. Yalnizca giris yapmis kullanicilar tam plakayi yazarak eslesen hesabi gorebilir.
+                  KVKK Aydinlatma Metni kayit sirasinda sunulur ve metin surumu sistemde kaydedilir. Istege bagli plaka aramasi daha sonra Gizlilik ayarlarindan degistirilebilir.
                 </div>
               </div>
 

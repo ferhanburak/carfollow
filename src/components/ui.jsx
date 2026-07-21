@@ -1,16 +1,26 @@
-export function Field({ label, children }) {
+function FieldLabel({ label, required, optional }) {
+  return (
+    <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">
+      {label}
+      {required ? <span className="ml-1 text-rose-400" aria-hidden="true">*</span> : null}
+      {optional ? <span className="ml-2 text-[9px] tracking-[0.12em] text-neutral-600">Istege bagli</span> : null}
+    </span>
+  );
+}
+
+export function Field({ label, children, optional = false, required = false }) {
   return (
     <label className="block space-y-2">
-      <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">{label}</span>
+      <FieldLabel label={label} optional={optional} required={required} />
       {children}
     </label>
   );
 }
 
-export function CompactField({ label, children }) {
+export function CompactField({ label, children, optional = false, required = false }) {
   return (
     <label className="space-y-2">
-      <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">{label}</span>
+      <FieldLabel label={label} optional={optional} required={required} />
       {children}
     </label>
   );

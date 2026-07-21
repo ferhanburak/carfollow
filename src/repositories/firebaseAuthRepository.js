@@ -94,7 +94,8 @@ export async function registerFirebaseAccount({ email, password, user, avatarFil
     const { httpsCallable } = await import("firebase/functions");
     await httpsCallable(services.functions, "finalizeRegistration")({
       profile: nextUser,
-      acceptKvkk: true,
+      acceptTerms: true,
+      acceptPlateSearch: nextUser.privacy?.plateSearchEnabled === true,
     });
     return loadFirebaseAuthenticatedProfile(credential.user);
   } catch (error) {

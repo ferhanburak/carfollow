@@ -100,7 +100,7 @@ export function getQuickProfileByCredentials(plate, password) {
 }
 
 export function createSignedUpUser(signUpForm, identity = {}) {
-  const vehicleType = inferVehicleType(signUpForm.model);
+  const vehicleType = signUpForm.vehicleType === "motorcycle" ? "motorcycle" : "car";
   const odometer = Number(signUpForm.odometer);
   const id = identity.id ?? `signup-${Date.now()}`;
   const primaryVehicleId = resolvePrimaryVehicleId(
@@ -116,20 +116,28 @@ export function createSignedUpUser(signUpForm, identity = {}) {
     model: signUpForm.model,
     tuningStage: signUpForm.tuningStage,
     horsepower: Number(signUpForm.horsepower || 0),
-    garage: signUpForm.garage,
+    garage: signUpForm.garage.trim() || "Belirtilmedi",
     privacy: {
-      plateSearchEnabled: true,
+      plateSearchEnabled: signUpForm.plateSearchEnabled === true,
       showModelInSearch: true,
       showRegionInSearch: false,
       locationPrecision: "approximate",
       safeZoneEnabled: true,
       kvkkConsentVersion: "2026-07",
     },
-    privacyConsent: {
-      version: "2026-07",
-      kvkkAcceptedAt: Date.now(),
-      plateSearchConsent: true,
+    legalAcceptance: {
+      termsVersion: "2026-07",
+      termsAcceptedAt: Date.now(),
+      privacyNoticeVersion: "2026-07",
+      privacyNoticePresentedAt: Date.now(),
     },
+    ...(signUpForm.plateSearchEnabled === true ? {
+      privacyConsent: {
+        version: "2026-07",
+        kvkkAcceptedAt: Date.now(),
+        plateSearchConsent: true,
+      },
+    } : {}),
     odometer,
     badges: ["Yeni Uye", "Garajda Aktif"],
     clan: "Lowline Union",

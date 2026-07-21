@@ -29,7 +29,7 @@ function getAuthErrorMessage(error) {
     "auth/network-request-failed": "Firebase baglantisi kurulamadi. Internet baglantisini kontrol et.",
     "auth/operation-not-allowed": "Firebase Console'da Email/Password giris yontemini etkinlestir.",
     "auth/too-many-requests": "Cok fazla deneme yapildi. Biraz bekleyip tekrar dene.",
-    "auth/weak-password": "Sifre en az 6 karakter olmali.",
+    "auth/weak-password": "Sifre en az 8 karakter olmali.",
     "cruiser/firebase-unavailable": "Firebase su anda kullanilamiyor.",
     "cruiser/plate-already-in-use": "Bu plaka baska bir CRUISER hesabinda kayitli.",
     "cruiser/profile-not-found": "Firebase hesabi bulundu fakat CRUISER profili eksik.",
@@ -233,6 +233,8 @@ export function useCruiserAuth() {
     setAuthError("");
     setAuthFeedback("");
     if (Object.keys(validationErrors).length > 0) {
+      setAuthError("Zorunlu alanlari doldurunuz.");
+      setAuthMode("error");
       return null;
     }
 
