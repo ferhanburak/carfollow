@@ -17,6 +17,7 @@ import { useFirebaseSync } from "./useFirebaseSync";
 import { useClanGraph } from "./useClanGraph";
 import { useConvoyTracking } from "./useConvoyTracking";
 import { useMapPins } from "./useMapPins";
+import { useLiveLocation } from "./useLiveLocation";
 import { useModeration } from "./useModeration";
 import { useNotifications } from "./useNotifications";
 import { useProfileEditor } from "./useProfileEditor";
@@ -37,6 +38,9 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   const [fuelPending, setFuelPending] = useState(false);
   const [clans, setClans] = useState(initialWorld.clans);
   const [drivers, setDrivers] = useState([]);
+  const liveLocation = useLiveLocation({
+    enabled: Boolean(user) && ["map", "liveMap", "drive"].includes(activeTab),
+  });
 
   const {
     profileCompletion,
@@ -140,6 +144,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     onSessionStart: startDriveSession,
     onSessionFinish: finishDriveSession,
     serverOwnedDriverStats,
+    liveLocation,
   });
 
   const {
@@ -346,6 +351,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     likeGalleryImage,
     likePin,
     loadSpotPhotoFile,
+    liveLocation,
     mapDraftLocation,
     mapPickMode,
     mapPinErrors,

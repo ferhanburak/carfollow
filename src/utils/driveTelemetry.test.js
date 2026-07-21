@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   getDistanceMeters,
+  getBearingDegrees,
   getGeolocationErrorStatus,
   processGpsPosition,
+  smoothGpsLocation,
 } from "./driveTelemetry";
 
 function position({
   accuracy = 8,
+  heading = null,
   lat = 39.92,
   lng = 32.85,
   speed = null,
@@ -15,6 +18,7 @@ function position({
   return {
     coords: {
       accuracy,
+      heading,
       latitude: lat,
       longitude: lng,
       speed,
@@ -84,5 +88,15 @@ describe("drive telemetry", () => {
       status: "denied",
       message: "Konum izni reddedildi. Surus verisi kaydedilmiyor.",
     });
+  });
+
+  it("derives heading and smooths map movement without jumping to the raw fix", () => {
+    const previous = { accuracy: 8, heading: 0, lat: 39.92, lng: 32.85, speedKmh: 0 };
+    const reading = processGpsPosition(null, position({ heading: null, lat: 39.9203, timestamp: 2_000 }));
+    const smoothed = smoothGpsLocation(previous, reading);
+
+    expect(getBearingDegrees(previous, reading.location)).toBeCloseTo(0, 0);
+    expect(smoothed.lat).toBeGreaterThan(previous.lat);
+    expect(smoothed.lat).toBeLessThan(reading.location.lat);
   });
 });

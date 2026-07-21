@@ -11,8 +11,8 @@ vi.mock("@react-google-maps/api", () => ({
     </div>
   ),
   InfoWindowF: ({ children }) => <div>{children}</div>,
-  MarkerF: ({ position, title }) => (
-    <div data-testid="map-marker" data-position={JSON.stringify(position)} data-title={title ?? ""} />
+  MarkerF: ({ icon, position, title, zIndex }) => (
+    <div data-testid="map-marker" data-icon={JSON.stringify(icon)} data-position={JSON.stringify(position)} data-title={title ?? ""} data-z-index={zIndex} />
   ),
   PolylineF: ({ path }) => <div data-testid="map-polyline" data-path={JSON.stringify(path)} />,
   useJsApiLoader: () => ({ isLoaded: true, loadError: null }),
@@ -32,7 +32,7 @@ describe("GoogleMapCard convoy overlays", () => {
       maps: {
         Point: class Point {},
         Size: class Size {},
-        SymbolPath: { CIRCLE: "circle" },
+        SymbolPath: { CIRCLE: "circle", FORWARD_CLOSED_ARROW: "forward-arrow" },
         importLibrary: vi.fn().mockResolvedValue({
           Route: {
             computeRoutes: vi.fn().mockResolvedValue({
@@ -113,5 +113,50 @@ describe("GoogleMapCard convoy overlays", () => {
 
     expect(screen.getByTestId("google-map-shell")).toHaveClass("absolute", "inset-0", "h-full", "w-full");
     expect(screen.getByTestId("google-map-shell")).not.toHaveClass("relative");
+  });
+
+  it("renders self, friend, clan and stranger markers with relationship priority", () => {
+    const drivers = [
+      { firebaseUid: "self-1", lat: 39.91, lng: 32.81, plate: "06 SELF 01", vehicle: "Self Car", locationVisibility: "exact" },
+      { firebaseUid: "friend-clan-1", lat: 39.92, lng: 32.82, plate: "06 FRIEND 01", vehicle: "Friend Car", locationVisibility: "exact" },
+      { firebaseUid: "clan-1", lat: 39.93, lng: 32.83, plate: "06 CLAN 01", vehicle: "Clan Car", locationVisibility: "exact" },
+      { firebaseUid: "other-1", lat: 39.94, lng: 32.84, plate: "06 OTHER 01", vehicle: "Other Car", locationVisibility: "approximate" },
+      { firebaseUid: "blocked-1", lat: 39.95, lng: 32.85, plate: "06 BLOCK 01", vehicle: "Blocked Car", locationVisibility: "exact" },
+    ];
+
+    render(
+      <GoogleMapCard
+        mapsApiKey="test-key"
+        drivers={drivers}
+        currentClanMembers={[{ userId: "friend-clan-1" }, { userId: "clan-1" }]}
+        pins={[]}
+        selectedPin={null}
+        selectedPinId={null}
+        onSelect={vi.fn()}
+        user={{
+          firebaseUid: "self-1",
+          blockedDrivers: [{ userId: "blocked-1" }],
+          friends: [{ userId: "friend-clan-1" }],
+        }}
+        driveHud={{}}
+        liveLocation={{ location: { accuracy: 7, heading: 84, lat: 39.9, lng: 32.8 }, status: "live" }}
+        draftRoutePath={[]}
+        isDriving={false}
+        mapPickMode="node"
+        fullScreen
+        navigationMode
+        mapHeight="18rem"
+      />,
+    );
+
+    const markers = screen.getAllByTestId("map-marker");
+    const markerByTitle = (value) => markers.find((marker) => marker.dataset.title.includes(value));
+    expect(JSON.parse(markerByTitle("Senin konumun").dataset.icon)).toMatchObject({ fillColor: "#38bdf8", path: "forward-arrow", rotation: 84 });
+    expect(JSON.parse(markerByTitle("Friend Car").dataset.icon).fillColor).toBe("#22c55e");
+    expect(JSON.parse(markerByTitle("Clan Car").dataset.icon).fillColor).toBe("#facc15");
+    expect(JSON.parse(markerByTitle("Other Car").dataset.icon).fillColor).toBe("#f43f5e");
+    expect(markerByTitle("Self Car")).toBeUndefined();
+    expect(markerByTitle("Blocked Car")).toBeUndefined();
+    expect(screen.getByLabelText("Surucu renkleri")).toBeInTheDocument();
   });
 });

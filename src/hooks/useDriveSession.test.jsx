@@ -1,25 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { useDriveSession } from "./useDriveSession";
-
-const geolocation = {
-  clearWatch: vi.fn(),
-  watchPosition: vi.fn(() => 42),
-};
-
-beforeEach(() => {
-  geolocation.clearWatch.mockClear();
-  geolocation.watchPosition.mockClear();
-  geolocation.watchPosition.mockReturnValue(42);
-  Object.defineProperty(navigator, "geolocation", {
-    configurable: true,
-    value: geolocation,
-  });
-});
-
-afterEach(() => {
-  delete navigator.geolocation;
-});
 
 function createHookProps(overrides = {}) {
   return {
@@ -46,6 +27,7 @@ function createHookProps(overrides = {}) {
       rejectedKm: 0,
     }),
     serverOwnedDriverStats: true,
+    liveLocation: { error: "", location: null, sample: null, status: "requesting" },
     ...overrides,
   };
 }
@@ -117,27 +99,46 @@ describe("useDriveSession", () => {
 
   it("updates speed, distance, and odometer from real GPS fixes", async () => {
     let currentUser;
+    let liveLocation = createHookProps().liveLocation;
     const props = createHookProps();
     currentUser = props.user;
     props.setUser.mockImplementation((updater) => {
       currentUser = updater(currentUser);
     });
-    const { result } = renderHook(() => useDriveSession(props));
+    const { result, rerender } = renderHook(() => useDriveSession({ ...props, liveLocation }));
 
     await act(async () => {
       await result.current.toggleDrive();
     });
 
-    const onPosition = geolocation.watchPosition.mock.calls[0][0];
+    liveLocation = {
+      error: "",
+      location: { accuracy: 8, heading: 0, lat: 39.92, lng: 32.85 },
+      sample: {
+        id: 1,
+        position: {
+          coords: { accuracy: 8, heading: 0, latitude: 39.92, longitude: 32.85, speed: 10 },
+          timestamp: 1_000,
+        },
+      },
+      status: "live",
+    };
     act(() => {
-      onPosition({
-        coords: { accuracy: 8, latitude: 39.92, longitude: 32.85, speed: 10 },
-        timestamp: 1_000,
-      });
-      onPosition({
-        coords: { accuracy: 8, latitude: 39.9209, longitude: 32.85, speed: null },
-        timestamp: 11_000,
-      });
+      rerender();
+    });
+    liveLocation = {
+      ...liveLocation,
+      location: { accuracy: 8, heading: 0, lat: 39.9209, lng: 32.85 },
+      sample: {
+        id: 2,
+        position: {
+          coords: { accuracy: 8, heading: 0, latitude: 39.9209, longitude: 32.85, speed: null },
+          timestamp: 11_000,
+        },
+      },
+    };
+    act(() => {
+      rerender();
     });
 
     expect(result.current.driveHud.gpsStatus).toBe("live");

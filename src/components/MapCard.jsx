@@ -3,6 +3,7 @@ import { GoogleMap, InfoWindowF, MarkerF, PolylineF, useJsApiLoader } from "@rea
 import { getPinIcon } from "../constants/pins";
 import { getConvoyAccessState } from "../utils/meetVisibility";
 import { buildMapOverlayModel, getActiveConvoyRoute, hasValidMapCoordinates } from "../utils/mapOverlays";
+import { buildVisibleMapDrivers } from "../utils/mapDriverRelations";
 
 const mapContainerStyle = {
   width: "100%",
@@ -353,31 +354,55 @@ function getMarkerLabel(pin) {
   };
 }
 
-function getCurrentLocationIcon() {
+function getCurrentLocationIcon(heading = 0) {
   if (typeof window === "undefined" || !window.google?.maps) {
     return undefined;
   }
 
   return {
-    path: window.google.maps.SymbolPath.CIRCLE,
-    fillColor: "#f43f5e",
+    path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+    fillColor: "#38bdf8",
     fillOpacity: 1,
-    strokeColor: "#ffe4e6",
+    strokeColor: "#e0f2fe",
     strokeWeight: 3,
-    scale: 9,
+    rotation: Number.isFinite(Number(heading)) ? Number(heading) : 0,
+    scale: 7,
   };
 }
 
-function getActiveDriverIcon(locationVisibility) {
+const driverMarkerTones = {
+  friend: { fill: "#22c55e", stroke: "#dcfce7", scale: 8, zIndex: 998 },
+  clan: { fill: "#facc15", stroke: "#fef9c3", scale: 8, zIndex: 997 },
+  stranger: { fill: "#f43f5e", stroke: "#ffe4e6", scale: 7, zIndex: 996 },
+};
+
+function getActiveDriverIcon(relation, locationVisibility) {
   if (typeof window === "undefined" || !window.google?.maps) return undefined;
+  const tone = driverMarkerTones[relation] ?? driverMarkerTones.stranger;
   return {
     path: window.google.maps.SymbolPath.CIRCLE,
-    fillColor: locationVisibility === "approximate" ? "#facc15" : "#a3e635",
-    fillOpacity: 0.95,
-    strokeColor: "#0a0a0a",
-    strokeWeight: 4,
-    scale: locationVisibility === "approximate" ? 8 : 7,
+    fillColor: tone.fill,
+    fillOpacity: locationVisibility === "approximate" ? 0.72 : 0.95,
+    strokeColor: tone.stroke,
+    strokeWeight: 3,
+    scale: locationVisibility === "approximate" ? tone.scale + 1 : tone.scale,
   };
+}
+
+function getDriverRelationLabel(relation) {
+  if (relation === "friend") return "Arkadas";
+  if (relation === "clan") return "Klan";
+  return "Diger surucu";
+}
+
+function MapDriverLegend() {
+  return (
+    <div aria-label="Surucu renkleri" className="pointer-events-none absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-xl border border-white/10 bg-black/75 px-2.5 py-2 text-[9px] text-neutral-300 backdrop-blur">
+      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />Arkadas</span>
+      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-400" />Klan</span>
+      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-500" />Diger</span>
+    </div>
+  );
 }
 
 function getDraftLocationIcon() {
@@ -551,6 +576,7 @@ function FallbackGridMap({ pins, selectedPinId, onSelect, fullScreen = false, ma
 
 export function MapCard({
   drivers = [],
+  currentClanMembers = [],
   pins,
   selectedPinId,
   onSelect,
@@ -559,6 +585,7 @@ export function MapCard({
   onRequestFriend,
   user,
   driveHud,
+  liveLocation,
   draftLocation,
   draftRoutePath,
   isDriving = false,
@@ -610,6 +637,7 @@ export function MapCard({
     <GoogleMapCard
       mapsApiKey={mapsApiKey}
       drivers={drivers}
+      currentClanMembers={currentClanMembers}
       pins={mappablePins}
       selectedPin={selectedPin}
       selectedPinId={selectedPinId}
@@ -619,6 +647,7 @@ export function MapCard({
       onRequestFriend={onRequestFriend}
       user={user}
       driveHud={driveHud}
+      liveLocation={liveLocation}
       draftLocation={draftLocation}
       draftRoutePath={draftRoutePath}
       isDriving={isDriving}
@@ -634,6 +663,7 @@ export function MapCard({
 export function GoogleMapCard({
   mapsApiKey,
   drivers,
+  currentClanMembers = [],
   pins,
   selectedPin,
   selectedPinId,
@@ -643,6 +673,7 @@ export function GoogleMapCard({
   onRequestFriend,
   user,
   driveHud,
+  liveLocation,
   draftLocation,
   draftRoutePath,
   isDriving,
@@ -653,18 +684,12 @@ export function GoogleMapCard({
   mapHeight,
 }) {
   const mapRef = useRef(null);
-  const watchIdRef = useRef(null);
   const shouldAutoFrameRouteRef = useRef(true);
   const previousSelectedPinIdRef = useRef(selectedPinId);
   const [routeState, setRouteState] = useState({
     path: [],
     distanceMeters: null,
     duration: null,
-    source: "idle",
-    error: "",
-  });
-  const [currentLocation, setCurrentLocation] = useState(null);
-  const [locationState, setLocationState] = useState({
     source: "idle",
     error: "",
   });
@@ -692,6 +717,11 @@ export function GoogleMapCard({
   const convoyGhostMarkers = getConvoyGhostMarkers(selectedPin, user, driveHud, isDriving);
   const selectedGhostMarker = convoyGhostMarkers.find((marker) => marker.id === selectedGhostMarkerId) ?? null;
   const selectedGhostFriendship = selectedGhostMarker ? getFriendshipStatus(user, selectedGhostMarker.plate) : "none";
+  const currentLocation = liveLocation?.location ?? null;
+  const visibleDrivers = useMemo(
+    () => buildVisibleMapDrivers(drivers, user, currentClanMembers),
+    [currentClanMembers, drivers, user],
+  );
 
   useEffect(() => {
     setFollowCurrentLocation(Boolean(navigationMode));
@@ -704,95 +734,6 @@ export function GoogleMapCard({
       setSelectedGhostMarkerId(null);
     }
   }, [selectedPinId]);
-
-  useEffect(() => {
-    if (!isLoaded || typeof navigator === "undefined" || !navigator.geolocation) {
-      setLocationState({
-        source: "unsupported",
-        error: "",
-      });
-      return;
-    }
-
-    let cancelled = false;
-
-    setLocationState({
-      source: "loading",
-      error: "",
-    });
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        if (cancelled) {
-          return;
-        }
-
-        setCurrentLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-        setLocationState({
-          source: "ready",
-          error: "",
-        });
-      },
-      (error) => {
-        if (cancelled) {
-          return;
-        }
-
-        setLocationState({
-          source: "blocked",
-          error: error.message || "Location access denied.",
-        });
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 60000,
-        timeout: 10000,
-      },
-    );
-
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (position) => {
-        if (cancelled) {
-          return;
-        }
-
-        setCurrentLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-        setLocationState({
-          source: "ready",
-          error: "",
-        });
-      },
-      (error) => {
-        if (cancelled) {
-          return;
-        }
-
-        setLocationState({
-          source: "blocked",
-          error: error.message || "Location tracking denied.",
-        });
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 3000,
-        timeout: 10000,
-      },
-    );
-
-    return () => {
-      cancelled = true;
-      if (watchIdRef.current != null && navigator.geolocation) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-    };
-  }, [isLoaded]);
 
   useEffect(() => {
     if (!isLoaded || !hasMockRoute || selectedPin?.type !== "meet") {
@@ -995,20 +936,20 @@ export function GoogleMapCard({
             {currentLocation ? (
               <MarkerF
                 position={currentLocation}
-                title="Current location"
+                title="Senin konumun"
                 zIndex={999}
-                icon={getCurrentLocationIcon()}
+                icon={getCurrentLocationIcon(currentLocation.heading)}
               />
             ) : null}
-            {drivers
+            {visibleDrivers
               .filter((driver) => hasValidMapCoordinates(driver))
               .map((driver) => (
                 <MarkerF
-                  key={`active-driver-${driver.firebaseUid}`}
+                  key={`active-driver-${driver.firebaseUid ?? driver.userId ?? driver.plate}`}
                   position={{ lat: Number(driver.lat), lng: Number(driver.lng) }}
-                  title={`${driver.plate} / ${driver.vehicle}`}
-                  zIndex={996}
-                  icon={getActiveDriverIcon(driver.locationVisibility)}
+                  title={`${driver.plate} / ${driver.vehicle} / ${getDriverRelationLabel(driver.mapRelation)}`}
+                  zIndex={driverMarkerTones[driver.mapRelation]?.zIndex ?? 996}
+                  icon={getActiveDriverIcon(driver.mapRelation, driver.locationVisibility)}
                 />
               ))}
             {draftRoutePath?.map((point, index) => {
@@ -1126,6 +1067,7 @@ export function GoogleMapCard({
               </InfoWindowF>
             ) : null}
           </GoogleMap>
+          {visibleDrivers.length ? <MapDriverLegend /> : null}
         </div>
       ) : null}
 
@@ -1139,7 +1081,7 @@ export function GoogleMapCard({
       ) : null}
 
       {routeState.error ? <p className="mt-3 text-xs text-neutral-500">{routeState.error}</p> : null}
-      {locationState.source === "blocked" ? <p className="mt-2 text-xs text-neutral-500">{locationState.error}</p> : null}
+      {["denied", "timeout", "unavailable", "error"].includes(liveLocation?.status) ? <p className="mt-2 text-xs text-neutral-500">{liveLocation.error}</p> : null}
     </div>
   );
 }

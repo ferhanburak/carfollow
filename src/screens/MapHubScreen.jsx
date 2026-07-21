@@ -10,6 +10,7 @@ export function MapHubScreen({
   likeGalleryImage,
   likePin,
   loadSpotPhotoFile,
+  liveLocation,
   mapPickMode,
   mapPinErrors,
   mapPinFeedback,
@@ -52,6 +53,7 @@ export function MapHubScreen({
         selectedPinId={selectedPinId}
         onSelect={onSelectPin}
         user={user}
+        liveLocation={liveLocation}
         draftLocation={draftLocation}
         draftRoutePath={mapPinForm.routePoints}
         mapPickMode={mapPickMode}

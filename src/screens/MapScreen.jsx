@@ -205,6 +205,7 @@ function OverlayCard({ children, title, onClose }) {
 export function MapScreen({
   convoyFeedback,
   convoyTracking,
+  currentClanMembers,
   drivers,
   driveHud,
   driveSessionStatus,
@@ -214,6 +215,7 @@ export function MapScreen({
   likeGalleryImage,
   likePin,
   loadSpotPhotoFile,
+  liveLocation,
   mapPins,
   onGhostOpenConversation,
   onGhostOpenProfile,
@@ -320,6 +322,7 @@ export function MapScreen({
       <div className="relative min-h-0 flex-1 overflow-hidden rounded-[1.35rem] border border-white/10">
         <MapCard
           drivers={drivers}
+          currentClanMembers={currentClanMembers}
           pins={mapPins}
           selectedPinId={selectedPinId}
           onSelect={(pinId) => {
@@ -330,6 +333,7 @@ export function MapScreen({
           onOpenDriverProfile={onGhostOpenProfile}
           onRequestFriend={onGhostRequestFriend}
           user={user}
+          liveLocation={liveLocation}
           driveHud={driveHud}
           draftRoutePath={[]}
           fullScreen

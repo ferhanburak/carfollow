@@ -177,6 +177,7 @@ function App() {
     likeGalleryImage,
     likePin,
     loadSpotPhotoFile,
+    liveLocation,
     mapDraftLocation,
     mapPickMode,
     mapPinErrors,
@@ -438,6 +439,7 @@ function App() {
                 likeGalleryImage={likeGalleryImage}
                 likePin={likePin}
                 loadSpotPhotoFile={loadSpotPhotoFile}
+                liveLocation={liveLocation}
                 mapPickMode={mapPickMode}
                 mapPinErrors={mapPinErrors}
                 mapPinFeedback={mapPinFeedback}
@@ -478,6 +480,7 @@ function App() {
             {activeTab === "liveMap" ? (
               <MapScreen
                 drivers={drivers}
+                currentClanMembers={currentClanMembers}
                 driveHud={driveHud}
                 driveSessionStatus={driveSessionStatus}
                 headerActions={(
@@ -512,6 +515,7 @@ function App() {
                 likeGalleryImage={likeGalleryImage}
                 likePin={likePin}
                 loadSpotPhotoFile={loadSpotPhotoFile}
+                liveLocation={liveLocation}
                 mapPins={mapPins}
                 onGhostOpenConversation={(profile) => {
                   void openDmConversation(profile);

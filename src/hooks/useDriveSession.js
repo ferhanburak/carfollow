@@ -3,7 +3,7 @@ import {
   incrementClanKm,
   incrementUserOdometer,
 } from "../repositories/cruiserRepository";
-import { getGeolocationErrorStatus, processGpsPosition } from "../utils/driveTelemetry";
+import { processGpsPosition } from "../utils/driveTelemetry";
 
 function createInitialDriveHud() {
   return {
@@ -34,6 +34,7 @@ export function useDriveSession({
   onSessionStart,
   onSessionFinish,
   serverOwnedDriverStats = false,
+  liveLocation,
 }) {
   const [isDriving, setIsDriving] = useState(false);
   const [driveHud, setDriveHud] = useState(createInitialDriveHud);
@@ -61,100 +62,72 @@ export function useDriveSession({
       liveLocationRef.current = null;
       gpsPointRef.current = null;
       gpsStatusRef.current = "idle";
-      return undefined;
+      return;
     }
 
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      gpsStatusRef.current = "unavailable";
+    const status = liveLocation?.status ?? "requesting";
+    if (["denied", "timeout", "unavailable", "error"].includes(status)) {
+      gpsStatusRef.current = status;
       setDriveHud((current) => ({
         ...current,
-        etaNode: getGpsNodeLabel("unavailable"),
-        gpsStatus: "unavailable",
+        accuracy: null,
+        etaNode: getGpsNodeLabel(status),
+        gpsStatus: status,
         speed: 0,
       }));
-      setDriveSessionFeedback("Bu cihaz veya tarayici GPS erisimi sunmuyor; mesafe kaydedilmiyor.");
-      return undefined;
+      setDriveSessionFeedback(liveLocation?.error || "GPS verisi okunamadi; mesafe kaydedilmiyor.");
+      return;
     }
 
-    setDriveHud((current) => ({
-      ...current,
-      etaNode: getGpsNodeLabel("requesting"),
-      gpsStatus: "requesting",
-      speed: 0,
-    }));
-    gpsStatusRef.current = "requesting";
+    if (["idle", "requesting"].includes(status)) {
+      gpsStatusRef.current = "requesting";
+      setDriveHud((current) => ({ ...current, etaNode: getGpsNodeLabel("requesting"), gpsStatus: "requesting", speed: 0 }));
+    }
+  }, [isDriving, liveLocation?.error, liveLocation?.status]);
 
-    const geolocation = navigator.geolocation;
-    const watchId = geolocation.watchPosition(
-      (position) => {
-        const reading = processGpsPosition(gpsPointRef.current, position);
-        liveLocationRef.current = reading.location;
-        if (reading.accepted) {
-          gpsPointRef.current = reading.nextPoint;
+  useEffect(() => {
+    const position = liveLocation?.sample?.position;
+    if (!isDriving || !position) return;
+
+    const reading = processGpsPosition(gpsPointRef.current, position);
+    liveLocationRef.current = liveLocation?.location ?? reading.location;
+    if (reading.accepted) gpsPointRef.current = reading.nextPoint;
+
+    const previousGpsStatus = gpsStatusRef.current;
+    gpsStatusRef.current = reading.gpsStatus;
+    startTransition(() => {
+      setDriveHud((current) => ({
+        ...current,
+        accuracy: reading.accuracy ?? null,
+        etaNode: getGpsNodeLabel(reading.gpsStatus),
+        gpsStatus: reading.gpsStatus,
+        lastFixAt: reading.timestamp ?? Date.now(),
+        sessionKm: Number((current.sessionKm + reading.distanceKm).toFixed(4)),
+        speed: reading.speedKmh,
+      }));
+
+      if (reading.distanceKm > 0) {
+        setUser((current) => (
+          current
+            ? incrementUserOdometer(current, {
+              distanceKm: reading.distanceKm,
+              incrementMonthlyKm: !serverOwnedDriverStats,
+            })
+            : current
+        ));
+
+        if (!serverOwnedDriverStats) {
+          setClans((current) => incrementClanKm(current, userRef.current?.clan, reading.distanceKm));
         }
+      }
+    });
 
-        const previousGpsStatus = gpsStatusRef.current;
-        gpsStatusRef.current = reading.gpsStatus;
-        startTransition(() => {
-          setDriveHud((current) => ({
-            ...current,
-            accuracy: reading.accuracy ?? null,
-            etaNode: getGpsNodeLabel(reading.gpsStatus),
-            gpsStatus: reading.gpsStatus,
-            lastFixAt: reading.timestamp ?? Date.now(),
-            sessionKm: Number((current.sessionKm + reading.distanceKm).toFixed(4)),
-            speed: reading.speedKmh,
-          }));
-
-          if (reading.distanceKm > 0) {
-            setUser((current) => (
-              current
-                ? incrementUserOdometer(current, {
-                  distanceKm: reading.distanceKm,
-                  incrementMonthlyKm: !serverOwnedDriverStats,
-                })
-                : current
-            ));
-
-            if (!serverOwnedDriverStats) {
-              setClans((current) => incrementClanKm(
-                current,
-                userRef.current?.clan,
-                reading.distanceKm,
-              ));
-            }
-          }
-        });
-
-        if (reading.gpsStatus === "live" && previousGpsStatus !== "live") {
-          setDriveSessionFeedback("Gercek GPS telemetrisi aktif; hiz ve mesafe cihaz konumundan hesaplaniyor.");
-        } else if (reading.gpsStatus === "weak" && previousGpsStatus !== "weak") {
-          setDriveSessionFeedback("GPS dogrulugu zayif; guvenilir olmayan hareket mesafeye eklenmiyor.");
-        }
-      },
-      (error) => {
-        const gpsError = getGeolocationErrorStatus(error);
-        liveLocationRef.current = null;
-        gpsStatusRef.current = gpsError.status;
-        setDriveHud((current) => ({
-          ...current,
-          accuracy: null,
-          etaNode: getGpsNodeLabel(gpsError.status),
-          gpsStatus: gpsError.status,
-          speed: 0,
-        }));
-        setDriveSessionFeedback(gpsError.message);
-      },
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 },
-    );
-
-    return () => {
-      geolocation.clearWatch(watchId);
-      liveLocationRef.current = null;
-      gpsPointRef.current = null;
-      gpsStatusRef.current = "idle";
-    };
-  }, [isDriving, serverOwnedDriverStats, setClans, setUser]);
+    if (reading.gpsStatus === "live" && previousGpsStatus !== "live") {
+      setDriveSessionFeedback("Gercek GPS telemetrisi aktif; hiz ve mesafe cihaz konumundan hesaplaniyor.");
+    } else if (reading.gpsStatus === "weak" && previousGpsStatus !== "weak") {
+      setDriveSessionFeedback("GPS dogrulugu zayif; guvenilir olmayan hareket mesafeye eklenmiyor.");
+    }
+  }, [isDriving, liveLocation?.location, liveLocation?.sample, serverOwnedDriverStats, setClans, setUser]);
 
   useEffect(() => {
     if (!isDriving || !userRef.current) {

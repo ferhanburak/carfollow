@@ -16,6 +16,17 @@ function finiteNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+export function getBearingDegrees(start, end) {
+  if (!start || !end) return 0;
+  const startLatitude = toRadians(start.lat);
+  const endLatitude = toRadians(end.lat);
+  const longitudeDelta = toRadians(Number(end.lng) - Number(start.lng));
+  const y = Math.sin(longitudeDelta) * Math.cos(endLatitude);
+  const x = Math.cos(startLatitude) * Math.sin(endLatitude)
+    - Math.sin(startLatitude) * Math.cos(endLatitude) * Math.cos(longitudeDelta);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
 export function getDistanceMeters(start, end) {
   if (!start || !end) {
     return 0;
@@ -39,12 +50,49 @@ export function normalizeGpsPosition(position) {
   }
 
   const speedMetersPerSecond = finiteNumber(position.coords.speed);
+  const reportedHeading = finiteNumber(position.coords.heading);
   return {
     lat: latitude,
     lng: longitude,
     accuracy: Math.max(0, finiteNumber(position.coords.accuracy) ?? MAX_GPS_ACCURACY_METERS),
     deviceSpeedKmh: speedMetersPerSecond == null ? null : Math.max(0, speedMetersPerSecond * 3.6),
+    heading: reportedHeading == null ? null : (reportedHeading + 360) % 360,
     timestamp: finiteNumber(position.timestamp) ?? Date.now(),
+  };
+}
+
+export function smoothGpsLocation(previousLocation, reading) {
+  if (!reading?.accepted || !reading.location) return previousLocation ?? null;
+
+  const rawLocation = reading.location;
+  if (!previousLocation) {
+    return {
+      ...rawLocation,
+      heading: reading.heading ?? 0,
+      speedKmh: reading.speedKmh ?? 0,
+      timestamp: reading.timestamp,
+    };
+  }
+
+  const distanceMeters = getDistanceMeters(previousLocation, rawLocation);
+  const speedKmh = Math.max(0, Number(reading.speedKmh ?? 0));
+  let weight = speedKmh >= 60 ? 0.82 : speedKmh >= 10 ? 0.68 : distanceMeters >= 4 ? 0.48 : 0.2;
+  if (Number(reading.accuracy ?? rawLocation.accuracy) > 40) weight = Math.min(weight, 0.3);
+
+  const derivedHeading = distanceMeters >= 2
+    ? getBearingDegrees(previousLocation, rawLocation)
+    : previousLocation.heading ?? 0;
+  const heading = reading.heading != null && speedKmh >= 3
+    ? reading.heading
+    : derivedHeading;
+
+  return {
+    lat: previousLocation.lat + (rawLocation.lat - previousLocation.lat) * weight,
+    lng: previousLocation.lng + (rawLocation.lng - previousLocation.lng) * weight,
+    accuracy: reading.accuracy ?? rawLocation.accuracy,
+    heading,
+    speedKmh,
+    timestamp: reading.timestamp,
   };
 }
 
@@ -77,6 +125,7 @@ export function processGpsPosition(previousPoint, position) {
       location,
       nextPoint: previousPoint,
       reason: "weak-accuracy",
+      heading: point.heading,
       speedKmh: 0,
       timestamp: point.timestamp,
     };
@@ -94,6 +143,7 @@ export function processGpsPosition(previousPoint, position) {
       location,
       nextPoint: point,
       reason: "initial-fix",
+      heading: point.heading,
       speedKmh: Number((deviceSpeedKmh ?? 0).toFixed(1)),
       timestamp: point.timestamp,
     };
@@ -109,6 +159,7 @@ export function processGpsPosition(previousPoint, position) {
       location,
       nextPoint: previousPoint,
       reason: "stale-fix",
+      heading: point.heading,
       speedKmh: 0,
       timestamp: point.timestamp,
     };
@@ -123,6 +174,7 @@ export function processGpsPosition(previousPoint, position) {
       location,
       nextPoint: point,
       reason: "baseline-reset",
+      heading: point.heading,
       speedKmh: Number((deviceSpeedKmh ?? 0).toFixed(1)),
       timestamp: point.timestamp,
     };
@@ -141,6 +193,7 @@ export function processGpsPosition(previousPoint, position) {
       location,
       nextPoint: previousPoint,
       reason: "implausible-jump",
+      heading: point.heading,
       speedKmh: 0,
       timestamp: point.timestamp,
     };
@@ -162,6 +215,7 @@ export function processGpsPosition(previousPoint, position) {
     location,
     nextPoint: point,
     reason: acceptedDistanceMeters ? "movement" : "stationary",
+    heading: point.heading,
     speedKmh: Number(Math.min(MAX_DRIVE_SPEED_KMH, Math.max(0, speedKmh)).toFixed(1)),
     timestamp: point.timestamp,
   };
