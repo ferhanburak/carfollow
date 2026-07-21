@@ -42,7 +42,8 @@ describe("GarageScreen", () => {
     render(<GarageScreen {...props} />);
 
     expect(screen.queryByText(props.user.primaryVehicleId)).not.toBeInTheDocument();
-    expect(screen.getByText("Records Match")).toBeInTheDocument();
+    expect(screen.queryByText("Records Match")).not.toBeInTheDocument();
+    expect(screen.queryByText("Kayit Durumu")).not.toBeInTheDocument();
     expect(screen.getByText("Vehicle History Report")).toBeInTheDocument();
     expect(screen.getByText("Arac Gecmisi Raporu")).toBeInTheDocument();
     expect(screen.queryByText(/Firebase|UID:|Connection:/i)).not.toBeInTheDocument();

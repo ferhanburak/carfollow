@@ -47,10 +47,6 @@ export function MapHubScreen({
 }) {
   return (
     <section className="space-y-4">
-      <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#101010)] px-4 py-4">
-        <p className="text-[10px] uppercase tracking-[0.32em] text-lime-400">CRUISER MAP</p>
-        <h3 className="mt-2 text-xl font-black text-white">Node Management Hub</h3>
-      </div>
       <MapCard
         pins={mapPins}
         selectedPinId={selectedPinId}

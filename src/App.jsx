@@ -543,9 +543,6 @@ function App() {
             {activeTab === "drive" ? (
               <DriveScreen
                 driveHud={driveHud}
-                driveSessionFeedback={driveSessionFeedback}
-                driveSessionPending={driveSessionPending}
-                driveSessionStatus={driveSessionStatus}
                 drivers={drivers}
                 isDriving={isDriving}
                 user={user}

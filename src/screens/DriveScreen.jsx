@@ -22,9 +22,6 @@ function getGpsStatusView(status) {
 
 export function DriveScreen({
   driveHud,
-  driveSessionFeedback,
-  driveSessionPending,
-  driveSessionStatus,
   drivers,
   isDriving,
   user,
@@ -70,24 +67,6 @@ export function DriveScreen({
           </div>
           <p className="mt-3 text-sm text-neutral-400">
             Odometre ve bakim omru yalnizca filtrelerden gecen gercek GPS mesafesiyle guncellenir.
-          </p>
-        </div>
-
-        <div className={`mt-4 rounded-2xl border p-4 text-sm ${
-          driveSessionStatus === "error"
-            ? "border-rose-400/20 bg-rose-400/10 text-rose-100"
-            : driveSessionStatus === "active"
-              ? "border-lime-400/20 bg-lime-400/10 text-lime-100"
-              : "border-white/10 bg-black/20 text-neutral-300"
-        }`}>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs uppercase tracking-[0.22em]">Secure Drive Session</span>
-            <span className="text-xs font-semibold uppercase tracking-[0.16em]">
-              {driveSessionPending ? "processing" : driveSessionStatus}
-            </span>
-          </div>
-          <p className="mt-2 text-xs opacity-80">
-            {driveSessionFeedback || "Surusu baslattiginda sunucu kontrollu oturum durumu burada gorunur."}
           </p>
         </div>
 

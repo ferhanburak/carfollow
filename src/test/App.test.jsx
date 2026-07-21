@@ -38,8 +38,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
 
     expect(screen.getByText("CRUISER // Ankara Bati")).toBeInTheDocument();
-    expect(await screen.findByText("CRUISER MAP")).toBeInTheDocument();
-    expect(screen.getByText("Node Management Hub")).toBeInTheDocument();
+    expect(screen.queryByText("Node Management Hub")).not.toBeInTheDocument();
     expect(screen.queryByText(/Event, photo spot ve wash noktalarini burada yonet/i)).not.toBeInTheDocument();
     const spotMarker = await screen.findByRole("button", { name: "Mogan Lake Sunset (spot)" });
     expect(spotMarker).toBeInTheDocument();
@@ -75,6 +74,7 @@ describe("App", () => {
     expect(await screen.findByText(/Surus Modu Aktif|Surus Modu Hazir/i)).toBeInTheDocument();
     expect(await screen.findByText("Live GPS HUD")).toBeInTheDocument();
     expect(await screen.findByText("Canli Aktif Suruculer")).toBeInTheDocument();
+    expect(screen.queryByText("Secure Drive Session")).not.toBeInTheDocument();
     expect(screen.queryByText(/Telemetry Sync|UID:|Connection:|RTDB|Firebase Live/i)).not.toBeInTheDocument();
   });
 
