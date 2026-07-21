@@ -160,7 +160,6 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
           : `${selectedPart?.name ?? "Part"} inspection prepared from vehicle map.`,
     }));
     setServiceLogErrors({});
-    setServiceLogFeedback(`${selectedPart?.name ?? "Part"} loaded into service form.`);
   };
 
   const createPassportExport = async () => {

@@ -239,6 +239,22 @@ describe("App", () => {
     expect(screen.getByText("Station is required.")).toBeInTheDocument();
   });
 
+  it("selects a maintenance part without showing an informational action toast", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
+    await user.click(screen.getByRole("button", { name: /Servis/i }));
+    await user.click(await screen.findByRole("button", { name: "Arac parca sagligi detaylarini ac" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Parca sagligi merkezi" });
+    const batteryActions = within(dialog).getAllByRole("button", { name: /Battery/i });
+    await user.click(batteryActions.at(-1));
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByText(/loaded into service form/i)).not.toBeInTheDocument();
+  });
+
   it("submits a valid wash review and shows success feedback", async () => {
     const user = userEvent.setup();
     render(<App />);
