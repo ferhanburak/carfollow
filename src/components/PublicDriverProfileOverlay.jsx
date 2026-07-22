@@ -141,6 +141,7 @@ export function PublicDriverProfileOverlay({
   const isPending = Boolean(
     socialPendingKey && profile.userId && socialPendingKey.endsWith(`:${profile.userId}`),
   );
+  const canReceiveCommunityInvite = !["blocked", "self"].includes(profileStatus);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-[#050505]/95 px-3 py-6 backdrop-blur-sm">
@@ -248,7 +249,7 @@ export function PublicDriverProfileOverlay({
             </button>
             <button
               type="button"
-              disabled={!onInviteFriendToClan || profileStatus !== "friend" || isPending}
+              disabled={!onInviteFriendToClan || !canReceiveCommunityInvite || isPending}
               onClick={() => onInviteFriendToClan(profile)}
               className="min-h-12 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 text-xs font-semibold text-lime-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -256,7 +257,7 @@ export function PublicDriverProfileOverlay({
             </button>
             <button
               type="button"
-              disabled={!hostableConvoy || profileStatus !== "friend" || isPending}
+              disabled={!onInviteToConvoy || !hostableConvoy || !canReceiveCommunityInvite || isPending}
               onClick={() => onInviteToConvoy(hostableConvoy.id, profile)}
               className="min-h-12 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 text-xs font-semibold text-rose-200 disabled:cursor-not-allowed disabled:opacity-50"
             >

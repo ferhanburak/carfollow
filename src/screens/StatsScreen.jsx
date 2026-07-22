@@ -268,6 +268,27 @@ export function StatsScreen({
                     </span>
                   )}
                 </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {canInviteToClan ? (
+                    <button
+                      type="button"
+                      disabled={isClanPending}
+                      onClick={() => inviteFriendToClan(entry)}
+                      className="min-h-12 rounded-xl border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-xs font-semibold text-lime-200 disabled:cursor-wait disabled:opacity-50"
+                    >
+                      Klana Davet
+                    </button>
+                  ) : null}
+                  {primaryHostableConvoy ? (
+                    <button
+                      type="button"
+                      onClick={() => inviteDriverToMeet(primaryHostableConvoy.id, entry)}
+                      className="min-h-12 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200"
+                    >
+                      Konvoya Davet
+                    </button>
+                  ) : null}
+                </div>
               </div>
             ))}
             {!hasSearchResults && friendSearchQuery.trim() ? (

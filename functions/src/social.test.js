@@ -5,6 +5,7 @@ const {
   buildFriendshipDocument,
   buildFriendshipMigrationDocument,
   buildPairId,
+  canSendCommunityInvite,
   getCounterpartUserId,
   maskPlate,
   normalizePrivacySettings,
@@ -12,6 +13,13 @@ const {
   projectPlateSearchResult,
   projectPublicProfileForViewer,
 } = require("./social");
+
+test("community invites do not require friendship but respect self and block boundaries", () => {
+  assert.equal(canSendCommunityInvite({ actorUserId: "host", targetUserId: "driver" }), true);
+  assert.equal(canSendCommunityInvite({ actorUserId: "host", targetUserId: "host" }), false);
+  assert.equal(canSendCommunityInvite({ actorUserId: "host", targetUserId: "driver", actorBlocked: true }), false);
+  assert.equal(canSendCommunityInvite({ actorUserId: "host", targetUserId: "driver", targetBlocked: true }), false);
+});
 
 const requester = {
   id: "driver-b",

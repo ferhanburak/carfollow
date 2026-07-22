@@ -110,6 +110,16 @@ function buildPairId(leftId, rightId) {
     .join("__");
 }
 
+function canSendCommunityInvite({ actorUserId, targetUserId, actorBlocked = false, targetBlocked = false }) {
+  return Boolean(
+    actorUserId &&
+    targetUserId &&
+    actorUserId !== targetUserId &&
+    !actorBlocked &&
+    !targetBlocked
+  );
+}
+
 function projectSocialProfile(profile, fallbackUserId = "") {
   const userId = String(profile?.userId ?? profile?.firebaseUid ?? profile?.id ?? fallbackUserId);
 
@@ -193,6 +203,7 @@ module.exports = {
   buildFriendshipDocument,
   buildFriendshipMigrationDocument,
   buildPairId,
+  canSendCommunityInvite,
   getCounterpartUserId,
   maskPlate,
   normalizePlate,

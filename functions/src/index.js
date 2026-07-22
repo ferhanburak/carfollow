@@ -23,6 +23,7 @@ const {
   buildFriendshipDocument,
   buildFriendshipMigrationDocument,
   buildPairId,
+  canSendCommunityInvite,
   normalizePlate,
   normalizePrivacySettings,
   PROFILE_RELATIONS,
@@ -1455,18 +1456,28 @@ exports.inviteConvoyMember = secureCall("inviteConvoyMember", { rateLimit: { lim
   const actorUserId = requireAuth(request);
   const { convoyId, targetUserId } = request.data ?? {};
   if (!convoyId || !targetUserId || targetUserId === actorUserId) throw new HttpsError("invalid-argument", "A valid convoy and driver are required.");
-  const [actor, target, friendship] = await Promise.all([
+  const [actor, target] = await Promise.all([
     getUserProfile(actorUserId),
     getUserProfile(targetUserId),
-    friendshipDocument(actorUserId, targetUserId).get(),
   ]);
-  if (!friendship.exists || friendship.data().status !== "accepted") throw new HttpsError("permission-denied", "Only friends can be invited to a convoy.");
   const convoyRef = publicDocument("convoys", convoyId);
+  const actorBlockRef = blockedDriverDocument(actorUserId, targetUserId);
+  const targetBlockRef = blockedDriverDocument(targetUserId, actorUserId);
   await db.runTransaction(async (transaction) => {
-    const convoySnapshot = await transaction.get(convoyRef);
+    const [convoySnapshot, actorBlock, targetBlock] = await Promise.all([
+      transaction.get(convoyRef),
+      transaction.get(actorBlockRef),
+      transaction.get(targetBlockRef),
+    ]);
     const convoy = requireSnapshot(convoySnapshot, "not-found", "Convoy not found.");
     if (convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can invite drivers.");
     if (convoy.lifecycleStatus !== "planning") throw new HttpsError("failed-precondition", "Invites are closed for this convoy.");
+    if (!canSendCommunityInvite({
+      actorUserId,
+      targetUserId,
+      actorBlocked: actorBlock.exists,
+      targetBlocked: targetBlock.exists,
+    })) throw new HttpsError("permission-denied", "Blocked drivers cannot receive convoy invites.");
     if ((convoy.invitedUserIds ?? []).includes(targetUserId)) return;
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
     transaction.update(convoyRef, {
@@ -1646,19 +1657,17 @@ exports.inviteClanMember = secureCall("inviteClanMember", { rateLimit: { limit: 
   const actorMemberRef = clanMemberDocument(clanId, actorUserId);
   const targetMemberRef = clanMemberDocument(clanId, targetUserId);
   const inviteRef = clanInviteDocument(clanId, targetUserId);
-  const friendshipRef = friendshipDocument(actorUserId, targetUserId);
   const actorBlockRef = blockedDriverDocument(actorUserId, targetUserId);
   const targetBlockRef = blockedDriverDocument(targetUserId, actorUserId);
 
   let duplicateInvite = false;
 
   await db.runTransaction(async (transaction) => {
-    const [clanSnapshot, actorMember, targetMember, invite, friendship, actorBlock, targetBlock] = await Promise.all([
+    const [clanSnapshot, actorMember, targetMember, invite, actorBlock, targetBlock] = await Promise.all([
       transaction.get(clanRef),
       transaction.get(actorMemberRef),
       transaction.get(targetMemberRef),
       transaction.get(inviteRef),
-      transaction.get(friendshipRef),
       transaction.get(actorBlockRef),
       transaction.get(targetBlockRef),
     ]);
@@ -1674,8 +1683,13 @@ exports.inviteClanMember = secureCall("inviteClanMember", { rateLimit: { limit: 
       duplicateInvite = true;
       return;
     }
-    if (!isAcceptedFriendship(friendship.data(), actorUserId, targetUserId) || actorBlock.exists || targetBlock.exists) {
-      throw new HttpsError("permission-denied", "Clan invites can only be sent to unblocked friends.");
+    if (!canSendCommunityInvite({
+      actorUserId,
+      targetUserId,
+      actorBlocked: actorBlock.exists,
+      targetBlocked: targetBlock.exists,
+    })) {
+      throw new HttpsError("permission-denied", "Blocked drivers cannot receive clan invites.");
     }
 
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
@@ -1736,19 +1750,22 @@ exports.respondClanInvite = secureCall("respondClanInvite", async (request) => {
     }
 
     const inviterMemberRef = clanMemberDocument(clanId, invite.invitedByUserId);
-    const friendshipRef = friendshipDocument(invite.invitedByUserId, targetUserId);
     const targetBlockRef = blockedDriverDocument(targetUserId, invite.invitedByUserId);
     const inviterBlockRef = blockedDriverDocument(invite.invitedByUserId, targetUserId);
-    const [inviterMember, friendship, targetBlock, inviterBlock] = await Promise.all([
+    const [inviterMember, targetBlock, inviterBlock] = await Promise.all([
       transaction.get(inviterMemberRef),
-      transaction.get(friendshipRef),
       transaction.get(targetBlockRef),
       transaction.get(inviterBlockRef),
     ]);
     if (!canInviteClanMember(getClanMemberRole(inviterMember, invite.invitedByUserId))) {
       throw new HttpsError("failed-precondition", "The inviter no longer has clan invite permission.");
     }
-    if (!isAcceptedFriendship(friendship.data(), invite.invitedByUserId, targetUserId) || targetBlock.exists || inviterBlock.exists) {
+    if (!canSendCommunityInvite({
+      actorUserId: invite.invitedByUserId,
+      targetUserId,
+      actorBlocked: inviterBlock.exists,
+      targetBlocked: targetBlock.exists,
+    })) {
       throw new HttpsError("permission-denied", "This clan invite is no longer eligible.");
     }
 

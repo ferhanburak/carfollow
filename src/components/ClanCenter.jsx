@@ -204,7 +204,7 @@ export function ClanCenter({
           {canInvite ? (
             <div className="rounded-[1.5rem] border border-white/8 bg-black/20 p-4">
               <p className="text-sm font-semibold">Giden Davetler</p>
-              <p className="mt-1 text-xs text-neutral-500">Yeni davetleri arkadas kartlarindaki “Klana Davet Et” islemiyle gonderebilirsin.</p>
+              <p className="mt-1 text-xs text-neutral-500">Yeni davetleri surucu aramasindan veya public profilden gonderebilirsin.</p>
               <div className="mt-3 space-y-2">
                 {outgoingInvites.length ? outgoingInvites.map((invite) => (
                   <div key={invite.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
