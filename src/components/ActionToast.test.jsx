@@ -1,8 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ActionToast, inferActionToastTone } from "./ActionToast";
+import { filterActionToastFeedbacks } from "../hooks/useActionToast";
 
 describe("ActionToast", () => {
+  it("only keeps sent friendship and convoy invitation feedback", () => {
+    expect(filterActionToastFeedbacks({
+      social: "Poyraz icin arkadaslik istegi gonderildi.",
+      convoy: "Burak aktif konvoya davet edildi.",
+      chat: "Yeni mesaj geldi.",
+      profile: "Profil guncellendi.",
+    })).toEqual({
+      social: "Poyraz icin arkadaslik istegi gonderildi.",
+      convoy: "Burak aktif konvoya davet edildi.",
+    });
+  });
   it("classifies request progress, success and errors", () => {
     expect(inferActionToastTone("İstek gönderiliyor...")).toBe("pending");
     expect(inferActionToastTone("Servis kaydi siliniyor...")).toBe("pending");

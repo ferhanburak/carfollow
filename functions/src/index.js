@@ -72,6 +72,7 @@ const {
   buildModerationReportDocument,
   buildNotificationDocument,
   hasModeratorClaim,
+  isUserNotificationType,
   sanitizeOperationalText,
 } = require("./operations");
 const {
@@ -190,6 +191,7 @@ function secureCall(name, optionsOrHandler, maybeHandler) {
 }
 
 function writeNotification(transaction, userId, notificationId, payload, timestamp) {
+  if (!isUserNotificationType(payload?.type)) return null;
   const notification = buildNotificationDocument({
     id: notificationId,
     userId,
@@ -959,19 +961,6 @@ exports.sendDirectMessage = secureCall("sendDirectMessage", { rateLimit: { limit
     [`userThreads/${actorUserId}/${state.threadId}/updatedAt`]: timestamp,
     [`userThreads/${targetUserId}/${state.threadId}/updatedAt`]: timestamp,
   });
-  const notificationTimestamp = admin.firestore.FieldValue.serverTimestamp();
-  await privateUserDocument(targetUserId, "notifications", `message-${message.id}`).set(
-    buildNotificationDocument({
-      id: `message-${message.id}`,
-      userId: targetUserId,
-      type: "direct-message",
-      title: "Yeni mesaj",
-      body: `${state.actor.fullName ?? state.actor.plate} sana bir mesaj gonderdi.`,
-      actor: state.actor,
-      action: { type: "conversation", targetId: actorUserId },
-      timestamp: notificationTimestamp,
-    }),
-  );
   return { ok: true, threadId: state.threadId, messageId: message.id, createdAt: timestamp };
 });
 
@@ -1192,21 +1181,6 @@ exports.advanceScheduledConvoys = onSchedule({ schedule: "every 1 minutes", time
     }
   });
   await batch.commit();
-  await Promise.all(dueConvoys.map(async (convoy) => {
-    const members = await publicCollection("convoyMembers").where("convoyId", "==", convoy.id).get();
-    const notificationBatch = db.batch();
-    members.docs
-      .map((document) => document.data())
-      .filter((member) => member.membershipStatus === "approved" && member.tripStatus !== "cancelled")
-      .forEach((member) => writeNotification(notificationBatch, member.userId, `convoy-started-${convoy.id}`, {
-        type: "convoy-started",
-        title: "Konvoy basladi",
-        body: `${convoy.name} icin GPS konvoy takibi aktif.`,
-        actor: { userId: convoy.hostUserId, fullName: convoy.createdByName, plate: convoy.createdByPlate },
-        action: { type: "convoy", targetId: convoy.id },
-      }, timestamp));
-    if (!members.empty) await notificationBatch.commit();
-  }));
   logger.info("Scheduled convoys advanced", { count: dueConvoys.length });
 });
 

@@ -45,11 +45,15 @@ describe("Firebase notification repository", () => {
         docs: [
           {
             id: "older",
-            data: () => ({ title: "Older", createdAt: { toMillis: () => 100 } }),
+            data: () => ({ type: "friend-request", title: "Older", createdAt: { toMillis: () => 100 } }),
           },
           {
             id: "newer",
-            data: () => ({ title: "Newer", createdAt: { toMillis: () => 300 }, readAt: { toMillis: () => 400 } }),
+            data: () => ({ type: "convoy-invite", title: "Newer", createdAt: { toMillis: () => 300 }, readAt: { toMillis: () => 400 } }),
+          },
+          {
+            id: "message",
+            data: () => ({ type: "direct-message", title: "Yeni mesaj", createdAt: { toMillis: () => 500 } }),
           },
         ],
       });

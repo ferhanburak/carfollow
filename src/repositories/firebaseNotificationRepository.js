@@ -1,6 +1,12 @@
 import { getFirebaseServices, isFirebaseModeEnabled } from "../services/firebaseClient";
 import { PRIVATE_COLLECTIONS, privateUserCollectionPath, resolveAppId } from "../services/firebasePaths";
 
+export const USER_NOTIFICATION_TYPES = Object.freeze(["friend-request", "convoy-invite"]);
+
+export function isUserNotificationType(type) {
+  return USER_NOTIFICATION_TYPES.includes(String(type ?? ""));
+}
+
 function toMillis(value) {
   if (typeof value?.toMillis === "function") {
     return value.toMillis();
@@ -40,6 +46,7 @@ export async function subscribeFirebaseNotifications(onChange, onError = () => {
             readAt: data.readAt ? toMillis(data.readAt) : null,
           };
         })
+        .filter((notification) => isUserNotificationType(notification.type))
         .sort((left, right) => right.createdAt - left.createdAt)
         .slice(0, 100);
       onChange(notifications);

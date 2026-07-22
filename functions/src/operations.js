@@ -9,6 +9,7 @@ const MODERATION_REASONS = Object.freeze([
 
 const MODERATION_TARGET_TYPES = Object.freeze(["driver", "mapPin", "mapPhoto", "convoy", "message", "clan"]);
 const MODERATION_DECISIONS = Object.freeze(["dismiss", "warn", "restrict"]);
+const USER_NOTIFICATION_TYPES = Object.freeze(["friend-request", "convoy-invite"]);
 
 function sanitizeOperationalText(value, maxLength) {
   return String(value ?? "")
@@ -38,6 +39,10 @@ function buildNotificationDocument({ id, userId, type, title, body, actor, actio
     createdAt: timestamp,
     updatedAt: timestamp,
   };
+}
+
+function isUserNotificationType(type) {
+  return USER_NOTIFICATION_TYPES.includes(String(type ?? ""));
 }
 
 function buildModerationReportDocument({ reportId, reporter, targetType, targetId, reason, details, timestamp }) {
@@ -95,9 +100,11 @@ module.exports = {
   MODERATION_DECISIONS,
   MODERATION_REASONS,
   MODERATION_TARGET_TYPES,
+  USER_NOTIFICATION_TYPES,
   buildModerationAuditDocument,
   buildModerationReportDocument,
   buildNotificationDocument,
   hasModeratorClaim,
+  isUserNotificationType,
   sanitizeOperationalText,
 };

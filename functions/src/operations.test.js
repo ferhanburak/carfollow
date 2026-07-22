@@ -5,6 +5,7 @@ const {
   buildModerationReportDocument,
   buildNotificationDocument,
   hasModeratorClaim,
+  isUserNotificationType,
 } = require("./operations");
 
 test("notification documents expose a bounded action projection", () => {
@@ -23,6 +24,14 @@ test("notification documents expose a bounded action projection", () => {
   assert.equal(notification.body, "Poyraz seni eklemek istiyor.");
   assert.equal(notification.actor.userId, "actor-user");
   assert.equal(notification.readAt, null);
+});
+
+test("user inbox only accepts friendship requests and convoy invitations", () => {
+  assert.equal(isUserNotificationType("friend-request"), true);
+  assert.equal(isUserNotificationType("convoy-invite"), true);
+  assert.equal(isUserNotificationType("direct-message"), false);
+  assert.equal(isUserNotificationType("convoy-started"), false);
+  assert.equal(isUserNotificationType("maintenance-critical"), false);
 });
 
 test("moderation reports reject unknown reasons and sanitize details", () => {
