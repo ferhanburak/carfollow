@@ -534,7 +534,6 @@ export const navItems = [
   { key: "social", label: "Social" },
   { key: "leaderboard", label: "Leaders" },
   { key: "profile", label: "Profil" },
-  { key: "garage", label: "Servis" },
 ];
 
 export const socialDirectorySeed = [

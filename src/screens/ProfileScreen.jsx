@@ -79,9 +79,10 @@ export function ProfileScreen({
           <button
             type="button"
             onClick={onOpenService}
+            aria-label="Servis"
             className="min-h-12 rounded-2xl border border-white/10 bg-black/20 font-semibold text-neutral-200"
           >
-            Servis Defterini Ac
+            Servis
           </button>
         </div>
       </div>

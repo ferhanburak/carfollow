@@ -9,7 +9,6 @@ const items = [
   { key: "social", label: "Social" },
   { key: "leaderboard", label: "Leaders" },
   { key: "profile", label: "Profil" },
-  { key: "garage", label: "Servis" },
 ];
 
 describe("BottomNavigation", () => {
@@ -21,6 +20,7 @@ describe("BottomNavigation", () => {
     expect(screen.getByRole("navigation", { name: "Ana navigasyon" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Harita" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: "Harita" })).toHaveTextContent("");
+    expect(screen.queryByRole("button", { name: "Servis" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Social" }));
     expect(onSelect).toHaveBeenCalledWith("social");

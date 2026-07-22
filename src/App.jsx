@@ -654,7 +654,7 @@ function App() {
           </Suspense>
         </div>
 
-        <BottomNavigation activeTab={activeTab} items={navItems} onSelect={setActiveTab} />
+        <BottomNavigation activeTab={activeTab === "garage" ? "profile" : activeTab} items={navItems} onSelect={setActiveTab} />
       </div>
       <SettingsCenter
         accountFeedback={accountFeedback}

@@ -37,9 +37,6 @@ const iconPaths = {
       <path d="M5 20a7 7 0 0 1 14 0" />
     </>
   ),
-  garage: (
-    <path d="M14.5 6.5a4 4 0 0 0-5 5L4 17l3 3 5.5-5.5a4 4 0 0 0 5-5l-2.5 2.5-3-3Z" />
-  ),
 };
 
 function NavigationIcon({ name }) {
@@ -53,7 +50,10 @@ function NavigationIcon({ name }) {
 export function BottomNavigation({ activeTab, items, onSelect }) {
   return (
     <nav aria-label="Ana navigasyon" className="app-bottom-nav absolute left-1/2 z-20 w-[calc(100%-0.75rem)] max-w-[27rem] -translate-x-1/2 px-1.5 sm:w-[calc(100%-1.5rem)] sm:px-3">
-      <div className="grid grid-cols-7 gap-1 rounded-[1.4rem] border border-white/10 bg-[#111111]/95 p-1.5 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur">
+      <div
+        className="grid gap-1 rounded-[1.4rem] border border-white/10 bg-[#111111]/95 p-1.5 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur"
+        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+      >
         {items.map((item) => {
           const isActive = activeTab === item.key;
           return (

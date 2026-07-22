@@ -248,7 +248,8 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(screen.getByRole("button", { name: /Servis/i }));
+    await user.click(screen.getByRole("button", { name: "Profil" }));
+    await user.click(await screen.findByRole("button", { name: "Servis" }));
     const litersInput = await screen.findByRole("spinbutton", { name: "Liters" });
     const priceInput = await screen.findByRole("spinbutton", { name: "Price (TL)" });
     const currentKmInput = await screen.findByRole("spinbutton", { name: "Current KM" });
@@ -273,7 +274,8 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(screen.getByRole("button", { name: /Servis/i }));
+    await user.click(screen.getByRole("button", { name: "Profil" }));
+    await user.click(await screen.findByRole("button", { name: "Servis" }));
     await user.click(await screen.findByRole("button", { name: "Arac parca sagligi detaylarini ac" }));
 
     const dialog = screen.getByRole("dialog", { name: "Parca sagligi merkezi" });
