@@ -222,7 +222,7 @@ export function AuthScreen({
                 </Field>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="Tuning Stage" optional>
+                  <Field label="Tuning Stage">
                     <select
                       value={signUpForm.tuningStage}
                       onChange={(event) =>
@@ -235,7 +235,7 @@ export function AuthScreen({
                       ))}
                     </select>
                   </Field>
-                  <Field label="Horsepower" optional>
+                  <Field label="Horsepower">
                     <input
                       type="number"
                       value={signUpForm.horsepower}
@@ -264,7 +264,7 @@ export function AuthScreen({
                   <FieldError>{signUpErrors.odometer}</FieldError>
                 </Field>
 
-                <Field label="Profil Fotografi" optional>
+                <Field label="Profil Fotografi">
                   <input
                     aria-label="Profil Fotografi"
                     type="file"
@@ -284,7 +284,7 @@ export function AuthScreen({
                   ) : null}
                 </Field>
 
-                <Field label="Primary Garage/Tuning Shop" optional>
+                <Field label="Primary Garage/Tuning Shop">
                   <input
                     value={signUpForm.garage}
                     onChange={(event) =>
