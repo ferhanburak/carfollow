@@ -4,6 +4,15 @@ import { ProfileAvatar } from "../components/ProfileAvatar";
 import { InsightCard } from "../components/ui";
 import { buildAchievementProgress, buildPersonalStats } from "../utils/socialStats";
 
+function CompactMetric({ label, value }) {
+  return (
+    <div className="min-w-0 rounded-xl border border-white/8 bg-black/20 px-3 py-2.5">
+      <p className="text-[8px] uppercase tracking-[0.16em] text-neutral-500">{label}</p>
+      <p className="mt-1 truncate text-sm font-black text-lime-300" title={value}>{value}</p>
+    </div>
+  );
+}
+
 export function ProfileScreen({
   onOpenService,
   onOpenStats,
@@ -13,6 +22,8 @@ export function ProfileScreen({
   const [achievementCenterOpen, setAchievementCenterOpen] = useState(false);
   const achievementProgress = buildAchievementProgress(user);
   const personalStats = buildPersonalStats(user);
+  const garageStat = personalStats.find((stat) => stat.key === "garage");
+  const compactPersonalStats = personalStats.filter((stat) => stat.key !== "garage");
   const socialSummary = [
     { key: "friends", label: "Arkadas", value: `${user.friends?.length ?? 0}` },
     { key: "incoming", label: "Gelen Istek", value: `${user.incomingRequests?.length ?? 0}` },
@@ -87,19 +98,21 @@ export function ProfileScreen({
         </div>
       </div>
 
-      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold">Driver Stats Snapshot</p>
-            <p className="text-xs text-neutral-500">Bireysel performans, servis disiplini ve sosyal ag ozeti.</p>
-          </div>
-          <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">Live Profile</span>
+      <div aria-label="Driver stats" className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
+        <div className="flex items-center justify-between gap-3 px-1">
+          <p className="text-sm font-semibold">Driver Stats Snapshot</p>
+          <span className="text-[9px] uppercase tracking-[0.18em] text-neutral-500">Live</span>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {personalStats.map((stat) => (
-            <InsightCard key={stat.key} label={stat.label} value={stat.value} />
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {compactPersonalStats.map((stat) => (
+            <CompactMetric key={stat.key} label={stat.label} value={stat.value} />
           ))}
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-black/20 px-3 py-2">
+          <span className="text-[9px] uppercase tracking-[0.16em] text-neutral-500">{garageStat?.label ?? "Aktif Garaj"}</span>
+          <span className="truncate text-xs font-semibold text-neutral-200">{garageStat?.value ?? "--"}</span>
         </div>
       </div>
 
@@ -110,26 +123,25 @@ export function ProfileScreen({
         onOpen={() => setAchievementCenterOpen(true)}
       />
 
-      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold">Social Cockpit</p>
-            <p className="text-xs text-neutral-500">Arkadaslar, davetler ve klan akisina hizli bakis.</p>
-          </div>
-          <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">Crew Pulse</span>
+      <div aria-label="Social cockpit" className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
+        <div className="flex items-center justify-between gap-3 px-1">
+          <p className="text-sm font-semibold">Social Cockpit</p>
+          <span className="text-[9px] uppercase tracking-[0.18em] text-neutral-500">Crew</span>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid grid-cols-2 gap-2">
           {socialSummary.map((item) => (
-            <InsightCard key={item.key} label={item.label} value={item.value} />
+            <CompactMetric key={item.key} label={item.label} value={item.value} />
           ))}
         </div>
 
-        <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-neutral-300">
-          <p className="font-semibold text-neutral-100">Mevcut klan</p>
-          <p className="mt-2">{user.clan ?? "Klan yok"}</p>
-          <p className="mt-1 text-xs text-neutral-500">
-            Rol: {user.clanRole ?? "member"} / Uyum oyu: {user.harmonyVotes ?? 0} / Uyari oyu: {user.alertVotes ?? 0}
+        <div className="mt-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[9px] uppercase tracking-[0.16em] text-neutral-500">Mevcut klan</p>
+            <p className="truncate text-xs font-bold text-neutral-100">{user.clan ?? "Klan yok"}</p>
+          </div>
+          <p className="mt-1 truncate text-[10px] text-neutral-500">
+            {user.clanRole ?? "member"} / {user.harmonyVotes ?? 0} uyum / {user.alertVotes ?? 0} uyari
           </p>
         </div>
       </div>

@@ -317,6 +317,8 @@ describe("App", () => {
     expect(await screen.findByText("Achievement Progress")).toBeInTheDocument();
     expect(screen.getByText("Driver Stats Snapshot")).toBeInTheDocument();
     expect(screen.getByText("Social Cockpit")).toBeInTheDocument();
+    expect(screen.getByLabelText("Driver stats")).toHaveClass("p-3");
+    expect(screen.getByLabelText("Social cockpit")).toHaveClass("p-3");
     expect(screen.getByRole("button", { name: "Stats Ekranina Git" })).toBeInTheDocument();
     expect(screen.queryByText("Vehicle Passport Snapshot")).not.toBeInTheDocument();
     expect(screen.queryByText("Pasaport")).not.toBeInTheDocument();
