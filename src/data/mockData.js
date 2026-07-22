@@ -528,13 +528,13 @@ export const initialClans = [
 export const tuningOptions = ["Stock", "Stage 1", "Stage 2+", "Stage 3"];
 
 export const navItems = [
-  { key: "map", label: "Harita", icon: "Grid" },
-  { key: "liveMap", label: "Live Map", icon: "Map" },
-  { key: "drive", label: "Surus", icon: "HUD" },
-  { key: "social", label: "Social", icon: "Crew" },
-  { key: "leaderboard", label: "Leaders", icon: "Rank" },
-  { key: "profile", label: "Profil", icon: "ID" },
-  { key: "garage", label: "Servis", icon: "Wrench" },
+  { key: "map", label: "Harita" },
+  { key: "liveMap", label: "Live Map" },
+  { key: "drive", label: "Surus" },
+  { key: "social", label: "Social" },
+  { key: "leaderboard", label: "Leaders" },
+  { key: "profile", label: "Profil" },
+  { key: "garage", label: "Servis" },
 ];
 
 export const socialDirectorySeed = [

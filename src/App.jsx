@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { navItems, tuningOptions } from "./data/mockData";
+import { BottomNavigation } from "./components/BottomNavigation";
 import { PublicDriverProfileOverlay } from "./components/PublicDriverProfileOverlay";
 import { NotificationCenter } from "./components/NotificationCenter";
 import { DirectMessageButton, DirectMessageCenter } from "./components/DirectMessageCenter";
@@ -641,39 +642,7 @@ function App() {
           </Suspense>
         </div>
 
-        <nav
-          className="app-bottom-nav absolute left-1/2 z-20 w-[calc(100%-0.75rem)] max-w-[27rem] -translate-x-1/2 px-1.5 sm:w-[calc(100%-1.5rem)] sm:px-3"
-        >
-          <div
-            className={`grid grid-cols-7 gap-1 border border-white/10 bg-[#111111]/95 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur ${
-              activeTab === "liveMap" ? "rounded-[1.35rem] p-1" : "rounded-[1.8rem] p-1.5 sm:p-2"
-            }`}
-          >
-            {navItems.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setActiveTab(item.key)}
-                className={`min-h-12 rounded-2xl px-0.5 text-center font-semibold transition ${
-                  activeTab === "liveMap" ? "py-1 text-[11px]" : "py-1.5 text-xs sm:py-2"
-                } ${
-                  activeTab === item.key
-                    ? "bg-lime-400 text-black shadow-[0_0_18px_rgba(163,230,53,0.45)]"
-                    : "text-neutral-400"
-                }`}
-              >
-                <span
-                  className={`block whitespace-nowrap uppercase tracking-[0.08em] sm:tracking-[0.18em] ${
-                    activeTab === "liveMap" ? "text-[8px] sm:text-[10px]" : "text-[8px] sm:text-[11px]"
-                  }`}
-                >
-                  {item.icon}
-                </span>
-                <span className={`block whitespace-nowrap ${activeTab === "liveMap" ? "mt-0.5 text-[9px] sm:text-[10px]" : "mt-1 text-[9px] sm:text-xs"}`}>{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </nav>
+        <BottomNavigation activeTab={activeTab} items={navItems} onSelect={setActiveTab} />
       </div>
       <SettingsCenter
         accountFeedback={accountFeedback}
