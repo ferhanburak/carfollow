@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { InsightCard } from "../ui";
 import { getConvoyAccessState, getMeetAccessPolicyLabel, getMeetDetailVisibilityLabel, getMeetVisibilityLabel } from "../../utils/meetVisibility";
 
@@ -112,17 +113,106 @@ function formatLaunchTime(pin) {
   }).format(new Date(scheduledStartAtMs));
 }
 
+function matchesDriver(left, right) {
+  const leftId = left?.userId ?? left?.firebaseUid ?? left?.id;
+  const rightId = right?.userId ?? right?.firebaseUid ?? right?.id;
+  if (leftId && rightId) return leftId === rightId;
+  return Boolean(left?.plate && right?.plate && left.plate === right.plate);
+}
+
+function ConvoyInvitePanel({ attendees, invitedGuests, pendingRequests, onInviteDriver, onSearchChange, pin, searchResults, user }) {
+  const [query, setQuery] = useState("");
+  const [pendingUserId, setPendingUserId] = useState("");
+
+  useEffect(() => {
+    setQuery("");
+    onSearchChange?.("");
+  }, [onSearchChange, pin.id]);
+
+  const inviteDriver = async (profile) => {
+    const profileId = profile.userId ?? profile.firebaseUid ?? profile.id ?? profile.plate;
+    if (!onInviteDriver || pendingUserId) return;
+    setPendingUserId(profileId);
+    try {
+      const completed = await onInviteDriver(pin.id, profile);
+      if (completed !== false) {
+        setQuery("");
+        onSearchChange?.("");
+      }
+    } finally {
+      setPendingUserId("");
+    }
+  };
+
+  return (
+    <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/[0.05] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-white">Konvoya Surucu Davet Et</p>
+          <p className="mt-1 text-xs text-neutral-500">Arkadaslik gerekmeden tam plakayla surucu ara.</p>
+        </div>
+        <span className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-rose-200">Host</span>
+      </div>
+      <input
+        aria-label="Konvoya davet edilecek plaka"
+        value={query}
+        onChange={(event) => {
+          const value = event.target.value.toUpperCase();
+          setQuery(value);
+          onSearchChange?.(value);
+        }}
+        placeholder="Ornek: 06 PWA 101"
+        className="mt-3 h-12 w-full rounded-2xl border border-white/10 bg-black/25 px-4 font-mono text-sm uppercase tracking-[0.12em] outline-none focus:border-rose-400"
+      />
+      <div className="mt-3 space-y-2">
+        {query.trim() && searchResults.length ? searchResults.slice(0, 3).map((profile) => {
+          const isSelf = matchesDriver(profile, user);
+          const isAttendee = attendees.some((entry) => matchesDriver(entry, profile));
+          const isInvited = invitedGuests.some((entry) => matchesDriver(entry, profile));
+          const hasPendingRequest = pendingRequests.some((entry) => matchesDriver(entry, profile));
+          const isUnavailable = isSelf || isAttendee || isInvited || hasPendingRequest;
+          const profileId = profile.userId ?? profile.firebaseUid ?? profile.id ?? profile.plate;
+          const buttonLabel = isSelf ? "Bu Sensin" : isAttendee ? "Konvoyda" : isInvited ? "Davet Edildi" : hasPendingRequest ? "Istek Bekliyor" : pendingUserId === profileId ? "Gonderiliyor..." : "Davet Et";
+          return (
+            <div key={profileId} className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 p-3">
+              <div className="min-w-0">
+                <p className="truncate font-mono text-xs tracking-[0.14em] text-lime-300">{profile.plate}</p>
+                <p className="mt-1 truncate text-sm font-semibold text-white">{profile.fullName ?? "CRUISER Driver"}</p>
+                <p className="truncate text-xs text-neutral-500">{profile.model || "Arac bilgisi gizli"}</p>
+              </div>
+              <button
+                type="button"
+                disabled={isUnavailable || Boolean(pendingUserId)}
+                onClick={() => inviteDriver(profile)}
+                className="min-h-12 shrink-0 rounded-xl bg-rose-500 px-3 text-xs font-bold text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {buttonLabel}
+              </button>
+            </div>
+          );
+        }) : null}
+        {query.trim().length >= 5 && !searchResults.length ? (
+          <p className="rounded-xl border border-dashed border-white/10 px-3 py-3 text-xs text-neutral-500">Bu plakaya ait davet edilebilir bir surucu bulunamadi.</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function MeetPinPanel({
   convoyFeedback,
+  driverSearchResults = [],
   pin,
   user,
   onApproveCruiseJoinRequest,
   onDeclineCruiseJoinRequest,
   onJoinCruise,
+  onInviteDriver,
   onRateAttendee,
   onRemoveConvoyMember,
   onSetAttendeeTripStatus,
   onSetConvoyLifecycleStatus,
+  onDriverSearchChange,
 }) {
   const attendees = (pin.attendees ?? []).map(normalizeAttendee);
   const pendingRequests = (pin.pendingRequests ?? []).map(normalizeAttendee);
@@ -233,6 +323,19 @@ export function MeetPinPanel({
             ))}
           </div>
         </div>
+      ) : null}
+
+      {accessState.canViewDetails && isHost && lifecycleStatus === "planning" ? (
+        <ConvoyInvitePanel
+          attendees={attendees}
+          invitedGuests={invitedGuests}
+          pendingRequests={pendingRequests}
+          onInviteDriver={onInviteDriver}
+          onSearchChange={onDriverSearchChange}
+          pin={pin}
+          searchResults={driverSearchResults}
+          user={user}
+        />
       ) : null}
 
       {accessState.canViewDetails && selfAttendee && !isHost ? (

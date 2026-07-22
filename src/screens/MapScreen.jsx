@@ -206,6 +206,7 @@ export function MapScreen({
   convoyFeedback,
   convoyTracking,
   currentClanMembers,
+  driverSearchResults,
   drivers,
   driveHud,
   driveSessionStatus,
@@ -223,6 +224,8 @@ export function MapScreen({
   onApproveCruiseJoinRequest,
   onDeclineCruiseJoinRequest,
   onDeleteSpotPhoto,
+  onDriverSearchChange,
+  onInviteDriver,
   onReportSpotPhoto,
   onRemoveConvoyMember,
   onSelectPin,
@@ -418,6 +421,7 @@ export function MapScreen({
             pin={selectedPin}
             user={user}
             convoyFeedback={convoyFeedback}
+            driverSearchResults={driverSearchResults}
             spotPhotoErrors={spotPhotoErrors}
             spotPhotoFeedback={spotPhotoFeedback}
             spotPhotoForm={spotPhotoForm}
@@ -427,6 +431,8 @@ export function MapScreen({
             onApproveCruiseJoinRequest={onApproveCruiseJoinRequest}
             onDeclineCruiseJoinRequest={onDeclineCruiseJoinRequest}
             onDeleteSpotPhoto={onDeleteSpotPhoto}
+            onDriverSearchChange={onDriverSearchChange}
+            onInviteDriver={onInviteDriver}
             onReportSpotPhoto={onReportSpotPhoto}
             onRemoveConvoyMember={onRemoveConvoyMember}
             onJoinCruise={joinCruise}

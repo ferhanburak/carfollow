@@ -1461,17 +1461,23 @@ exports.inviteConvoyMember = secureCall("inviteConvoyMember", { rateLimit: { lim
     getUserProfile(targetUserId),
   ]);
   const convoyRef = publicDocument("convoys", convoyId);
+  const memberRef = publicCollection("convoyMembers").doc(buildScopedMemberId(convoyId, targetUserId));
   const actorBlockRef = blockedDriverDocument(actorUserId, targetUserId);
   const targetBlockRef = blockedDriverDocument(targetUserId, actorUserId);
   await db.runTransaction(async (transaction) => {
-    const [convoySnapshot, actorBlock, targetBlock] = await Promise.all([
+    const [convoySnapshot, memberSnapshot, actorBlock, targetBlock] = await Promise.all([
       transaction.get(convoyRef),
+      transaction.get(memberRef),
       transaction.get(actorBlockRef),
       transaction.get(targetBlockRef),
     ]);
     const convoy = requireSnapshot(convoySnapshot, "not-found", "Convoy not found.");
     if (convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can invite drivers.");
     if (convoy.lifecycleStatus !== "planning") throw new HttpsError("failed-precondition", "Invites are closed for this convoy.");
+    if (Number(convoy.approvedCount ?? 0) >= Number(convoy.capacity ?? 0)) throw new HttpsError("resource-exhausted", "Convoy capacity is full.");
+    if (memberSnapshot.exists && ["approved", "pending"].includes(memberSnapshot.data().membershipStatus)) {
+      throw new HttpsError("already-exists", "This driver is already part of the convoy flow.");
+    }
     if (!canSendCommunityInvite({
       actorUserId,
       targetUserId,

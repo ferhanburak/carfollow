@@ -23,7 +23,10 @@ const stranger = {
 function renderProfile(overrides = {}) {
   return render(
     <PublicDriverProfileOverlay
-      hostableConvoy={{ id: "convoy-1", name: "Night Route" }}
+      hostableConvoys={[
+        { id: "convoy-1", name: "Night Route", route: "Golbasi", time: "22:00", capacity: 12, attendees: [] },
+        { id: "convoy-2", name: "Morning Route", route: "Incek", time: "08:00", capacity: 8, attendees: [] },
+      ]}
       onClose={vi.fn()}
       onInviteFriendToClan={vi.fn()}
       onInviteToConvoy={vi.fn()}
@@ -49,9 +52,11 @@ describe("PublicDriverProfileOverlay community invitations", () => {
 
     await user.click(screen.getByRole("button", { name: "Klana Davet" }));
     await user.click(screen.getByRole("button", { name: "Konvoya Davet" }));
+    expect(screen.getByText("Konvoy Sec")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Morning Route/i }));
 
     expect(onInviteFriendToClan).toHaveBeenCalledWith(stranger);
-    expect(onInviteToConvoy).toHaveBeenCalledWith("convoy-1", stranger);
+    expect(onInviteToConvoy).toHaveBeenCalledWith("convoy-2", stranger);
   });
 
   it("does not allow community invitations to a blocked driver", () => {
@@ -61,5 +66,19 @@ describe("PublicDriverProfileOverlay community invitations", () => {
 
     expect(screen.getByRole("button", { name: "Klana Davet" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Konvoya Davet" })).toBeDisabled();
+  });
+
+  it("removes convoys where the driver is already invited from the selectable list", () => {
+    renderProfile({
+      hostableConvoys: [{
+        id: "convoy-1",
+        name: "Night Route",
+        capacity: 12,
+        attendees: [],
+        invitedGuests: [stranger],
+      }],
+    });
+
+    expect(screen.getByRole("button", { name: "Davet Edilebilir Konvoy Yok" })).toBeDisabled();
   });
 });

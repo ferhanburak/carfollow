@@ -109,8 +109,15 @@ function getProfileStatus(user, profile) {
   return "none";
 }
 
+function matchesDriverIdentity(entry, profile) {
+  const entryUserId = entry?.userId ?? entry?.firebaseUid ?? entry?.id;
+  const profileUserId = profile?.userId ?? profile?.firebaseUid ?? profile?.id;
+  if (entryUserId && profileUserId) return entryUserId === profileUserId;
+  return Boolean(entry?.plate && profile?.plate && entry.plate === profile.plate);
+}
+
 export function PublicDriverProfileOverlay({
-  hostableConvoy,
+  hostableConvoys = [],
   onBlockDriver,
   onClose,
   onInviteFriendToClan,
@@ -130,6 +137,8 @@ export function PublicDriverProfileOverlay({
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("dangerous-driving");
   const [reportDetails, setReportDetails] = useState("");
+  const [convoyPickerOpen, setConvoyPickerOpen] = useState(false);
+  const [convoyInvitePendingId, setConvoyInvitePendingId] = useState("");
 
   if (!profile) {
     return null;
@@ -142,6 +151,25 @@ export function PublicDriverProfileOverlay({
     socialPendingKey && profile.userId && socialPendingKey.endsWith(`:${profile.userId}`),
   );
   const canReceiveCommunityInvite = !["blocked", "self"].includes(profileStatus);
+  const availableConvoys = hostableConvoys.filter((convoy) => {
+    const relatedDrivers = [
+      ...(convoy.attendees ?? []),
+      ...(convoy.invitedGuests ?? []),
+      ...(convoy.pendingRequests ?? []),
+    ];
+    const hasCapacity = Number(convoy.attendees?.length ?? 0) < Number(convoy.capacity ?? Number.POSITIVE_INFINITY);
+    return hasCapacity && !relatedDrivers.some((entry) => matchesDriverIdentity(entry, profile));
+  });
+  const inviteToConvoy = async (convoyId) => {
+    if (!onInviteToConvoy || convoyInvitePendingId) return;
+    setConvoyInvitePendingId(convoyId);
+    try {
+      const completed = await onInviteToConvoy(convoyId, profile);
+      if (completed !== false) setConvoyPickerOpen(false);
+    } finally {
+      setConvoyInvitePendingId("");
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-[#050505]/95 px-3 py-6 backdrop-blur-sm">
@@ -257,11 +285,11 @@ export function PublicDriverProfileOverlay({
             </button>
             <button
               type="button"
-              disabled={!onInviteToConvoy || !hostableConvoy || !canReceiveCommunityInvite || isPending}
-              onClick={() => onInviteToConvoy(hostableConvoy.id, profile)}
+              disabled={!onInviteToConvoy || !availableConvoys.length || !canReceiveCommunityInvite || isPending}
+              onClick={() => setConvoyPickerOpen((current) => !current)}
               className="min-h-12 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 text-xs font-semibold text-rose-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Konvoya Davet
+              {availableConvoys.length ? "Konvoya Davet" : "Davet Edilebilir Konvoy Yok"}
             </button>
             {profileStatus === "friend" ? (
               <button
@@ -293,6 +321,39 @@ export function PublicDriverProfileOverlay({
               </button>
             ) : null}
           </div>
+
+          {convoyPickerOpen && canReceiveCommunityInvite ? (
+            <div className="rounded-2xl border border-rose-400/20 bg-rose-500/[0.06] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">Konvoy Sec</p>
+                  <p className="mt-1 text-xs text-neutral-500">Bu surucuyu davet etmek istedigin planli konvoyu sec.</p>
+                </div>
+                <span className="rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-neutral-400">
+                  {availableConvoys.length} konvoy
+                </span>
+              </div>
+              <div className="mt-3 space-y-2">
+                {availableConvoys.map((convoy) => (
+                  <button
+                    key={convoy.id}
+                    type="button"
+                    disabled={Boolean(convoyInvitePendingId)}
+                    onClick={() => inviteToConvoy(convoy.id)}
+                    className="flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-left transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-50"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-white">{convoy.name}</span>
+                      <span className="mt-1 block truncate text-xs text-neutral-500">{convoy.route || "Rota bekleniyor"} / {convoy.time || "Saat bekleniyor"}</span>
+                    </span>
+                    <span className="shrink-0 text-xs font-bold text-rose-200">
+                      {convoyInvitePendingId === convoy.id ? "Gonderiliyor..." : `${convoy.attendees?.length ?? 0}/${convoy.capacity ?? "--"}`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           {profileStatus !== "self" ? (
             <div className="rounded-2xl border border-rose-400/15 bg-rose-500/[0.04] p-4">

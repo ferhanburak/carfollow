@@ -386,7 +386,7 @@ export function useMapPins({ initialWorld, user }) {
 
   const inviteDriverToMeet = async (pinId, profile) => {
     if (!profile) {
-      return;
+      return false;
     }
 
     if (firebaseMapEnabled) {
@@ -394,10 +394,11 @@ export function useMapPins({ initialWorld, user }) {
         await inviteFirebaseConvoyMember(pinId, profile.userId ?? profile.id);
         await refreshFirebaseConvoys();
         setConvoyFeedback(`${profile.fullName} aktif konvoya davet edildi.`);
+        return true;
       } catch (error) {
         setConvoyFeedback(error instanceof Error ? error.message : "Konvoy daveti gonderilemedi.");
+        return false;
       }
-      return;
     }
     let nextPin = null;
     setMapPins((current) => {
@@ -409,7 +410,9 @@ export function useMapPins({ initialWorld, user }) {
     if (nextPin) {
       setConvoyFeedback(`${profile.fullName} aktif konvoya davet edildi.`);
       void saveFirebaseMapPin(nextPin);
+      return true;
     }
+    return false;
   };
 
   const deleteClanEvent = async (convoyId) => {

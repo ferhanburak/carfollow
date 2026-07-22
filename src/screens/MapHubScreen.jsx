@@ -4,6 +4,7 @@ import { PinPanel } from "../components/PinPanel";
 
 export function MapHubScreen({
   convoyFeedback,
+  driverSearchResults,
   clearDraftRoute,
   draftLocation,
   joinCruise,
@@ -19,6 +20,8 @@ export function MapHubScreen({
   onApproveCruiseJoinRequest,
   onDeclineCruiseJoinRequest,
   onDeleteSpotPhoto,
+  onDriverSearchChange,
+  onInviteDriver,
   onReportSpotPhoto,
   onRemoveConvoyMember,
   onPickLocation,
@@ -63,6 +66,7 @@ export function MapHubScreen({
         pin={selectedPin}
         user={user}
         convoyFeedback={convoyFeedback}
+        driverSearchResults={driverSearchResults}
         spotPhotoErrors={spotPhotoErrors}
         spotPhotoFeedback={spotPhotoFeedback}
         spotPhotoForm={spotPhotoForm}
@@ -72,6 +76,8 @@ export function MapHubScreen({
         onApproveCruiseJoinRequest={onApproveCruiseJoinRequest}
         onDeclineCruiseJoinRequest={onDeclineCruiseJoinRequest}
         onDeleteSpotPhoto={onDeleteSpotPhoto}
+        onDriverSearchChange={onDriverSearchChange}
+        onInviteDriver={onInviteDriver}
         onReportSpotPhoto={onReportSpotPhoto}
         onRemoveConvoyMember={onRemoveConvoyMember}
         onJoinCruise={joinCruise}

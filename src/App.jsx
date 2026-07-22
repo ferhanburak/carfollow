@@ -435,6 +435,7 @@ function App() {
               <MapHubScreen
                 clearDraftRoute={clearDraftRoute}
                 convoyFeedback={convoyFeedback}
+                driverSearchResults={friendSearchResults}
                 draftLocation={mapDraftLocation}
                 joinCruise={joinCruise}
                 likeGalleryImage={likeGalleryImage}
@@ -450,6 +451,8 @@ function App() {
                 onApproveCruiseJoinRequest={approveCruiseJoinRequest}
                 onDeclineCruiseJoinRequest={declineCruiseJoinRequest}
                 onDeleteSpotPhoto={deleteSpotPhoto}
+                onDriverSearchChange={setFriendSearchQuery}
+                onInviteDriver={inviteDriverToMeet}
                 onReportSpotPhoto={reportSpotPhoto}
                 onRemoveConvoyMember={removeConvoyMember}
                 onSelectPin={setSelectedPinId}
@@ -484,6 +487,7 @@ function App() {
                 currentClanMembers={currentClanMembers}
                 driveHud={driveHud}
                 driveSessionStatus={driveSessionStatus}
+                driverSearchResults={friendSearchResults}
                 headerActions={(
                   <div className="grid grid-cols-[3rem_3rem_3rem_3rem] gap-1.5">
                     <DirectMessageButton onClick={openDmInbox} tone="map" unreadCount={unreadConversationCount} />
@@ -527,6 +531,8 @@ function App() {
                 onApproveCruiseJoinRequest={approveCruiseJoinRequest}
                 onDeclineCruiseJoinRequest={declineCruiseJoinRequest}
                 onDeleteSpotPhoto={deleteSpotPhoto}
+                onDriverSearchChange={setFriendSearchQuery}
+                onInviteDriver={inviteDriverToMeet}
                 onReportSpotPhoto={reportSpotPhoto}
                 onRemoveConvoyMember={removeConvoyMember}
                 onSetSpotPhotoForm={setSpotPhotoForm}
@@ -695,7 +701,7 @@ function App() {
         view={dmCenterView}
       />
       <PublicDriverProfileOverlay
-        hostableConvoy={hostableConvoys?.[0] ?? null}
+        hostableConvoys={hostableConvoys}
         onClose={() => setPublicProfile(null)}
         onBlockDriver={async (profile) => {
           const completed = await blockDriver(profile);

@@ -215,7 +215,11 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   });
 
   const resolvedSafeUser = safeClanUser ?? safeUser ?? user;
-  const hostableConvoys = mapPins.filter((pin) => pin.type === "meet" && pin.createdByPlate === resolvedSafeUser?.plate);
+  const hostableConvoys = mapPins.filter((pin) =>
+    pin.type === "meet" &&
+    pin.createdByPlate === resolvedSafeUser?.plate &&
+    (pin.lifecycleStatus ?? "planning") === "planning"
+  );
 
   const {
     activeConversation,
