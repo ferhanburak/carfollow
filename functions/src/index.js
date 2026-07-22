@@ -50,9 +50,11 @@ const {
 const {
   LIFECYCLE_STATUSES,
   buildConvoyDocument,
+  buildConvoyEditablePatch,
   buildConvoyMemberDocument,
   buildPublicMapSummary,
   canDeleteConvoy,
+  canManageConvoy,
   canSeeConvoy,
   meetsTrust,
   presentConvoy,
@@ -1376,17 +1378,19 @@ exports.respondConvoyJoinRequest = secureCall("respondConvoyJoinRequest", async 
 
   const convoyRef = publicCollection("convoys").doc(convoyId);
   const memberRef = publicCollection("convoyMembers").doc(buildScopedMemberId(convoyId, memberUserId));
+  const actorMemberRef = publicCollection("convoyMembers").doc(buildScopedMemberId(convoyId, actorUserId));
 
   await db.runTransaction(async (transaction) => {
-    const [convoySnapshot, memberSnapshot] = await Promise.all([
+    const [convoySnapshot, memberSnapshot, actorMemberSnapshot] = await Promise.all([
       transaction.get(convoyRef),
       transaction.get(memberRef),
+      transaction.get(actorMemberRef),
     ]);
     if (!convoySnapshot.exists) {
       throw new HttpsError("not-found", "Convoy not found.");
     }
-    if (convoySnapshot.data().hostUserId !== actorUserId) {
-      throw new HttpsError("permission-denied", "Only the convoy host can moderate requests.");
+    if (!canManageConvoy(convoySnapshot.data(), actorMemberSnapshot.data(), actorUserId)) {
+      throw new HttpsError("permission-denied", "Only convoy management can moderate requests.");
     }
     if (!memberSnapshot.exists || memberSnapshot.data().membershipStatus !== "pending") {
       throw new HttpsError("not-found", "Member request not found.");
@@ -1424,14 +1428,19 @@ exports.removeConvoyMember = secureCall("removeConvoyMember", { rateLimit: { lim
   const actor = await getUserProfile(actorUserId);
   const convoyRef = publicDocument("convoys", convoyId);
   const memberRef = publicDocument("convoyMembers", buildScopedMemberId(convoyId, memberUserId));
+  const actorMemberRef = publicDocument("convoyMembers", buildScopedMemberId(convoyId, actorUserId));
   await db.runTransaction(async (transaction) => {
-    const [convoySnapshot, memberSnapshot] = await Promise.all([
+    const [convoySnapshot, memberSnapshot, actorMemberSnapshot] = await Promise.all([
       transaction.get(convoyRef),
       transaction.get(memberRef),
+      transaction.get(actorMemberRef),
     ]);
     const convoy = requireSnapshot(convoySnapshot, "not-found", "Convoy not found.");
     const member = requireSnapshot(memberSnapshot, "not-found", "Convoy member not found.");
-    if (convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can remove convoy members.");
+    if (!canManageConvoy(convoy, actorMemberSnapshot.data(), actorUserId)) throw new HttpsError("permission-denied", "Only convoy management can remove members.");
+    if (member.userId === convoy.hostUserId || (actorUserId !== convoy.hostUserId && member.managementRole === "manager")) {
+      throw new HttpsError("permission-denied", "A manager cannot remove the host or another manager.");
+    }
     if (["completed", "cancelled"].includes(convoy.lifecycleStatus)) throw new HttpsError("failed-precondition", "Closed convoys cannot change members.");
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
     transaction.delete(memberRef);
@@ -1462,17 +1471,19 @@ exports.inviteConvoyMember = secureCall("inviteConvoyMember", { rateLimit: { lim
   ]);
   const convoyRef = publicDocument("convoys", convoyId);
   const memberRef = publicCollection("convoyMembers").doc(buildScopedMemberId(convoyId, targetUserId));
+  const actorMemberRef = publicCollection("convoyMembers").doc(buildScopedMemberId(convoyId, actorUserId));
   const actorBlockRef = blockedDriverDocument(actorUserId, targetUserId);
   const targetBlockRef = blockedDriverDocument(targetUserId, actorUserId);
   await db.runTransaction(async (transaction) => {
-    const [convoySnapshot, memberSnapshot, actorBlock, targetBlock] = await Promise.all([
+    const [convoySnapshot, memberSnapshot, actorMemberSnapshot, actorBlock, targetBlock] = await Promise.all([
       transaction.get(convoyRef),
       transaction.get(memberRef),
+      transaction.get(actorMemberRef),
       transaction.get(actorBlockRef),
       transaction.get(targetBlockRef),
     ]);
     const convoy = requireSnapshot(convoySnapshot, "not-found", "Convoy not found.");
-    if (convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can invite drivers.");
+    if (!canManageConvoy(convoy, actorMemberSnapshot.data(), actorUserId)) throw new HttpsError("permission-denied", "Only convoy management can invite drivers.");
     if (convoy.lifecycleStatus !== "planning") throw new HttpsError("failed-precondition", "Invites are closed for this convoy.");
     if (Number(convoy.approvedCount ?? 0) >= Number(convoy.capacity ?? 0)) throw new HttpsError("resource-exhausted", "Convoy capacity is full.");
     if (memberSnapshot.exists && ["approved", "pending"].includes(memberSnapshot.data().membershipStatus)) {
@@ -1502,18 +1513,83 @@ exports.inviteConvoyMember = secureCall("inviteConvoyMember", { rateLimit: { lim
   return { ok: true, convoyId, targetUserId };
 });
 
+exports.updateConvoyDetails = secureCall("updateConvoyDetails", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
+  const actorUserId = requireAuth(request);
+  const { convoyId, details } = request.data ?? {};
+  if (!convoyId || !details || typeof details !== "object") throw new HttpsError("invalid-argument", "Convoy details are required.");
+  const convoyRef = publicDocument("convoys", convoyId);
+  const actorMemberRef = publicDocument("convoyMembers", buildScopedMemberId(convoyId, actorUserId));
+
+  await db.runTransaction(async (transaction) => {
+    const [convoySnapshot, actorMemberSnapshot] = await Promise.all([
+      transaction.get(convoyRef),
+      transaction.get(actorMemberRef),
+    ]);
+    const convoy = requireSnapshot(convoySnapshot, "not-found", "Convoy not found.");
+    if (!canManageConvoy(convoy, actorMemberSnapshot.data(), actorUserId)) throw new HttpsError("permission-denied", "Only convoy management can edit details.");
+    if (!["planning", "delayed"].includes(convoy.lifecycleStatus)) throw new HttpsError("failed-precondition", "A running or closed convoy cannot be edited.");
+    let patch;
+    try {
+      patch = buildConvoyEditablePatch(convoy, details);
+    } catch (error) {
+      throw new HttpsError("invalid-argument", error.message);
+    }
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const updatedConvoy = { ...convoy, ...patch, updatedAt: timestamp };
+    transaction.update(convoyRef, { ...patch, updatedAt: timestamp, updatedByUserId: actorUserId });
+    const mapPinRef = publicDocument("mapPins", convoyId);
+    if (patch.visibility === "public") transaction.set(mapPinRef, buildPublicMapSummary(updatedConvoy));
+    else if (convoy.visibility === "public") transaction.delete(mapPinRef);
+  });
+  return { ok: true, convoyId };
+});
+
+exports.setConvoyMemberRole = secureCall("setConvoyMemberRole", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
+  const actorUserId = requireAuth(request);
+  const { convoyId, memberUserId, managementRole } = request.data ?? {};
+  if (!convoyId || !memberUserId || !["manager", "member"].includes(managementRole)) {
+    throw new HttpsError("invalid-argument", "A valid convoy member and role are required.");
+  }
+  const actor = await getUserProfile(actorUserId);
+  const convoyRef = publicDocument("convoys", convoyId);
+  const memberRef = publicDocument("convoyMembers", buildScopedMemberId(convoyId, memberUserId));
+  await db.runTransaction(async (transaction) => {
+    const [convoySnapshot, memberSnapshot] = await Promise.all([
+      transaction.get(convoyRef),
+      transaction.get(memberRef),
+    ]);
+    const convoy = requireSnapshot(convoySnapshot, "not-found", "Convoy not found.");
+    const member = requireSnapshot(memberSnapshot, "not-found", "Convoy member not found.");
+    if (convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can assign convoy roles.");
+    if (memberUserId === actorUserId || member.membershipStatus !== "approved") throw new HttpsError("failed-precondition", "Only approved participants can receive management permission.");
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    transaction.update(memberRef, { managementRole, roleUpdatedAt: timestamp, roleUpdatedByUserId: actorUserId, updatedAt: timestamp });
+    writeNotification(transaction, memberUserId, `convoy-role-${convoyId}-${memberUserId}`, {
+      type: "convoy-role",
+      title: managementRole === "manager" ? "Konvoy yonetim yetkisi verildi" : "Konvoy yonetim yetkisi kaldirildi",
+      body: `${actor.fullName ?? actor.plate} ${convoy.name} icin rolunu guncelledi.`,
+      actor,
+      action: { type: "convoy", targetId: convoyId },
+    }, timestamp);
+  });
+  return { ok: true, convoyId, memberUserId, managementRole };
+});
+
 exports.updateConvoyLifecycle = secureCall("updateConvoyLifecycle", async (request) => {
   const actorUserId = requireAuth(request);
   const { convoyId, lifecycleStatus } = request.data ?? {};
   if (!convoyId || !LIFECYCLE_STATUSES.includes(lifecycleStatus)) throw new HttpsError("invalid-argument", "A valid convoy status is required.");
   const convoyRef = publicDocument("convoys", convoyId);
+  const actorMemberRef = publicDocument("convoyMembers", buildScopedMemberId(convoyId, actorUserId));
   await db.runTransaction(async (transaction) => {
-    const [snapshot, membersSnapshot] = await Promise.all([
+    const [snapshot, membersSnapshot, actorMemberSnapshot] = await Promise.all([
       transaction.get(convoyRef),
       transaction.get(publicCollection("convoyMembers").where("convoyId", "==", convoyId)),
+      transaction.get(actorMemberRef),
     ]);
     const convoy = requireSnapshot(snapshot, "not-found", "Convoy not found.");
-    if (convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can update convoy status.");
+    if (!canManageConvoy(convoy, actorMemberSnapshot.data(), actorUserId)) throw new HttpsError("permission-denied", "Only convoy management can update status.");
+    if (lifecycleStatus === "cancelled" && convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can cancel a convoy.");
     if (["completed", "cancelled"].includes(convoy.lifecycleStatus)) throw new HttpsError("failed-precondition", "Closed convoys cannot be reopened.");
     const allowedTransitions = {
       planning: new Set(["planning", "delayed", "cancelled"]),

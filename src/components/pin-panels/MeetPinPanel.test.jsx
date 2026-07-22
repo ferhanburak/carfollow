@@ -74,3 +74,57 @@ describe("MeetPinPanel convoy invitations", () => {
     expect(screen.getByRole("button", { name: "Davet Edildi" })).toBeDisabled();
   });
 });
+
+describe("MeetPinPanel convoy management", () => {
+  it("lets the host edit convoy details", async () => {
+    const user = userEvent.setup();
+    const onUpdateConvoyDetails = vi.fn().mockResolvedValue(true);
+    renderPanel({ onUpdateConvoyDetails });
+
+    await user.click(screen.getByRole("button", { name: "Konvoy Bilgilerini Duzenle" }));
+    const nameInput = screen.getByRole("textbox", { name: /Konvoy Adi/ });
+    await user.clear(nameInput);
+    await user.type(nameInput, "Ankara Gece Konvoyu");
+    await user.click(screen.getByRole("button", { name: "Degisiklikleri Kaydet" }));
+
+    expect(onUpdateConvoyDetails).toHaveBeenCalledWith(expect.objectContaining({
+      name: "Ankara Gece Konvoyu",
+      route: "Golbasi",
+      capacity: 12,
+    }));
+  });
+
+  it("lets the host promote an approved participant", async () => {
+    const user = userEvent.setup();
+    const onSetConvoyMemberRole = vi.fn().mockResolvedValue(true);
+    const attendee = { ...driver, status: "approved", managementRole: "member" };
+    renderPanel({
+      pin: createPin({ attendees: [attendee] }),
+      onSetConvoyMemberRole,
+    });
+
+    await user.click(screen.getByRole("button", { name: "Yonetici Yap" }));
+    expect(onSetConvoyMemberRole).toHaveBeenCalledWith(expect.objectContaining({
+      userId: driver.userId,
+    }), "manager");
+  });
+
+  it("gives a delegated manager management tools without cancellation authority", () => {
+    const manager = {
+      firebaseUid: driver.userId,
+      plate: driver.plate,
+      fullName: driver.fullName,
+    };
+    renderPanel({
+      user: manager,
+      pin: createPin({
+        viewerManagementRole: "manager",
+        attendees: [{ ...driver, status: "approved", managementRole: "manager" }],
+      }),
+    });
+
+    expect(screen.getByText("Convoy Management")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Konvoya davet edilecek plaka" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Iptal Edildi" })).not.toBeInTheDocument();
+  });
+});

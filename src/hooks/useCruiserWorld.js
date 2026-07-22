@@ -86,6 +86,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     selectedPin,
     selectedPinId,
     setAttendeeTripStatus,
+    setConvoyMemberRole,
     setConvoyLifecycleStatus,
     setMapPickMode,
     setMapPinForm,
@@ -99,6 +100,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     submitMapPin,
     submitSpotPhoto,
     submitWashReview,
+    updateConvoyDetails,
     useSelectedPinCoordinates,
     washForm,
     washErrors,
@@ -215,11 +217,16 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
   });
 
   const resolvedSafeUser = safeClanUser ?? safeUser ?? user;
-  const hostableConvoys = mapPins.filter((pin) =>
-    pin.type === "meet" &&
-    pin.createdByPlate === resolvedSafeUser?.plate &&
-    (pin.lifecycleStatus ?? "planning") === "planning"
-  );
+  const hostableConvoys = mapPins.filter((pin) => {
+    if (pin.type !== "meet" || (pin.lifecycleStatus ?? "planning") !== "planning") return false;
+
+    const selfMembership = (pin.attendees ?? []).find((attendee) =>
+      attendee.userId === resolvedSafeUser?.firebaseUid || attendee.plate === resolvedSafeUser?.plate
+    );
+    return pin.createdByPlate === resolvedSafeUser?.plate ||
+      pin.viewerManagementRole === "manager" ||
+      selfMembership?.managementRole === "manager";
+  });
 
   const {
     activeConversation,
@@ -405,6 +412,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     serviceLogPending,
     setActiveTab,
     setAttendeeTripStatus,
+    setConvoyMemberRole,
     setClanForm,
     transferClanOwnership,
     updateClanMemberRole,
@@ -430,6 +438,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     submitServiceLog,
     submitSpotPhoto,
     submitWashReview,
+    updateConvoyDetails,
     toggleDrive,
     unreadConversationCount,
     unreadNotificationCount,

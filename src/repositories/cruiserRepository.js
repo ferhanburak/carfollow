@@ -121,9 +121,11 @@ export {
   removeFirebaseConvoyMember,
   requestFirebaseConvoyJoin,
   respondFirebaseConvoyJoin,
+  setFirebaseConvoyMemberRole,
   submitFirebaseWashReview,
   subscribeFirebaseMapState,
   toggleFirebaseMapLike,
+  updateFirebaseConvoyDetails,
   updateFirebaseConvoyLifecycle,
   updateFirebaseConvoyTripStatus,
 } from "./firebaseMapRepository";

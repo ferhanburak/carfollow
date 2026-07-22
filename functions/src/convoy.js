@@ -192,6 +192,7 @@ function buildConvoyMemberDocument({ convoy, profile, status = "approved", times
     userId: driver.userId,
     ...driver,
     membershipStatus: status,
+    managementRole: driver.userId === convoy.hostUserId ? "host" : "member",
     tripStatus: "ready",
     arrivalConfirmationCount: 0,
     scoreSnapshot: driver.score,
@@ -200,6 +201,51 @@ function buildConvoyMemberDocument({ convoy, profile, status = "approved", times
     schemaVersion: CONVOY_SCHEMA_VERSION,
     createdAt: timestamp,
     updatedAt: timestamp,
+  };
+}
+
+function getConvoyManagementRole(convoy, membership, userId) {
+  if (convoy?.hostUserId && convoy.hostUserId === userId) return "host";
+  if (membership?.membershipStatus === "approved" && membership.managementRole === "manager") return "manager";
+  return "member";
+}
+
+function canManageConvoy(convoy, membership, userId) {
+  return ["host", "manager"].includes(getConvoyManagementRole(convoy, membership, userId));
+}
+
+function buildConvoyEditablePatch(convoy, input = {}) {
+  const name = safeText(input.name ?? convoy.name, 100);
+  const route = safeText(input.route ?? convoy.route, 240);
+  const time = safeText(input.time ?? convoy.time, 40);
+  const capacity = Number(input.capacity ?? convoy.capacity);
+  const visibility = VISIBILITIES.includes(input.visibility) ? input.visibility : convoy.visibility;
+  const accessPolicy = ACCESS_POLICIES.includes(input.accessPolicy) ? input.accessPolicy : convoy.accessPolicy;
+  const detailVisibility = DETAIL_VISIBILITIES.includes(input.detailVisibility) ? input.detailVisibility : convoy.detailVisibility;
+  const scheduledStartAtMs = Number(input.scheduledStartAtMs ?? convoy.scheduledStartAtMs ?? 0);
+  const minDriverScore = Number(input.minDriverScore ?? convoy.minDriverScore ?? 0);
+  const minHarmonyVotes = Number(input.minHarmonyVotes ?? convoy.minHarmonyVotes ?? 0);
+  const maxAlertVotes = Number(input.maxAlertVotes ?? convoy.maxAlertVotes ?? 999);
+
+  if (!name || !route || !time) throw new Error("Convoy name, route, and launch time are required.");
+  if (!Number.isInteger(capacity) || capacity < 2 || capacity > 50) throw new Error("Convoy capacity must be between 2 and 50.");
+  if (capacity < Number(convoy.approvedCount ?? 1)) throw new Error("Convoy capacity cannot be lower than the approved member count.");
+  if (!Number.isFinite(scheduledStartAtMs) || scheduledStartAtMs < 0) throw new Error("Convoy launch date is invalid.");
+  if (![minDriverScore, minHarmonyVotes, maxAlertVotes].every(Number.isFinite)) throw new Error("Convoy trust limits must be valid numbers.");
+  if (visibility === "clan" && !convoy.clanId) throw new Error("Clan-only convoys require clan membership.");
+
+  return {
+    name,
+    route,
+    time,
+    capacity,
+    visibility,
+    accessPolicy,
+    detailVisibility,
+    scheduledStartAtMs,
+    minDriverScore: Math.min(100, Math.max(0, minDriverScore)),
+    minHarmonyVotes: Math.max(0, minHarmonyVotes),
+    maxAlertVotes: Math.max(0, maxAlertVotes),
   };
 }
 
@@ -280,20 +326,24 @@ function presentConvoy(convoy, profile, membership, members) {
   const trusted = meetsTrust(convoy, profile);
   const canJoin = !joined && !pendingSelf && !full && trusted && convoy.lifecycleStatus === "planning";
   const base = detailsAllowed ? convoy : buildPublicMapSummary(convoy);
+  const viewerUserId = profile?.id ?? profile?.firebaseUid ?? profile?.userId;
+  const viewerManagementRole = getConvoyManagementRole(convoy, membership, viewerUserId);
   return {
     ...base,
     backendCanViewDetails: detailsAllowed,
     backendCanJoin: canJoin,
     backendAccessReason: !trusted ? "Driver score or behavior requirements are not met." : full ? "Convoy capacity is full." : pendingSelf ? "Join request is awaiting host approval." : "",
     attendees: detailsAllowed ? approved : [],
-    pendingRequests: convoy.hostUserId === (profile?.id ?? profile?.firebaseUid) ? pending : [],
+    pendingRequests: canManageConvoy(convoy, membership, viewerUserId) ? pending : [],
     invitedGuests: detailsAllowed ? (convoy.invitedGuests ?? []) : [],
+    viewerManagementRole,
   };
 }
 
 module.exports = {
   ACCESS_POLICIES, ARRIVAL_CONFIRMATION_COUNT, CONVOY_SCHEMA_VERSION, DEFAULT_ARRIVAL_RADIUS_M, DETAIL_VISIBILITIES,
   LIFECYCLE_STATUSES, MAX_AUTO_ARRIVAL_ACCURACY_M, TRIP_STATUSES, VISIBILITIES,
-  buildConvoyDocument, buildConvoyMemberDocument, buildPublicMapSummary, canDeleteConvoy, canSeeConvoy, canSeeDetails,
-  getDistanceMeters, isClosedConvoy, meetsTrust, presentConvoy, projectDriver, resolveConvoyLocationUpdate, safeText,
+  buildConvoyDocument, buildConvoyEditablePatch, buildConvoyMemberDocument, buildPublicMapSummary, canDeleteConvoy,
+  canManageConvoy, canSeeConvoy, canSeeDetails, getConvoyManagementRole, getDistanceMeters, isClosedConvoy,
+  meetsTrust, presentConvoy, projectDriver, resolveConvoyLocationUpdate, safeText,
 };

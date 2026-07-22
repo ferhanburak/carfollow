@@ -230,7 +230,9 @@ export function MapScreen({
   onRemoveConvoyMember,
   onSelectPin,
   onSetAttendeeTripStatus,
+  onSetConvoyMemberRole,
   onSetConvoyLifecycleStatus,
+  onUpdateConvoyDetails,
   onSetSpotPhotoForm,
   onSetWashForm,
   onSubmitSpotPhoto,
@@ -440,7 +442,9 @@ export function MapScreen({
             onLikePin={likePin}
             onRateAttendee={rateAttendee}
             onSetAttendeeTripStatus={onSetAttendeeTripStatus}
+            onSetConvoyMemberRole={onSetConvoyMemberRole}
             onSetConvoyLifecycleStatus={onSetConvoyLifecycleStatus}
+            onUpdateConvoyDetails={onUpdateConvoyDetails}
             onSpotPhotoFileChange={loadSpotPhotoFile}
             onSpotPhotoFormChange={onSetSpotPhotoForm}
             onSubmitSpotPhoto={onSubmitSpotPhoto}

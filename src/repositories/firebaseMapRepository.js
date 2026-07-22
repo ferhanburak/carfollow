@@ -76,6 +76,8 @@ export const requestFirebaseConvoyJoin = (convoyId) => callMapFunction("requestC
 export const respondFirebaseConvoyJoin = (convoyId, memberUserId, decision) => callMapFunction("respondConvoyJoinRequest", { convoyId, memberUserId, decision });
 export const removeFirebaseConvoyMember = (convoyId, memberUserId) => callMapFunction("removeConvoyMember", { convoyId, memberUserId });
 export const inviteFirebaseConvoyMember = (convoyId, targetUserId) => callMapFunction("inviteConvoyMember", { convoyId, targetUserId });
+export const setFirebaseConvoyMemberRole = (convoyId, memberUserId, managementRole) => callMapFunction("setConvoyMemberRole", { convoyId, memberUserId, managementRole });
+export const updateFirebaseConvoyDetails = (convoyId, details) => callMapFunction("updateConvoyDetails", { convoyId, details });
 export const updateFirebaseConvoyLifecycle = (convoyId, lifecycleStatus) => callMapFunction("updateConvoyLifecycle", { convoyId, lifecycleStatus });
 export const updateFirebaseConvoyTripStatus = (convoyId, tripStatus) => callMapFunction("updateConvoyTripStatus", { convoyId, tripStatus });
 export const rateFirebaseConvoyMember = (convoyId, targetUserId, signal) => callMapFunction("rateConvoyMember", { convoyId, targetUserId, signal });

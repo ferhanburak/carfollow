@@ -199,6 +199,117 @@ function ConvoyInvitePanel({ attendees, invitedGuests, pendingRequests, onInvite
   );
 }
 
+function toDateTimeLocal(value) {
+  const date = new Date(Number(value ?? 0));
+  if (!Number(value) || Number.isNaN(date.getTime())) return "";
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function createConvoyEditForm(pin) {
+  return {
+    name: pin.name ?? "",
+    route: pin.route ?? "",
+    time: pin.time ?? "",
+    scheduledStartAt: toDateTimeLocal(pin.scheduledStartAtMs),
+    capacity: String(pin.capacity ?? 12),
+    visibility: pin.visibility ?? "public",
+    accessPolicy: pin.accessPolicy ?? "request",
+    detailVisibility: pin.detailVisibility ?? "trusted",
+    minDriverScore: String(pin.minDriverScore ?? 0),
+    minHarmonyVotes: String(pin.minHarmonyVotes ?? 0),
+    maxAlertVotes: String(pin.maxAlertVotes ?? 999),
+  };
+}
+
+function ConvoyEditPanel({ onUpdate, pin }) {
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [form, setForm] = useState(() => createConvoyEditForm(pin));
+
+  useEffect(() => {
+    setForm(createConvoyEditForm(pin));
+    setOpen(false);
+  }, [pin.id]);
+
+  const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const submit = async (event) => {
+    event.preventDefault();
+    if (!onUpdate || pending) return;
+    setPending(true);
+    try {
+      const completed = await onUpdate({
+        name: form.name,
+        route: form.route,
+        time: form.time,
+        scheduledStartAtMs: form.scheduledStartAt ? new Date(form.scheduledStartAt).getTime() : Number(pin.scheduledStartAtMs ?? 0),
+        capacity: Number(form.capacity),
+        visibility: form.visibility,
+        accessPolicy: form.accessPolicy,
+        detailVisibility: form.detailVisibility,
+        minDriverScore: Number(form.minDriverScore),
+        minHarmonyVotes: Number(form.minHarmonyVotes),
+        maxAlertVotes: Number(form.maxAlertVotes),
+      });
+      if (completed !== false) setOpen(false);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div className="mt-3">
+      <button type="button" onClick={() => setOpen((current) => !current)} className="min-h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-neutral-200">
+        {open ? "Duzenlemeyi Kapat" : "Konvoy Bilgilerini Duzenle"}
+      </button>
+      {open ? (
+        <form onSubmit={submit} className="mt-3 space-y-3 rounded-2xl border border-white/8 bg-black/25 p-3">
+          <label className="block text-xs text-neutral-400">Konvoy Adi *
+            <input required value={form.name} onChange={(event) => updateField("name", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-white outline-none focus:border-lime-400" />
+          </label>
+          <label className="block text-xs text-neutral-400">Rota Aciklamasi *
+            <input required value={form.route} onChange={(event) => updateField("route", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-white outline-none focus:border-lime-400" />
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-xs text-neutral-400">Saat *
+              <input required value={form.time} onChange={(event) => updateField("time", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-white outline-none focus:border-lime-400" />
+            </label>
+            <label className="block text-xs text-neutral-400">Kapasite *
+              <input required type="number" min="2" max="50" value={form.capacity} onChange={(event) => updateField("capacity", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-white outline-none focus:border-lime-400" />
+            </label>
+          </div>
+          <label className="block text-xs text-neutral-400">Baslangic Tarihi
+            <input type="datetime-local" value={form.scheduledStartAt} onChange={(event) => updateField("scheduledStartAt", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-white outline-none focus:border-lime-400" />
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-xs text-neutral-400">Gorunurluk
+              <select value={form.visibility} onChange={(event) => updateField("visibility", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-2 text-xs text-white outline-none focus:border-lime-400">
+                <option value="public">Herkese Acik</option><option value="friends">Arkadaslar</option><option value="clan">Klan</option>
+              </select>
+            </label>
+            <label className="block text-xs text-neutral-400">Katilim
+              <select value={form.accessPolicy} onChange={(event) => updateField("accessPolicy", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-2 text-xs text-white outline-none focus:border-lime-400">
+                <option value="open">Acik</option><option value="request">Onayli</option><option value="trusted">Guvenilir</option>
+              </select>
+            </label>
+          </div>
+          <label className="block text-xs text-neutral-400">Detay Gorunurlugu
+            <select value={form.detailVisibility} onChange={(event) => updateField("detailVisibility", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-white outline-none focus:border-lime-400">
+              <option value="public">Herkese Acik</option><option value="trusted">Guvenilir Suruculer</option>
+            </select>
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            <label className="block text-[10px] text-neutral-500">Min Skor<input type="number" min="0" max="100" value={form.minDriverScore} onChange={(event) => updateField("minDriverScore", event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-[#171717] px-2 text-xs text-white" /></label>
+            <label className="block text-[10px] text-neutral-500">Min Uyum<input type="number" min="0" value={form.minHarmonyVotes} onChange={(event) => updateField("minHarmonyVotes", event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-[#171717] px-2 text-xs text-white" /></label>
+            <label className="block text-[10px] text-neutral-500">Max Uyari<input type="number" min="0" value={form.maxAlertVotes} onChange={(event) => updateField("maxAlertVotes", event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-[#171717] px-2 text-xs text-white" /></label>
+          </div>
+          <button type="submit" disabled={pending} className="min-h-12 w-full rounded-2xl bg-lime-400 font-bold text-black disabled:cursor-wait disabled:opacity-50">{pending ? "Kaydediliyor..." : "Degisiklikleri Kaydet"}</button>
+        </form>
+      ) : null}
+    </div>
+  );
+}
+
 export function MeetPinPanel({
   convoyFeedback,
   driverSearchResults = [],
@@ -211,8 +322,10 @@ export function MeetPinPanel({
   onRateAttendee,
   onRemoveConvoyMember,
   onSetAttendeeTripStatus,
+  onSetConvoyMemberRole,
   onSetConvoyLifecycleStatus,
   onDriverSearchChange,
+  onUpdateConvoyDetails,
 }) {
   const attendees = (pin.attendees ?? []).map(normalizeAttendee);
   const pendingRequests = (pin.pendingRequests ?? []).map(normalizeAttendee);
@@ -222,6 +335,8 @@ export function MeetPinPanel({
   const accessState = getConvoyAccessState(pin, user);
   const isJoinDisabled = joinState === "host" || joinState === "joined" || joinState === "requested" || !accessState.canJoin;
   const selfAttendee = attendees.find((entry) => entry.plate === user.plate) ?? null;
+  const isManager = pin.viewerManagementRole === "manager" || selfAttendee?.managementRole === "manager";
+  const canManage = isHost || isManager;
   const lifecycleStatus = pin.lifecycleStatus ?? "planning";
 
   return (
@@ -300,16 +415,16 @@ export function MeetPinPanel({
         {getJoinButtonLabel(joinState, pin.visibility)}
       </button>
 
-      {accessState.canViewDetails && isHost ? (
+      {accessState.canViewDetails && canManage ? (
         <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold">Host Convoy Control</p>
+            <p className="text-sm font-semibold">Convoy Management</p>
             <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-lime-300">
               {getLifecycleLabel(lifecycleStatus)}
             </span>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            {["planning", "delayed", "cancelled"].map((status) => (
+            {(isHost ? ["planning", "delayed", "cancelled"] : ["planning", "delayed"]).map((status) => (
               <button
                 key={status}
                 type="button"
@@ -322,10 +437,11 @@ export function MeetPinPanel({
               </button>
             ))}
           </div>
+          {["planning", "delayed"].includes(lifecycleStatus) ? <ConvoyEditPanel onUpdate={onUpdateConvoyDetails} pin={pin} /> : null}
         </div>
       ) : null}
 
-      {accessState.canViewDetails && isHost && lifecycleStatus === "planning" ? (
+      {accessState.canViewDetails && canManage && lifecycleStatus === "planning" ? (
         <ConvoyInvitePanel
           attendees={attendees}
           invitedGuests={invitedGuests}
@@ -379,7 +495,7 @@ export function MeetPinPanel({
             </div>
           ) : null}
 
-          {isHost && pendingRequests.length ? (
+          {canManage && pendingRequests.length ? (
             <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm font-semibold">Pending RSVP Requests</p>
@@ -462,7 +578,17 @@ export function MeetPinPanel({
                       Tasinlik +1
                     </button>
                   </div>
-                  {isHost && !isSelf && !["completed", "cancelled"].includes(lifecycleStatus) ? (
+                  {attendee.managementRole === "manager" ? <p className="mt-3 text-[10px] uppercase tracking-[0.18em] text-amber-300">Yardimci Yonetici</p> : null}
+                  {isHost && !isSelf ? (
+                    <button
+                      type="button"
+                      onClick={() => onSetConvoyMemberRole?.(attendee, attendee.managementRole === "manager" ? "member" : "manager")}
+                      className="mt-3 min-h-12 w-full rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 text-sm font-semibold text-amber-200"
+                    >
+                      {attendee.managementRole === "manager" ? "Yonetim Yetkisini Kaldir" : "Yonetici Yap"}
+                    </button>
+                  ) : null}
+                  {canManage && !isSelf && !(isManager && attendee.managementRole === "manager") && !["completed", "cancelled"].includes(lifecycleStatus) ? (
                     <button
                       type="button"
                       onClick={() => onRemoveConvoyMember?.(attendee)}

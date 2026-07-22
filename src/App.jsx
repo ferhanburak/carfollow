@@ -228,6 +228,7 @@ function App() {
     serviceLogPending,
     setActiveTab,
     setAttendeeTripStatus,
+    setConvoyMemberRole,
     setClanForm,
     setConvoyLifecycleStatus,
     setFriendSearchQuery,
@@ -251,6 +252,7 @@ function App() {
     submitServiceLog,
     submitSpotPhoto,
     submitWashReview,
+    updateConvoyDetails,
     toggleDrive,
     unreadConversationCount,
     unreadNotificationCount,
@@ -457,7 +459,9 @@ function App() {
                 onRemoveConvoyMember={removeConvoyMember}
                 onSelectPin={setSelectedPinId}
                 onSetAttendeeTripStatus={setAttendeeTripStatus}
+                onSetConvoyMemberRole={setConvoyMemberRole}
                 onSetConvoyLifecycleStatus={setConvoyLifecycleStatus}
+                onUpdateConvoyDetails={updateConvoyDetails}
                 onSetMapPickMode={setMapPickMode}
                 onSetMapPinForm={setMapPinForm}
                 onSetSpotPhotoForm={setSpotPhotoForm}
@@ -537,7 +541,9 @@ function App() {
                 onRemoveConvoyMember={removeConvoyMember}
                 onSetSpotPhotoForm={setSpotPhotoForm}
                 onSetAttendeeTripStatus={setAttendeeTripStatus}
+                onSetConvoyMemberRole={setConvoyMemberRole}
                 onSetConvoyLifecycleStatus={setConvoyLifecycleStatus}
+                onUpdateConvoyDetails={updateConvoyDetails}
                 onSetWashForm={setWashForm}
                 onSubmitSpotPhoto={submitSpotPhoto}
                 onSubmitWashReview={submitWashReview}

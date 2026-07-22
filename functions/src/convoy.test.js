@@ -2,10 +2,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   buildConvoyDocument,
+  buildConvoyEditablePatch,
   buildConvoyMemberDocument,
   buildPublicMapSummary,
   DEFAULT_ARRIVAL_RADIUS_M,
   canDeleteConvoy,
+  canManageConvoy,
   canSeeConvoy,
   getDistanceMeters,
   isClosedConvoy,
@@ -63,6 +65,34 @@ test("member documents preserve identity and reputation snapshots", () => {
   assert.equal(member.id, "convoy-1__guest");
   assert.equal(member.membershipStatus, "pending");
   assert.equal(member.scoreSnapshot, 80);
+});
+
+test("convoy management roles keep host authority and allow delegated managers", () => {
+  const convoy = createConvoy();
+  const hostMembership = buildConvoyMemberDocument({ convoy, profile: host, timestamp: "now" });
+  const managerMembership = { ...buildConvoyMemberDocument({ convoy, profile: guest, timestamp: "now" }), managementRole: "manager" };
+  const memberMembership = { ...managerMembership, managementRole: "member" };
+
+  assert.equal(hostMembership.managementRole, "host");
+  assert.equal(canManageConvoy(convoy, hostMembership, host.id), true);
+  assert.equal(canManageConvoy(convoy, managerMembership, guest.id), true);
+  assert.equal(canManageConvoy(convoy, memberMembership, guest.id), false);
+});
+
+test("editable convoy patch validates capacity and preserves route coordinates", () => {
+  const convoy = { ...createConvoy(), approvedCount: 3 };
+  const patch = buildConvoyEditablePatch(convoy, {
+    name: "Updated Run",
+    route: "New route",
+    time: "23:00",
+    capacity: 10,
+    visibility: "friends",
+  });
+
+  assert.equal(patch.name, "Updated Run");
+  assert.equal(patch.capacity, 10);
+  assert.equal(patch.visibility, "friends");
+  assert.throws(() => buildConvoyEditablePatch(convoy, { capacity: 2 }), /approved member count/);
 });
 
 test("clan members can inspect attendee details for their clan events", () => {

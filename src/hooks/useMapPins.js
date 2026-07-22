@@ -27,10 +27,12 @@ import {
   removeFirebaseConvoyMember,
   requestFirebaseConvoyJoin,
   respondFirebaseConvoyJoin,
+  setFirebaseConvoyMemberRole,
   submitFirebaseWashReview,
   submitFirebaseModerationReport,
   subscribeFirebaseMapState,
   toggleFirebaseMapLike,
+  updateFirebaseConvoyDetails,
   updateFirebaseConvoyLifecycle,
   updateFirebaseConvoyTripStatus,
 } from "../repositories/cruiserRepository";
@@ -500,6 +502,49 @@ export function useMapPins({ initialWorld, user }) {
     }
   };
 
+  const updateConvoyDetails = async (details) => {
+    if (!selectedPin || selectedPin.type !== "meet") return false;
+    if (firebaseMapEnabled) {
+      try {
+        await updateFirebaseConvoyDetails(selectedPin.id, details);
+        await refreshFirebaseConvoys();
+        setConvoyFeedback("Konvoy bilgileri guncellendi.");
+        return true;
+      } catch (error) {
+        setConvoyFeedback(error instanceof Error ? error.message : "Konvoy bilgileri guncellenemedi.");
+        return false;
+      }
+    }
+    setMapPins((current) => current.map((pin) => pin.id === selectedPin.id ? { ...pin, ...details } : pin));
+    setConvoyFeedback("Konvoy bilgileri guncellendi.");
+    return true;
+  };
+
+  const setConvoyMemberRole = async (attendee, managementRole) => {
+    if (!selectedPin || selectedPin.type !== "meet" || !attendee) return false;
+    if (firebaseMapEnabled) {
+      const memberUserId = attendee.userId ?? attendee.firebaseUid ?? attendee.id;
+      if (!memberUserId) {
+        setConvoyFeedback("Bu katilimcinin Firebase profili bulunamadi.");
+        return false;
+      }
+      try {
+        await setFirebaseConvoyMemberRole(selectedPin.id, memberUserId, managementRole);
+        await refreshFirebaseConvoys();
+        setConvoyFeedback(managementRole === "manager" ? `${attendee.plate} yonetici yapildi.` : `${attendee.plate} yonetim yetkisi kaldirildi.`);
+        return true;
+      } catch (error) {
+        setConvoyFeedback(error instanceof Error ? error.message : "Konvoy yetkisi guncellenemedi.");
+        return false;
+      }
+    }
+    setMapPins((current) => current.map((pin) => pin.id === selectedPin.id
+      ? { ...pin, attendees: (pin.attendees ?? []).map((entry) => entry.plate === attendee.plate ? { ...entry, managementRole } : entry) }
+      : pin));
+    setConvoyFeedback(managementRole === "manager" ? `${attendee.plate} yonetici yapildi.` : `${attendee.plate} yonetim yetkisi kaldirildi.`);
+    return true;
+  };
+
   const setAttendeeTripStatus = async (plate, tripStatus) => {
     if (!selectedPin || selectedPin.type !== "meet") {
       return;
@@ -846,6 +891,7 @@ export function useMapPins({ initialWorld, user }) {
     selectedPin,
     selectedPinId,
     setAttendeeTripStatus,
+    setConvoyMemberRole,
     setConvoyLifecycleStatus,
     setMapPickMode,
     setMapPinForm,
@@ -859,6 +905,7 @@ export function useMapPins({ initialWorld, user }) {
     submitMapPin,
     submitSpotPhoto,
     submitWashReview,
+    updateConvoyDetails,
     useSelectedPinCoordinates,
     washForm,
     washErrors,

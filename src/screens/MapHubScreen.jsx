@@ -27,7 +27,9 @@ export function MapHubScreen({
   onPickLocation,
   onSelectPin,
   onSetAttendeeTripStatus,
+  onSetConvoyMemberRole,
   onSetConvoyLifecycleStatus,
+  onUpdateConvoyDetails,
   onSetMapPickMode,
   onSetMapPinForm,
   onSetSpotPhotoForm,
@@ -85,7 +87,9 @@ export function MapHubScreen({
         onLikePin={likePin}
         onRateAttendee={rateAttendee}
         onSetAttendeeTripStatus={onSetAttendeeTripStatus}
+        onSetConvoyMemberRole={onSetConvoyMemberRole}
         onSetConvoyLifecycleStatus={onSetConvoyLifecycleStatus}
+        onUpdateConvoyDetails={onUpdateConvoyDetails}
         onSpotPhotoFileChange={loadSpotPhotoFile}
         onSpotPhotoFormChange={onSetSpotPhotoForm}
         onSubmitSpotPhoto={onSubmitSpotPhoto}
