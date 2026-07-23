@@ -605,6 +605,7 @@ function App() {
                 pendingKey={forum.pendingKey}
                 threads={forum.threads}
                 toggleLike={forum.toggleLike}
+                user={safeUser ?? user}
               />
             ) : null}
 

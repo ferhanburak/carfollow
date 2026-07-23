@@ -11,6 +11,7 @@ const props = {
   pendingKey: "",
   threads: [],
   toggleLike: vi.fn(),
+  user: { fullName: "Test Driver", avatar: "" },
 };
 
 describe("ForumScreen", () => {
@@ -18,10 +19,11 @@ describe("ForumScreen", () => {
     const user = userEvent.setup();
     render(<ForumScreen {...props} />);
 
-    expect(screen.getByRole("heading", { name: "Forum" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Forum" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tum Akis" })).toBeInTheDocument();
     expect(screen.getByText("Bu kategoride henuz paylasim yok. Ilk paylasimi sen yap.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Paylas" }));
+    await user.click(screen.getByRole("button", { name: "Ne paylasmak istersin?" }));
     expect(screen.getByPlaceholderText("Baslik *")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Foruma Yayinla" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Paylas" })).toBeInTheDocument();
   });
 });
