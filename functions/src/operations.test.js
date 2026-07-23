@@ -4,6 +4,7 @@ const {
   buildModerationAuditDocument,
   buildModerationReportDocument,
   buildNotificationDocument,
+  getCommunityRoleLabel,
   hasModeratorClaim,
   isUserNotificationType,
 } = require("./operations");
@@ -26,12 +27,21 @@ test("notification documents expose a bounded action projection", () => {
   assert.equal(notification.readAt, null);
 });
 
-test("user inbox only accepts friendship requests and convoy invitations", () => {
+test("user inbox accepts the approved social and convoy activity matrix", () => {
   assert.equal(isUserNotificationType("friend-request"), true);
   assert.equal(isUserNotificationType("convoy-invite"), true);
+  assert.equal(isUserNotificationType("clan-role"), true);
+  assert.equal(isUserNotificationType("convoy-response"), true);
+  assert.equal(isUserNotificationType("convoy-cancelled"), true);
   assert.equal(isUserNotificationType("direct-message"), false);
   assert.equal(isUserNotificationType("convoy-started"), false);
   assert.equal(isUserNotificationType("maintenance-critical"), false);
+});
+
+test("community role labels are explicit for role-change notifications", () => {
+  assert.equal(getCommunityRoleLabel("captain"), "Kaptan");
+  assert.equal(getCommunityRoleLabel("manager"), "Konvoy yoneticisi");
+  assert.equal(getCommunityRoleLabel("participant"), "Katilimci");
 });
 
 test("moderation reports reject unknown reasons and sanitize details", () => {

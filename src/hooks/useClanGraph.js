@@ -219,7 +219,7 @@ export function useClanGraph({ clans, setClans, user, setUser }) {
       return runFirebaseAction(
         `${decision}:${inviteId}`,
         () => respondFirebaseClanInvite(invite.clanId, decision),
-        decision === "accepted" ? `${invite.clanName} daveti kabul edildi.` : "Klan daveti reddedildi.",
+        decision === "accepted" ? `${invite.clanName} klanina uye oldun.` : "Klan daveti reddedildi.",
       );
     }
     const result = decision === "accepted"
@@ -244,7 +244,7 @@ export function useClanGraph({ clans, setClans, user, setUser }) {
   const updateClanMemberRole = (member, role) => runFirebaseAction(
     `role:${member.userId}`,
     () => updateFirebaseClanMemberRole(currentClan.id, member.userId, role),
-    `${member.fullName} icin rol guncellendi.`,
+    `${member.fullName} icin rol ${role === "captain" ? "kaptan" : "uye"} olarak guncellendi.`,
   );
   const removeClanMember = (member) => runFirebaseAction(
     `remove:${member.userId}`,

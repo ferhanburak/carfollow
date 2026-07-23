@@ -21,6 +21,7 @@ vi.mock("firebase/firestore", () => ({
 }));
 
 import {
+  isUserNotificationType,
   markAllFirebaseNotificationsRead,
   markFirebaseNotificationRead,
   subscribeFirebaseNotifications,
@@ -38,6 +39,15 @@ beforeEach(() => {
 });
 
 describe("Firebase notification repository", () => {
+  it("keeps approved relationship events out of the DM channel", () => {
+    expect(isUserNotificationType("friend-response")).toBe(true);
+    expect(isUserNotificationType("clan-invite")).toBe(true);
+    expect(isUserNotificationType("clan-role")).toBe(true);
+    expect(isUserNotificationType("convoy-join")).toBe(true);
+    expect(isUserNotificationType("convoy-cancelled")).toBe(true);
+    expect(isUserNotificationType("direct-message")).toBe(false);
+  });
+
   it("normalizes timestamps and sorts notifications in client memory", async () => {
     const unsubscribe = vi.fn();
     mocks.onSnapshot.mockImplementation((_reference, onChange) => {
@@ -55,6 +65,10 @@ describe("Firebase notification repository", () => {
             id: "message",
             data: () => ({ type: "direct-message", title: "Yeni mesaj", createdAt: { toMillis: () => 500 } }),
           },
+          {
+            id: "role",
+            data: () => ({ type: "clan-role", title: "Klan rolun guncellendi", createdAt: { toMillis: () => 450 } }),
+          },
         ],
       });
       return unsubscribe;
@@ -65,6 +79,7 @@ describe("Firebase notification repository", () => {
 
     expect(stop).toBe(unsubscribe);
     expect(onChange).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "role", createdAt: 450, readAt: null }),
       expect.objectContaining({ id: "newer", createdAt: 300, readAt: 400 }),
       expect.objectContaining({ id: "older", createdAt: 100, readAt: null }),
     ]);

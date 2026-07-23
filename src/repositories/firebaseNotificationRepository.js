@@ -1,7 +1,19 @@
 import { getFirebaseServices, isFirebaseModeEnabled } from "../services/firebaseClient";
 import { PRIVATE_COLLECTIONS, privateUserCollectionPath, resolveAppId } from "../services/firebasePaths";
 
-export const USER_NOTIFICATION_TYPES = Object.freeze(["friend-request", "convoy-invite"]);
+export const USER_NOTIFICATION_TYPES = Object.freeze([
+  "friend-request",
+  "friend-response",
+  "clan-invite",
+  "clan-response",
+  "clan-role",
+  "convoy-invite",
+  "convoy-invite-response",
+  "convoy-join",
+  "convoy-response",
+  "convoy-role",
+  "convoy-cancelled",
+]);
 
 export function isUserNotificationType(type) {
   return USER_NOTIFICATION_TYPES.includes(String(type ?? ""));

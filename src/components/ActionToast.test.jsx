@@ -8,11 +8,22 @@ describe("ActionToast", () => {
     expect(filterActionToastFeedbacks({
       social: "Poyraz icin arkadaslik istegi gonderildi.",
       convoy: "Burak aktif konvoya davet edildi.",
-      chat: "Yeni mesaj geldi.",
+      clan: "Burak icin klan daveti gonderildi.",
       profile: "Profil guncellendi.",
     })).toEqual({
       social: "Poyraz icin arkadaslik istegi gonderildi.",
       convoy: "Burak aktif konvoya davet edildi.",
+      clan: "Burak icin klan daveti gonderildi.",
+    });
+    expect(filterActionToastFeedbacks({
+      social: "Poyraz ile artik arkadassiniz.",
+      clan: "INIURIA klanina uye oldun.",
+      convoy: "Gece Rotasi konvoyuna katildin.",
+      chat: "Yeni mesaj geldi.",
+    })).toEqual({
+      social: "Poyraz ile artik arkadassiniz.",
+      clan: "INIURIA klanina uye oldun.",
+      convoy: "Gece Rotasi konvoyuna katildin.",
     });
   });
   it("classifies request progress, success and errors", () => {

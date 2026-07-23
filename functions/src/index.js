@@ -71,6 +71,7 @@ const {
   buildModerationAuditDocument,
   buildModerationReportDocument,
   buildNotificationDocument,
+  getCommunityRoleLabel,
   hasModeratorClaim,
   isUserNotificationType,
   sanitizeOperationalText,
@@ -996,7 +997,9 @@ exports.respondFriendship = secureCall("respondFriendship", async (request) => {
     writeNotification(transaction, requesterUserId, `friend-response-${friendshipRef.id}`, {
       type: "friend-response",
       title: decision === "accepted" ? "Arkadaslik istegi kabul edildi" : "Arkadaslik istegi reddedildi",
-      body: `${actor.fullName ?? actor.plate} arkadaslik istegine yanit verdi.`,
+      body: decision === "accepted"
+        ? `${actor.fullName ?? actor.plate} istegini kabul etti. Artik arkadassiniz.`
+        : `${actor.fullName ?? actor.plate} arkadaslik istegini reddetti.`,
       actor,
       action: { type: "social", targetId: actorUserId },
     }, timestamp);
@@ -1301,11 +1304,13 @@ exports.requestConvoyJoin = secureCall("requestConvoyJoin", { rateLimit: { limit
   const requester = await getUserProfile(requesterUserId);
   const convoyRef = publicCollection("convoys").doc(convoyId);
   const memberRef = publicCollection("convoyMembers").doc(buildScopedMemberId(convoyId, requesterUserId));
+  const membersQuery = publicCollection("convoyMembers").where("convoyId", "==", convoyId);
 
-  await db.runTransaction(async (transaction) => {
-    const [convoySnapshot, existingMember] = await Promise.all([
+  const joinResult = await db.runTransaction(async (transaction) => {
+    const [convoySnapshot, existingMember, membersSnapshot] = await Promise.all([
       transaction.get(convoyRef),
       transaction.get(memberRef),
+      transaction.get(membersQuery),
     ]);
     if (!convoySnapshot.exists) {
       throw new HttpsError("not-found", "Convoy not found.");
@@ -1324,21 +1329,47 @@ exports.requestConvoyJoin = secureCall("requestConvoyJoin", { rateLimit: { limit
     const invited = (convoy.invitedUserIds ?? []).includes(requesterUserId);
     const status = invited || convoy.accessPolicy === "open" ? "approved" : "pending";
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const inviteSenderUserId = convoy.inviteSenderUserIds?.[requesterUserId] ?? convoy.hostUserId;
+    const nextInviteSenderUserIds = { ...(convoy.inviteSenderUserIds ?? {}) };
+    delete nextInviteSenderUserIds[requesterUserId];
     transaction.set(memberRef, buildConvoyMemberDocument({ convoy, profile: requester, status, timestamp }));
     transaction.update(convoyRef, {
       [status === "approved" ? "approvedCount" : "pendingCount"]: admin.firestore.FieldValue.increment(1),
+      ...(invited ? {
+        invitedUserIds: admin.firestore.FieldValue.arrayRemove(requesterUserId),
+        invitedGuests: (convoy.invitedGuests ?? []).filter((guest) => guest.userId !== requesterUserId),
+        inviteSenderUserIds: nextInviteSenderUserIds,
+      } : {}),
       updatedAt: timestamp,
     });
-    writeNotification(transaction, convoy.hostUserId, `convoy-join-${convoyId}-${requesterUserId}`, {
-      type: "convoy-join",
-      title: status === "pending" ? "Yeni konvoy katilim istegi" : "Konvoya yeni katilim",
-      body: `${requester.fullName ?? requester.plate} konvoyuna katilmak istiyor.`,
-      actor: requester,
-      action: { type: "convoy", targetId: convoyId },
-    }, timestamp);
+    if (status === "pending") {
+      const managementUserIds = new Set([
+        convoy.hostUserId,
+        ...membersSnapshot.docs
+          .map((document) => document.data())
+          .filter((member) => member.membershipStatus === "approved" && member.managementRole === "manager")
+          .map((member) => member.userId),
+      ]);
+      managementUserIds.forEach((managerUserId) => writeNotification(transaction, managerUserId, `convoy-join-${convoyId}-${requesterUserId}`, {
+        type: "convoy-join",
+        title: "Yeni konvoy katilim istegi",
+        body: `${requester.fullName ?? requester.plate} ${convoy.name} konvoyuna katilmak istiyor.`,
+        actor: requester,
+        action: { type: "convoy", targetId: convoyId },
+      }, timestamp));
+    } else if (invited && inviteSenderUserId && inviteSenderUserId !== requesterUserId) {
+      writeNotification(transaction, inviteSenderUserId, `convoy-invite-response-${convoyId}-${requesterUserId}`, {
+        type: "convoy-invite-response",
+        title: "Konvoy daveti kabul edildi",
+        body: `${requester.fullName ?? requester.plate} ${convoy.name} davetini kabul etti.`,
+        actor: requester,
+        action: { type: "convoy", targetId: convoyId },
+      }, timestamp);
+    }
+    return { membershipStatus: status, convoyName: convoy.name };
   });
 
-  return { ok: true, convoyId };
+  return { ok: true, convoyId, ...joinResult };
 });
 
 exports.respondConvoyJoinRequest = secureCall("respondConvoyJoinRequest", async (request) => {
@@ -1384,7 +1415,9 @@ exports.respondConvoyJoinRequest = secureCall("respondConvoyJoinRequest", async 
     writeNotification(transaction, memberUserId, `convoy-response-${convoyId}-${memberUserId}`, {
       type: "convoy-response",
       title: decision === "approved" ? "Konvoy istegin kabul edildi" : "Konvoy istegin reddedildi",
-      body: `${actor.fullName ?? actor.plate} konvoy katilim istegine yanit verdi.`,
+      body: decision === "approved"
+        ? `${convoy.name} konvoyuna katilimin onaylandi.`
+        : `${convoy.name} konvoyuna katilim istegin reddedildi.`,
       actor,
       action: { type: "convoy", targetId: convoyId },
     }, timestamp);
@@ -1474,6 +1507,7 @@ exports.inviteConvoyMember = secureCall("inviteConvoyMember", { rateLimit: { lim
     transaction.update(convoyRef, {
       invitedUserIds: admin.firestore.FieldValue.arrayUnion(targetUserId),
       invitedGuests: [...(convoy.invitedGuests ?? []), projectDriver(target)],
+      inviteSenderUserIds: { ...(convoy.inviteSenderUserIds ?? {}), [targetUserId]: actorUserId },
       updatedAt: timestamp,
     });
     writeNotification(transaction, targetUserId, `convoy-invite-${convoyId}-${targetUserId}`, {
@@ -1536,12 +1570,13 @@ exports.setConvoyMemberRole = secureCall("setConvoyMemberRole", { rateLimit: { l
     const member = requireSnapshot(memberSnapshot, "not-found", "Convoy member not found.");
     if (convoy.hostUserId !== actorUserId) throw new HttpsError("permission-denied", "Only the host can assign convoy roles.");
     if (memberUserId === actorUserId || member.membershipStatus !== "approved") throw new HttpsError("failed-precondition", "Only approved participants can receive management permission.");
+    if ((member.managementRole ?? "member") === managementRole) return;
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
     transaction.update(memberRef, { managementRole, roleUpdatedAt: timestamp, roleUpdatedByUserId: actorUserId, updatedAt: timestamp });
     writeNotification(transaction, memberUserId, `convoy-role-${convoyId}-${memberUserId}`, {
       type: "convoy-role",
-      title: managementRole === "manager" ? "Konvoy yonetim yetkisi verildi" : "Konvoy yonetim yetkisi kaldirildi",
-      body: `${actor.fullName ?? actor.plate} ${convoy.name} icin rolunu guncelledi.`,
+      title: "Konvoy rolun guncellendi",
+      body: `${convoy.name} konvoyundaki yeni rolun: ${getCommunityRoleLabel(managementRole === "member" ? "participant" : managementRole)}.`,
       actor,
       action: { type: "convoy", targetId: convoyId },
     }, timestamp);
@@ -1579,7 +1614,7 @@ exports.updateConvoyLifecycle = secureCall("updateConvoyLifecycle", async (reque
     if (lifecycleStatus === "cancelled") {
       membersSnapshot.docs
         .map((document) => document.data())
-        .filter((member) => member.membershipStatus === "approved")
+        .filter((member) => member.membershipStatus === "approved" && member.userId !== actorUserId)
         .forEach((member) => writeNotification(transaction, member.userId, `convoy-cancelled-${convoyId}`, {
           type: "convoy-cancelled",
           title: "Konvoy iptal edildi",
@@ -1794,7 +1829,7 @@ exports.respondClanInvite = secureCall("respondClanInvite", async (request) => {
       writeNotification(transaction, invite.invitedByUserId, `clan-response-${clanId}-${targetUserId}`, {
         type: "clan-response",
         title: "Klan daveti reddedildi",
-        body: `${target.fullName ?? target.plate} klan davetine yanit verdi.`,
+        body: `${target.fullName ?? target.plate} ${clan.name} klan davetini reddetti.`,
         actor: target,
         action: { type: "clan", targetId: clanId },
       }, timestamp);
@@ -1828,8 +1863,8 @@ exports.respondClanInvite = secureCall("respondClanInvite", async (request) => {
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
     writeNotification(transaction, invite.invitedByUserId, `clan-response-${clanId}-${targetUserId}`, {
       type: "clan-response",
-      title: decision === "accepted" ? "Klan daveti kabul edildi" : "Klan daveti reddedildi",
-      body: `${target.fullName ?? target.plate} klan davetine yanit verdi.`,
+      title: "Klan daveti kabul edildi",
+      body: `${target.fullName ?? target.plate} ${clan.name} klan davetini kabul etti.`,
       actor: target,
       action: { type: "clan", targetId: clanId },
     }, timestamp);
@@ -1875,6 +1910,7 @@ exports.updateClanMemberRole = secureCall("updateClanMemberRole", async (request
   assertClanId(clanId);
   requireTargetUserId({ data: { targetUserId } }, actorUserId);
   const nextRole = assertClanRole(role);
+  const actor = await getUserProfile(actorUserId);
   const clanRef = publicCollection("clans").doc(clanId);
   const actorMemberRef = clanMemberDocument(clanId, actorUserId);
   const targetMemberRef = clanMemberDocument(clanId, targetUserId);
@@ -1889,6 +1925,7 @@ exports.updateClanMemberRole = secureCall("updateClanMemberRole", async (request
     if (actorRole !== "owner" || targetRole === "owner") {
       throw new HttpsError("permission-denied", "Only the owner can update member roles.");
     }
+    if (targetRole === nextRole) return;
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
     transaction.update(targetMemberRef, { role: nextRole, updatedAt: timestamp });
     setProfileClanState(transaction, targetUserId, {
@@ -1897,6 +1934,13 @@ exports.updateClanMemberRole = secureCall("updateClanMemberRole", async (request
       clanRole: nextRole,
       timestamp,
     });
+    writeNotification(transaction, targetUserId, `clan-role-${clanId}-${targetUserId}`, {
+      type: "clan-role",
+      title: "Klan rolun guncellendi",
+      body: `${clan.name} klanindaki yeni rolun: ${getCommunityRoleLabel(nextRole)}.`,
+      actor,
+      action: { type: "clan", targetId: clanId },
+    }, timestamp);
   });
 
   return { ok: true, clanId, targetUserId, role: nextRole };

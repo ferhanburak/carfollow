@@ -9,7 +9,27 @@ const MODERATION_REASONS = Object.freeze([
 
 const MODERATION_TARGET_TYPES = Object.freeze(["driver", "mapPin", "mapPhoto", "convoy", "message", "clan"]);
 const MODERATION_DECISIONS = Object.freeze(["dismiss", "warn", "restrict"]);
-const USER_NOTIFICATION_TYPES = Object.freeze(["friend-request", "convoy-invite"]);
+const USER_NOTIFICATION_TYPES = Object.freeze([
+  "friend-request",
+  "friend-response",
+  "clan-invite",
+  "clan-response",
+  "clan-role",
+  "convoy-invite",
+  "convoy-invite-response",
+  "convoy-join",
+  "convoy-response",
+  "convoy-role",
+  "convoy-cancelled",
+]);
+
+const COMMUNITY_ROLE_LABELS = Object.freeze({
+  captain: "Kaptan",
+  manager: "Konvoy yoneticisi",
+  member: "Uye",
+  owner: "Kurucu",
+  participant: "Katilimci",
+});
 
 function sanitizeOperationalText(value, maxLength) {
   return String(value ?? "")
@@ -43,6 +63,10 @@ function buildNotificationDocument({ id, userId, type, title, body, actor, actio
 
 function isUserNotificationType(type) {
   return USER_NOTIFICATION_TYPES.includes(String(type ?? ""));
+}
+
+function getCommunityRoleLabel(role, fallback = "Uye") {
+  return COMMUNITY_ROLE_LABELS[String(role ?? "")] ?? fallback;
 }
 
 function buildModerationReportDocument({ reportId, reporter, targetType, targetId, reason, details, timestamp }) {
@@ -104,6 +128,7 @@ module.exports = {
   buildModerationAuditDocument,
   buildModerationReportDocument,
   buildNotificationDocument,
+  getCommunityRoleLabel,
   hasModeratorClaim,
   isUserNotificationType,
   sanitizeOperationalText,

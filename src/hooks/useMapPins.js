@@ -274,9 +274,11 @@ export function useMapPins({ initialWorld, user }) {
 
     if (firebaseMapEnabled) {
       try {
-        await requestFirebaseConvoyJoin(selectedPin.id);
+        const result = await requestFirebaseConvoyJoin(selectedPin.id);
         await refreshFirebaseConvoys();
-        setConvoyFeedback(selectedPin.accessPolicy === "open" ? "Konvoya katilim onaylandi." : "Katilim istegin host onayina gonderildi.");
+        setConvoyFeedback(result?.membershipStatus === "approved"
+          ? `${result?.convoyName ?? selectedPin.name} konvoyuna katildin.`
+          : "Katilim istegin konvoy yonetimine gonderildi.");
       } catch (error) {
         setConvoyFeedback(error instanceof Error ? error.message : "Katilim istegi kaydedilemedi.");
       }
@@ -295,9 +297,9 @@ export function useMapPins({ initialWorld, user }) {
     } else if (nextPin?.convoyStatus === "restricted") {
       setConvoyFeedback("Bu konvoyun minimum guven kurallari seni su an kabul etmiyor.");
     } else if ((nextPin?.pendingRequests ?? []).some((entry) => entry.plate === user.plate)) {
-      setConvoyFeedback("Katilim istegin host onayina gonderildi.");
+      setConvoyFeedback("Katilim istegin konvoy yonetimine gonderildi.");
     } else if ((nextPin?.attendees ?? []).some((entry) => entry.plate === user.plate)) {
-      setConvoyFeedback("Konvoya katilim onaylandi.");
+      setConvoyFeedback(`${selectedPin.name} konvoyuna katildin.`);
     }
 
   };

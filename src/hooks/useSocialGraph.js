@@ -233,11 +233,11 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
       return runFirebaseAction(
         `accept:${request.userId}`,
         () => respondFirebaseFriendship(request.userId, "accepted"),
-        `${request.fullName ?? plate} arkadas listene eklendi.`,
+        `${request.fullName ?? plate} ile artik arkadassiniz.`,
       );
     }
     setUser((current) => acceptFriendRequest(current, plate));
-    setSocialFeedback(`${request?.fullName ?? plate} arkadas listene eklendi.`);
+    setSocialFeedback(`${request?.fullName ?? plate} ile artik arkadassiniz.`);
     return true;
   };
 

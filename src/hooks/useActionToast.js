@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { inferActionToastTone } from "../components/ActionToast";
 
 const ACTION_TOAST_RULES = Object.freeze({
-  social: /arkadaslik istegi gonderildi/i,
-  convoy: /aktif konvoya davet edildi/i,
+  social: /arkadaslik istegi gonderildi|ile artik arkadassiniz/i,
+  clan: /klan daveti gonderildi|klanina uye oldun/i,
+  convoy: /aktif konvoya davet edildi|katilim istegin .*gonderildi|konvoyuna katildin/i,
 });
 
 export function filterActionToastFeedbacks(feedbacks = {}) {

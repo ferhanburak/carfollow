@@ -120,7 +120,7 @@ export function sendClanInvite(user, targetFriend, clans) {
       ...state,
       sentClanInvites: [invite, ...(state.sentClanInvites ?? [])],
     },
-    feedback: `${targetFriend.fullName} icin ${clan.name} daveti hazirlandi.`,
+    feedback: `${targetFriend.fullName} icin klan daveti gonderildi.`,
   };
 }
 
@@ -157,7 +157,7 @@ export function acceptClanInvite(user, clans, inviteId) {
       clanInvites: (state.clanInvites ?? []).filter((entry) => entry.id !== inviteId),
     },
     nextClans,
-    feedback: `${invite.clanName} daveti kabul edildi.`,
+    feedback: `${invite.clanName} klanina uye oldun.`,
   };
 }
 
