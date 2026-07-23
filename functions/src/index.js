@@ -88,6 +88,10 @@ const {
   buildServiceLogDeletionPlan,
 } = require("./serviceLogDeletion");
 const {
+  buildForumReplyDocument,
+  buildForumThreadDocument,
+} = require("./forum");
+const {
   ACCOUNT_DELETE_CONFIRMATION,
   buildAccountExport,
   buildWithdrawnPrivacySettings,
@@ -2863,4 +2867,76 @@ exports.resolveModerationReport = secureCall("resolveModerationReport", { rateLi
 
   logger.warn("moderation.report.resolved", { reportId, decision, targetType: resolvedTargetType });
   return { ok: true, reportId, decision };
+});
+
+exports.createForumThread = secureCall("createForumThread", { rateLimit: { limit: 8, windowSeconds: 3600 } }, async (request) => {
+  const userId = requireAuth(request);
+  const profile = await getUserProfile(userId);
+  const threadRef = publicCollection("forumThreads").doc();
+  try {
+    const thread = buildForumThreadDocument({
+      id: threadRef.id,
+      input: request.data?.thread,
+      profile: { ...profile, userId },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    await threadRef.set(thread);
+    return { ok: true, threadId: threadRef.id };
+  } catch (error) {
+    throw new HttpsError("invalid-argument", error.message);
+  }
+});
+
+exports.toggleForumLike = secureCall("toggleForumLike", { rateLimit: { limit: 90, windowSeconds: 3600 } }, async (request) => {
+  const userId = requireAuth(request);
+  const threadId = sanitizeOperationalText(request.data?.threadId, 180);
+  if (!threadId || threadId.includes("/")) throw new HttpsError("invalid-argument", "Gecerli bir forum konusu gerekli.");
+  const threadRef = publicDocument("forumThreads", threadId);
+  const likeRef = publicDocument("forumLikes", `${threadId}_${userId}`);
+  let liked = false;
+  await db.runTransaction(async (transaction) => {
+    const [threadSnapshot, likeSnapshot] = await Promise.all([transaction.get(threadRef), transaction.get(likeRef)]);
+    if (!threadSnapshot.exists || threadSnapshot.data().status !== "active") throw new HttpsError("not-found", "Forum konusu bulunamadi.");
+    const currentCount = Number(threadSnapshot.data().likeCount ?? 0);
+    if (likeSnapshot.exists) {
+      transaction.delete(likeRef);
+      transaction.update(threadRef, { likeCount: Math.max(0, currentCount - 1), updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    } else {
+      liked = true;
+      transaction.set(likeRef, { id: likeRef.id, threadId, userId, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+      transaction.update(threadRef, { likeCount: currentCount + 1, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    }
+  });
+  return { ok: true, liked };
+});
+
+exports.addForumReply = secureCall("addForumReply", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
+  const userId = requireAuth(request);
+  const threadId = sanitizeOperationalText(request.data?.threadId, 180);
+  if (!threadId || threadId.includes("/")) throw new HttpsError("invalid-argument", "Gecerli bir forum konusu gerekli.");
+  const profile = await getUserProfile(userId);
+  const threadRef = publicDocument("forumThreads", threadId);
+  const replyRef = publicCollection("forumReplies").doc();
+  await db.runTransaction(async (transaction) => {
+    const threadSnapshot = await transaction.get(threadRef);
+    if (!threadSnapshot.exists || threadSnapshot.data().status !== "active") throw new HttpsError("not-found", "Forum konusu bulunamadi.");
+    let reply;
+    try {
+      reply = buildForumReplyDocument({
+        id: replyRef.id,
+        threadId,
+        body: request.data?.body,
+        profile: { ...profile, userId },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (error) {
+      throw new HttpsError("invalid-argument", error.message);
+    }
+    transaction.set(replyRef, reply);
+    transaction.update(threadRef, {
+      replyCount: Number(threadSnapshot.data().replyCount ?? 0) + 1,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+  return { ok: true, replyId: replyRef.id };
 });

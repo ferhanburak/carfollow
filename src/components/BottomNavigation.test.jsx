@@ -7,6 +7,7 @@ const items = [
   { key: "liveMap", label: "Live Map" },
   { key: "drive", label: "Surus" },
   { key: "social", label: "Social" },
+  { key: "forum", label: "Forum" },
   { key: "leaderboard", label: "Leaders" },
   { key: "profile", label: "Profil" },
 ];

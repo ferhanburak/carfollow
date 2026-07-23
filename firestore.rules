@@ -462,6 +462,21 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /artifacts/{appId}/public/data/forumThreads/{documentId} {
+      allow read: if isKnownApp(appId) && isSignedIn();
+      allow write: if false;
+    }
+
+    match /artifacts/{appId}/public/data/forumReplies/{documentId} {
+      allow read: if isKnownApp(appId) && isSignedIn();
+      allow write: if false;
+    }
+
+    match /artifacts/{appId}/public/data/forumLikes/{documentId} {
+      allow read: if isKnownApp(appId) && isSignedIn();
+      allow write: if false;
+    }
+
     match /artifacts/{appId}/public/data/cruiseAttendees/{documentId} {
       allow read, write: if false;
     }

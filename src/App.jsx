@@ -7,6 +7,7 @@ import { DirectMessageButton, DirectMessageCenter } from "./components/DirectMes
 import { SettingsButton, SettingsCenter } from "./components/SettingsCenter";
 import { useCruiserAuth } from "./hooks/useCruiserAuth";
 import { useCruiserWorld } from "./hooks/useCruiserWorld";
+import { useForum } from "./hooks/useForum";
 import { AuthScreen } from "./screens/AuthScreen";
 import { getFirebasePublicDriverProfile } from "./repositories/cruiserRepository";
 
@@ -16,6 +17,7 @@ const MapHubScreen = lazy(() => import("./screens/MapHubScreen").then((module) =
 const MapScreen = lazy(() => import("./screens/MapScreen").then((module) => ({ default: module.MapScreen })));
 const ProfileScreen = lazy(() => import("./screens/ProfileScreen").then((module) => ({ default: module.ProfileScreen })));
 const StatsScreen = lazy(() => import("./screens/StatsScreen").then((module) => ({ default: module.StatsScreen })));
+const ForumScreen = lazy(() => import("./screens/ForumScreen").then((module) => ({ default: module.ForumScreen })));
 
 function ScreenLoader() {
   return (
@@ -265,6 +267,7 @@ function App() {
     updateClanMemberRole,
     withdrawFriendRequest,
   } = useCruiserWorld(user, setUser, setFuelForm);
+  const forum = useForum(safeUser ?? user, activeTab === "forum");
 
   const activeClanName = (safeUser ?? user)?.clan;
   const activeClanId = (safeUser ?? user)?.clanId ?? currentClan?.id;
@@ -589,6 +592,19 @@ function App() {
                 updateClanMemberRole={updateClanMemberRole}
                 withdrawFriendRequest={withdrawFriendRequest}
                 mode={activeTab === "leaderboard" ? "leaderboard" : "social"}
+              />
+            ) : null}
+
+            {activeTab === "forum" ? (
+              <ForumScreen
+                addReply={forum.addReply}
+                createThread={forum.createThread}
+                feedback={forum.feedback}
+                form={forum.form}
+                onFormChange={forum.setForm}
+                pendingKey={forum.pendingKey}
+                threads={forum.threads}
+                toggleLike={forum.toggleLike}
               />
             ) : null}
 

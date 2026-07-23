@@ -25,6 +25,12 @@ const iconPaths = {
       <path d="M16 11a2.5 2.5 0 1 0 0-5M18 14.5a3 3 0 0 1 2 2.8V19" />
     </>
   ),
+  forum: (
+    <>
+      <path d="M5 5h14v11H9l-4 3Z" />
+      <path d="M8 9h8M8 12h5" />
+    </>
+  ),
   leaderboard: (
     <>
       <path d="M5 20v-6h4v6M10 20V8h4v12M15 20V4h4v16" />
