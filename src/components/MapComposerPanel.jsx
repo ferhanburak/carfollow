@@ -209,6 +209,39 @@ export function MapComposerPanel({
 
             {isMeet ? (
               <>
+                <CompactField label="Event Turu" required>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { key: "meetup", label: "Tek Nokta Bulusma" },
+                      { key: "convoy", label: "Rota Konvoyu" },
+                    ].map((mode) => (
+                      <button
+                        key={mode.key}
+                        type="button"
+                        onClick={() => {
+                          onFormChange((current) => ({
+                            ...current,
+                            eventMode: mode.key,
+                            routePoints: mode.key === "meetup" ? [] : current.routePoints,
+                          }));
+                          if (mode.key === "meetup") {
+                            onClearRouteDraft();
+                            onSetMapPickMode("node");
+                          }
+                        }}
+                        className={`min-h-12 rounded-2xl border px-3 text-xs font-semibold ${
+                          form.eventMode === mode.key
+                            ? "border-lime-400/30 bg-lime-400 text-black"
+                            : "border-white/10 bg-white/5 text-neutral-300"
+                        }`}
+                      >
+                        {mode.label}
+                      </button>
+                    ))}
+                  </div>
+                  {errors.eventMode ? <p className="text-xs text-rose-300">{errors.eventMode}</p> : null}
+                </CompactField>
+
                 <div className="grid grid-cols-2 gap-3">
                   <CompactField label="Launch Time" required>
                     <input
@@ -219,12 +252,12 @@ export function MapComposerPanel({
                     />
                     {errors.time ? <p className="text-xs text-rose-300">{errors.time}</p> : null}
                   </CompactField>
-                  <CompactField label="Route Summary" required>
+                  <CompactField label={form.eventMode === "meetup" ? "Bulusma Yeri" : "Route Summary"} required>
                     <input
                       value={form.route}
                       onChange={(event) => onFormChange((current) => ({ ...current, route: event.target.value }))}
                       className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
-                      placeholder="Beytepe -> Incek -> Mogan"
+                      placeholder={form.eventMode === "meetup" ? "Mogan Golu ana otopark" : "Beytepe -> Incek -> Mogan"}
                     />
                     {errors.route ? <p className="text-xs text-rose-300">{errors.route}</p> : null}
                   </CompactField>
@@ -372,6 +405,7 @@ export function MapComposerPanel({
                   </div>
                 </CompactField>
 
+                {form.eventMode === "convoy" ? (
                 <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -436,6 +470,14 @@ export function MapComposerPanel({
                   ) : null}
                   {errors.routePoints ? <p className="mt-3 text-xs text-rose-300">{errors.routePoints}</p> : null}
                 </div>
+                ) : (
+                  <div className="rounded-2xl border border-lime-400/15 bg-lime-400/[0.05] px-4 py-4">
+                    <p className="text-xs font-semibold text-lime-200">Tek nokta bulusma aktif</p>
+                    <p className="mt-1 text-xs leading-5 text-neutral-500">
+                      Yalnizca ana event konumu kaydedilir. Rota ve otomatik varis takibi kullanilmaz.
+                    </p>
+                  </div>
+                )}
               </>
             ) : null}
 

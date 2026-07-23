@@ -108,10 +108,11 @@ export function validateMapPinForm(form) {
     if (!Number.isFinite(Number(form.maxAlertVotes)) || Number(form.maxAlertVotes) < 0) {
       errors.maxAlertVotes = "Maximum alert votes must be 0 or greater.";
     }
-    if (Array.isArray(form.routePoints) && form.routePoints.length === 1) {
-      errors.routePoints = "Add at least 2 route points or clear the draft route.";
-    } else if (!Array.isArray(form.routePoints) || form.routePoints.length < 2) {
-      errors.routePoints = "Select at least 2 route points for automatic arrival tracking.";
+    if (!["meetup", "convoy"].includes(form.eventMode)) {
+      errors.eventMode = "Event mode must be meetup or convoy.";
+    }
+    if (form.eventMode === "convoy" && (!Array.isArray(form.routePoints) || form.routePoints.length < 2)) {
+      errors.routePoints = "Rota konvoyu icin en az 2 rota noktasi sec.";
     }
   }
   if (form.type === "wash") {

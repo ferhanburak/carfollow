@@ -21,9 +21,17 @@ const guest = { id: "guest", plate: "34 GUEST 34", fullName: "Guest", driverScor
 function createConvoy(overrides = {}) {
   return buildConvoyDocument({
     convoyId: "convoy-1", host, invitedProfiles: [], timestamp: "now",
-    pin: { name: "Night Run", lat: 39.9, lng: 32.8, route: "Ankara route", routePath: [], time: "22:30", capacity: 8, visibility: "public", accessPolicy: "request", detailVisibility: "trusted", minDriverScore: 75, minHarmonyVotes: 5, maxAlertVotes: 2, ...overrides },
+    pin: { name: "Night Run", lat: 39.9, lng: 32.8, route: "Ankara route", routePath: [{ lat: 39.9, lng: 32.8 }, { lat: 39.8, lng: 32.7 }], time: "22:30", capacity: 8, visibility: "public", accessPolicy: "request", detailVisibility: "trusted", minDriverScore: 75, minHarmonyVotes: 5, maxAlertVotes: 2, ...overrides },
   });
 }
+
+test("single-point meetups disable route and automatic arrival tracking", () => {
+  const meetup = createConvoy({ eventMode: "meetup", routePath: [{ lat: 39.9, lng: 32.8 }] });
+  assert.equal(meetup.eventMode, "meetup");
+  assert.equal(meetup.automaticArrivalTracking, false);
+  assert.deepEqual(meetup.routePath, []);
+  assert.equal(resolveConvoyLocationUpdate(meetup, { lat: 39.9, lng: 32.8 }, Date.now()).trackingDisabled, true);
+});
 
 test("restricted public summary removes exact route and rounds coordinates", () => {
   const summary = buildPublicMapSummary(createConvoy());

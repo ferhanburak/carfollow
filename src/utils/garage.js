@@ -39,6 +39,7 @@ export const createMapPinForm = (seedPin) => ({
   tags: "#NightRun #CrewApproved",
   time: createDefaultConvoyTime(),
   route: "",
+  eventMode: seedPin?.eventMode ?? (seedPin?.routePath?.length >= 2 ? "convoy" : "meetup"),
   foam: 5,
   water: 5,
   allowsBuckets: true,

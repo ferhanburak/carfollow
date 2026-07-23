@@ -43,6 +43,17 @@ function getDistanceMeters(left, right) {
 }
 
 function resolveConvoyLocationUpdate(convoy, location, nowMs = Date.now(), member = {}) {
+  if (convoy?.eventMode === "meetup" || convoy?.automaticArrivalTracking === false) {
+    return {
+      lifecycleStatus: convoy?.lifecycleStatus ?? "planning",
+      tripStatus: member?.tripStatus ?? "ready",
+      distanceToDestinationM: null,
+      arrivalConfirmationCount: 0,
+      arrivalConfirmationRequired: 0,
+      trackingDisabled: true,
+      completed: false,
+    };
+  }
   const destination = convoy?.routePath?.at?.(-1);
   const scheduledStartAtMs = safeScheduledStartAtMs(convoy?.scheduledStartAtMs);
   const lifecycleStatus = convoy?.lifecycleStatus ?? "planning";
@@ -141,8 +152,9 @@ function buildConvoyDocument({ convoyId, pin, host, invitedProfiles = [], timest
     const projected = projectDriver(profile);
     return [projected.userId, projected];
   }).filter(([userId]) => userId && userId !== hostProfile.userId)).values()).slice(0, 20);
-  const routePath = safeRoutePoints(pin?.routePath);
-  if (routePath.length === 1) throw new Error("A convoy route needs at least two points.");
+  const eventMode = pin?.eventMode === "meetup" ? "meetup" : "convoy";
+  const routePath = eventMode === "convoy" ? safeRoutePoints(pin?.routePath) : [];
+  if (eventMode === "convoy" && routePath.length < 2) throw new Error("A convoy route needs at least two points.");
   const scheduledStartAtMs = safeScheduledStartAtMs(pin?.scheduledStartAtMs);
   const minDriverScore = Number(pin?.minDriverScore ?? 0);
   const minHarmonyVotes = Number(pin?.minHarmonyVotes ?? 0);
@@ -156,6 +168,8 @@ function buildConvoyDocument({ convoyId, pin, host, invitedProfiles = [], timest
     lng: safeCoordinate(pin?.lng, 180),
     route,
     routePath,
+    eventMode,
+    automaticArrivalTracking: eventMode === "convoy",
     time,
     scheduledStartAtMs,
     arrivalRadiusM: DEFAULT_ARRIVAL_RADIUS_M,
@@ -294,6 +308,8 @@ function buildPublicMapSummary(convoy) {
     lng: Math.round(convoy.lng),
     route: "Restricted route",
     routePath: [],
+    eventMode: convoy.eventMode ?? "convoy",
+    automaticArrivalTracking: convoy.automaticArrivalTracking !== false,
     time: "Restricted",
     capacity: convoy.capacity,
     visibility: convoy.visibility,

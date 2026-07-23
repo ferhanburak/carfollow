@@ -387,7 +387,7 @@ export function MeetPinPanel({
         </div>
       ) : null}
 
-      {accessState.canViewDetails && ["planning", "rolling", "delayed"].includes(lifecycleStatus) ? (
+      {accessState.canViewDetails && pin.automaticArrivalTracking !== false && ["planning", "rolling", "delayed"].includes(lifecycleStatus) ? (
         <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
           <p className="font-semibold">Otomatik konvoy takibi</p>
           <p className="mt-1 text-xs text-sky-100/75">

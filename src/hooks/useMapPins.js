@@ -75,14 +75,6 @@ function buildFallbackGridPosition(lat, lng, pins) {
   };
 }
 
-function buildMeetRoutePath(lat, lng) {
-  return [
-    { lat: Number((lat + 0.028).toFixed(4)), lng: Number((lng - 0.051).toFixed(4)) },
-    { lat: Number((lat + 0.013).toFixed(4)), lng: Number((lng - 0.021).toFixed(4)) },
-    { lat: Number(lat.toFixed(4)), lng: Number(lng.toFixed(4)) },
-  ];
-}
-
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -693,7 +685,9 @@ export function useMapPins({ initialWorld, user }) {
         scheduledStartAtMs: new Date(mapPinForm.time).getTime(),
         route: mapPinForm.route.trim(),
         capacity: Number(mapPinForm.capacity),
-        routePath: mapPinForm.routePoints.length > 1 ? mapPinForm.routePoints : buildMeetRoutePath(lat, lng),
+        eventMode: mapPinForm.eventMode,
+        automaticArrivalTracking: mapPinForm.eventMode === "convoy",
+        routePath: mapPinForm.eventMode === "convoy" ? mapPinForm.routePoints : [],
         visibility: mapPinForm.visibility,
         accessPolicy: mapPinForm.accessPolicy,
         detailVisibility: mapPinForm.detailVisibility,
