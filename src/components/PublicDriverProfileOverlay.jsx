@@ -116,6 +116,18 @@ function matchesDriverIdentity(entry, profile) {
   return Boolean(entry?.plate && profile?.plate && entry.plate === profile.plate);
 }
 
+function hasPendingClanInvite(user, profile) {
+  return (user?.sentClanInvites ?? []).some((invite) =>
+    matchesDriverIdentity(
+      {
+        userId: invite.targetUserId,
+        plate: invite.targetPlate,
+      },
+      profile,
+    ),
+  );
+}
+
 export function PublicDriverProfileOverlay({
   hostableConvoys = [],
   onBlockDriver,
@@ -150,16 +162,19 @@ export function PublicDriverProfileOverlay({
   const isPending = Boolean(
     socialPendingKey && profile.userId && socialPendingKey.endsWith(`:${profile.userId}`),
   );
+  const clanInviteSent = hasPendingClanInvite(user, profile);
   const canReceiveCommunityInvite = !["blocked", "self"].includes(profileStatus);
-  const availableConvoys = hostableConvoys.filter((convoy) => {
-    const relatedDrivers = [
-      ...(convoy.attendees ?? []),
-      ...(convoy.invitedGuests ?? []),
-      ...(convoy.pendingRequests ?? []),
-    ];
+  const eligibleConvoys = hostableConvoys.filter((convoy) => {
+    const relatedDrivers = [...(convoy.attendees ?? []), ...(convoy.pendingRequests ?? [])];
     const hasCapacity = Number(convoy.attendees?.length ?? 0) < Number(convoy.capacity ?? Number.POSITIVE_INFINITY);
     return hasCapacity && !relatedDrivers.some((entry) => matchesDriverIdentity(entry, profile));
   });
+  const invitedConvoyIds = new Set(
+    eligibleConvoys
+      .filter((convoy) => (convoy.invitedGuests ?? []).some((entry) => matchesDriverIdentity(entry, profile)))
+      .map((convoy) => convoy.id),
+  );
+  const availableConvoys = eligibleConvoys.filter((convoy) => !invitedConvoyIds.has(convoy.id));
   const inviteToConvoy = async (convoyId) => {
     if (!onInviteToConvoy || convoyInvitePendingId) return;
     setConvoyInvitePendingId(convoyId);
@@ -277,11 +292,11 @@ export function PublicDriverProfileOverlay({
             </button>
             <button
               type="button"
-              disabled={!onInviteFriendToClan || !canReceiveCommunityInvite || isPending}
+              disabled={!onInviteFriendToClan || !canReceiveCommunityInvite || isPending || clanInviteSent}
               onClick={() => onInviteFriendToClan(profile)}
               className="min-h-12 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 text-xs font-semibold text-lime-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Klana Davet
+              {clanInviteSent ? "Davet Gonderildi" : "Klana Davet"}
             </button>
             <button
               type="button"
@@ -289,7 +304,11 @@ export function PublicDriverProfileOverlay({
               onClick={() => setConvoyPickerOpen((current) => !current)}
               className="min-h-12 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 text-xs font-semibold text-rose-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {availableConvoys.length ? "Konvoya Davet" : "Davet Edilebilir Konvoy Yok"}
+              {availableConvoys.length
+                ? "Konvoya Davet"
+                : invitedConvoyIds.size
+                  ? "Davet Gonderildi"
+                  : "Davet Edilebilir Konvoy Yok"}
             </button>
             {profileStatus === "friend" ? (
               <button
@@ -330,27 +349,34 @@ export function PublicDriverProfileOverlay({
                   <p className="mt-1 text-xs text-neutral-500">Bu surucuyu davet etmek istedigin planli konvoyu sec.</p>
                 </div>
                 <span className="rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-neutral-400">
-                  {availableConvoys.length} konvoy
+                  {eligibleConvoys.length} konvoy
                 </span>
               </div>
               <div className="mt-3 space-y-2">
-                {availableConvoys.map((convoy) => (
-                  <button
-                    key={convoy.id}
-                    type="button"
-                    disabled={Boolean(convoyInvitePendingId)}
-                    onClick={() => inviteToConvoy(convoy.id)}
-                    className="flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-left transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-50"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-white">{convoy.name}</span>
-                      <span className="mt-1 block truncate text-xs text-neutral-500">{convoy.route || "Rota bekleniyor"} / {convoy.time || "Saat bekleniyor"}</span>
-                    </span>
-                    <span className="shrink-0 text-xs font-bold text-rose-200">
-                      {convoyInvitePendingId === convoy.id ? "Gonderiliyor..." : `${convoy.attendees?.length ?? 0}/${convoy.capacity ?? "--"}`}
-                    </span>
-                  </button>
-                ))}
+                {eligibleConvoys.map((convoy) => {
+                  const inviteSent = invitedConvoyIds.has(convoy.id);
+                  return (
+                    <button
+                      key={convoy.id}
+                      type="button"
+                      disabled={Boolean(convoyInvitePendingId) || inviteSent}
+                      onClick={() => inviteToConvoy(convoy.id)}
+                      className="flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-left transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-50"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-white">{convoy.name}</span>
+                        <span className="mt-1 block truncate text-xs text-neutral-500">{convoy.route || "Rota bekleniyor"} / {convoy.time || "Saat bekleniyor"}</span>
+                      </span>
+                      <span className="shrink-0 text-xs font-bold text-rose-200">
+                        {convoyInvitePendingId === convoy.id
+                          ? "Gonderiliyor..."
+                          : inviteSent
+                            ? "Davet Gonderildi"
+                            : `${convoy.attendees?.length ?? 0}/${convoy.capacity ?? "--"}`}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ) : null}

@@ -103,7 +103,7 @@ describe("MeetPinPanel convoy management", () => {
       onSetConvoyMemberRole,
     });
 
-    await user.click(screen.getByRole("button", { name: "Yonetici Yap" }));
+    await user.click(screen.getByRole("button", { name: "Katilimci / Yonetici Yap" }));
     expect(onSetConvoyMemberRole).toHaveBeenCalledWith(expect.objectContaining({
       userId: driver.userId,
     }), "manager");

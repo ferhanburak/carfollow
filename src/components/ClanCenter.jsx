@@ -1,4 +1,5 @@
 import { formatNumber } from "../utils/garage";
+import { getActionError } from "../utils/actionFeedback";
 import { ClanEventList } from "./ClanEventList";
 
 function StatTile({ label, value }) {
@@ -77,12 +78,14 @@ function IncomingInvites({ invites, onAccept, onDecline }) {
 }
 
 export function ClanCreatePanel({ clanFeedback, clanForm, invites, isPending, onAcceptInvite, onCreateClan, onDeclineInvite, onFormChange }) {
+  const clanError = getActionError(clanFeedback);
+
   return (
     <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
       <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">START A CREW</p>
       <h4 className="mt-2 text-lg font-black">Klan Kur</h4>
       <p className="mt-1 text-xs leading-5 text-neutral-500">Kendi ekibini kur veya bekleyen bir klan davetini kabul et.</p>
-      {clanFeedback ? <p className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-xs text-lime-100">{clanFeedback}</p> : null}
+      {clanError ? <p className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-xs text-rose-100">{clanError}</p> : null}
       <div className="mt-4 space-y-3">
         <label className="block text-[10px] uppercase tracking-[0.2em] text-neutral-500">
           Klan Adi
@@ -120,7 +123,7 @@ function ClanMemberCard({ isPending, member, onOpenProfile, onRemove, onTransfer
       </div>
       {canManage ? (
         <div className="mt-3 grid grid-cols-2 gap-2">
-          {user.clanRole === "owner" ? <button type="button" disabled={isPending} onClick={() => onUpdateRole(member, member.role === "captain" ? "member" : "captain")} className="min-h-12 rounded-xl border border-lime-400/25 bg-lime-400/10 px-2 text-xs font-semibold text-lime-200 disabled:opacity-50">{member.role === "captain" ? "Uye Yap" : "Kaptan Yap"}</button> : null}
+          {user.clanRole === "owner" ? <button type="button" disabled={isPending} onClick={() => onUpdateRole(member, member.role === "captain" ? "member" : "captain")} className="min-h-12 rounded-xl border border-lime-400/25 bg-lime-400/10 px-2 text-xs font-semibold text-lime-200 disabled:opacity-50">{member.role === "captain" ? "Kaptan / Uye Yap" : "Uye / Kaptan Yap"}</button> : null}
           {user.clanRole === "owner" ? <button type="button" disabled={isPending} onClick={() => onTransfer(member)} className="min-h-12 rounded-xl border border-amber-400/25 bg-amber-400/10 px-2 text-xs font-semibold text-amber-100 disabled:opacity-50">Sahipligi Devret</button> : null}
           <button type="button" disabled={isPending} onClick={() => onRemove(member)} className="col-span-2 min-h-12 rounded-xl border border-rose-400/25 bg-rose-400/10 px-2 text-xs font-semibold text-rose-100 disabled:opacity-50">Klandan Cikar</button>
         </div>
@@ -153,6 +156,8 @@ export function ClanCenter({
   const memberCount = members.length || Number(clan.members ?? 0);
   const averageScore = members.length ? Math.round(members.reduce((sum, member) => sum + Number(member.driverScore ?? 0), 0) / members.length) : Number(user.driverScore ?? 0);
   const canInvite = ["owner", "captain"].includes(user.clanRole ?? "member");
+  const clanError = getActionError(clanFeedback);
+  const clanEventError = getActionError(clanEventFeedback);
 
   return (
     <div className="fixed inset-0 z-[45] bg-black/85 backdrop-blur-md md:p-4" role="dialog" aria-modal="true" aria-label="Klan merkezi paneli">
@@ -169,7 +174,7 @@ export function ClanCenter({
         </header>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {clanFeedback || clanEventFeedback ? <p className="rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-xs text-lime-100">{clanEventFeedback || clanFeedback}</p> : null}
+          {clanError || clanEventError ? <p className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-xs text-rose-100">{clanEventError || clanError}</p> : null}
           <div className="grid grid-cols-2 gap-2">
             <StatTile label="Aylik KM" value={`${formatNumber(clan.km ?? 0)} KM`} />
             <StatTile label="Uye Sayisi" value={memberCount} />

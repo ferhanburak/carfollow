@@ -73,7 +73,7 @@ describe("ClanCenter", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Kaptan Yap" }));
+    await user.click(screen.getByRole("button", { name: "Uye / Kaptan Yap" }));
     expect(onUpdateMemberRole).toHaveBeenCalledWith(targetMember, "captain");
 
     rerender(
@@ -95,7 +95,7 @@ describe("ClanCenter", () => {
         user={{ id: "member-3", clanRole: "member", driverScore: 70 }}
       />,
     );
-    expect(screen.queryByRole("button", { name: "Kaptan Yap" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Uye / Kaptan Yap" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Klandan Cikar" })).not.toBeInTheDocument();
   });
 

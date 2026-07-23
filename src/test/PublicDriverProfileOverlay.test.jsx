@@ -68,7 +68,7 @@ describe("PublicDriverProfileOverlay community invitations", () => {
     expect(screen.getByRole("button", { name: "Konvoya Davet" })).toBeDisabled();
   });
 
-  it("removes convoys where the driver is already invited from the selectable list", () => {
+  it("shows a persistent sent state when the driver is already invited", () => {
     renderProfile({
       hostableConvoys: [{
         id: "convoy-1",
@@ -79,6 +79,6 @@ describe("PublicDriverProfileOverlay community invitations", () => {
       }],
     });
 
-    expect(screen.getByRole("button", { name: "Davet Edilebilir Konvoy Yok" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Davet Gonderildi" })).toBeDisabled();
   });
 });

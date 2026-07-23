@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { InsightCard } from "../ui";
+import { getActionError } from "../../utils/actionFeedback";
 import { getConvoyAccessState, getMeetAccessPolicyLabel, getMeetDetailVisibilityLabel, getMeetVisibilityLabel } from "../../utils/meetVisibility";
 
 function ReputationBadge({ attendee }) {
@@ -338,6 +339,7 @@ export function MeetPinPanel({
   const isManager = pin.viewerManagementRole === "manager" || selfAttendee?.managementRole === "manager";
   const canManage = isHost || isManager;
   const lifecycleStatus = pin.lifecycleStatus ?? "planning";
+  const convoyError = getActionError(convoyFeedback);
 
   return (
     <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
@@ -379,9 +381,9 @@ export function MeetPinPanel({
         ) : null}
       </div>
 
-      {convoyFeedback ? (
-        <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-100">
-          {convoyFeedback}
+      {convoyError ? (
+        <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          {convoyError}
         </div>
       ) : null}
 
@@ -585,7 +587,7 @@ export function MeetPinPanel({
                       onClick={() => onSetConvoyMemberRole?.(attendee, attendee.managementRole === "manager" ? "member" : "manager")}
                       className="mt-3 min-h-12 w-full rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 text-sm font-semibold text-amber-200"
                     >
-                      {attendee.managementRole === "manager" ? "Yonetim Yetkisini Kaldir" : "Yonetici Yap"}
+                      {attendee.managementRole === "manager" ? "Yonetici / Yetkiyi Kaldir" : "Katilimci / Yonetici Yap"}
                     </button>
                   ) : null}
                   {canManage && !isSelf && !(isManager && attendee.managementRole === "manager") && !["completed", "cancelled"].includes(lifecycleStatus) ? (

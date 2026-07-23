@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ClanCenter, ClanCreatePanel, ClanMembershipLoadingCard, ClanSummaryCard } from "../components/ClanCenter";
 import { individualDriverSeed } from "../data/mockData";
+import { getActionError } from "../utils/actionFeedback";
 import { formatNumber } from "../utils/garage";
 import { buildIndividualLeaderboard } from "../utils/socialStats";
 
@@ -92,6 +93,7 @@ export function StatsScreen({
     { key: "clan-invites", label: "Klan Daveti", value: `${user.clanInvites?.length ?? 0}` },
   ];
   const hasSearchResults = friendSearchResults.length > 0;
+  const socialError = getActionError(socialFeedback);
 
   const friendPlateSet = useMemo(() => new Set((user.friends ?? []).map((entry) => entry.plate)), [user.friends]);
   const incomingPlateSet = useMemo(() => new Set((user.incomingRequests ?? []).map((entry) => entry.plate)), [user.incomingRequests]);
@@ -102,6 +104,14 @@ export function StatsScreen({
   };
   const isSocialEntryPending = (entry) =>
     Boolean(socialPendingKey && entry?.userId && socialPendingKey.endsWith(`:${entry.userId}`));
+  const hasPendingClanInvite = (entry) => (user.sentClanInvites ?? []).some((invite) =>
+    (invite.targetUserId && invite.targetUserId === entry.userId) ||
+    (invite.targetPlate && invite.targetPlate === entry.plate),
+  );
+  const isInvitedToConvoy = (convoy, entry) => (convoy?.invitedGuests ?? []).some((invite) =>
+    (invite.userId && invite.userId === entry.userId) ||
+    (invite.plate && invite.plate === entry.plate),
+  );
   const showSocial = mode === "social";
   const showLeaderboard = mode === "leaderboard";
 
@@ -195,9 +205,9 @@ export function StatsScreen({
             {(user.friends ?? []).length} friends
           </div>
         </div>
-        {socialFeedback ? (
-          <div className="mt-4 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-100">
-            {socialFeedback}
+        {socialError ? (
+          <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+            {socialError}
           </div>
         ) : null}
         <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
@@ -237,11 +247,10 @@ export function StatsScreen({
                   ) : entry.friendshipStatus === "outgoing" ? (
                     <button
                       type="button"
-                      disabled={isSocialEntryPending(entry)}
-                      onClick={() => withdrawFriendRequest(entry.plate)}
-                      className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:cursor-wait disabled:opacity-50"
+                      disabled
+                      className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-300 disabled:cursor-not-allowed disabled:opacity-70"
                     >
-                      Istegi Geri Cek
+                      Istek Gonderildi
                     </button>
                   ) : entry.friendshipStatus === "incoming" ? (
                     <div className="flex gap-2">
@@ -272,20 +281,21 @@ export function StatsScreen({
                   {canInviteToClan ? (
                     <button
                       type="button"
-                      disabled={isClanPending}
+                      disabled={isClanPending || hasPendingClanInvite(entry)}
                       onClick={() => inviteFriendToClan(entry)}
                       className="min-h-12 rounded-xl border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-xs font-semibold text-lime-200 disabled:cursor-wait disabled:opacity-50"
                     >
-                      Klana Davet
+                      {hasPendingClanInvite(entry) ? "Davet Gonderildi" : "Klana Davet"}
                     </button>
                   ) : null}
                   {primaryHostableConvoy ? (
                     <button
                       type="button"
+                      disabled={isInvitedToConvoy(primaryHostableConvoy, entry)}
                       onClick={() => inviteDriverToMeet(primaryHostableConvoy.id, entry)}
-                      className="min-h-12 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200"
+                      className="min-h-12 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      Konvoya Davet
+                      {isInvitedToConvoy(primaryHostableConvoy, entry) ? "Davet Gonderildi" : "Konvoya Davet"}
                     </button>
                   ) : null}
                 </div>
@@ -392,11 +402,11 @@ export function StatsScreen({
                         {canInviteToClan ? (
                           <button
                             type="button"
-                            disabled={isSocialEntryPending(entry)}
+                            disabled={isSocialEntryPending(entry) || hasPendingClanInvite(entry)}
                             onClick={() => inviteFriendToClan(entry)}
                             className="min-h-12 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black disabled:opacity-50"
                           >
-                            Klana Davet Et
+                            {hasPendingClanInvite(entry) ? "Davet Gonderildi" : "Klana Davet Et"}
                           </button>
                         ) : (
                           <span className="rounded-xl border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-center text-xs font-semibold text-lime-300">
