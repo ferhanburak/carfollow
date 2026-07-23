@@ -2,11 +2,11 @@ import { useState } from "react";
 import { ProfileAvatar } from "../components/ProfileAvatar";
 
 const categories = [
-  { key: "all", label: "Tum Akis" },
-  { key: "places", label: "Rota & Mekan" },
-  { key: "builds", label: "Modifiye & Build" },
-  { key: "technical", label: "Teknik Destek" },
-  { key: "roadlife", label: "Road Life" },
+  { key: "all", label: "Tum Akis", tabLabel: "Tumu" },
+  { key: "places", label: "Rota & Mekan", tabLabel: "Rota" },
+  { key: "builds", label: "Modifiye & Build", tabLabel: "Modifiye" },
+  { key: "technical", label: "Teknik Destek", tabLabel: "Teknik" },
+  { key: "roadlife", label: "Road Life", tabLabel: "Hayat" },
 ];
 
 const categoryMeta = Object.fromEntries(categories.map((category) => [category.key, category]));
@@ -93,11 +93,11 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
 
   return (
     <section className="-mx-1 overflow-hidden rounded-[1.65rem] border border-white/10 bg-[#0b0b0b] pb-3">
-      <div className="flex overflow-x-auto border-b border-white/10 px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="grid grid-cols-5 border-b border-white/10 px-1">
         {categories.map((category) => (
-          <button key={category.key} type="button" onClick={() => setActiveCategory(category.key)} className={`relative min-h-14 shrink-0 px-4 text-xs font-bold transition active:scale-95 ${activeCategory === category.key ? "text-white" : "text-neutral-500 hover:text-neutral-300"}`}>
-            {category.label}
-            <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-lime-400 transition-opacity ${activeCategory === category.key ? "opacity-100" : "opacity-0"}`} />
+          <button key={category.key} type="button" aria-label={category.label} onClick={() => setActiveCategory(category.key)} className={`relative min-h-14 min-w-0 px-1 text-[10px] font-bold transition min-[390px]:text-[11px] active:scale-95 ${activeCategory === category.key ? "text-white" : "text-neutral-500 hover:text-neutral-300"}`}>
+            <span className="block truncate">{category.tabLabel}</span>
+            <span className={`absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-lime-400 transition-opacity ${activeCategory === category.key ? "opacity-100" : "opacity-0"}`} />
           </button>
         ))}
       </div>
