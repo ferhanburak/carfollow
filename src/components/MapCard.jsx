@@ -610,18 +610,9 @@ export function MapCard({
         className={`relative overflow-hidden ${
           fullScreen
             ? "h-full w-full bg-[#050505]"
-            : "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4"
+            : "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-2"
         }`}
       >
-        {!fullScreen ? (
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Interactive Map Layer</p>
-              <h3 className="mt-1 text-lg font-black">Google Maps Cruise Grid</h3>
-            </div>
-            <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Fallback Grid</div>
-          </div>
-        ) : null}
         <div className={fullScreen ? "absolute inset-0 p-0" : ""}>
           <FallbackGridMap
             pins={pins}
@@ -836,11 +827,10 @@ export function GoogleMapCard({
   }, [displayedRoutePath, hasDisplayedRoute, isLoaded, selectedPinId]);
 
   useEffect(() => {
-    if (!isLoaded || !mapRef.current || !navigationMode || !currentLocation || !followCurrentLocation) return;
+    if (!isLoaded || !mapRef.current || !currentLocation || !followCurrentLocation) return;
 
     mapRef.current.panTo(currentLocation);
-    mapRef.current.setZoom(14);
-  }, [currentLocation, followCurrentLocation, isLoaded, navigationMode]);
+  }, [currentLocation, followCurrentLocation, isLoaded]);
 
   useEffect(() => {
     if (!isLoaded || !mapRef.current || !selectedPinId || !selectedPinCenter || hasDisplayedRoute) return;
@@ -854,19 +844,20 @@ export function GoogleMapCard({
       className={`relative overflow-hidden ${
         fullScreen
           ? "h-full w-full bg-[#050505]"
-          : "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-4"
+          : "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-2"
       }`}
     >
-      <div className={`${fullScreen ? "pointer-events-none absolute right-4 top-4 z-20" : "mb-3 flex items-center justify-between"}`}>
-        <div>
-          {!fullScreen ? <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Interactive Map Layer</p> : null}
-          {!fullScreen ? <h3 className="mt-1 text-lg font-black">Google Maps Cruise Grid</h3> : null}
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="pointer-events-none absolute right-4 top-4 z-20">
+        <div className="flex items-center">
           <button
             type="button"
             onClick={() => {
               if (!mapRef.current || !currentLocation) {
+                return;
+              }
+
+              if (followCurrentLocation) {
+                setFollowCurrentLocation(false);
                 return;
               }
 
@@ -875,15 +866,15 @@ export function GoogleMapCard({
               setFollowCurrentLocation(true);
             }}
             disabled={!currentLocation}
-            className={`pointer-events-auto min-h-12 rounded-2xl border px-3 py-2 text-xs transition disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-neutral-500 ${
+            aria-pressed={followCurrentLocation}
+            className={`pointer-events-auto min-h-12 rounded-2xl border px-3 py-2 text-xs font-semibold shadow-xl backdrop-blur-md transition active:scale-95 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-black/60 disabled:text-neutral-500 ${
               followCurrentLocation
-                ? "border-lime-400/40 bg-lime-400/15 text-lime-200"
-                : "border-rose-400/30 bg-rose-500/10 text-rose-200"
+                ? "border-lime-400/50 bg-lime-400 text-black"
+                : "border-white/15 bg-black/75 text-white"
             }`}
           >
-            {followCurrentLocation ? "Bana Kilitli" : "Konumuma Git"}
+            {followCurrentLocation ? "Takibi Birak" : "Konumuma Git"}
           </button>
-          {!fullScreen ? <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Ankara Live</div> : null}
         </div>
       </div>
 
@@ -919,15 +910,8 @@ export function GoogleMapCard({
               mapRef.current = map;
             }}
             onDragStart={() => {
-              if (navigationMode) {
-                setFollowCurrentLocation(false);
-              }
+              setFollowCurrentLocation(false);
               shouldAutoFrameRouteRef.current = false;
-            }}
-            onZoomChanged={() => {
-              if (navigationMode) {
-                setFollowCurrentLocation(false);
-              }
             }}
             onUnmount={() => {
               mapRef.current = null;

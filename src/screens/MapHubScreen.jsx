@@ -63,6 +63,7 @@ export function MapHubScreen({
         draftRoutePath={mapPinForm.routePoints}
         mapPickMode={mapPickMode}
         onPickLocation={onPickLocation}
+        mapHeight="clamp(24rem, 58vh, 34rem)"
       />
       <PinPanel
         pin={selectedPin}

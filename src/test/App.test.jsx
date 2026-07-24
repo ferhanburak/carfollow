@@ -51,7 +51,7 @@ describe("App", () => {
 
     await user.click(spotMarker);
     const spotDetails = await screen.findByRole("heading", { name: "Mogan Lake Sunset" });
-    const nodeComposer = screen.getByRole("heading", { name: "Yeni Nokta Olustur" });
+    const nodeComposer = screen.getByLabelText("Nokta editoru");
     expect(spotDetails.compareDocumentPosition(nodeComposer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
@@ -220,7 +220,7 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(await screen.findByRole("button", { name: "Editoru Ac" }));
+    await user.click(await screen.findByRole("button", { name: "+ Nokta Ekle" }));
     fireEvent.submit(screen.getByRole("button", { name: "Event Ekle" }).closest("form"));
 
     expect((await screen.findAllByText("Zorunlu alanlari doldurunuz.")).length).toBeGreaterThan(0);

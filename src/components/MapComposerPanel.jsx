@@ -49,15 +49,8 @@ export function MapComposerPanel({
   }, [form]);
 
   return (
-    <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Node Studio</p>
-          <h3 className="mt-2 text-xl font-black">Yeni Nokta Olustur</h3>
-          <p className="mt-2 text-sm text-neutral-400">
-            Varsayilan akis event odakli. Haritadan ana nokta ve event rota dugumleri secilebilir.
-          </p>
-        </div>
+    <div aria-label="Nokta editoru" className={`rounded-[1.5rem] border border-white/10 bg-[#111111] ${resolvedOpen ? "p-4" : "p-2"}`}>
+      <div className={resolvedOpen ? "flex items-center justify-end" : ""}>
         {!alwaysOpen ? (
           <button
             type="button"
@@ -70,25 +63,16 @@ export function MapComposerPanel({
                 return next;
               });
             }}
-            className={`min-h-12 rounded-2xl px-4 text-sm font-semibold transition ${
-              resolvedOpen ? "bg-lime-400 text-black" : "border border-white/10 bg-black/20 text-neutral-300"
+            className={`min-h-12 rounded-2xl px-4 text-sm font-semibold transition active:scale-[0.98] ${
+              resolvedOpen
+                ? "border border-white/10 bg-black/30 text-neutral-300"
+                : "w-full bg-lime-400 text-black"
             }`}
           >
-            {resolvedOpen ? "Editoru Gizle" : "Editoru Ac"}
+            {resolvedOpen ? "Kapat" : "+ Nokta Ekle"}
           </button>
         ) : null}
       </div>
-
-      {!resolvedOpen ? (
-        <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 px-4 py-4 text-sm text-neutral-300">
-          <p>Su an ikinci bir photo spot degil, sadece yeni node olusturma alani var.</p>
-          <p className="mt-2 text-neutral-500">
-            Haritaya tikla, sonra editoru ac. Secili lokasyon:
-            {" "}
-            {draftLocation ? `${draftLocation.lat}, ${draftLocation.lng}` : "heniz yok"}
-          </p>
-        </div>
-      ) : null}
 
       {resolvedOpen ? (
         <>
