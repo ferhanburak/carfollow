@@ -16,7 +16,12 @@ describe("driver stats domain", () => {
       {
         monthlyKm: 24.8,
         monthlyNightKm: 8,
+        monthlyDriveSeconds: 1800,
+        monthlyMaxSpeedKmh: 112,
+        monthlyAverageSpeedKmh: 49.6,
         lifetimeVerifiedKm: 124,
+        lifetimeDriveSeconds: 7200,
+        lifetimeMaxSpeedKmh: 138,
         completedSessions: 3,
         achievementBadges: ["Garaj Arsivi"],
         achievements: [{ key: "garage-keeper", unlocked: true }],
@@ -24,6 +29,10 @@ describe("driver stats domain", () => {
     );
 
     expect(user.monthlyKm).toBe(24.8);
+    expect(user.monthlyDriveSeconds).toBe(1800);
+    expect(user.monthlyMaxSpeedKmh).toBe(112);
+    expect(user.lifetimeDriveSeconds).toBe(7200);
+    expect(user.lifetimeMaxSpeedKmh).toBe(138);
     expect(user.badges).toEqual(["Yeni Uye", "Garaj Arsivi"]);
     expect(user.driverStats.completedSessions).toBe(3);
   });
@@ -32,8 +41,8 @@ describe("driver stats domain", () => {
     const leaderboard = normalizeIndividualLeaderboard(
       [
         { id: "old", userId: "user-1", periodKey: "2026-06", monthlyKm: 999 },
-        { id: "a", userId: "user-2", periodKey: "2026-07", monthlyKm: 80, driverScore: 70 },
-        { id: "b", userId: "user-3", periodKey: "2026-07", monthlyKm: 80, driverScore: 90 },
+        { id: "a", userId: "user-2", periodKey: "2026-07", monthlyKm: 80, monthlyDriveSeconds: 3600, monthlyMaxSpeedKmh: 120, driverScore: 70 },
+        { id: "b", userId: "user-3", periodKey: "2026-07", monthlyKm: 80, monthlyDriveSeconds: 4200, monthlyMaxSpeedKmh: 135, driverScore: 90 },
       ],
       { id: "user-1", plate: "06 TEST 01", fullName: "Test", monthlyKm: 20, driverScore: 80 },
       "2026-07",
@@ -41,5 +50,9 @@ describe("driver stats domain", () => {
 
     expect(leaderboard.map((entry) => entry.userId)).toEqual(["user-3", "user-2", "user-1"]);
     expect(leaderboard.map((entry) => entry.rank)).toEqual([1, 2, 3]);
+    expect(leaderboard[0]).toMatchObject({
+      monthlyDriveSeconds: 4200,
+      monthlyMaxSpeedKmh: 135,
+    });
   });
 });

@@ -91,14 +91,39 @@ describe("Firebase driver stats repository", () => {
       .mockResolvedValueOnce({ data: { sessionId: "ride-user-1-123456", acceptedKm: 4.8 } });
 
     await startFirebaseDriveSession("ride-user-1-123456");
-    await finishFirebaseDriveSession("ride-user-1-123456", 4.8);
+    await finishFirebaseDriveSession("ride-user-1-123456", {
+      acceptedSampleCount: 20,
+      qualifiedSpeedSampleCount: 6,
+      reportedKm: 4.8,
+      reportedMaxSpeedKmh: 112,
+      reportedMovingSeconds: 240,
+    });
 
     expect(mocks.invokeCallable).toHaveBeenNthCalledWith(1, "startDriveSession", {
       sessionId: "ride-user-1-123456",
     });
     expect(mocks.invokeCallable).toHaveBeenNthCalledWith(2, "finishDriveSession", {
+      acceptedSampleCount: 20,
+      qualifiedSpeedSampleCount: 6,
+      reportedMaxSpeedKmh: 112,
+      reportedMovingSeconds: 240,
       sessionId: "ride-user-1-123456",
       reportedKm: 4.8,
+    });
+  });
+
+  it("keeps the legacy numeric finish signature backward compatible", async () => {
+    mocks.invokeCallable.mockResolvedValueOnce({ data: { acceptedKm: 2.4 } });
+
+    await finishFirebaseDriveSession("ride-user-1-123456", 2.4);
+
+    expect(mocks.invokeCallable).toHaveBeenCalledWith("finishDriveSession", {
+      acceptedSampleCount: 0,
+      qualifiedSpeedSampleCount: 0,
+      reportedKm: 2.4,
+      reportedMaxSpeedKmh: 0,
+      reportedMovingSeconds: 0,
+      sessionId: "ride-user-1-123456",
     });
   });
 });

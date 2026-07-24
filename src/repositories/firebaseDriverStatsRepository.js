@@ -116,12 +116,27 @@ export async function startFirebaseDriveSession(sessionId) {
   return callDriverFunction("startDriveSession", { sessionId });
 }
 
-export async function finishFirebaseDriveSession(sessionId, reportedKm) {
-  if (!sessionId || !Number.isFinite(Number(reportedKm)) || Number(reportedKm) < 0) {
+export async function finishFirebaseDriveSession(sessionId, summaryOrReportedKm) {
+  const summary = summaryOrReportedKm && typeof summaryOrReportedKm === "object"
+    ? summaryOrReportedKm
+    : { reportedKm: summaryOrReportedKm };
+  const payload = {
+    acceptedSampleCount: Number(summary.acceptedSampleCount ?? 0),
+    qualifiedSpeedSampleCount: Number(summary.qualifiedSpeedSampleCount ?? 0),
+    reportedKm: Number(summary.reportedKm),
+    reportedMaxSpeedKmh: Number(summary.reportedMaxSpeedKmh ?? 0),
+    reportedMovingSeconds: Number(summary.reportedMovingSeconds ?? 0),
+    sessionId,
+  };
+  const numericFields = [
+    payload.acceptedSampleCount,
+    payload.qualifiedSpeedSampleCount,
+    payload.reportedKm,
+    payload.reportedMaxSpeedKmh,
+    payload.reportedMovingSeconds,
+  ];
+  if (!sessionId || numericFields.some((value) => !Number.isFinite(value) || value < 0)) {
     throw createRepositoryError("cruiser/invalid-drive-session", "Drive session result is invalid.");
   }
-  return callDriverFunction("finishDriveSession", {
-    sessionId,
-    reportedKm: Number(reportedKm),
-  });
+  return callDriverFunction("finishDriveSession", payload);
 }

@@ -79,6 +79,11 @@ describe("user document contracts", () => {
       ...user,
       monthlyKm: 842,
       monthlyKmPeriod: "2026-07",
+      monthlyDriveSeconds: 3600,
+      monthlyMaxSpeedKmh: 128,
+      monthlyAverageSpeedKmh: 52,
+      lifetimeDriveSeconds: 7200,
+      lifetimeMaxSpeedKmh: 141,
       achievementBadges: ["Gece Savascisi"],
       driverStats: { monthlyKm: 842 },
       odometer: 68420,
@@ -90,10 +95,15 @@ describe("user document contracts", () => {
     const publicPatch = buildPublicUserProfilePatch(source, firebaseUser);
 
     expect(privatePatch).not.toHaveProperty("monthlyKm");
+    expect(privatePatch).not.toHaveProperty("monthlyDriveSeconds");
+    expect(privatePatch).not.toHaveProperty("monthlyMaxSpeedKmh");
+    expect(privatePatch).not.toHaveProperty("lifetimeDriveSeconds");
     expect(privatePatch).not.toHaveProperty("odometer");
     expect(privatePatch).not.toHaveProperty("driverStats");
     expect(privatePatch).not.toHaveProperty("badges");
     expect(publicPatch).not.toHaveProperty("monthlyKm");
+    expect(publicPatch).not.toHaveProperty("monthlyDriveSeconds");
+    expect(publicPatch).not.toHaveProperty("monthlyMaxSpeedKmh");
     expect(publicPatch).not.toHaveProperty("achievementBadges");
     expect(publicPatch).not.toHaveProperty("badges");
     expect(privatePatch).not.toHaveProperty("clan");

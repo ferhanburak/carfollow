@@ -140,20 +140,40 @@ export function useDriverStats({ user, setUser }) {
     }
   };
 
-  const finishDriveSession = async ({ sessionId, reportedKm }) => {
+  const finishDriveSession = async ({
+    acceptedSampleCount,
+    qualifiedSpeedSampleCount,
+    reportedKm,
+    reportedMaxSpeedKmh,
+    reportedMovingSeconds,
+    sessionId,
+  }) => {
+    const driveSummary = {
+      acceptedSampleCount,
+      qualifiedSpeedSampleCount,
+      reportedKm,
+      reportedMaxSpeedKmh,
+      reportedMovingSeconds,
+    };
     if (!serverOwned) {
       return {
         ok: true,
         mode: "mock",
         sessionId,
         acceptedKm: Number(reportedKm ?? 0),
+        averageSpeedKmh: Number(reportedMovingSeconds) > 0
+          ? Number(((Number(reportedKm ?? 0) / Number(reportedMovingSeconds)) * 3600).toFixed(1))
+          : 0,
+        maxSpeedKmh: Number(reportedMaxSpeedKmh ?? 0),
+        movingSeconds: Number(reportedMovingSeconds ?? 0),
         rejectedKm: 0,
+        rejectedMovingSeconds: 0,
       };
     }
 
     setDriverStatsStatus((current) => ({ ...current, state: "finalizing", error: "" }));
     try {
-      const result = await finishFirebaseDriveSession(sessionId, reportedKm);
+      const result = await finishFirebaseDriveSession(sessionId, driveSummary);
       setUser((current) => {
         const merged = mergeDriverStatsIntoUser(current, result?.stats);
         const authoritativeUser = merged

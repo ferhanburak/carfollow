@@ -52,6 +52,10 @@ describe("useDriveSession", () => {
       await result.current.toggleDrive();
     });
     expect(props.onSessionFinish).toHaveBeenCalledWith({
+      acceptedSampleCount: 0,
+      qualifiedSpeedSampleCount: 0,
+      reportedMaxSpeedKmh: 0,
+      reportedMovingSeconds: 0,
       sessionId: "ride-user-1-123456",
       reportedKm: 0,
     });

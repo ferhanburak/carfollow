@@ -192,7 +192,14 @@ export function useDriveSession({
         setDriveSessionStatus("finalizing");
         setDriveSessionFeedback("Surus mesafesi dogrulaniyor ve siralamaya isleniyor...");
         const result = onSessionFinish
-          ? await onSessionFinish({ sessionId: driveSessionId, reportedKm: driveHud.sessionKm })
+          ? await onSessionFinish({
+            sessionId: driveSessionId,
+            reportedKm: driveHud.sessionKm,
+            reportedMovingSeconds: driveHud.movingSeconds,
+            reportedMaxSpeedKmh: driveHud.maxSpeedKmh,
+            acceptedSampleCount: driveHud.acceptedSampleCount,
+            qualifiedSpeedSampleCount: driveHud.qualifiedSpeedSampleCount,
+          })
           : { ok: true, acceptedKm: driveHud.sessionKm, rejectedKm: 0 };
         if (result?.ok === false) {
           setIsDriving(true);
