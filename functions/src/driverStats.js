@@ -113,27 +113,55 @@ function buildPartLifeSnapshot(part = {}, odometer = 0, now = new Date()) {
   };
 }
 
-function applyCompletedDriveToClan({ clan = {}, member = {}, acceptedKm = 0, periodKey }) {
+function applyCompletedDriveToClan({
+  clan = {},
+  member = {},
+  acceptedKm = 0,
+  movingSeconds = 0,
+  maxSpeedKmh = 0,
+  periodKey,
+}) {
   const safePeriodKey = String(periodKey ?? getMonthKey());
-  const previousClanKm = clan.monthlyKmPeriod === safePeriodKey
+  const isCurrentClanPeriod = clan.monthlyKmPeriod === safePeriodKey;
+  const isCurrentMemberPeriod = member.monthlyKmPeriod === safePeriodKey;
+  const previousClanKm = isCurrentClanPeriod
     ? roundKm(clan.monthlyKm ?? clan.km)
     : 0;
-  const previousMemberKm = member.monthlyKmPeriod === safePeriodKey
+  const previousMemberKm = isCurrentMemberPeriod
     ? roundKm(member.monthlyKm)
     : 0;
+  const acceptedMovingSeconds = Math.max(0, Math.floor(Number(movingSeconds) || 0));
   const monthlyKm = roundKm(previousClanKm + acceptedKm);
   const memberMonthlyKm = roundKm(previousMemberKm + acceptedKm);
+  const monthlyDriveSeconds = (
+    isCurrentClanPeriod ? Math.max(0, Math.floor(Number(clan.monthlyDriveSeconds) || 0)) : 0
+  ) + acceptedMovingSeconds;
+  const memberMonthlyDriveSeconds = (
+    isCurrentMemberPeriod ? Math.max(0, Math.floor(Number(member.monthlyDriveSeconds) || 0)) : 0
+  ) + acceptedMovingSeconds;
+  const monthlyMaxSpeedKmh = roundSpeed(Math.max(
+    isCurrentClanPeriod ? Number(clan.monthlyMaxSpeedKmh) || 0 : 0,
+    Number(maxSpeedKmh) || 0,
+  ));
+  const memberMonthlyMaxSpeedKmh = roundSpeed(Math.max(
+    isCurrentMemberPeriod ? Number(member.monthlyMaxSpeedKmh) || 0 : 0,
+    Number(maxSpeedKmh) || 0,
+  ));
   const clanId = String(clan.id ?? member.clanId ?? "");
 
   return {
     clanPatch: {
       monthlyKm,
+      monthlyDriveSeconds,
+      monthlyMaxSpeedKmh,
       monthlyKmPeriod: safePeriodKey,
       // Legacy screens still read `km`; keep it as the current monthly total.
       km: monthlyKm,
     },
     memberPatch: {
       monthlyKm: memberMonthlyKm,
+      monthlyDriveSeconds: memberMonthlyDriveSeconds,
+      monthlyMaxSpeedKmh: memberMonthlyMaxSpeedKmh,
       monthlyKmPeriod: safePeriodKey,
     },
     leaderboardEntry: {
@@ -144,6 +172,8 @@ function applyCompletedDriveToClan({ clan = {}, member = {}, acceptedKm = 0, per
       tag: String(clan.tag ?? ""),
       memberCount: Math.max(0, Number(clan.memberCount ?? clan.members ?? 0)),
       monthlyKm,
+      monthlyDriveSeconds,
+      monthlyMaxSpeedKmh,
       schemaVersion: STATS_SCHEMA_VERSION,
     },
   };

@@ -34,7 +34,14 @@ describe("buildFirebaseClanState", () => {
         { id: "clan-2", name: "Night", memberCount: 4, monthlyKmPeriod: periodKey, monthlyKm: 80 },
       ],
       leaderboardEntries: [
-        { id: `${periodKey}__clan-1`, clanId: "clan-1", periodKey, monthlyKm: 125.2 },
+        {
+          id: `${periodKey}__clan-1`,
+          clanId: "clan-1",
+          periodKey,
+          monthlyKm: 125.2,
+          monthlyDriveSeconds: 3900,
+          monthlyMaxSpeedKmh: 142,
+        },
         { id: `old-period__clan-2`, clanId: "clan-2", periodKey: "old-period", monthlyKm: 9999 },
       ],
     });
@@ -43,6 +50,14 @@ describe("buildFirebaseClanState", () => {
       ["clan-1", 125.2],
       ["clan-2", 80],
     ]);
+    expect(state.clans[0]).toMatchObject({
+      monthlyDriveSeconds: 3900,
+      monthlyMaxSpeedKmh: 142,
+    });
+    expect(state.clans[1]).toMatchObject({
+      monthlyDriveSeconds: 0,
+      monthlyMaxSpeedKmh: 0,
+    });
   });
 
   it("preserves partial subscription readiness so invites can render immediately", () => {

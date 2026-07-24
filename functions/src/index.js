@@ -2506,6 +2506,8 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
         clan: { id: clanContext.clanRef.id, ...clanContext.clan },
         member: clanContext.member,
         acceptedKm: distance.acceptedKm,
+        movingSeconds: distance.movingSeconds,
+        maxSpeedKmh: distance.maxSpeedKmh,
         periodKey: stats.periodKey,
       });
       transaction.update(clanContext.clanRef, { ...clanAggregate.clanPatch, updatedAt: timestamp });

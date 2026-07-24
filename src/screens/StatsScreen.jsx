@@ -39,7 +39,7 @@ function getClanRankTone(index) {
   return "bg-white/10 text-white";
 }
 
-const individualLeaderboardMetrics = [
+const leaderboardMetrics = [
   {
     key: "monthlyKm",
     label: "KM",
@@ -102,6 +102,9 @@ export function StatsScreen({
 }) {
   const [clanCenterOpen, setClanCenterOpen] = useState(false);
   const [leaderboardMetricKey, setLeaderboardMetricKey] = useState("monthlyKm");
+  const [clanLeaderboardMetricKey, setClanLeaderboardMetricKey] = useState("monthlyKm");
+  const [individualLeaderboardExpanded, setIndividualLeaderboardExpanded] = useState(false);
+  const [clanLeaderboardExpanded, setClanLeaderboardExpanded] = useState(false);
   const baseIndividualLeaderboard = Array.isArray(individualLeaderboardEntries)
     ? individualLeaderboardEntries
     : buildIndividualLeaderboard(user, individualDriverSeed);
@@ -109,10 +112,25 @@ export function StatsScreen({
     () => rankIndividualLeaderboard(baseIndividualLeaderboard, leaderboardMetricKey),
     [baseIndividualLeaderboard, leaderboardMetricKey],
   );
-  const activeLeaderboardMetric = individualLeaderboardMetrics.find(
+  const activeLeaderboardMetric = leaderboardMetrics.find(
     (metric) => metric.key === leaderboardMetricKey,
-  ) ?? individualLeaderboardMetrics[0];
-  const sortedClans = [...clans].sort((a, b) => b.km - a.km);
+  ) ?? leaderboardMetrics[0];
+  const clanLeaderboard = useMemo(
+    () => rankIndividualLeaderboard(
+      clans.map((clan) => ({ ...clan, monthlyKm: Number(clan.monthlyKm ?? clan.km ?? 0) })),
+      clanLeaderboardMetricKey,
+    ),
+    [clanLeaderboardMetricKey, clans],
+  );
+  const activeClanLeaderboardMetric = leaderboardMetrics.find(
+    (metric) => metric.key === clanLeaderboardMetricKey,
+  ) ?? leaderboardMetrics[0];
+  const visibleIndividualLeaderboard = individualLeaderboardExpanded
+    ? individualLeaderboard
+    : individualLeaderboard.slice(0, 5);
+  const visibleClanLeaderboard = clanLeaderboardExpanded
+    ? clanLeaderboard
+    : clanLeaderboard.slice(0, 5);
   const canInviteToClan = ["owner", "captain"].includes(user.clanRole ?? "member");
   const isClanPending = Boolean(clanPendingKey);
   const hasClanMembership = Boolean(currentClan || user.clanId || user.clan);
@@ -479,21 +497,31 @@ export function StatsScreen({
       ) : null}
 
       {showLeaderboard ? (
-      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <div>
+      <div aria-label="Aylik surucu siralamasi" className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
+        <button
+          type="button"
+          aria-expanded={individualLeaderboardExpanded}
+          onClick={() => setIndividualLeaderboardExpanded((current) => !current)}
+          className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-1 text-left active:scale-[0.99]"
+        >
           <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Individual Leaderboard</p>
-            <h3 className="mt-2 text-xl font-black">Monthly Driver Rankings</h3>
+            <h3 className="text-lg font-black">Aylik Surucu Siralamasi</h3>
+            <p className="mt-0.5 text-[10px] text-neutral-500">
+              {individualLeaderboardExpanded ? "Tum suruculer" : "Ilk 5 surucu"}
+            </p>
           </div>
-        </div>
-        <div aria-label="Leaderboard olcutu" className="mt-4 grid grid-cols-3 gap-2 rounded-2xl border border-white/8 bg-black/20 p-1.5">
-          {individualLeaderboardMetrics.map((metric) => (
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-semibold text-neutral-300">
+            {individualLeaderboardExpanded ? "Daralt" : `Tumunu Gor (${individualLeaderboard.length})`}
+          </span>
+        </button>
+        <div aria-label="Leaderboard olcutu" className="mt-2 grid grid-cols-3 gap-1.5 rounded-xl border border-white/8 bg-black/20 p-1">
+          {leaderboardMetrics.map((metric) => (
             <button
               key={metric.key}
               type="button"
               aria-pressed={leaderboardMetricKey === metric.key}
               onClick={() => setLeaderboardMetricKey(metric.key)}
-              className={`min-h-12 rounded-xl px-2 text-[10px] font-bold transition active:scale-95 ${
+              className={`min-h-11 rounded-lg px-1 text-[9px] font-bold transition active:scale-95 ${
                 leaderboardMetricKey === metric.key
                   ? "bg-lime-400 text-black shadow-[0_0_16px_rgba(163,230,53,0.28)]"
                   : "text-neutral-400 hover:bg-white/5 hover:text-white"
@@ -503,51 +531,46 @@ export function StatsScreen({
             </button>
           ))}
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
-            <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Senin Rank</p>
-            <p className="mt-1 text-sm font-black text-lime-300">
+        <div className="mt-2 grid grid-cols-3 gap-1.5">
+          <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
+            <p className="text-[8px] uppercase tracking-[0.14em] text-neutral-500">Siran</p>
+            <p className="mt-0.5 text-xs font-black text-lime-300">
               #{individualLeaderboard.find((driver) => driver.plate === user.plate)?.rank ?? "--"}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
-            <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">{activeLeaderboardMetric.summaryLabel}</p>
-            <p className="mt-1 text-sm font-black text-lime-300">
+          <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
+            <p className="text-[8px] uppercase tracking-[0.14em] text-neutral-500">{activeLeaderboardMetric.summaryLabel}</p>
+            <p className="mt-0.5 truncate text-xs font-black text-lime-300">
               {activeLeaderboardMetric.format(user[activeLeaderboardMetric.key])}
             </p>
           </div>
-          <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
-            <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Skor</p>
-            <p className="mt-1 text-sm font-black text-lime-300">{user.driverScore}/100</p>
+          <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
+            <p className="text-[8px] uppercase tracking-[0.14em] text-neutral-500">Skor</p>
+            <p className="mt-0.5 text-xs font-black text-lime-300">{user.driverScore}/100</p>
           </div>
         </div>
-        <div className="mt-4 space-y-3">
-          {individualLeaderboard.map((driver) => (
+        <div className="mt-3 space-y-2">
+          {visibleIndividualLeaderboard.map((driver) => (
             <div
               key={driver.userId ?? `${driver.plate}-individual`}
-              className={`rounded-2xl border p-4 ${
+              className={`rounded-xl border p-2.5 ${
                 driver.plate === user.plate ? "border-lime-400/30 bg-lime-400/10" : "border-white/8 bg-black/20"
               }`}
             >
               <button type="button" onClick={() => openProfileDrawer(driver, "leaderboard")} className="flex w-full items-center justify-between gap-3 text-left">
-                <div className="flex items-center gap-3">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-black ${getClanRankTone(driver.rank - 1)}`}>
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${getClanRankTone(driver.rank - 1)}`}>
                     #{driver.rank}
                   </div>
-                  <div>
-                    <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{driver.plate}</p>
-                    <p className="text-sm font-semibold">{driver.fullName}</p>
-                    <p className="text-xs text-neutral-500">{driver.model} / {driver.region}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{driver.fullName}</p>
+                    <p className="truncate text-[11px] text-neutral-500">{driver.model}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-black text-lime-300">
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-black text-lime-300">
                     {activeLeaderboardMetric.format(driver[activeLeaderboardMetric.key])}
                   </p>
-                  <p className="text-xs text-neutral-500">
-                    Score {driver.driverScore} / {driver.clan ?? "Independent"}
-                  </p>
-                  {driver.verified ? <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-lime-400">Verified</p> : null}
                 </div>
               </button>
             </div>
@@ -557,31 +580,58 @@ export function StatsScreen({
       ) : null}
 
       {showLeaderboard ? (
-      <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <div className="flex items-center justify-between">
+      <div aria-label="Aylik klan siralamasi" className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
+        <button
+          type="button"
+          aria-expanded={clanLeaderboardExpanded}
+          onClick={() => setClanLeaderboardExpanded((current) => !current)}
+          className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-1 text-left active:scale-[0.99]"
+        >
           <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Monthly Clan Leaderboard</p>
-            <h3 className="mt-2 text-xl font-black">Collective Kilometers</h3>
+            <h3 className="text-lg font-black">Aylik Klan Siralamasi</h3>
+            <p className="mt-0.5 text-[10px] text-neutral-500">
+              {clanLeaderboardExpanded ? "Tum klanlar" : "Ilk 5 klan"}
+            </p>
           </div>
-          <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">Live Sync</div>
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-semibold text-neutral-300">
+            {clanLeaderboardExpanded ? "Daralt" : `Tumunu Gor (${clanLeaderboard.length})`}
+          </span>
+        </button>
+        <div aria-label="Klan leaderboard olcutu" className="mt-2 grid grid-cols-3 gap-1.5 rounded-xl border border-white/8 bg-black/20 p-1">
+          {leaderboardMetrics.map((metric) => (
+            <button
+              key={metric.key}
+              type="button"
+              aria-pressed={clanLeaderboardMetricKey === metric.key}
+              onClick={() => setClanLeaderboardMetricKey(metric.key)}
+              className={`min-h-11 rounded-lg px-1 text-[9px] font-bold transition active:scale-95 ${
+                clanLeaderboardMetricKey === metric.key
+                  ? "bg-lime-400 text-black shadow-[0_0_16px_rgba(163,230,53,0.28)]"
+                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              {metric.label}
+            </button>
+          ))}
         </div>
-        <div className="mt-4 space-y-3">
-          {sortedClans.map((clan, index) => (
-            <div key={clan.id} className="rounded-2xl border border-white/8 bg-black/20 p-4">
+        <div className="mt-3 space-y-2">
+          {visibleClanLeaderboard.map((clan) => (
+            <div key={clan.id} className={`rounded-xl border p-2.5 ${
+              clan.name === user.clan ? "border-lime-400/30 bg-lime-400/10" : "border-white/8 bg-black/20"
+            }`}>
               <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-black ${getClanRankTone(index)}`}>
-                    #{index + 1}
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${getClanRankTone(clan.rank - 1)}`}>
+                    #{clan.rank}
                   </div>
-                  <div>
-                    <p className="font-semibold">{clan.name}</p>
-                    <p className="text-xs text-neutral-500">{clan.members} members / {clan.tag}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{clan.name}</p>
+                    <p className="truncate text-[11px] text-neutral-500">{clan.members} uye</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-black text-lime-300">{formatNumber(clan.km)} KM</p>
-                  <p className="text-xs text-neutral-500">
-                    {clan.name === user.clan ? "Your clan is syncing live" : "Monthly total"}
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-black text-lime-300">
+                    {activeClanLeaderboardMetric.format(clan[activeClanLeaderboardMetric.key])}
                   </p>
                 </div>
               </div>

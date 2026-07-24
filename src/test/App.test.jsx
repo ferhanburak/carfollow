@@ -346,7 +346,8 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
     await user.click(screen.getByRole("button", { name: /Leaders/i }));
 
-    expect(await screen.findByText("Monthly Driver Rankings")).toBeInTheDocument();
+    expect(await screen.findByText("Aylik Surucu Siralamasi")).toBeInTheDocument();
+    expect(screen.getByText("Aylik Klan Siralamasi")).toBeInTheDocument();
     const metricGroup = screen.getByLabelText("Leaderboard olcutu");
     expect(within(metricGroup).getByRole("button", { name: "KM" })).toHaveAttribute("aria-pressed", "true");
 
@@ -356,6 +357,17 @@ describe("App", () => {
     await user.click(within(metricGroup).getByRole("button", { name: "Maksimum Hiz" }));
     expect(within(metricGroup).getByRole("button", { name: "Maksimum Hiz" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Max Hiz")).toBeInTheDocument();
+
+    const clanMetricGroup = screen.getByLabelText("Klan leaderboard olcutu");
+    await user.click(within(clanMetricGroup).getByRole("button", { name: "Surus Suresi" }));
+    expect(within(clanMetricGroup).getByRole("button", { name: "Surus Suresi" })).toHaveAttribute("aria-pressed", "true");
+
+    const driverLeaderboard = screen.getByLabelText("Aylik surucu siralamasi");
+    expect(within(driverLeaderboard).queryByText("Verified")).not.toBeInTheDocument();
+    expect(within(driverLeaderboard).queryByText("06 PWA 101")).not.toBeInTheDocument();
+
+    await user.click(within(driverLeaderboard).getByRole("button", { name: /Aylik Surucu Siralamasi/i }));
+    expect(within(driverLeaderboard).getByText("Tum suruculer")).toBeInTheDocument();
   });
 
   it("opens the shared public driver profile from stats", async () => {

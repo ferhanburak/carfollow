@@ -11,17 +11,26 @@ function sortNewest(items, timestampField = "createdAt") {
 }
 
 function normalizeClan(clan, leaderboardEntry, periodKey) {
+  const isCurrentPeriod = clan.monthlyKmPeriod === periodKey;
   const currentMonthlyKm = Number(
     leaderboardEntry?.monthlyKm ?? (
-      clan.monthlyKmPeriod === periodKey
+      isCurrentPeriod
         ? clan.monthlyKm
         : clan.monthlyKmPeriod ? 0 : clan.km
     ) ?? 0,
+  );
+  const monthlyDriveSeconds = Number(
+    leaderboardEntry?.monthlyDriveSeconds ?? (isCurrentPeriod ? clan.monthlyDriveSeconds : 0) ?? 0,
+  );
+  const monthlyMaxSpeedKmh = Number(
+    leaderboardEntry?.monthlyMaxSpeedKmh ?? (isCurrentPeriod ? clan.monthlyMaxSpeedKmh : 0) ?? 0,
   );
   return {
     ...clan,
     km: currentMonthlyKm,
     monthlyKm: currentMonthlyKm,
+    monthlyDriveSeconds,
+    monthlyMaxSpeedKmh,
     monthlyKmPeriod: periodKey,
     members: Number(clan.memberCount ?? clan.members ?? 0),
     memberCount: Number(clan.memberCount ?? clan.members ?? 0),

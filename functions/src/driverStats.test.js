@@ -51,16 +51,60 @@ test("resets clan and member totals when a new monthly period starts", () => {
       memberCount: 3,
       monthlyKmPeriod: "2026-06",
       monthlyKm: 900,
+      monthlyDriveSeconds: 7200,
+      monthlyMaxSpeedKmh: 180,
     },
-    member: { clanId: "clan-1", monthlyKmPeriod: "2026-06", monthlyKm: 240 },
+    member: {
+      clanId: "clan-1",
+      monthlyKmPeriod: "2026-06",
+      monthlyKm: 240,
+      monthlyDriveSeconds: 3600,
+      monthlyMaxSpeedKmh: 150,
+    },
     acceptedKm: 5.2,
+    movingSeconds: 240,
+    maxSpeedKmh: 126,
     periodKey: "2026-07",
   });
 
   assert.equal(aggregate.clanPatch.monthlyKm, 5.2);
+  assert.equal(aggregate.clanPatch.monthlyDriveSeconds, 240);
+  assert.equal(aggregate.clanPatch.monthlyMaxSpeedKmh, 126);
   assert.equal(aggregate.clanPatch.km, 5.2);
   assert.equal(aggregate.memberPatch.monthlyKm, 5.2);
+  assert.equal(aggregate.memberPatch.monthlyDriveSeconds, 240);
+  assert.equal(aggregate.memberPatch.monthlyMaxSpeedKmh, 126);
   assert.equal(aggregate.leaderboardEntry.id, "2026-07__clan-1");
+  assert.equal(aggregate.leaderboardEntry.monthlyDriveSeconds, 240);
+  assert.equal(aggregate.leaderboardEntry.monthlyMaxSpeedKmh, 126);
+});
+
+test("accumulates current clan drive time and preserves the highest speed", () => {
+  const aggregate = applyCompletedDriveToClan({
+    clan: {
+      id: "clan-1",
+      monthlyKmPeriod: "2026-07",
+      monthlyKm: 120,
+      monthlyDriveSeconds: 3600,
+      monthlyMaxSpeedKmh: 142,
+    },
+    member: {
+      clanId: "clan-1",
+      monthlyKmPeriod: "2026-07",
+      monthlyKm: 40,
+      monthlyDriveSeconds: 1200,
+      monthlyMaxSpeedKmh: 118,
+    },
+    acceptedKm: 4.5,
+    movingSeconds: 300,
+    maxSpeedKmh: 130,
+    periodKey: "2026-07",
+  });
+
+  assert.equal(aggregate.clanPatch.monthlyDriveSeconds, 3900);
+  assert.equal(aggregate.clanPatch.monthlyMaxSpeedKmh, 142);
+  assert.equal(aggregate.memberPatch.monthlyDriveSeconds, 1500);
+  assert.equal(aggregate.memberPatch.monthlyMaxSpeedKmh, 130);
 });
 
 test("uses the Istanbul calendar for monthly periods and night sessions", () => {
