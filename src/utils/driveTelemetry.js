@@ -289,12 +289,26 @@ export function processGpsPosition(previousPoint, position) {
   }
 
   const jitterThresholdMeters = Math.max(
-    1.5,
-    Math.min(previousPoint.accuracy, point.accuracy) * 0.15,
+    8,
+    Math.min(30, Math.max(previousPoint.accuracy, point.accuracy) * 1.5),
   );
-  const acceptedDistanceMeters = distanceMeters >= jitterThresholdMeters ? distanceMeters : 0;
-  const derivedSpeedKmh = (acceptedDistanceMeters / elapsedSeconds) * 3.6;
-  const speedKmh = deviceSpeedKmh ?? derivedSpeedKmh;
+  const derivedSpeedKmh = (distanceMeters / elapsedSeconds) * 3.6;
+  const deviceReportsStationary = deviceSpeedKmh != null && deviceSpeedKmh < MIN_MOVING_SPEED_KMH;
+  const candidateSpeedKmh = deviceSpeedKmh ?? derivedSpeedKmh;
+  const isMovement = (
+    !deviceReportsStationary
+    && distanceMeters >= jitterThresholdMeters
+    && candidateSpeedKmh >= MIN_MOVING_SPEED_KMH
+  );
+  const acceptedDistanceMeters = isMovement ? distanceMeters : 0;
+  const speedKmh = isMovement ? candidateSpeedKmh : 0;
+  const nextPoint = (
+    isMovement
+    || deviceReportsStationary
+    || distanceMeters >= jitterThresholdMeters
+  )
+    ? point
+    : previousPoint;
 
   return {
     accepted: true,
@@ -302,8 +316,8 @@ export function processGpsPosition(previousPoint, position) {
     distanceKm: Number((acceptedDistanceMeters / 1000).toFixed(4)),
     gpsStatus: "live",
     location,
-    nextPoint: point,
-    reason: acceptedDistanceMeters ? "movement" : "stationary",
+    nextPoint,
+    reason: isMovement ? "movement" : "stationary",
     derivedSpeedKmh: Number(derivedSpeedKmh.toFixed(1)),
     deviceSpeedKmh: deviceSpeedKmh == null ? null : Number(deviceSpeedKmh.toFixed(1)),
     elapsedSeconds: Number(elapsedSeconds.toFixed(3)),

@@ -78,7 +78,7 @@ export function DriveScreen({
 
         <div className="grid grid-cols-3 gap-2">
           <CompactMetric label="Mesafe" value={formatTripDistance(driveHud.sessionKm)} accent />
-          <CompactMetric label="Surus" value={formatDriveDuration(driveHud.movingSeconds)} />
+          <CompactMetric label="Oturum" value={formatDriveDuration(driveHud.sessionElapsedSeconds)} />
           <CompactMetric
             label="GPS"
             value={Number.isFinite(accuracy) && accuracy > 0 ? `+/-${Math.round(accuracy)} M` : "--"}

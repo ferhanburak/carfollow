@@ -33,6 +33,28 @@ function createHookProps(overrides = {}) {
 }
 
 describe("useDriveSession", () => {
+  it("tracks elapsed session time independently from moving time", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-25T00:00:00.000Z"));
+    const props = createHookProps();
+    const { result, unmount } = renderHook(() => useDriveSession(props));
+
+    try {
+      await act(async () => {
+        await result.current.toggleDrive();
+      });
+      act(() => {
+        vi.advanceTimersByTime(185_000);
+      });
+
+      expect(result.current.driveHud.sessionElapsedSeconds).toBe(185);
+      expect(result.current.driveHud.movingSeconds).toBe(0);
+    } finally {
+      unmount();
+      vi.useRealTimers();
+    }
+  });
+
   it("opens and finalizes a secure drive session", async () => {
     const props = createHookProps();
     const { result } = renderHook(() => useDriveSession(props));

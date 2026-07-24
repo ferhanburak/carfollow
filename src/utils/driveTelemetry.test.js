@@ -85,6 +85,40 @@ describe("drive telemetry", () => {
     expect(reading).toMatchObject({ accepted: true, distanceKm: 0, reason: "stationary" });
   });
 
+  it("rejects coordinate drift when the device reports zero speed", () => {
+    const initial = processGpsPosition(null, position({ accuracy: 6, speed: 0 }));
+    const drift = processGpsPosition(initial.nextPoint, position({
+      accuracy: 6,
+      lat: 39.9201,
+      speed: 0,
+      timestamp: 2_000,
+    }));
+
+    expect(getDistanceMeters(initial.nextPoint, drift.location)).toBeGreaterThan(10);
+    expect(drift).toMatchObject({
+      accepted: true,
+      distanceKm: 0,
+      reason: "stationary",
+      speedKmh: 0,
+    });
+  });
+
+  it("does not convert slow accumulated GPS drift into distance", () => {
+    const initial = processGpsPosition(null, position({ accuracy: 6 }));
+    const drift = processGpsPosition(initial.nextPoint, position({
+      accuracy: 6,
+      lat: 39.9201,
+      timestamp: 31_000,
+    }));
+
+    expect(drift).toMatchObject({
+      accepted: true,
+      distanceKm: 0,
+      reason: "stationary",
+      speedKmh: 0,
+    });
+  });
+
   it("maps browser permission failures to a clear status", () => {
     expect(getGeolocationErrorStatus({ code: 1 })).toEqual({
       status: "denied",

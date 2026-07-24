@@ -13,6 +13,7 @@ function createInitialDriveHud() {
     gpsStatus: "idle",
     lastFixAt: null,
     location: null,
+    sessionElapsedSeconds: 0,
     speed: 0,
   };
 }
@@ -49,6 +50,7 @@ export function useDriveSession({
   const liveLocationRef = useRef(null);
   const gpsPointRef = useRef(null);
   const gpsStatusRef = useRef("idle");
+  const driveStartedAtRef = useRef(null);
 
   useEffect(() => {
     userRef.current = user;
@@ -85,6 +87,23 @@ export function useDriveSession({
       setDriveHud((current) => ({ ...current, etaNode: getGpsNodeLabel("requesting"), gpsStatus: "requesting", speed: 0 }));
     }
   }, [isDriving, liveLocation?.error, liveLocation?.status]);
+
+  useEffect(() => {
+    if (!isDriving) return undefined;
+    if (!driveStartedAtRef.current) driveStartedAtRef.current = Date.now();
+
+    const updateElapsedTime = () => {
+      const elapsedSeconds = Math.max(0, Math.floor((Date.now() - driveStartedAtRef.current) / 1000));
+      setDriveHud((current) => (
+        current.sessionElapsedSeconds === elapsedSeconds
+          ? current
+          : { ...current, sessionElapsedSeconds: elapsedSeconds }
+      ));
+    };
+    updateElapsedTime();
+    const timerId = window.setInterval(updateElapsedTime, 1_000);
+    return () => window.clearInterval(timerId);
+  }, [isDriving]);
 
   useEffect(() => {
     const position = liveLocation?.sample?.position;
@@ -188,9 +207,15 @@ export function useDriveSession({
         if (!result.resumed) {
           setDriveHud(createInitialDriveHud());
         }
+        driveStartedAtRef.current = Date.now();
         setIsDriving(true);
       } else {
         setIsDriving(false);
+        setDriveHud((current) => ({
+          ...current,
+          gpsStatus: "idle",
+          speed: 0,
+        }));
         setDriveSessionStatus("finalizing");
         setDriveSessionFeedback("Surus mesafesi dogrulaniyor ve siralamaya isleniyor...");
         const result = onSessionFinish
@@ -213,6 +238,7 @@ export function useDriveSession({
         const acceptedKm = Number(result.acceptedKm ?? driveHud.sessionKm ?? 0);
         const rejectedKm = Number(result.rejectedKm ?? 0);
         setDriveSessionId(null);
+        driveStartedAtRef.current = null;
         setDriveSessionStatus("completed");
         setDriveSessionFeedback(
           rejectedKm > 0
@@ -250,6 +276,7 @@ export function useDriveSession({
     setDriveSessionStatus("idle");
     setDriveSessionFeedback("");
     setDriveSessionPending(false);
+    driveStartedAtRef.current = null;
     actionLockRef.current = false;
   };
 

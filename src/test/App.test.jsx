@@ -80,7 +80,7 @@ describe("App", () => {
     expect(screen.queryByText("Live GPS HUD")).not.toBeInTheDocument();
     expect(screen.queryByText("Current Setup")).not.toBeInTheDocument();
     expect(screen.queryByText("Trip Energy")).not.toBeInTheDocument();
-    expect(await screen.findByText("Surus")).toBeInTheDocument();
+    expect(await screen.findByText("Oturum")).toBeInTheDocument();
     expect(await screen.findByText("Canli Aktif Suruculer")).toBeInTheDocument();
     expect(screen.queryByText("Secure Drive Session")).not.toBeInTheDocument();
     expect(screen.queryByText(/Telemetry Sync|UID:|Connection:|RTDB|Firebase Live/i)).not.toBeInTheDocument();
