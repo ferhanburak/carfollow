@@ -319,6 +319,9 @@ describe("App", () => {
 
     expect(await screen.findByText("Achievement Progress")).toBeInTheDocument();
     expect(screen.getByText("Driver Stats Snapshot")).toBeInTheDocument();
+    expect(screen.getByText("Aylik Surus")).toBeInTheDocument();
+    expect(screen.getByText("Aylik Max Hiz")).toBeInTheDocument();
+    expect(screen.queryByText("Onayli Surus")).not.toBeInTheDocument();
     expect(screen.getByText("Social Cockpit")).toBeInTheDocument();
     expect(screen.getByLabelText("Driver stats")).toHaveClass("p-3");
     expect(screen.getByLabelText("Social cockpit")).toHaveClass("p-3");
@@ -334,6 +337,25 @@ describe("App", () => {
     expect(screen.getByText("Devam Edenler")).toBeInTheDocument();
     expect(screen.getByText("Tamamlananlar")).toBeInTheDocument();
     expect(screen.getByText("Garaj Arsivi")).toBeInTheDocument();
+  });
+
+  it("switches individual leaderboard ranking metrics", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
+    await user.click(screen.getByRole("button", { name: /Leaders/i }));
+
+    expect(await screen.findByText("Monthly Driver Rankings")).toBeInTheDocument();
+    const metricGroup = screen.getByLabelText("Leaderboard olcutu");
+    expect(within(metricGroup).getByRole("button", { name: "KM" })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(within(metricGroup).getByRole("button", { name: "Surus Suresi" }));
+    expect(within(metricGroup).getByRole("button", { name: "Surus Suresi" })).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(within(metricGroup).getByRole("button", { name: "Maksimum Hiz" }));
+    expect(within(metricGroup).getByRole("button", { name: "Maksimum Hiz" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Max Hiz")).toBeInTheDocument();
   });
 
   it("opens the shared public driver profile from stats", async () => {

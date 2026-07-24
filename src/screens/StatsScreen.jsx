@@ -3,7 +3,11 @@ import { ClanCenter, ClanCreatePanel, ClanMembershipLoadingCard, ClanSummaryCard
 import { individualDriverSeed } from "../data/mockData";
 import { getActionError } from "../utils/actionFeedback";
 import { formatNumber } from "../utils/garage";
-import { buildIndividualLeaderboard } from "../utils/socialStats";
+import {
+  buildIndividualLeaderboard,
+  formatDriveTime,
+  rankIndividualLeaderboard,
+} from "../utils/socialStats";
 
 function clampPercent(value) {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -34,6 +38,27 @@ function getClanRankTone(index) {
   }
   return "bg-white/10 text-white";
 }
+
+const individualLeaderboardMetrics = [
+  {
+    key: "monthlyKm",
+    label: "KM",
+    summaryLabel: "Aylik KM",
+    format: (value) => `${formatNumber(value)} KM`,
+  },
+  {
+    key: "monthlyDriveSeconds",
+    label: "Surus Suresi",
+    summaryLabel: "Surus",
+    format: (value) => formatDriveTime(value),
+  },
+  {
+    key: "monthlyMaxSpeedKmh",
+    label: "Maksimum Hiz",
+    summaryLabel: "Max Hiz",
+    format: (value) => `${Math.round(Number(value) || 0)} KM/H`,
+  },
+];
 
 export function StatsScreen({
   acceptIncomingClanInvite,
@@ -76,9 +101,17 @@ export function StatsScreen({
   mode = "social",
 }) {
   const [clanCenterOpen, setClanCenterOpen] = useState(false);
-  const individualLeaderboard = Array.isArray(individualLeaderboardEntries)
+  const [leaderboardMetricKey, setLeaderboardMetricKey] = useState("monthlyKm");
+  const baseIndividualLeaderboard = Array.isArray(individualLeaderboardEntries)
     ? individualLeaderboardEntries
     : buildIndividualLeaderboard(user, individualDriverSeed);
+  const individualLeaderboard = useMemo(
+    () => rankIndividualLeaderboard(baseIndividualLeaderboard, leaderboardMetricKey),
+    [baseIndividualLeaderboard, leaderboardMetricKey],
+  );
+  const activeLeaderboardMetric = individualLeaderboardMetrics.find(
+    (metric) => metric.key === leaderboardMetricKey,
+  ) ?? individualLeaderboardMetrics[0];
   const sortedClans = [...clans].sort((a, b) => b.km - a.km);
   const canInviteToClan = ["owner", "captain"].includes(user.clanRole ?? "member");
   const isClanPending = Boolean(clanPendingKey);
@@ -450,8 +483,25 @@ export function StatsScreen({
         <div>
           <div>
             <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Individual Leaderboard</p>
-            <h3 className="mt-2 text-xl font-black">Monthly Driver Kilometers</h3>
+            <h3 className="mt-2 text-xl font-black">Monthly Driver Rankings</h3>
           </div>
+        </div>
+        <div aria-label="Leaderboard olcutu" className="mt-4 grid grid-cols-3 gap-2 rounded-2xl border border-white/8 bg-black/20 p-1.5">
+          {individualLeaderboardMetrics.map((metric) => (
+            <button
+              key={metric.key}
+              type="button"
+              aria-pressed={leaderboardMetricKey === metric.key}
+              onClick={() => setLeaderboardMetricKey(metric.key)}
+              className={`min-h-12 rounded-xl px-2 text-[10px] font-bold transition active:scale-95 ${
+                leaderboardMetricKey === metric.key
+                  ? "bg-lime-400 text-black shadow-[0_0_16px_rgba(163,230,53,0.28)]"
+                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
+              }`}
+            >
+              {metric.label}
+            </button>
+          ))}
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
@@ -461,8 +511,10 @@ export function StatsScreen({
             </p>
           </div>
           <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
-            <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Aylik KM</p>
-            <p className="mt-1 text-sm font-black text-lime-300">{formatNumber(user.monthlyKm ?? 0)}</p>
+            <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">{activeLeaderboardMetric.summaryLabel}</p>
+            <p className="mt-1 text-sm font-black text-lime-300">
+              {activeLeaderboardMetric.format(user[activeLeaderboardMetric.key])}
+            </p>
           </div>
           <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
             <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Skor</p>
@@ -489,7 +541,9 @@ export function StatsScreen({
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-black text-lime-300">{formatNumber(driver.monthlyKm)} KM</p>
+                  <p className="text-lg font-black text-lime-300">
+                    {activeLeaderboardMetric.format(driver[activeLeaderboardMetric.key])}
+                  </p>
                   <p className="text-xs text-neutral-500">
                     Score {driver.driverScore} / {driver.clan ?? "Independent"}
                   </p>
