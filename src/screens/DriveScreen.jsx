@@ -1,75 +1,97 @@
-import { HudStat } from "../components/ui";
+import { useReverseGeocodedLocation } from "../hooks/useReverseGeocodedLocation";
 
 function formatTripDistance(distanceKm) {
   const distance = Math.max(0, Number(distanceKm) || 0);
   return `${distance < 1 ? distance.toFixed(2) : distance.toFixed(1)} KM`;
 }
 
-function getGpsStatusView(status) {
-  const views = {
-    denied: { label: "IZIN REDDEDILDI", tone: "border-rose-400/30 bg-rose-400/10 text-rose-200" },
-    error: { label: "GPS HATASI", tone: "border-rose-400/30 bg-rose-400/10 text-rose-200" },
-    idle: { label: "HAZIR", tone: "border-white/10 bg-white/[0.03] text-neutral-400" },
-    live: { label: "GPS CANLI", tone: "border-lime-400/30 bg-lime-400/10 text-lime-200" },
-    requesting: { label: "GPS ARANIYOR", tone: "border-amber-400/30 bg-amber-400/10 text-amber-200" },
-    timeout: { label: "BEKLENIYOR", tone: "border-amber-400/30 bg-amber-400/10 text-amber-200" },
-    unavailable: { label: "GPS YOK", tone: "border-rose-400/30 bg-rose-400/10 text-rose-200" },
-    weak: { label: "ZAYIF SINYAL", tone: "border-amber-400/30 bg-amber-400/10 text-amber-200" },
+function formatDriveDuration(seconds) {
+  const totalMinutes = Math.floor(Math.max(0, Number(seconds) || 0) / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours > 0 ? `${hours}S ${minutes}DK` : `${minutes} DK`;
+}
+
+function getGpsStatusLabel(status) {
+  const labels = {
+    denied: "IZIN REDDEDILDI",
+    error: "GPS HATASI",
+    idle: "GPS HAZIR",
+    live: "GPS CANLI",
+    requesting: "GPS ARANIYOR",
+    timeout: "GPS BEKLENIYOR",
+    unavailable: "GPS YOK",
+    weak: "ZAYIF SINYAL",
   };
 
-  return views[status] ?? views.idle;
+  return labels[status] ?? labels.idle;
+}
+
+function CompactMetric({ label, value, accent = false }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-white/8 bg-black/25 px-3 py-3 text-center">
+      <p className="truncate text-[9px] uppercase tracking-[0.2em] text-neutral-500">{label}</p>
+      <p className={`mt-1 truncate text-sm font-black ${accent ? "text-lime-300" : "text-white"}`}>{value}</p>
+    </div>
+  );
 }
 
 export function DriveScreen({
   driveHud,
   drivers,
   isDriving,
-  user,
 }) {
-  const gpsView = getGpsStatusView(driveHud.gpsStatus);
+  const resolvedLocation = useReverseGeocodedLocation(driveHud.location, isDriving);
+  const locationLabel = resolvedLocation.label || (
+    isDriving ? "Konum bekleniyor" : "Surusu baslat"
+  );
+  const accuracy = Number(driveHud.accuracy);
 
   return (
     <section className="space-y-4">
-      <div className="rounded-[1.75rem] border border-white/10 bg-[linear-gradient(160deg,#171717,#0b0b0b)] p-5 shadow-[inset_0_0_24px_rgba(163,230,53,0.05)]">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Live GPS HUD</p>
-            <h3 className="mt-2 text-xl font-black">Surus Modu {isDriving ? "Aktif" : "Hazir"}</h3>
+      <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(163,230,53,0.12),transparent_34%),linear-gradient(160deg,#171717,#090909)] p-4 shadow-[inset_0_0_24px_rgba(163,230,53,0.04)]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-lg font-black uppercase tracking-tight">
+              {isDriving ? "Surus Modu Aktif" : "Suruse Hazir"}
+            </h3>
+            <p className="mt-1 truncate text-[10px] font-semibold uppercase tracking-[0.2em] text-lime-300">
+              {getGpsStatusLabel(driveHud.gpsStatus)}
+            </p>
           </div>
-          <div className={`h-3 w-3 rounded-full ${isDriving ? "bg-lime-400 shadow-[0_0_14px_#a3e635]" : "bg-neutral-600"}`} />
+          <div className={`h-3 w-3 shrink-0 rounded-full ${isDriving ? "bg-lime-400 shadow-[0_0_14px_#a3e635]" : "bg-neutral-600"}`} />
         </div>
-        <div className={`mt-4 flex min-h-12 items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${gpsView.tone}`}>
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.24em] opacity-70">Gercek Konum Telemetrisi</p>
-            <p className="mt-1 text-xs font-bold">{gpsView.label}</p>
-          </div>
-          <div className="text-right text-[11px]">
-            <p>{driveHud.accuracy ? `Dogruluk ±${Math.round(driveHud.accuracy)} m` : "Konum bekleniyor"}</p>
-            <p className="mt-1 opacity-70">Sahte hiz veya sabit KM artisi yok</p>
+
+        <div className="mt-3 flex min-h-12 items-center gap-3 rounded-2xl border border-white/8 bg-black/25 px-3 py-2.5">
+          <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-lime-400/10 text-lime-300">
+            &#9678;
+          </span>
+          <div className="min-w-0">
+            <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-500">Bulundugun Bolge</p>
+            <p className="mt-0.5 truncate text-sm font-bold text-neutral-100">{locationLabel}</p>
           </div>
         </div>
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <HudStat label="GPS Speed" value={`${Math.round(driveHud.speed || 0)} KM/H`} accent="lime" />
-          <HudStat label="Gercek Mesafe" value={formatTripDistance(driveHud.sessionKm)} accent="rose" />
-          <HudStat label="Current Setup" value={`${user.tuningStage} / ${user.horsepower}HP`} accent="neutral" />
-          <HudStat label="GPS" value={driveHud.etaNode} accent="lime" />
-        </div>
-        <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
-          <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="text-neutral-400">Trip Energy</span>
-            <span className="font-semibold text-lime-300">{Math.min(100, driveHud.sessionKm * 6).toFixed(0)}%</span>
+
+        <div className="py-5 text-center">
+          <div className="flex items-end justify-center gap-2">
+            <strong className="text-6xl font-black tabular-nums leading-none text-lime-300">
+              {Math.round(driveHud.speed || 0)}
+            </strong>
+            <span className="pb-1 text-sm font-bold uppercase tracking-[0.16em] text-neutral-400">KM/H</span>
           </div>
-          <div className="h-3 overflow-hidden rounded-full bg-neutral-800">
-            <div
-              className="h-full rounded-full bg-[linear-gradient(90deg,#a3e635,#bef264,#f43f5e)] shadow-[0_0_18px_rgba(163,230,53,0.55)] transition-all duration-700"
-              style={{ width: `${Math.min(100, driveHud.sessionKm * 6)}%` }}
-            />
-          </div>
-          <p className="mt-3 text-sm text-neutral-400">
-            Odometre ve bakim omru yalnizca filtrelerden gecen gercek GPS mesafesiyle guncellenir.
+          <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-neutral-500">
+            Maksimum {Math.round(driveHud.maxSpeedKmh || 0)} KM/H
           </p>
         </div>
 
+        <div className="grid grid-cols-3 gap-2">
+          <CompactMetric label="Mesafe" value={formatTripDistance(driveHud.sessionKm)} accent />
+          <CompactMetric label="Surus" value={formatDriveDuration(driveHud.movingSeconds)} />
+          <CompactMetric
+            label="GPS"
+            value={Number.isFinite(accuracy) && accuracy > 0 ? `+/-${Math.round(accuracy)} M` : "--"}
+          />
+        </div>
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">

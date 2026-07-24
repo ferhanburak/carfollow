@@ -12,6 +12,7 @@ function createInitialDriveHud() {
     etaNode: "GPS Hazir",
     gpsStatus: "idle",
     lastFixAt: null,
+    location: null,
     speed: 0,
   };
 }
@@ -105,6 +106,7 @@ export function useDriveSession({
           etaNode: getGpsNodeLabel(reading.gpsStatus),
           gpsStatus: reading.gpsStatus,
           lastFixAt: reading.timestamp ?? Date.now(),
+          location: liveLocationRef.current,
           speed: reading.speedKmh,
         };
       });
