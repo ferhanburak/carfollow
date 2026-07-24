@@ -1,9 +1,11 @@
 // Client distance comes from filtered GPS fixes; this remains a server-side anti-abuse ceiling.
 const DRIVE_KM_PER_SECOND = 0.1;
 const DRIVE_GRACE_SECONDS = 3;
+const MAX_DRIVE_SPEED_KMH = 320;
+const MAX_GPS_SAMPLE_GAP_SECONDS = 30;
 const MAX_SESSION_SECONDS = 6 * 60 * 60;
 const MAX_SESSION_KM = 2000;
-const STATS_SCHEMA_VERSION = 1;
+const STATS_SCHEMA_VERSION = 2;
 const TIME_ZONE = "Europe/Istanbul";
 const { resolveMaintenanceLimit } = require("./maintenanceLimits");
 
@@ -51,6 +53,10 @@ const ACHIEVEMENT_DEFINITIONS = Object.freeze([
 ]);
 
 function roundKm(value) {
+  return Number(Math.max(0, Number(value) || 0).toFixed(1));
+}
+
+function roundSpeed(value) {
   return Number(Math.max(0, Number(value) || 0).toFixed(1));
 }
 
@@ -203,6 +209,52 @@ function calculateAcceptedDriveKm({ reportedKm, startedAt, finishedAt = new Date
   };
 }
 
+function calculateAcceptedDriveSummary({
+  acceptedSampleCount,
+  finishedAt = new Date(),
+  qualifiedSpeedSampleCount,
+  reportedKm,
+  reportedMaxSpeedKmh,
+  reportedMovingSeconds,
+  startedAt,
+}) {
+  const distance = calculateAcceptedDriveKm({ reportedKm, startedAt, finishedAt });
+  const safeAcceptedSampleCount = Math.max(0, Math.floor(Number(acceptedSampleCount) || 0));
+  const safeQualifiedSampleCount = Math.min(
+    safeAcceptedSampleCount,
+    Math.max(0, Math.floor(Number(qualifiedSpeedSampleCount) || 0)),
+  );
+  const safeReportedMovingSeconds = Math.max(0, Math.floor(Number(reportedMovingSeconds) || 0));
+  const sampleWindowSeconds = Math.max(
+    0,
+    (safeAcceptedSampleCount - 1) * MAX_GPS_SAMPLE_GAP_SECONDS,
+  );
+  const movingSeconds = distance.acceptedKm > 0 && safeAcceptedSampleCount >= 2
+    ? Math.min(safeReportedMovingSeconds, distance.elapsedSeconds, sampleWindowSeconds)
+    : 0;
+  const requestedMaxSpeedKmh = roundSpeed(reportedMaxSpeedKmh);
+  const maxSpeedKmh = (
+    movingSeconds > 0 &&
+    safeQualifiedSampleCount >= 2 &&
+    requestedMaxSpeedKmh <= MAX_DRIVE_SPEED_KMH
+  )
+    ? requestedMaxSpeedKmh
+    : 0;
+  const averageSpeedKmh = movingSeconds > 0
+    ? roundSpeed(Math.min(MAX_DRIVE_SPEED_KMH, (distance.acceptedKm / movingSeconds) * 3600))
+    : 0;
+
+  return {
+    ...distance,
+    acceptedSampleCount: safeAcceptedSampleCount,
+    averageSpeedKmh,
+    maxSpeedKmh,
+    movingSeconds,
+    qualifiedSpeedSampleCount: safeQualifiedSampleCount,
+    rejectedMovingSeconds: Math.max(0, safeReportedMovingSeconds - movingSeconds),
+  };
+}
+
 function buildAchievementProgress(metrics = {}, unlockedBadges = []) {
   const unlockedBadgeSet = new Set(unlockedBadges);
   return ACHIEVEMENT_DEFINITIONS.map((definition) => {
@@ -230,6 +282,14 @@ function buildDriverStatsDocument({ existingStats = {}, profile = {}, passport =
   const isCurrentPeriod = existingStats.periodKey === periodKey;
   const monthlyKm = isCurrentPeriod ? roundKm(existingStats.monthlyKm) : 0;
   const monthlyNightKm = isCurrentPeriod ? roundKm(existingStats.monthlyNightKm) : 0;
+  const monthlyDriveSeconds = isCurrentPeriod
+    ? Math.max(0, Math.floor(Number(existingStats.monthlyDriveSeconds) || 0))
+    : 0;
+  const monthlyMaxSpeedKmh = isCurrentPeriod ? roundSpeed(existingStats.monthlyMaxSpeedKmh) : 0;
+  const monthlyTimedKm = isCurrentPeriod ? roundKm(existingStats.monthlyTimedKm) : 0;
+  const monthlyAverageSpeedKmh = monthlyDriveSeconds > 0
+    ? roundSpeed((monthlyTimedKm / monthlyDriveSeconds) * 3600)
+    : 0;
   const metrics = {
     monthlyNightKm,
     odometer: roundKm(vehicle.odometer ?? profile.odometer),
@@ -249,7 +309,14 @@ function buildDriverStatsDocument({ existingStats = {}, profile = {}, passport =
     periodKey,
     monthlyKm,
     monthlyNightKm,
+    monthlyDriveSeconds,
+    monthlyMaxSpeedKmh,
+    monthlyAverageSpeedKmh,
+    monthlyTimedKm,
     lifetimeVerifiedKm: roundKm(existingStats.lifetimeVerifiedKm),
+    lifetimeDriveSeconds: Math.max(0, Math.floor(Number(existingStats.lifetimeDriveSeconds) || 0)),
+    lifetimeMaxSpeedKmh: roundSpeed(existingStats.lifetimeMaxSpeedKmh),
+    lifetimeTimedKm: roundKm(existingStats.lifetimeTimedKm),
     completedSessions: Math.max(0, Number(existingStats.completedSessions ?? 0)),
     activeSessionId: existingStats.activeSessionId ?? null,
     odometerSnapshot: metrics.odometer,
@@ -262,10 +329,26 @@ function buildDriverStatsDocument({ existingStats = {}, profile = {}, passport =
   };
 }
 
-function applyCompletedDriveToStats({ existingStats, profile, passport, vehicle, acceptedKm, isNight, now = new Date() }) {
+function applyCompletedDriveToStats({
+  existingStats,
+  profile,
+  passport,
+  vehicle,
+  acceptedKm,
+  movingSeconds = 0,
+  maxSpeedKmh = 0,
+  isNight,
+  now = new Date(),
+}) {
   const baseline = buildDriverStatsDocument({ existingStats, profile, passport, vehicle, now });
   const monthlyKm = roundKm(baseline.monthlyKm + acceptedKm);
   const monthlyNightKm = roundKm(baseline.monthlyNightKm + (isNight ? acceptedKm : 0));
+  const acceptedMovingSeconds = Math.max(0, Math.floor(Number(movingSeconds) || 0));
+  const timedKm = acceptedMovingSeconds > 0 ? roundKm(acceptedKm) : 0;
+  const monthlyDriveSeconds = baseline.monthlyDriveSeconds + acceptedMovingSeconds;
+  const lifetimeDriveSeconds = baseline.lifetimeDriveSeconds + acceptedMovingSeconds;
+  const monthlyTimedKm = roundKm(baseline.monthlyTimedKm + timedKm);
+  const lifetimeTimedKm = roundKm(baseline.lifetimeTimedKm + timedKm);
   const odometer = roundKm(vehicle.odometer ?? profile.odometer);
   const achievements = buildAchievementProgress({
     monthlyNightKm,
@@ -283,7 +366,16 @@ function applyCompletedDriveToStats({ existingStats, profile, passport, vehicle,
     ...baseline,
     monthlyKm,
     monthlyNightKm,
+    monthlyDriveSeconds,
+    monthlyMaxSpeedKmh: roundSpeed(Math.max(baseline.monthlyMaxSpeedKmh, maxSpeedKmh)),
+    monthlyAverageSpeedKmh: monthlyDriveSeconds > 0
+      ? roundSpeed((monthlyTimedKm / monthlyDriveSeconds) * 3600)
+      : 0,
+    monthlyTimedKm,
     lifetimeVerifiedKm: roundKm(baseline.lifetimeVerifiedKm + acceptedKm),
+    lifetimeDriveSeconds,
+    lifetimeMaxSpeedKmh: roundSpeed(Math.max(baseline.lifetimeMaxSpeedKmh, maxSpeedKmh)),
+    lifetimeTimedKm,
     completedSessions: baseline.completedSessions + 1,
     activeSessionId: null,
     odometerSnapshot: odometer,
@@ -304,6 +396,9 @@ function buildLeaderboardEntry({ userId, profile, stats }) {
     clan: String(profile.clan ?? "Independent"),
     monthlyKm: roundKm(stats.monthlyKm),
     monthlyNightKm: roundKm(stats.monthlyNightKm),
+    monthlyDriveSeconds: Math.max(0, Math.floor(Number(stats.monthlyDriveSeconds) || 0)),
+    monthlyMaxSpeedKmh: roundSpeed(stats.monthlyMaxSpeedKmh),
+    monthlyAverageSpeedKmh: roundSpeed(stats.monthlyAverageSpeedKmh),
     lifetimeVerifiedKm: roundKm(stats.lifetimeVerifiedKm),
     completedSessions: Math.max(0, Number(stats.completedSessions ?? 0)),
     driverScore: Math.max(0, Number(profile.driverScore ?? 0)),
@@ -318,6 +413,7 @@ module.exports = {
   DRIVE_KM_PER_SECOND,
   MAX_SESSION_KM,
   MAX_SESSION_SECONDS,
+  MAX_DRIVE_SPEED_KMH,
   STATS_SCHEMA_VERSION,
   applyCompletedDriveToStats,
   applyCompletedDriveToClan,
@@ -326,6 +422,7 @@ module.exports = {
   buildLeaderboardEntry,
   buildPartLifeSnapshot,
   calculateAcceptedDriveKm,
+  calculateAcceptedDriveSummary,
   getMonthKey,
   isNightTime,
   roundKm,

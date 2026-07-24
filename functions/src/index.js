@@ -10,7 +10,7 @@ const {
   buildDriverStatsDocument,
   buildLeaderboardEntry,
   buildPartLifeSnapshot,
-  calculateAcceptedDriveKm,
+  calculateAcceptedDriveSummary,
   getMonthKey,
   isNightTime,
   roundKm,
@@ -2355,10 +2355,27 @@ exports.startDriveSession = secureCall("startDriveSession", { rateLimit: { limit
 
 exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { limit: 20, windowSeconds: 600 } }, async (request) => {
   const userId = requireAuth(request);
-  const { sessionId, reportedKm } = request.data ?? {};
+  const {
+    acceptedSampleCount,
+    qualifiedSpeedSampleCount,
+    reportedKm,
+    reportedMaxSpeedKmh,
+    reportedMovingSeconds,
+    sessionId,
+  } = request.data ?? {};
   assertDriveSessionId(sessionId);
   if (!Number.isFinite(Number(reportedKm)) || Number(reportedKm) < 0) {
     throw new HttpsError("invalid-argument", "reportedKm must be a positive number or zero.");
+  }
+  for (const [field, value] of Object.entries({
+    acceptedSampleCount,
+    qualifiedSpeedSampleCount,
+    reportedMaxSpeedKmh,
+    reportedMovingSeconds,
+  })) {
+    if (value != null && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
+      throw new HttpsError("invalid-argument", `${field} must be a positive number or zero.`);
+    }
   }
   let response;
 
@@ -2399,6 +2416,10 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
         sessionId,
         acceptedKm: Number(session.acceptedKm ?? 0),
         rejectedKm: Number(session.rejectedKm ?? 0),
+        movingSeconds: Number(session.movingSeconds ?? 0),
+        rejectedMovingSeconds: Number(session.rejectedMovingSeconds ?? 0),
+        maxSpeedKmh: Number(session.maxSpeedKmh ?? 0),
+        averageSpeedKmh: Number(session.averageSpeedKmh ?? 0),
         odometer: Number(session.endOdometer ?? vehicle.odometer ?? 0),
         stats: existingStats,
         leaderboardEntry: buildLeaderboardEntry({ userId, profile, stats: existingStats }),
@@ -2411,8 +2432,12 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
     }
 
     const finishedAt = new Date();
-    const distance = calculateAcceptedDriveKm({
+    const distance = calculateAcceptedDriveSummary({
+      acceptedSampleCount,
+      qualifiedSpeedSampleCount,
       reportedKm: Number(reportedKm),
+      reportedMaxSpeedKmh,
+      reportedMovingSeconds,
       startedAt: session.startedAt,
       finishedAt,
     });
@@ -2426,6 +2451,8 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
       passport,
       vehicle: { ...vehicle, odometer: nextOdometer },
       acceptedKm: distance.acceptedKm,
+      movingSeconds: distance.movingSeconds,
+      maxSpeedKmh: distance.maxSpeedKmh,
       isNight: isNightTime(session.startedAt),
       now: finishedAt,
     });
@@ -2497,6 +2524,12 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
       acceptedKm: distance.acceptedKm,
       rejectedKm: distance.rejectedKm,
       elapsedSeconds: distance.elapsedSeconds,
+      movingSeconds: distance.movingSeconds,
+      rejectedMovingSeconds: distance.rejectedMovingSeconds,
+      maxSpeedKmh: distance.maxSpeedKmh,
+      averageSpeedKmh: distance.averageSpeedKmh,
+      acceptedSampleCount: distance.acceptedSampleCount,
+      qualifiedSpeedSampleCount: distance.qualifiedSpeedSampleCount,
       endOdometer: nextOdometer,
       completedAt: timestamp,
       updatedAt: timestamp,
@@ -2532,6 +2565,10 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
       sessionId,
       acceptedKm: distance.acceptedKm,
       rejectedKm: distance.rejectedKm,
+      movingSeconds: distance.movingSeconds,
+      rejectedMovingSeconds: distance.rejectedMovingSeconds,
+      maxSpeedKmh: distance.maxSpeedKmh,
+      averageSpeedKmh: distance.averageSpeedKmh,
       odometer: nextOdometer,
       stats,
       leaderboardEntry,

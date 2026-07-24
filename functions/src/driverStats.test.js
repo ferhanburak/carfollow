@@ -8,6 +8,7 @@ const {
   buildDriverStatsDocument,
   buildPartLifeSnapshot,
   calculateAcceptedDriveKm,
+  calculateAcceptedDriveSummary,
   getMonthKey,
   isNightTime,
 } = require("./driverStats");
@@ -82,13 +83,59 @@ test("clamps reported distance to server elapsed time", () => {
   });
 });
 
+test("accepts moving time and maximum speed only within server and sample limits", () => {
+  const result = calculateAcceptedDriveSummary({
+    acceptedSampleCount: 12,
+    qualifiedSpeedSampleCount: 4,
+    reportedKm: 2,
+    reportedMaxSpeedKmh: 118,
+    reportedMovingSeconds: 80,
+    startedAt: new Date("2026-07-13T10:00:00.000Z"),
+    finishedAt: new Date("2026-07-13T10:02:00.000Z"),
+  });
+
+  assert.deepEqual(result, {
+    acceptedKm: 2,
+    rejectedKm: 0,
+    elapsedSeconds: 120,
+    acceptedSampleCount: 12,
+    averageSpeedKmh: 90,
+    maxSpeedKmh: 118,
+    movingSeconds: 80,
+    qualifiedSpeedSampleCount: 4,
+    rejectedMovingSeconds: 0,
+  });
+});
+
+test("rejects unsupported speed records and caps moving time to observed sample windows", () => {
+  const result = calculateAcceptedDriveSummary({
+    acceptedSampleCount: 2,
+    qualifiedSpeedSampleCount: 1,
+    reportedKm: 1,
+    reportedMaxSpeedKmh: 190,
+    reportedMovingSeconds: 300,
+    startedAt: new Date("2026-07-13T10:00:00.000Z"),
+    finishedAt: new Date("2026-07-13T10:05:00.000Z"),
+  });
+
+  assert.equal(result.movingSeconds, 30);
+  assert.equal(result.rejectedMovingSeconds, 270);
+  assert.equal(result.maxSpeedKmh, 0);
+});
+
 test("resets monthly counters when the period changes", () => {
   const stats = buildDriverStatsDocument({
     existingStats: {
       periodKey: "2026-06",
       monthlyKm: 900,
       monthlyNightKm: 600,
+      monthlyDriveSeconds: 3600,
+      monthlyMaxSpeedKmh: 140,
+      monthlyTimedKm: 60,
       lifetimeVerifiedKm: 1200,
+      lifetimeDriveSeconds: 7200,
+      lifetimeMaxSpeedKmh: 180,
+      lifetimeTimedKm: 120,
       completedSessions: 4,
     },
     profile: { id: "user-1", odometer: 68000, driverScore: 90, harmonyVotes: 4 },
@@ -100,7 +147,11 @@ test("resets monthly counters when the period changes", () => {
   assert.equal(stats.periodKey, "2026-07");
   assert.equal(stats.monthlyKm, 0);
   assert.equal(stats.monthlyNightKm, 0);
+  assert.equal(stats.monthlyDriveSeconds, 0);
+  assert.equal(stats.monthlyMaxSpeedKmh, 0);
   assert.equal(stats.lifetimeVerifiedKm, 1200);
+  assert.equal(stats.lifetimeDriveSeconds, 7200);
+  assert.equal(stats.lifetimeMaxSpeedKmh, 180);
 });
 
 test("unlocks achievements from authoritative metric snapshots", () => {
@@ -128,6 +179,8 @@ test("adds accepted night distance to monthly and lifetime totals", () => {
     passport: { serviceLogCount: 2 },
     vehicle: { odometer: 68405.2 },
     acceptedKm: 5.2,
+    movingSeconds: 240,
+    maxSpeedKmh: 126,
     isNight: true,
     now: new Date("2026-07-13T21:00:00.000Z"),
   });
@@ -135,6 +188,11 @@ test("adds accepted night distance to monthly and lifetime totals", () => {
   assert.equal(stats.monthlyKm, 125.2);
   assert.equal(stats.monthlyNightKm, 45.2);
   assert.equal(stats.lifetimeVerifiedKm, 605.2);
+  assert.equal(stats.monthlyDriveSeconds, 240);
+  assert.equal(stats.lifetimeDriveSeconds, 240);
+  assert.equal(stats.monthlyMaxSpeedKmh, 126);
+  assert.equal(stats.lifetimeMaxSpeedKmh, 126);
+  assert.equal(stats.monthlyAverageSpeedKmh, 78);
   assert.equal(stats.completedSessions, 4);
 });
 
