@@ -144,6 +144,8 @@ describe("useDriveSession", () => {
     expect(result.current.driveHud.gpsStatus).toBe("live");
     expect(result.current.driveHud.speed).toBeGreaterThan(32);
     expect(result.current.driveHud.sessionKm).toBeGreaterThan(0.09);
+    expect(result.current.driveHud.movingSeconds).toBe(10);
+    expect(result.current.driveHud.averageSpeedKmh).toBeGreaterThan(32);
     expect(currentUser.odometer).toBeGreaterThan(1000.09);
   });
 });

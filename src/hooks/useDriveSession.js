@@ -3,15 +3,15 @@ import {
   incrementClanKm,
   incrementUserOdometer,
 } from "../repositories/cruiserRepository";
-import { processGpsPosition } from "../utils/driveTelemetry";
+import { createDriveMetrics, processGpsPosition, updateDriveMetrics } from "../utils/driveTelemetry";
 
 function createInitialDriveHud() {
   return {
+    ...createDriveMetrics(),
     accuracy: null,
     etaNode: "GPS Hazir",
     gpsStatus: "idle",
     lastFixAt: null,
-    sessionKm: 0,
     speed: 0,
   };
 }
@@ -96,15 +96,18 @@ export function useDriveSession({
     const previousGpsStatus = gpsStatusRef.current;
     gpsStatusRef.current = reading.gpsStatus;
     startTransition(() => {
-      setDriveHud((current) => ({
-        ...current,
-        accuracy: reading.accuracy ?? null,
-        etaNode: getGpsNodeLabel(reading.gpsStatus),
-        gpsStatus: reading.gpsStatus,
-        lastFixAt: reading.timestamp ?? Date.now(),
-        sessionKm: Number((current.sessionKm + reading.distanceKm).toFixed(4)),
-        speed: reading.speedKmh,
-      }));
+      setDriveHud((current) => {
+        const metrics = updateDriveMetrics(current, reading);
+        return {
+          ...current,
+          ...metrics,
+          accuracy: reading.accuracy ?? null,
+          etaNode: getGpsNodeLabel(reading.gpsStatus),
+          gpsStatus: reading.gpsStatus,
+          lastFixAt: reading.timestamp ?? Date.now(),
+          speed: reading.speedKmh,
+        };
+      });
 
       if (reading.distanceKm > 0) {
         setUser((current) => (

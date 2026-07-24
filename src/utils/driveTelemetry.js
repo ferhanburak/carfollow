@@ -3,6 +3,9 @@ const EARTH_RADIUS_METERS = 6_371_000;
 export const MAX_GPS_ACCURACY_METERS = 100;
 export const MAX_DRIVE_SPEED_KMH = 320;
 export const MAX_GPS_SAMPLE_GAP_MS = 30_000;
+export const MAX_SPEED_RECORD_ACCURACY_METERS = 35;
+export const MAX_SPEED_SAMPLE_GAP_SECONDS = 15;
+export const MIN_MOVING_SPEED_KMH = 3;
 
 function toRadians(value) {
   return (Number(value) * Math.PI) / 180;
@@ -40,6 +43,86 @@ export function getDistanceMeters(start, end) {
     + Math.cos(startLat) * Math.cos(endLat) * Math.sin(longitudeDelta / 2) ** 2;
 
   return 2 * EARTH_RADIUS_METERS * Math.asin(Math.min(1, Math.sqrt(haversine)));
+}
+
+export function createDriveMetrics() {
+  return {
+    acceptedSampleCount: 0,
+    averageSpeedKmh: 0,
+    lastQualifiedSpeedKmh: null,
+    maxSpeedKmh: 0,
+    movingSeconds: 0,
+    qualifiedSpeedSampleCount: 0,
+    sessionKm: 0,
+  };
+}
+
+function isConsistentSpeedPair(previousSpeedKmh, currentSpeedKmh) {
+  if (!Number.isFinite(previousSpeedKmh) || !Number.isFinite(currentSpeedKmh)) return false;
+  const toleranceKmh = Math.max(18, Math.max(previousSpeedKmh, currentSpeedKmh) * 0.25);
+  return Math.abs(previousSpeedKmh - currentSpeedKmh) <= toleranceKmh;
+}
+
+function isQualifiedSpeedReading(reading) {
+  const speedKmh = Number(reading?.speedKmh);
+  const derivedSpeedKmh = Number(reading?.derivedSpeedKmh);
+  const deviceSpeedKmh = reading?.deviceSpeedKmh == null ? null : Number(reading.deviceSpeedKmh);
+  const elapsedSeconds = Number(reading?.elapsedSeconds);
+  if (
+    !reading?.accepted ||
+    reading.reason !== "movement" ||
+    !Number.isFinite(speedKmh) ||
+    speedKmh < MIN_MOVING_SPEED_KMH ||
+    speedKmh > MAX_DRIVE_SPEED_KMH ||
+    !Number.isFinite(elapsedSeconds) ||
+    elapsedSeconds <= 0 ||
+    elapsedSeconds > MAX_SPEED_SAMPLE_GAP_SECONDS ||
+    Number(reading.accuracy) > MAX_SPEED_RECORD_ACCURACY_METERS
+  ) {
+    return false;
+  }
+
+  if (deviceSpeedKmh == null || !Number.isFinite(derivedSpeedKmh)) return true;
+  const allowedDifferenceKmh = Math.max(20, derivedSpeedKmh * 0.35);
+  return Math.abs(deviceSpeedKmh - derivedSpeedKmh) <= allowedDifferenceKmh;
+}
+
+export function updateDriveMetrics(currentMetrics, reading) {
+  const current = { ...createDriveMetrics(), ...(currentMetrics ?? {}) };
+  if (!reading?.accepted) return current;
+
+  const distanceKm = Math.max(0, Number(reading.distanceKm) || 0);
+  const elapsedSeconds = Math.max(0, Number(reading.elapsedSeconds) || 0);
+  const isMoving = (
+    reading.reason === "movement" &&
+    distanceKm > 0 &&
+    Number(reading.speedKmh) >= MIN_MOVING_SPEED_KMH
+  );
+  const sessionKm = Number((Number(current.sessionKm) + distanceKm).toFixed(4));
+  const movingSeconds = Number((
+    Number(current.movingSeconds) + (isMoving ? elapsedSeconds : 0)
+  ).toFixed(1));
+  const qualified = isQualifiedSpeedReading(reading);
+  const speedKmh = Math.max(0, Number(reading.speedKmh) || 0);
+  const lastQualifiedSpeedKmh = qualified ? speedKmh : null;
+  const confirmedSpeedKmh = qualified && isConsistentSpeedPair(
+    Number(current.lastQualifiedSpeedKmh),
+    speedKmh,
+  )
+    ? Math.min(Number(current.lastQualifiedSpeedKmh), speedKmh)
+    : 0;
+
+  return {
+    acceptedSampleCount: Number(current.acceptedSampleCount) + 1,
+    averageSpeedKmh: movingSeconds > 0
+      ? Number(((sessionKm / movingSeconds) * 3600).toFixed(1))
+      : 0,
+    lastQualifiedSpeedKmh,
+    maxSpeedKmh: Number(Math.max(Number(current.maxSpeedKmh), confirmedSpeedKmh).toFixed(1)),
+    movingSeconds,
+    qualifiedSpeedSampleCount: Number(current.qualifiedSpeedSampleCount) + (qualified ? 1 : 0),
+    sessionKm,
+  };
 }
 
 export function normalizeGpsPosition(position) {
@@ -143,6 +226,9 @@ export function processGpsPosition(previousPoint, position) {
       location,
       nextPoint: point,
       reason: "initial-fix",
+      derivedSpeedKmh: null,
+      deviceSpeedKmh,
+      elapsedSeconds: 0,
       heading: point.heading,
       speedKmh: Number((deviceSpeedKmh ?? 0).toFixed(1)),
       timestamp: point.timestamp,
@@ -174,6 +260,9 @@ export function processGpsPosition(previousPoint, position) {
       location,
       nextPoint: point,
       reason: "baseline-reset",
+      derivedSpeedKmh: null,
+      deviceSpeedKmh,
+      elapsedSeconds: 0,
       heading: point.heading,
       speedKmh: Number((deviceSpeedKmh ?? 0).toFixed(1)),
       timestamp: point.timestamp,
@@ -215,6 +304,9 @@ export function processGpsPosition(previousPoint, position) {
     location,
     nextPoint: point,
     reason: acceptedDistanceMeters ? "movement" : "stationary",
+    derivedSpeedKmh: Number(derivedSpeedKmh.toFixed(1)),
+    deviceSpeedKmh: deviceSpeedKmh == null ? null : Number(deviceSpeedKmh.toFixed(1)),
+    elapsedSeconds: Number(elapsedSeconds.toFixed(3)),
     heading: point.heading,
     speedKmh: Number(Math.min(MAX_DRIVE_SPEED_KMH, Math.max(0, speedKmh)).toFixed(1)),
     timestamp: point.timestamp,

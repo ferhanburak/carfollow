@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  createDriveMetrics,
   getDistanceMeters,
   getBearingDegrees,
   getGeolocationErrorStatus,
   processGpsPosition,
   smoothGpsLocation,
+  updateDriveMetrics,
 } from "./driveTelemetry";
 
 function position({
@@ -98,5 +100,71 @@ describe("drive telemetry", () => {
     expect(getBearingDegrees(previous, reading.location)).toBeCloseTo(0, 0);
     expect(smoothed.lat).toBeGreaterThan(previous.lat);
     expect(smoothed.lat).toBeLessThan(reading.location.lat);
+  });
+
+  it("counts moving time and derives average speed only from accepted movement", () => {
+    const initial = processGpsPosition(null, position());
+    const movement = processGpsPosition(initial.nextPoint, position({
+      lat: 39.9209,
+      timestamp: 11_000,
+    }));
+    const stationary = processGpsPosition(movement.nextPoint, position({
+      lat: 39.9209,
+      timestamp: 16_000,
+    }));
+
+    const afterMovement = updateDriveMetrics(createDriveMetrics(), movement);
+    const metrics = updateDriveMetrics(afterMovement, stationary);
+
+    expect(metrics.sessionKm).toBeGreaterThan(0.09);
+    expect(metrics.movingSeconds).toBe(10);
+    expect(metrics.averageSpeedKmh).toBeGreaterThan(32);
+    expect(metrics.acceptedSampleCount).toBe(2);
+  });
+
+  it("requires two coherent quality samples before accepting a maximum speed", () => {
+    const first = {
+      accepted: true,
+      accuracy: 8,
+      derivedSpeedKmh: 119,
+      deviceSpeedKmh: 120,
+      distanceKm: 0.033,
+      elapsedSeconds: 1,
+      reason: "movement",
+      speedKmh: 120,
+    };
+    const second = { ...first, derivedSpeedKmh: 123, deviceSpeedKmh: 124, speedKmh: 124 };
+
+    const singleSample = updateDriveMetrics(createDriveMetrics(), first);
+    const confirmed = updateDriveMetrics(singleSample, second);
+
+    expect(singleSample.maxSpeedKmh).toBe(0);
+    expect(confirmed.maxSpeedKmh).toBe(120);
+    expect(confirmed.qualifiedSpeedSampleCount).toBe(2);
+  });
+
+  it("rejects weak or internally inconsistent readings from the maximum speed", () => {
+    const weak = {
+      accepted: true,
+      accuracy: 80,
+      derivedSpeedKmh: 140,
+      deviceSpeedKmh: 140,
+      distanceKm: 0.039,
+      elapsedSeconds: 1,
+      reason: "movement",
+      speedKmh: 140,
+    };
+    const inconsistent = {
+      ...weak,
+      accuracy: 8,
+      derivedSpeedKmh: 20,
+      deviceSpeedKmh: 180,
+      speedKmh: 180,
+    };
+
+    const metrics = updateDriveMetrics(updateDriveMetrics(createDriveMetrics(), weak), inconsistent);
+
+    expect(metrics.maxSpeedKmh).toBe(0);
+    expect(metrics.qualifiedSpeedSampleCount).toBe(0);
   });
 });
