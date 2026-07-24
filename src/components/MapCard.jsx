@@ -31,6 +31,7 @@ const mapOptions = {
 };
 
 const routeLineOptions = {
+  clickable: false,
   geodesic: true,
   strokeColor: "#a3e635",
   strokeOpacity: 0.9,
@@ -49,6 +50,7 @@ const routeLineOptions = {
 };
 
 const draftRouteLineOptions = {
+  clickable: false,
   geodesic: true,
   strokeColor: "#f43f5e",
   strokeOpacity: 0.82,
@@ -935,6 +937,7 @@ export function GoogleMapCard({
             {draftRoutePath?.length > 1 ? <PolylineF path={draftRoutePath} options={draftRouteLineOptions} /> : null}
             {currentLocation ? (
               <MarkerF
+                clickable={false}
                 position={currentLocation}
                 title="Senin konumun"
                 zIndex={999}
@@ -946,6 +949,7 @@ export function GoogleMapCard({
               .map((driver) => (
                 <MarkerF
                   key={`active-driver-${driver.firebaseUid ?? driver.userId ?? driver.plate}`}
+                  clickable={false}
                   position={{ lat: Number(driver.lat), lng: Number(driver.lng) }}
                   title={`${driver.plate} / ${driver.vehicle} / ${getDriverRelationLabel(driver.mapRelation)}`}
                   zIndex={driverMarkerTones[driver.mapRelation]?.zIndex ?? 996}
@@ -958,6 +962,7 @@ export function GoogleMapCard({
               return (
                 <MarkerF
                   key={`draft-route-${point.lat}-${point.lng}-${index}`}
+                  clickable={false}
                   position={point}
                   title={waypoint.title}
                   zIndex={997}
@@ -973,6 +978,7 @@ export function GoogleMapCard({
             })}
             {draftLocation ? (
               <MarkerF
+                clickable={false}
                 position={{ lat: draftLocation.lat, lng: draftLocation.lng }}
                 title="Draft location"
                 zIndex={998}
@@ -983,7 +989,14 @@ export function GoogleMapCard({
               <MarkerF
                 key={pin.id}
                 position={{ lat: pin.lat, lng: pin.lng }}
-                onClick={() => onSelect(pin.id)}
+                onClick={() => {
+                  if (mapPickMode === "route") {
+                    onPickLocation?.({ lat: pin.lat, lng: pin.lng });
+                    return;
+                  }
+
+                  onSelect(pin.id);
+                }}
                 title={pin.type === "meet" ? `${pin.name} · ${getMeetStatusBadge(pin)}` : pin.name}
                 label={getMarkerLabel(pin)}
                 icon={getMarkerIcon(pin, selectedPinId === pin.id)}
@@ -992,6 +1005,7 @@ export function GoogleMapCard({
             {convoyGhostMarkers.map((marker) => (
               <MarkerF
                 key={marker.id}
+                clickable={mapPickMode !== "route"}
                 position={marker.position}
                 title={`${marker.plate} · ${marker.tripStatus}`}
                 zIndex={996}

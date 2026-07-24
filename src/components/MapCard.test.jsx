@@ -11,8 +11,20 @@ vi.mock("@react-google-maps/api", () => ({
     </div>
   ),
   InfoWindowF: ({ children }) => <div>{children}</div>,
-  MarkerF: ({ icon, position, title, zIndex }) => (
-    <div data-testid="map-marker" data-icon={JSON.stringify(icon)} data-position={JSON.stringify(position)} data-title={title ?? ""} data-z-index={zIndex} />
+  MarkerF: ({ clickable, icon, onClick, position, title, zIndex }) => (
+    <button
+      type="button"
+      data-testid="map-marker"
+      data-clickable={clickable}
+      data-icon={JSON.stringify(icon)}
+      data-position={JSON.stringify(position)}
+      data-title={title ?? ""}
+      data-z-index={zIndex}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.();
+      }}
+    />
   ),
   PolylineF: ({ path }) => <div data-testid="map-polyline" data-path={JSON.stringify(path)} />,
   useJsApiLoader: () => ({ isLoaded: true, loadError: null }),
@@ -113,6 +125,53 @@ describe("GoogleMapCard convoy overlays", () => {
 
     expect(screen.getByTestId("google-map-shell")).toHaveClass("absolute", "inset-0", "h-full", "w-full");
     expect(screen.getByTestId("google-map-shell")).not.toHaveClass("relative");
+  });
+
+  it("adds an existing map pin as another waypoint while route picking is active", () => {
+    const onPickLocation = vi.fn();
+    const onSelect = vi.fn();
+    const pin = {
+      id: "spot-route-node",
+      type: "spot",
+      name: "Route stop",
+      lat: 39.91,
+      lng: 32.81,
+    };
+
+    render(
+      <GoogleMapCard
+        mapsApiKey="test-key"
+        drivers={[]}
+        pins={[pin]}
+        selectedPin={null}
+        selectedPinId={null}
+        onPickLocation={onPickLocation}
+        onSelect={onSelect}
+        user={{ firebaseUid: "member-1" }}
+        driveHud={{}}
+        draftRoutePath={[
+          { lat: 39.87, lng: 32.78 },
+          { lat: 39.88, lng: 32.79 },
+        ]}
+        isDriving={false}
+        mapPickMode="route"
+        fullScreen={false}
+        navigationMode={false}
+        mapHeight="18rem"
+      />,
+    );
+
+    const pinMarker = screen.getAllByTestId("map-marker").find((marker) =>
+      marker.dataset.title.includes("Route stop"));
+    fireEvent.click(pinMarker);
+
+    expect(onPickLocation).toHaveBeenCalledWith({ lat: pin.lat, lng: pin.lng });
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(
+      screen.getAllByTestId("map-marker")
+        .filter((marker) => marker.dataset.title.includes("Waypoint"))
+        .every((marker) => marker.dataset.clickable === "false"),
+    ).toBe(true);
   });
 
   it("renders self, friend, clan and stranger markers with relationship priority", () => {
