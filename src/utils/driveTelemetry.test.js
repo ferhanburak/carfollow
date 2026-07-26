@@ -6,6 +6,7 @@ import {
   getGeolocationErrorStatus,
   processGpsPosition,
   smoothGpsLocation,
+  stabilizeDisplayedSpeed,
   updateDriveMetrics,
 } from "./driveTelemetry";
 
@@ -117,6 +118,40 @@ describe("drive telemetry", () => {
       reason: "stationary",
       speedKmh: 0,
     });
+  });
+
+  it("holds the last moving speed across a brief low-speed GPS dropout", () => {
+    const moving = stabilizeDisplayedSpeed(null, {
+      accepted: true,
+      gpsStatus: "live",
+      reason: "movement",
+      speedKmh: 17,
+      timestamp: 1_000,
+    });
+    const briefDrop = stabilizeDisplayedSpeed(moving, {
+      accepted: true,
+      gpsStatus: "live",
+      reason: "stationary",
+      speedKmh: 0,
+      timestamp: 3_000,
+    });
+
+    expect(briefDrop).toEqual({ lastMovingAt: 1_000, speedKmh: 17 });
+  });
+
+  it("returns the displayed speed to zero after a confirmed stop", () => {
+    const stopped = stabilizeDisplayedSpeed(
+      { lastMovingAt: 1_000, speedKmh: 17 },
+      {
+        accepted: true,
+        gpsStatus: "live",
+        reason: "stationary",
+        speedKmh: 0,
+        timestamp: 4_500,
+      },
+    );
+
+    expect(stopped).toEqual({ lastMovingAt: 0, speedKmh: 0 });
   });
 
   it("maps browser permission failures to a clear status", () => {

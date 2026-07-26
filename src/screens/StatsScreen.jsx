@@ -136,13 +136,6 @@ export function StatsScreen({
   const hasClanMembership = Boolean(currentClan || user.clanId || user.clan);
   const clanMemberCount = currentClanMembers.length || Number(currentClan?.members ?? 0);
   const primaryHostableConvoy = hostableConvoys?.[0] ?? null;
-  const socialSummary = [
-    { key: "friends", label: "Arkadas", value: `${user.friends?.length ?? 0}` },
-    { key: "incoming", label: "Gelen", value: `${user.incomingRequests?.length ?? 0}` },
-    { key: "outgoing", label: "Giden", value: `${user.outgoingRequests?.length ?? 0}` },
-    { key: "blocked", label: "Engelli", value: `${user.blockedDrivers?.length ?? 0}` },
-    { key: "clan-invites", label: "Klan Daveti", value: `${user.clanInvites?.length ?? 0}` },
-  ];
   const hasSearchResults = friendSearchResults.length > 0;
   const socialError = getActionError(socialFeedback);
 
@@ -174,15 +167,6 @@ export function StatsScreen({
     <section className="space-y-4">
       {showSocial ? (
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
-          {socialSummary.map((item) => (
-            <div key={item.key} className="rounded-2xl border border-white/8 bg-black/20 px-3 py-3 text-center">
-              <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">{item.label}</p>
-              <p className="mt-1 text-sm font-black text-lime-300">{item.value}</p>
-            </div>
-          ))}
-        </div>
-
         {!hasClanMembership && (user.clanInvites ?? []).length ? (
           <div
             data-testid="incoming-clan-invite-alert"
@@ -193,10 +177,7 @@ export function StatsScreen({
         ) : null}
 
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Clan Management</p>
-            <h3 className="mt-2 text-xl font-black">Klan Merkezi</h3>
-          </div>
+          <h3 className="text-xl font-black">Klan Merkezi</h3>
           <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">
             {hasClanMembership ? currentClan?.name ?? user.clan : "Clanless"}
           </div>

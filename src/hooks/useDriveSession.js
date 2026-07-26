@@ -3,7 +3,12 @@ import {
   incrementClanKm,
   incrementUserOdometer,
 } from "../repositories/cruiserRepository";
-import { createDriveMetrics, processGpsPosition, updateDriveMetrics } from "../utils/driveTelemetry";
+import {
+  createDriveMetrics,
+  processGpsPosition,
+  stabilizeDisplayedSpeed,
+  updateDriveMetrics,
+} from "../utils/driveTelemetry";
 
 function createInitialDriveHud() {
   return {
@@ -51,6 +56,7 @@ export function useDriveSession({
   const gpsPointRef = useRef(null);
   const gpsStatusRef = useRef("idle");
   const driveStartedAtRef = useRef(null);
+  const displayedSpeedRef = useRef({ lastMovingAt: 0, speedKmh: 0 });
 
   useEffect(() => {
     userRef.current = user;
@@ -65,6 +71,7 @@ export function useDriveSession({
       liveLocationRef.current = null;
       gpsPointRef.current = null;
       gpsStatusRef.current = "idle";
+      displayedSpeedRef.current = { lastMovingAt: 0, speedKmh: 0 };
       return;
     }
 
@@ -110,6 +117,8 @@ export function useDriveSession({
     if (!isDriving || !position) return;
 
     const reading = processGpsPosition(gpsPointRef.current, position);
+    const displayedSpeed = stabilizeDisplayedSpeed(displayedSpeedRef.current, reading);
+    displayedSpeedRef.current = displayedSpeed;
     liveLocationRef.current = liveLocation?.location ?? reading.location;
     if (reading.accepted) gpsPointRef.current = reading.nextPoint;
 
@@ -126,7 +135,7 @@ export function useDriveSession({
           gpsStatus: reading.gpsStatus,
           lastFixAt: reading.timestamp ?? Date.now(),
           location: liveLocationRef.current,
-          speed: reading.speedKmh,
+          speed: displayedSpeed.speedKmh,
         };
       });
 
@@ -207,6 +216,7 @@ export function useDriveSession({
         if (!result.resumed) {
           setDriveHud(createInitialDriveHud());
         }
+        displayedSpeedRef.current = { lastMovingAt: 0, speedKmh: 0 };
         driveStartedAtRef.current = Date.now();
         setIsDriving(true);
       } else {
@@ -277,6 +287,7 @@ export function useDriveSession({
     setDriveSessionFeedback("");
     setDriveSessionPending(false);
     driveStartedAtRef.current = null;
+    displayedSpeedRef.current = { lastMovingAt: 0, speedKmh: 0 };
     actionLockRef.current = false;
   };
 

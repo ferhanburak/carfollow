@@ -6,6 +6,7 @@ export const MAX_GPS_SAMPLE_GAP_MS = 30_000;
 export const MAX_SPEED_RECORD_ACCURACY_METERS = 35;
 export const MAX_SPEED_SAMPLE_GAP_SECONDS = 15;
 export const MIN_MOVING_SPEED_KMH = 3;
+export const DISPLAY_SPEED_HOLD_MS = 3_000;
 
 function toRadians(value) {
   return (Number(value) * Math.PI) / 180;
@@ -54,6 +55,33 @@ export function createDriveMetrics() {
     movingSeconds: 0,
     qualifiedSpeedSampleCount: 0,
     sessionKm: 0,
+  };
+}
+
+export function stabilizeDisplayedSpeed(previousState, reading) {
+  const timestamp = Number(reading?.timestamp) || Date.now();
+  const rawSpeedKmh = Math.max(0, Number(reading?.speedKmh) || 0);
+  const previousSpeedKmh = Math.max(0, Number(previousState?.speedKmh) || 0);
+  const previousMovingAt = Number(previousState?.lastMovingAt) || 0;
+
+  if (reading?.gpsStatus === "live" && rawSpeedKmh >= MIN_MOVING_SPEED_KMH) {
+    return {
+      lastMovingAt: timestamp,
+      speedKmh: rawSpeedKmh,
+    };
+  }
+
+  const isTransientLiveDrop = (
+    reading?.accepted
+    && reading?.gpsStatus === "live"
+    && reading?.reason === "stationary"
+    && previousSpeedKmh >= MIN_MOVING_SPEED_KMH
+    && timestamp - previousMovingAt <= DISPLAY_SPEED_HOLD_MS
+  );
+
+  return {
+    lastMovingAt: isTransientLiveDrop ? previousMovingAt : 0,
+    speedKmh: isTransientLiveDrop ? previousSpeedKmh : 0,
   };
 }
 
