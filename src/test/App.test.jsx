@@ -45,6 +45,8 @@ describe("App", () => {
     expect(within(within(compactHeader).getByRole("button", { name: "Suruse Basla" })).queryByText("Baslat")).not.toBeInTheDocument();
     expect(screen.queryByText("Node Management Hub")).not.toBeInTheDocument();
     expect(screen.queryByText(/Event, photo spot ve wash noktalarini burada yonet/i)).not.toBeInTheDocument();
+    expect(await screen.findByText("Etkinlik Haritası")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Etkinlik Ekle" })).toBeInTheDocument();
     const spotMarker = await screen.findByRole("button", { name: "Mogan Lake Sunset (spot)" });
     expect(spotMarker).toBeInTheDocument();
     expect(screen.queryByText("Mogan Lake Sunset")).not.toBeInTheDocument();

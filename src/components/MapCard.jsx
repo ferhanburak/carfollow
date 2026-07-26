@@ -613,6 +613,11 @@ export function MapCard({
             : "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-2"
         }`}
       >
+        {!fullScreen ? (
+          <div className="pointer-events-none absolute left-4 top-4 z-20 rounded-xl border border-white/10 bg-black/75 px-3 py-2 text-xs font-black text-white backdrop-blur-md">
+            Etkinlik Haritası
+          </div>
+        ) : null}
         <div className={fullScreen ? "absolute inset-0 p-0" : ""}>
           <FallbackGridMap
             pins={pins}
@@ -847,6 +852,11 @@ export function GoogleMapCard({
           : "rounded-[1.75rem] border border-white/10 bg-[linear-gradient(180deg,#171717,#0d0d0d)] p-2"
       }`}
     >
+      {!fullScreen ? (
+        <div className="pointer-events-none absolute left-4 top-4 z-20 rounded-xl border border-white/10 bg-black/75 px-3 py-2 text-xs font-black text-white backdrop-blur-md">
+          Etkinlik Haritası
+        </div>
+      ) : null}
       <div className="pointer-events-none absolute right-4 top-4 z-20">
         <div className="flex items-center">
           <button

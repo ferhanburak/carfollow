@@ -52,7 +52,7 @@ export function MapComposerPanel({
     <div aria-label="Nokta editoru" className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-sm font-black text-neutral-100">Etkinlik ve Nokta Ekle</h2>
+          <h2 className="text-sm font-black text-neutral-100">Etkinlik Ekle</h2>
           {!resolvedOpen ? (
             <p className="mt-1 text-[11px] leading-4 text-neutral-500">
               Haritada etkinlik eklemek istediginiz konuma tiklayin.
