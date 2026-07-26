@@ -53,18 +53,21 @@ export function MapHubScreen({
 }) {
   return (
     <section className="space-y-4">
-      <MapCard
-        pins={mapPins}
-        selectedPinId={selectedPinId}
-        onSelect={onSelectPin}
-        user={user}
-        liveLocation={liveLocation}
-        draftLocation={draftLocation}
-        draftRoutePath={mapPinForm.routePoints}
-        mapPickMode={mapPickMode}
-        onPickLocation={onPickLocation}
-        mapHeight="clamp(24rem, 58vh, 34rem)"
-      />
+      <div className="space-y-2">
+        <h2 className="px-1 text-sm font-black uppercase tracking-[0.18em] text-neutral-200">Harita</h2>
+        <MapCard
+          pins={mapPins}
+          selectedPinId={selectedPinId}
+          onSelect={onSelectPin}
+          user={user}
+          liveLocation={liveLocation}
+          draftLocation={draftLocation}
+          draftRoutePath={mapPinForm.routePoints}
+          mapPickMode={mapPickMode}
+          onPickLocation={onPickLocation}
+          mapHeight="clamp(24rem, 58vh, 34rem)"
+        />
+      </div>
       <PinPanel
         pin={selectedPin}
         user={user}

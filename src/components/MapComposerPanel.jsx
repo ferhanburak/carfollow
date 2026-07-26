@@ -49,8 +49,16 @@ export function MapComposerPanel({
   }, [form]);
 
   return (
-    <div aria-label="Nokta editoru" className={`rounded-[1.5rem] border border-white/10 bg-[#111111] ${resolvedOpen ? "p-4" : "p-2"}`}>
-      <div className={resolvedOpen ? "flex items-center justify-end" : ""}>
+    <div aria-label="Nokta editoru" className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-sm font-black text-neutral-100">Etkinlik ve Nokta Ekle</h2>
+          {!resolvedOpen ? (
+            <p className="mt-1 text-[11px] leading-4 text-neutral-500">
+              Haritada etkinlik eklemek istediginiz konuma tiklayin.
+            </p>
+          ) : null}
+        </div>
         {!alwaysOpen ? (
           <button
             type="button"
@@ -63,13 +71,13 @@ export function MapComposerPanel({
                 return next;
               });
             }}
-            className={`min-h-12 rounded-2xl px-4 text-sm font-semibold transition active:scale-[0.98] ${
+            className={`min-h-12 shrink-0 rounded-2xl px-4 text-sm font-semibold transition active:scale-[0.98] ${
               resolvedOpen
                 ? "border border-white/10 bg-black/30 text-neutral-300"
-                : "w-full bg-lime-400 text-black"
+                : "bg-lime-400 text-black"
             }`}
           >
-            {resolvedOpen ? "Kapat" : "+ Nokta Ekle"}
+            {resolvedOpen ? "Kapat" : "+ Ekle"}
           </button>
         ) : null}
       </div>

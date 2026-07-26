@@ -220,7 +220,7 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(await screen.findByRole("button", { name: "+ Nokta Ekle" }));
+    await user.click(await screen.findByRole("button", { name: "+ Ekle" }));
     fireEvent.submit(screen.getByRole("button", { name: "Event Ekle" }).closest("form"));
 
     expect((await screen.findAllByText("Zorunlu alanlari doldurunuz.")).length).toBeGreaterThan(0);
