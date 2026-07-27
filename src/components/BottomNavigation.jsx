@@ -53,31 +53,53 @@ function NavigationIcon({ name }) {
   );
 }
 
+function ForumHomeMark() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 32 32" className="h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 2.8 27 6.4v8.2c0 7.1-4.4 11.8-11 14.6C9.4 26.4 5 21.7 5 14.6V6.4Z" strokeWidth="1.7" />
+      <path d="M9.3 9.7h13.4v8.5h-7.8l-4.1 3v-3H9.3Z" strokeWidth="1.8" />
+      <path d="M12.5 13.1h7M12.5 15.8h4.6" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
 export function BottomNavigation({ activeTab, items, onSelect }) {
   return (
     <nav aria-label="Ana navigasyon" className="app-bottom-nav absolute left-1/2 z-20 w-[calc(100%-0.75rem)] max-w-[27rem] -translate-x-1/2 px-1.5 sm:w-[calc(100%-1.5rem)] sm:px-3">
       <div
-        className="grid gap-1 rounded-[1.4rem] border border-white/10 bg-[#111111]/95 p-1.5 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur"
-        style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+        className="relative grid gap-1 overflow-visible rounded-[1.4rem] border border-white/10 bg-[radial-gradient(circle_at_50%_-35%,rgba(163,230,53,0.13),transparent_34%),rgba(17,17,17,0.96)] p-1.5 shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+        style={{ gridTemplateColumns: items.map((item) => item.key === "forum" ? "1.35fr" : "1fr").join(" ") }}
       >
         {items.map((item) => {
           const isActive = activeTab === item.key;
+          const isPrimary = item.key === "forum";
           return (
             <button
               key={item.key}
               type="button"
               aria-label={item.label}
               aria-current={isActive ? "page" : undefined}
+              data-primary-navigation={isPrimary ? "true" : undefined}
               title={item.label}
               onClick={() => onSelect(item.key)}
-              className={`group relative flex min-h-12 w-full items-center justify-center rounded-2xl transition duration-200 active:scale-90 ${
-                isActive
-                  ? "bg-lime-400 text-black shadow-[0_0_20px_rgba(163,230,53,0.42)]"
-                  : "text-neutral-500 hover:bg-white/5 hover:text-neutral-200"
+              className={`group relative mx-auto flex items-center justify-center transition duration-200 active:scale-90 ${
+                isPrimary
+                  ? `z-10 h-16 w-16 -translate-y-3.5 justify-self-center rounded-full border-2 ${
+                      isActive
+                        ? "border-lime-200 bg-lime-400 text-black shadow-[0_0_0_5px_rgba(10,10,10,0.95),0_0_32px_rgba(163,230,53,0.58)]"
+                        : "border-lime-400/70 bg-[#171717] text-lime-300 shadow-[0_0_0_5px_rgba(10,10,10,0.95),0_0_22px_rgba(163,230,53,0.2)] hover:border-lime-300 hover:text-lime-200"
+                    }`
+                  : `min-h-12 w-full rounded-2xl ${
+                      isActive
+                        ? "bg-lime-400 text-black shadow-[0_0_20px_rgba(163,230,53,0.42)]"
+                        : "text-neutral-500 hover:bg-white/5 hover:text-neutral-200"
+                    }`
               }`}
             >
-              <NavigationIcon name={item.key} />
-              <span className={`absolute bottom-1 h-0.5 rounded-full bg-current transition-all ${isActive ? "w-3 opacity-70" : "w-0 opacity-0"}`} />
+              {isPrimary ? <ForumHomeMark /> : <NavigationIcon name={item.key} />}
+              <span className={`absolute h-0.5 rounded-full bg-current transition-all ${
+                isPrimary ? "bottom-1.5" : "bottom-1"
+              } ${isActive ? "w-3 opacity-70" : "w-0 opacity-0"}`} />
             </button>
           );
         })}

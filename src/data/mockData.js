@@ -531,8 +531,8 @@ export const navItems = [
   { key: "map", label: "Harita" },
   { key: "liveMap", label: "Live Map" },
   { key: "drive", label: "Sürüş" },
-  { key: "social", label: "Social" },
   { key: "forum", label: "Forum" },
+  { key: "social", label: "Social" },
   { key: "leaderboard", label: "Leaders" },
   { key: "profile", label: "Profil" },
 ];
