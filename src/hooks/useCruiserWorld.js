@@ -279,11 +279,11 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
     };
 
     setFuelPending(true);
-    setFuelFeedback("Yakit kaydi Vehicle Passport'a isleniyor...");
+    setFuelFeedback("Yakıt kaydı Vehicle Passport'a işleniyor...");
     try {
       const syncResult = await syncFuelLog(nextLog);
       if (syncResult?.ok === false) {
-        setFuelFeedback("Yakit kaydi su anda tamamlanamadi. Lutfen tekrar dene.");
+        setFuelFeedback("Yakıt kaydı su anda tamamlanamadi. Lütfen tekrar dene.");
         return null;
       }
 
@@ -295,7 +295,7 @@ export function useCruiserWorld(user, setUser, setFuelForm) {
       });
       setFuelForm(createFuelForm(Number(nextFuelForm.currentKm)));
       setFuelErrors({});
-      setFuelFeedback("Yakit kaydi guvenli olarak kaydedildi.");
+      setFuelFeedback("Yakıt kaydı güvenli olarak kaydedildi.");
       return nextLog;
     } finally {
       setFuelPending(false);

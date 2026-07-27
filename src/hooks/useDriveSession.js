@@ -14,7 +14,7 @@ function createInitialDriveHud() {
   return {
     ...createDriveMetrics(),
     accuracy: null,
-    etaNode: "GPS Hazir",
+    etaNode: "GPS Hazır",
     gpsStatus: "idle",
     lastFixAt: null,
     location: null,
@@ -24,9 +24,9 @@ function createInitialDriveHud() {
 }
 
 function getGpsNodeLabel(status) {
-  if (status === "live") return "GPS Canli";
-  if (status === "weak") return "Zayif GPS";
-  if (status === "denied") return "Konum Kapali";
+  if (status === "live") return "GPS Canlı";
+  if (status === "weak") return "Zayıf GPS";
+  if (status === "denied") return "Konum Kapalı";
   if (status === "timeout") return "GPS Bekleniyor";
   if (status === "unavailable") return "GPS Yok";
   if (status === "error") return "GPS Hatasi";
@@ -85,7 +85,7 @@ export function useDriveSession({
         gpsStatus: status,
         speed: 0,
       }));
-      setDriveSessionFeedback(liveLocation?.error || "GPS verisi okunamadi; mesafe kaydedilmiyor.");
+      setDriveSessionFeedback(liveLocation?.error || "GPS verisi okunamadı; mesafe kaydedilmiyor.");
       return;
     }
 
@@ -156,9 +156,9 @@ export function useDriveSession({
     });
 
     if (reading.gpsStatus === "live" && previousGpsStatus !== "live") {
-      setDriveSessionFeedback("Gercek GPS telemetrisi aktif; hiz ve mesafe cihaz konumundan hesaplaniyor.");
+      setDriveSessionFeedback("Gercek GPS telemetrisi aktif; hız ve mesafe cihaz konumundan hesaplaniyor.");
     } else if (reading.gpsStatus === "weak" && previousGpsStatus !== "weak") {
-      setDriveSessionFeedback("GPS dogrulugu zayif; guvenilir olmayan hareket mesafeye eklenmiyor.");
+      setDriveSessionFeedback("GPS doğruluğu zayıf; güvenilir olmayan hareket mesafeye eklenmiyor.");
     }
   }, [isDriving, liveLocation?.location, liveLocation?.sample, serverOwnedDriverStats, setClans, setUser]);
 
@@ -192,15 +192,15 @@ export function useDriveSession({
         setDriveSessionStatus("starting");
         setDriveSessionFeedback(
           serverOwnedDriverStats
-            ? "Guvenli surus oturumu Firebase backend'de aciliyor..."
-            : "GPS tabanli surus oturumu hazirlaniyor...",
+            ? "Güvenli sürüş oturumu Firebase backend'de açılıyor..."
+            : "GPS tabanli sürüş oturumu hazirlaniyor...",
         );
         const result = onSessionStart
           ? await onSessionStart({ user })
           : { ok: true, sessionId: `local-${Date.now()}`, status: "active" };
         if (result?.ok === false) {
           setDriveSessionStatus("error");
-          setDriveSessionFeedback(result.error ?? "Surus oturumu baslatilamadi.");
+          setDriveSessionFeedback(result.error ?? "Sürüş oturumu baslatilamadi.");
           return result;
         }
 
@@ -208,10 +208,10 @@ export function useDriveSession({
         setDriveSessionStatus("active");
         setDriveSessionFeedback(
           result.resumed
-            ? "Acik surus oturumuna yeniden baglanildi."
+            ? "Açık sürüş oturumuna yeniden baglanildi."
             : serverOwnedDriverStats
-              ? "Sunucu kontrollu surus kaydi aktif; GPS bekleniyor."
-              : "GPS tabanli surus kaydi aktif; konum bekleniyor.",
+              ? "Sunucu kontrollu sürüş kaydı aktif; GPS bekleniyor."
+              : "GPS tabanli sürüş kaydı aktif; konum bekleniyor.",
         );
         if (!result.resumed) {
           setDriveHud(createInitialDriveHud());
@@ -227,7 +227,7 @@ export function useDriveSession({
           speed: 0,
         }));
         setDriveSessionStatus("finalizing");
-        setDriveSessionFeedback("Surus mesafesi dogrulaniyor ve siralamaya isleniyor...");
+        setDriveSessionFeedback("Sürüş mesafesi doğrulanıyor ve sıralamaya işleniyor...");
         const result = onSessionFinish
           ? await onSessionFinish({
             sessionId: driveSessionId,
@@ -241,7 +241,7 @@ export function useDriveSession({
         if (result?.ok === false) {
           setIsDriving(true);
           setDriveSessionStatus("error");
-          setDriveSessionFeedback(`${result.error} Suruse devam edip yeniden deneyebilirsin.`);
+          setDriveSessionFeedback(`${result.error} Sürüşe devam edip yeniden deneyebilirsin.`);
           return result;
         }
 
@@ -252,8 +252,8 @@ export function useDriveSession({
         setDriveSessionStatus("completed");
         setDriveSessionFeedback(
           rejectedKm > 0
-            ? `${acceptedKm.toFixed(1)} KM onaylandi; ${rejectedKm.toFixed(1)} KM zaman siniri nedeniyle sayilmadi.`
-            : `${acceptedKm.toFixed(1)} KM onaylandi ve aylik siralamaya eklendi.`,
+            ? `${acceptedKm.toFixed(1)} KM onaylandı; ${rejectedKm.toFixed(1)} KM zaman siniri nedeniyle sayilmadi.`
+            : `${acceptedKm.toFixed(1)} KM onaylandı ve aylık sıralamaya eklendi.`,
         );
         await telemetrySyncRef.current?.({
           active: false,
@@ -276,7 +276,7 @@ export function useDriveSession({
         active: false,
         plate: userRef.current.plate,
         vehicle: userRef.current.model,
-        node: "Hazir",
+        node: "Hazır",
         speed: 0,
       });
     }

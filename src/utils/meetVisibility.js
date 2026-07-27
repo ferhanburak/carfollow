@@ -110,7 +110,7 @@ export function getConvoyAccessState(pin, user) {
       canViewDetails,
       canJoin,
       isLocked: !canViewDetails,
-      reason: pin.backendAccessReason || (canViewDetails ? "" : "Bu konvoyun kesin konum, saat ve rota detaylari hesabina acik degil."),
+      reason: pin.backendAccessReason || (canViewDetails ? "" : "Bu konvoyun kesin konum, saat ve rota detayları hesabına açık değil."),
       isTrusted: canViewDetails || canJoin,
     };
   }
@@ -135,7 +135,7 @@ export function getConvoyAccessState(pin, user) {
       canViewDetails: false,
       canJoin: false,
       isLocked: true,
-      reason: "Bu konvoyun taban gorunurluk kurali sana acik degil.",
+      reason: "Bu konvoyun taban görünürlük kuralı sana açık değil.",
       isTrusted,
     };
   }
@@ -146,7 +146,7 @@ export function getConvoyAccessState(pin, user) {
       canViewDetails: detailVisibility === "public",
       canJoin: false,
       isLocked: detailVisibility !== "public",
-      reason: detailVisibility === "public" ? "Katilmak icin giris yap." : "Detaylari gormek icin uygun profil gerekir.",
+      reason: detailVisibility === "public" ? "Katilmak için giriş yap." : "Detayları görmek için uygun profil gerekir.",
       isTrusted: false,
     };
   }
@@ -157,7 +157,7 @@ export function getConvoyAccessState(pin, user) {
       canViewDetails: false,
       canJoin: false,
       isLocked: true,
-      reason: "Bu konvoyun saat, rota ve lokasyon detaylari sadece guvenilir suruculere acik.",
+      reason: "Bu konvoyun saat, rota ve lokasyon detayları sadece güvenilir suruculere açık.",
       isTrusted,
     };
   }
@@ -179,7 +179,7 @@ export function getConvoyAccessState(pin, user) {
       canViewDetails: false,
       canJoin: false,
       isLocked: true,
-      reason: "Driver score veya uyum metriklerin bu konvoyun minimum guven kurallarini saglamiyor.",
+      reason: "Driver score veya uyum metriklerin bu konvoyun minimum güven kurallarini saglamiyor.",
       isTrusted,
     };
   }
@@ -191,7 +191,7 @@ export function getConvoyAccessState(pin, user) {
     isLocked: false,
     reason:
       accessPolicy === "request"
-        ? "Detaylari goruyorsun, katilim host onayi ile ilerler."
+        ? "Detayları goruyorsun, katılım host onayi ile ilerler."
         : "",
     isTrusted,
   };

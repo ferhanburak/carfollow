@@ -27,7 +27,7 @@ function AchievementCard({ achievement }) {
       <AchievementBar achievement={achievement} />
       <div className="mt-2 flex items-center justify-between gap-3 text-xs text-neutral-500">
         <span>{achievement.current} / {achievement.target} {achievement.unit}</span>
-        <span>{achievement.unlocked ? "Kazanildi" : `${remaining} ${achievement.unit} kaldi`}</span>
+        <span>{achievement.unlocked ? "Kazanıldı" : `${remaining} ${achievement.unit} kaldı`}</span>
       </div>
     </div>
   );
@@ -59,16 +59,16 @@ export function AchievementProgressPanel({ achievements, isOpen, onClose, onOpen
       <button
         type="button"
         onClick={onOpen}
-        aria-label="Basarim detaylarini ac"
+        aria-label="Başarım detaylarini ac"
         className="group w-full rounded-[1.75rem] border border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.13),transparent_46%),#111111] p-4 text-left transition hover:border-lime-400/30"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-black">Basarimlar</h3>
+            <h3 className="text-lg font-black">Başarımlar</h3>
           </div>
           <div className="text-right">
             <p className="text-lg font-black text-lime-300">{completed.length} / {achievements.length}</p>
-            <p className="text-[9px] uppercase tracking-[0.18em] text-neutral-500">Kazanildi</p>
+            <p className="text-[9px] uppercase tracking-[0.18em] text-neutral-500">Kazanıldı</p>
           </div>
         </div>
 
@@ -76,7 +76,7 @@ export function AchievementProgressPanel({ achievements, isOpen, onClose, onOpen
           <div className="mt-4 rounded-[1.35rem] border border-white/8 bg-black/25 p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-500">{remaining.length ? "Siradaki En Yakin" : "Tum Hedefler Tamam"}</p>
+                <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-500">{remaining.length ? "Sıradaki En Yakın" : "Tüm Hedefler Tamam"}</p>
                 <p className="mt-2 truncate text-sm font-bold text-neutral-100">{featured.title}</p>
               </div>
               <span className="shrink-0 rounded-full border border-lime-400/15 bg-lime-400/10 px-3 py-1 text-xs font-bold text-lime-300">%{featured.percent}</span>
@@ -85,30 +85,30 @@ export function AchievementProgressPanel({ achievements, isOpen, onClose, onOpen
             <AchievementBar achievement={featured} compact />
             <div className="mt-2 flex items-center justify-between text-[11px] text-neutral-500">
               <span>{featured.current} / {featured.target} {featured.unit}</span>
-              <span className="text-lime-300">Tumunu gor &rsaquo;</span>
+              <span className="text-lime-300">Tumunu gör &rsaquo;</span>
             </div>
           </div>
         ) : (
-          <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-neutral-500">Basarim verisi bekleniyor.</div>
+          <div className="mt-4 rounded-2xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-neutral-500">Başarım verisi bekleniyor.</div>
         )}
       </button>
 
       {isOpen ? (
-        <div className="fixed inset-0 z-[45] bg-black/85 backdrop-blur-md md:p-4" role="dialog" aria-modal="true" aria-label="Basarim merkezi paneli">
+        <div className="fixed inset-0 z-[45] bg-black/85 backdrop-blur-md md:p-4" role="dialog" aria-modal="true" aria-label="Başarım merkezi paneli">
           <section className="mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden border-white/10 bg-[#090909] shadow-[0_24px_90px_rgba(0,0,0,0.9)] md:h-[calc(100dvh-2rem)] md:rounded-[2rem] md:border">
             <header className="app-safe-top shrink-0 border-b border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.16),transparent_44%),#111111] px-4 pb-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="text-lg font-black">Basarim Merkezi</h2>
-                  <p className="mt-1 text-xs text-neutral-500">{completed.length} / {achievements.length} basarim tamamlandi</p>
+                  <h2 className="text-lg font-black">Başarım Merkezi</h2>
+                  <p className="mt-1 text-xs text-neutral-500">{completed.length} / {achievements.length} başarım tamamlandı</p>
                 </div>
-                <button type="button" onClick={onClose} aria-label="Basarim merkezini kapat" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-xl text-neutral-300">&times;</button>
+                <button type="button" onClick={onClose} aria-label="Başarım merkezini kapat" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-xl text-neutral-300">&times;</button>
               </div>
             </header>
 
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-              <AchievementGroup achievements={remaining} emptyText="Tum basarimlari tamamladin." title="Devam Edenler" />
-              <AchievementGroup achievements={completed} emptyText="Henuz tamamlanan basarim yok." title="Tamamlananlar" />
+              <AchievementGroup achievements={remaining} emptyText="Tüm basarimlari tamamladin." title="Devam Edenler" />
+              <AchievementGroup achievements={completed} emptyText="Henüz tamamlanan başarım yok." title="Tamamlananlar" />
             </div>
           </section>
         </div>

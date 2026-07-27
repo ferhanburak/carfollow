@@ -12,16 +12,16 @@ const { resolveMaintenanceLimit } = require("./maintenanceLimits");
 const ACHIEVEMENT_DEFINITIONS = Object.freeze([
   {
     key: "night-warrior",
-    title: "Gece Savascisi",
-    description: "Ayni ay icinde 500 KM gece surusu tamamla.",
+    title: "Gece Savaşçısı",
+    description: "Aynı ay içinde 500 KM gece sürüşü tamamla.",
     metric: "monthlyNightKm",
     target: 500,
     unit: "KM",
   },
   {
     key: "asphalt-weeper",
-    title: "Asfalt Aglatan",
-    description: "Arac odometresinde 70.000 KM seviyesine ulas.",
+    title: "Asfalt Ağlatan",
+    description: "Araç odometresinde 70.000 KM seviyesine ulaş.",
     metric: "odometer",
     target: 70000,
     unit: "KM",
@@ -37,7 +37,7 @@ const ACHIEVEMENT_DEFINITIONS = Object.freeze([
   {
     key: "garage-keeper",
     title: "Garaj Arsivi",
-    description: "Vehicle Passport'a en az 5 servis kaydi ekle.",
+    description: "Vehicle Passport'a en az 5 servis kaydı ekle.",
     metric: "serviceLogCount",
     target: 5,
     unit: "log",
@@ -45,7 +45,7 @@ const ACHIEVEMENT_DEFINITIONS = Object.freeze([
   {
     key: "apex-score",
     title: "Crew Apex",
-    description: "Sunucu kontrollu surucu skorunda 95 seviyesine ulas.",
+    description: "Sunucu kontrollu sürücü skorunda 95 seviyesine ulaş.",
     metric: "driverScore",
     target: 95,
     unit: "score",

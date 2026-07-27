@@ -3,12 +3,12 @@ import { getActionError } from "./actionFeedback";
 
 describe("getActionError", () => {
   it("hides successful action messages", () => {
-    expect(getActionError("Arkadaslik istegi gonderildi.")).toBe("");
-    expect(getActionError("Surucu yonetici yapildi.")).toBe("");
+    expect(getActionError("Arkadaşlık isteği gönderildi.")).toBe("");
+    expect(getActionError("Sürücü yönetici yapildi.")).toBe("");
   });
 
   it("keeps actionable failures visible", () => {
-    expect(getActionError("Konvoy daveti gonderilemedi.")).toBe("Konvoy daveti gonderilemedi.");
-    expect(getActionError("Bu islem icin yetkiniz yok.")).toBe("Bu islem icin yetkiniz yok.");
+    expect(getActionError("Konvoy daveti gönderilemedi.")).toBe("Konvoy daveti gönderilemedi.");
+    expect(getActionError("Bu işlem için yetkiniz yok.")).toBe("Bu işlem için yetkiniz yok.");
   });
 });

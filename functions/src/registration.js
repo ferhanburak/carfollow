@@ -155,7 +155,7 @@ function buildRegistrationBundle({
     harmonyVotes: 1,
     alertVotes: 0,
     monthlyKm: 0,
-    badges: ["Yeni Uye", "Garajda Aktif"],
+    badges: ["Yeni Üye", "Garajda Aktif"],
     schemaVersion: REGISTRATION_SCHEMA_VERSION,
   };
   const parts = (Array.isArray(profile?.parts) ? profile.parts : [])

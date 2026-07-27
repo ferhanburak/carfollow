@@ -643,8 +643,8 @@ exports.requestFriendship = secureCall("requestFriendship", { rateLimit: { limit
       transaction.set(friendshipRef, migration, { merge: true });
       writeNotification(transaction, targetUserId, `friend-request-${friendshipId}`, {
         type: "friend-request",
-        title: "Yeni arkadaslik istegi",
-        body: `${requester.fullName ?? requester.plate} seni arkadas olarak eklemek istiyor.`,
+        title: "Yeni arkadaşlık isteği",
+        body: `${requester.fullName ?? requester.plate} seni arkadaş olarak eklemek istiyor.`,
         actor: requester,
         action: { type: "social", targetId: requesterUserId },
       }, timestamp);
@@ -655,8 +655,8 @@ exports.requestFriendship = secureCall("requestFriendship", { rateLimit: { limit
     transaction.set(friendshipRef, buildFriendshipDocument({ requester, target, timestamp }));
     writeNotification(transaction, targetUserId, `friend-request-${friendshipId}`, {
       type: "friend-request",
-      title: "Yeni arkadaslik istegi",
-      body: `${requester.fullName ?? requester.plate} seni arkadas olarak eklemek istiyor.`,
+      title: "Yeni arkadaşlık isteği",
+      body: `${requester.fullName ?? requester.plate} seni arkadaş olarak eklemek istiyor.`,
       actor: requester,
       action: { type: "social", targetId: requesterUserId },
     }, timestamp);
@@ -1000,10 +1000,10 @@ exports.respondFriendship = secureCall("respondFriendship", async (request) => {
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
     writeNotification(transaction, requesterUserId, `friend-response-${friendshipRef.id}`, {
       type: "friend-response",
-      title: decision === "accepted" ? "Arkadaslik istegi kabul edildi" : "Arkadaslik istegi reddedildi",
+      title: decision === "accepted" ? "Arkadaşlık isteği kabul edildi" : "Arkadaşlık isteği reddedildi",
       body: decision === "accepted"
         ? `${actor.fullName ?? actor.plate} istegini kabul etti. Artik arkadassiniz.`
-        : `${actor.fullName ?? actor.plate} arkadaslik istegini reddetti.`,
+        : `${actor.fullName ?? actor.plate} arkadaşlık istegini reddetti.`,
       actor,
       action: { type: "social", targetId: actorUserId },
     }, timestamp);
@@ -1265,8 +1265,8 @@ exports.syncConvoyLocation = secureCall("syncConvoyLocation", { rateLimit: { lim
     if (convoy.lifecycleStatus === "planning") {
       activeMembers.forEach((entry) => writeNotification(transaction, entry.userId, `convoy-started-${convoyId}`, {
         type: "convoy-started",
-        title: "Konvoy basladi",
-        body: `${convoy.name} icin GPS konvoy takibi aktif.`,
+        title: "Konvoy başladı",
+        body: `${convoy.name} için GPS konvoy takibi aktif.`,
         actor: { userId: convoy.hostUserId, fullName: convoy.createdByName, plate: convoy.createdByPlate },
         action: { type: "convoy", targetId: convoyId },
       }, timestamp));
@@ -1274,8 +1274,8 @@ exports.syncConvoyLocation = secureCall("syncConvoyLocation", { rateLimit: { lim
     if (allArrived) {
       activeMembers.forEach((entry) => writeNotification(transaction, entry.userId, `convoy-completed-${convoyId}`, {
         type: "convoy-completed",
-        title: "Konvoy tamamlandi",
-        body: `${convoy.name} tamamlandi. Surucu oylamasi acildi.`,
+        title: "Konvoy tamamlandı",
+        body: `${convoy.name} tamamlandı. Sürücü oylaması açıldı.`,
         actor: { userId: convoy.hostUserId, fullName: convoy.createdByName, plate: convoy.createdByPlate },
         action: { type: "convoy", targetId: convoyId },
       }, timestamp));
@@ -1356,7 +1356,7 @@ exports.requestConvoyJoin = secureCall("requestConvoyJoin", { rateLimit: { limit
       ]);
       managementUserIds.forEach((managerUserId) => writeNotification(transaction, managerUserId, `convoy-join-${convoyId}-${requesterUserId}`, {
         type: "convoy-join",
-        title: "Yeni konvoy katilim istegi",
+        title: "Yeni konvoy katılım isteği",
         body: `${requester.fullName ?? requester.plate} ${convoy.name} konvoyuna katilmak istiyor.`,
         actor: requester,
         action: { type: "convoy", targetId: convoyId },
@@ -1418,10 +1418,10 @@ exports.respondConvoyJoinRequest = secureCall("respondConvoyJoinRequest", async 
     });
     writeNotification(transaction, memberUserId, `convoy-response-${convoyId}-${memberUserId}`, {
       type: "convoy-response",
-      title: decision === "approved" ? "Konvoy istegin kabul edildi" : "Konvoy istegin reddedildi",
+      title: decision === "approved" ? "Konvoy isteğin kabul edildi" : "Konvoy isteğin reddedildi",
       body: decision === "approved"
-        ? `${convoy.name} konvoyuna katilimin onaylandi.`
-        : `${convoy.name} konvoyuna katilim istegin reddedildi.`,
+        ? `${convoy.name} konvoyuna katilimin onaylandı.`
+        : `${convoy.name} konvoyuna katılım isteğin reddedildi.`,
       actor,
       action: { type: "convoy", targetId: convoyId },
     }, timestamp);
@@ -1464,7 +1464,7 @@ exports.removeConvoyMember = secureCall("removeConvoyMember", { rateLimit: { lim
     writeNotification(transaction, memberUserId, `convoy-removed-${convoyId}-${memberUserId}`, {
       type: "convoy-removed",
       title: "Konvoy katilimi sonlandirildi",
-      body: `${convoy.name} hostu seni katilim listesinden cikardi.`,
+      body: `${convoy.name} hostu seni katılım listesinden çıkardı.`,
       actor,
       action: { type: "convoy", targetId: convoyId },
     }, timestamp);
@@ -1579,8 +1579,8 @@ exports.setConvoyMemberRole = secureCall("setConvoyMemberRole", { rateLimit: { l
     transaction.update(memberRef, { managementRole, roleUpdatedAt: timestamp, roleUpdatedByUserId: actorUserId, updatedAt: timestamp });
     writeNotification(transaction, memberUserId, `convoy-role-${convoyId}-${memberUserId}`, {
       type: "convoy-role",
-      title: "Konvoy rolun guncellendi",
-      body: `${convoy.name} konvoyundaki yeni rolun: ${getCommunityRoleLabel(managementRole === "member" ? "participant" : managementRole)}.`,
+      title: "Konvoy rolün güncellendi",
+      body: `${convoy.name} konvoyundaki yeni rolün: ${getCommunityRoleLabel(managementRole === "member" ? "participant" : managementRole)}.`,
       actor,
       action: { type: "convoy", targetId: convoyId },
     }, timestamp);
@@ -1940,8 +1940,8 @@ exports.updateClanMemberRole = secureCall("updateClanMemberRole", async (request
     });
     writeNotification(transaction, targetUserId, `clan-role-${clanId}-${targetUserId}`, {
       type: "clan-role",
-      title: "Klan rolun guncellendi",
-      body: `${clan.name} klanindaki yeni rolun: ${getCommunityRoleLabel(nextRole)}.`,
+      title: "Klan rolün güncellendi",
+      body: `${clan.name} klanindaki yeni rolün: ${getCommunityRoleLabel(nextRole)}.`,
       actor,
       action: { type: "clan", targetId: clanId },
     }, timestamp);
@@ -2493,8 +2493,8 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
       if (Number(part.healthPercent ?? 100) >= 20 && health.healthPercent < 20) {
         writeNotification(transaction, userId, `maintenance-critical-${partDocument.id}-${health.healthPeriodKey}`, {
           type: "maintenance-critical",
-          title: "Kritik bakim uyarisi",
-          body: `${part.name ?? part.key} omru %${health.healthPercent} seviyesine dustu.`,
+          title: "Kritik bakım uyarısı",
+          body: `${part.name ?? part.key} ömrü %${health.healthPercent} seviyesine düştü.`,
           actor: { userId, fullName: "CRUISER Garage", plate: profile.plate },
           action: { type: "garage", targetId: partDocument.id },
         }, timestamp);
@@ -2876,11 +2876,11 @@ exports.resolveModerationReport = secureCall("resolveModerationReport", { rateLi
     if (recipientUserId) {
       writeNotification(transaction, recipientUserId, `moderation-${reportId}-${decision}`, {
         type: "moderation",
-        title: decision === "dismiss" ? "Rapor incelendi" : decision === "warn" ? "Topluluk kurallari uyarisi" : "Hesap kisitlamasi",
+        title: decision === "dismiss" ? "Rapor incelendi" : decision === "warn" ? "Topluluk kurallari uyarısı" : "Hesap kisitlamasi",
         body: decision === "dismiss"
-          ? "Gonderdigin rapor incelendi ve islem gerektirmedigi belirlendi."
+          ? "Gonderdigin rapor incelendi ve işlem gerektirmedigi belirlendi."
           : decision === "warn"
-            ? "Topluluk kurallarina uygun davranman icin hesabina uyari verildi."
+            ? "Topluluk kurallarina uygun davranman için hesabına uyari verildi."
             : "Hesabin topluluk guvenligi nedeniyle gecici olarak kisitlandi.",
         actor: { userId: moderatorUserId, fullName: "CRUISER Safety" },
         action: { type: "profile", targetId: recipientUserId },
@@ -2932,13 +2932,13 @@ exports.createForumThread = secureCall("createForumThread", { rateLimit: { limit
 exports.toggleForumLike = secureCall("toggleForumLike", { rateLimit: { limit: 90, windowSeconds: 3600 } }, async (request) => {
   const userId = requireAuth(request);
   const threadId = sanitizeOperationalText(request.data?.threadId, 180);
-  if (!threadId || threadId.includes("/")) throw new HttpsError("invalid-argument", "Gecerli bir forum konusu gerekli.");
+  if (!threadId || threadId.includes("/")) throw new HttpsError("invalid-argument", "Geçerli bir forum konusu gerekli.");
   const threadRef = publicDocument("forumThreads", threadId);
   const likeRef = publicDocument("forumLikes", `${threadId}_${userId}`);
   let liked = false;
   await db.runTransaction(async (transaction) => {
     const [threadSnapshot, likeSnapshot] = await Promise.all([transaction.get(threadRef), transaction.get(likeRef)]);
-    if (!threadSnapshot.exists || threadSnapshot.data().status !== "active") throw new HttpsError("not-found", "Forum konusu bulunamadi.");
+    if (!threadSnapshot.exists || threadSnapshot.data().status !== "active") throw new HttpsError("not-found", "Forum konusu bulunamadı.");
     const currentCount = Number(threadSnapshot.data().likeCount ?? 0);
     if (likeSnapshot.exists) {
       transaction.delete(likeRef);
@@ -2955,13 +2955,13 @@ exports.toggleForumLike = secureCall("toggleForumLike", { rateLimit: { limit: 90
 exports.addForumReply = secureCall("addForumReply", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
   const userId = requireAuth(request);
   const threadId = sanitizeOperationalText(request.data?.threadId, 180);
-  if (!threadId || threadId.includes("/")) throw new HttpsError("invalid-argument", "Gecerli bir forum konusu gerekli.");
+  if (!threadId || threadId.includes("/")) throw new HttpsError("invalid-argument", "Geçerli bir forum konusu gerekli.");
   const profile = await getUserProfile(userId);
   const threadRef = publicDocument("forumThreads", threadId);
   const replyRef = publicCollection("forumReplies").doc();
   await db.runTransaction(async (transaction) => {
     const threadSnapshot = await transaction.get(threadRef);
-    if (!threadSnapshot.exists || threadSnapshot.data().status !== "active") throw new HttpsError("not-found", "Forum konusu bulunamadi.");
+    if (!threadSnapshot.exists || threadSnapshot.data().status !== "active") throw new HttpsError("not-found", "Forum konusu bulunamadı.");
     let reply;
     try {
       reply = buildForumReplyDocument({

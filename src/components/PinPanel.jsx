@@ -16,7 +16,7 @@ function PinPanelLoader() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">Node Loading</p>
-          <p className="mt-2 text-sm text-neutral-300">Pin detaylari hazirlaniyor...</p>
+          <p className="mt-2 text-sm text-neutral-300">Pin detayları hazirlaniyor...</p>
         </div>
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-lime-400/20 bg-lime-400/10">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-lime-300/40 border-t-lime-300" />

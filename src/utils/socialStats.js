@@ -1,14 +1,14 @@
 const ACHIEVEMENT_CATALOG = [
   {
     key: "night-warrior",
-    title: "Gece Savascisi",
-    description: "Aylik 500 KM gece surus ritmini yakala.",
+    title: "Gece Savaşçısı",
+    description: "Aylık 500 KM gece sürüş ritmini yakala.",
     progress: (user) => ({ current: Number(user.monthlyNightKm ?? 0), target: 500, unit: "KM" }),
   },
   {
     key: "asphalt-weeper",
-    title: "Asfalt Aglatan",
-    description: "Toplam odometrede 70.000 KM seviyesine ulas.",
+    title: "Asfalt Ağlatan",
+    description: "Toplam odometrede 70.000 KM seviyesine ulaş.",
     progress: (user) => ({ current: Number(user.odometer ?? 0), target: 70000, unit: "KM" }),
   },
   {
@@ -20,13 +20,13 @@ const ACHIEVEMENT_CATALOG = [
   {
     key: "garage-keeper",
     title: "Garaj Arsivi",
-    description: "En az 5 servis kaydiyla duzenli bakim pasaportu olustur.",
+    description: "En az 5 servis kaydiyla duzenli bakım pasaportu oluştur.",
     progress: (user) => ({ current: Number(user.serviceLogs?.length ?? 0), target: 5, unit: "log" }),
   },
   {
     key: "apex-score",
     title: "Crew Apex",
-    description: "Surucu skorunu 95 seviyesine cikar.",
+    description: "Sürücü skorunu 95 seviyesine çıkar.",
     progress: (user) => ({ current: Number(user.driverScore ?? 0), target: 95, unit: "score" }),
   },
 ];
@@ -78,15 +78,15 @@ export function buildPersonalStats(user) {
     : 100;
 
   return [
-    { key: "monthly-km", label: "Bireysel Aylik KM", value: `${Math.round(Number(user.monthlyKm ?? 0)).toLocaleString("tr-TR")} KM` },
-    { key: "night-km", label: "Aylik Gece KM", value: `${Math.round(Number(user.monthlyNightKm ?? 0)).toLocaleString("tr-TR")} KM` },
-    { key: "verified-km", label: "Onayli Toplam", value: `${Math.round(Number(user.lifetimeVerifiedKm ?? 0)).toLocaleString("tr-TR")} KM` },
-    { key: "drive-time", label: "Aylik Surus", value: formatDriveTime(user.monthlyDriveSeconds) },
-    { key: "max-speed", label: "Aylik Max Hiz", value: `${Math.round(Number(user.monthlyMaxSpeedKmh ?? 0))} KM/H` },
-    { key: "average-speed", label: "Ortalama Hiz", value: `${Math.round(Number(user.monthlyAverageSpeedKmh ?? 0))} KM/H` },
-    { key: "driver-score", label: "Surucu Skoru", value: `${Number(user.driverScore ?? 0)}/100` },
-    { key: "service-logs", label: "Servis Kaydi", value: `${serviceLogs.length}` },
-    { key: "fuel-logs", label: "Yakit Fisi", value: `${fuelLogs.length}` },
+    { key: "monthly-km", label: "Bireysel Aylık KM", value: `${Math.round(Number(user.monthlyKm ?? 0)).toLocaleString("tr-TR")} KM` },
+    { key: "night-km", label: "Aylık Gece KM", value: `${Math.round(Number(user.monthlyNightKm ?? 0)).toLocaleString("tr-TR")} KM` },
+    { key: "verified-km", label: "Onaylı Toplam", value: `${Math.round(Number(user.lifetimeVerifiedKm ?? 0)).toLocaleString("tr-TR")} KM` },
+    { key: "drive-time", label: "Aylık Sürüş", value: formatDriveTime(user.monthlyDriveSeconds) },
+    { key: "max-speed", label: "Aylık Max Hız", value: `${Math.round(Number(user.monthlyMaxSpeedKmh ?? 0))} KM/H` },
+    { key: "average-speed", label: "Ortalama Hız", value: `${Math.round(Number(user.monthlyAverageSpeedKmh ?? 0))} KM/H` },
+    { key: "driver-score", label: "Sürücü Skoru", value: `${Number(user.driverScore ?? 0)}/100` },
+    { key: "service-logs", label: "Servis Kaydı", value: `${serviceLogs.length}` },
+    { key: "fuel-logs", label: "Yakıt Fisi", value: `${fuelLogs.length}` },
     { key: "harmony", label: "Uyum Orani", value: `%${positiveRatio}` },
     { key: "garage", label: "Aktif Garaj", value: user.garage ?? "--" },
   ];

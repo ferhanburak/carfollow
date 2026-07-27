@@ -33,10 +33,10 @@ function formatPresenceLabel(presence) {
 
   const diffMinutes = Math.max(1, Math.round((Date.now() - lastSeen) / 60000));
   if (diffMinutes < 60) {
-    return `${diffMinutes} dk once`;
+    return `${diffMinutes} dk önce`;
   }
 
-  return `${Math.round(diffMinutes / 60)} sa once`;
+  return `${Math.round(diffMinutes / 60)} sa önce`;
 }
 
 function buildStats(profile, fallbackUser) {
@@ -46,10 +46,10 @@ function buildStats(profile, fallbackUser) {
   const harmonyRatio = totalVotes ? clampPercent((harmonyVotes / totalVotes) * 100) : 100;
 
   return [
-    { key: "score", label: "Surucu Skoru", value: `${Number(profile?.driverScore ?? profile?.score ?? 0)}/100` },
-    { key: "km", label: "Aylik KM", value: `${formatNumber(Number(profile?.monthlyKm ?? 0))} KM` },
+    { key: "score", label: "Sürücü Skoru", value: `${Number(profile?.driverScore ?? profile?.score ?? 0)}/100` },
+    { key: "km", label: "Aylık KM", value: `${formatNumber(Number(profile?.monthlyKm ?? 0))} KM` },
     { key: "harmony", label: "Uyum Orani", value: `%${harmonyRatio}` },
-    { key: "region", label: "Bolge", value: profile?.region ?? fallbackUser?.region ?? "--" },
+    { key: "region", label: "Bölge", value: profile?.region ?? fallbackUser?.region ?? "--" },
   ];
 }
 
@@ -62,7 +62,7 @@ function resolveReputation(profile) {
     return {
       label: "Convoy Elite",
       tone: "border-lime-400/20 bg-lime-400/10 text-lime-200",
-      description: "Yuksek skor ve temiz uyum kaydi.",
+      description: "Yüksek skor ve temiz uyum kaydı.",
     };
   }
 
@@ -70,14 +70,14 @@ function resolveReputation(profile) {
     return {
       label: "Road Friendly",
       tone: "border-white/10 bg-white/[0.04] text-neutral-200",
-      description: "Konvoy icin guvenli ve uyumlu gorunuyor.",
+      description: "Konvoy için güvenli ve uyumlu görünüyor.",
     };
   }
 
   return {
     label: "Watchlist",
     tone: "border-rose-400/20 bg-rose-500/10 text-rose-200",
-    description: "Davet oncesi davranis gecmisi tekrar kontrol edilmeli.",
+    description: "Davet oncesi davranış geçmişi tekrar kontrol edilmeli.",
   };
 }
 
@@ -270,16 +270,16 @@ export function PublicDriverProfileOverlay({
               className="min-h-12 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
             >
               {profileStatus === "friend"
-                ? "Zaten Arkadas"
+                ? "Zaten Arkadaş"
                 : profileStatus === "incoming"
-                  ? "Istek Bekliyor"
+                  ? "İstek Bekliyor"
                   : profileStatus === "outgoing"
-                    ? "Istek Gonderildi"
+                    ? "İstek Gönderildi"
                     : profileStatus === "blocked"
-                      ? "Surucu Engelli"
+                      ? "Sürücü Engelli"
                     : profileStatus === "self"
                       ? "Bu Sensin"
-                      : "Arkadas Ekle"}
+                      : "Arkadaş Ekle"}
             </button>
             <button
               type="button"
@@ -287,7 +287,7 @@ export function PublicDriverProfileOverlay({
               onClick={() => onOpenConversation(profile)}
               className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Mesaj Gonder
+              Mesaj Gönder
             </button>
             <button
               type="button"
@@ -295,7 +295,7 @@ export function PublicDriverProfileOverlay({
               onClick={() => onInviteFriendToClan(profile)}
               className="min-h-12 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 text-xs font-semibold text-lime-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {clanInviteSent ? "Davet Gonderildi" : "Klana Davet"}
+              {clanInviteSent ? "Davet Gönderildi" : "Klana Davet"}
             </button>
             <button
               type="button"
@@ -306,7 +306,7 @@ export function PublicDriverProfileOverlay({
               {availableConvoys.length
                 ? "Konvoya Davet"
                 : invitedConvoyIds.size
-                  ? "Davet Gonderildi"
+                  ? "Davet Gönderildi"
                   : "Davet Edilebilir Konvoy Yok"}
             </button>
             {profileStatus === "friend" ? (
@@ -316,7 +316,7 @@ export function PublicDriverProfileOverlay({
                 onClick={() => onRemoveFriendship?.(profile.plate)}
                 className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-neutral-300 disabled:cursor-wait disabled:opacity-50"
               >
-                Arkadasliktan Cikar
+                Arkadaşlıktan Çıkar
               </button>
             ) : null}
             {profileStatus === "blocked" ? (
@@ -326,7 +326,7 @@ export function PublicDriverProfileOverlay({
                 onClick={() => onUnblockDriver?.(profile)}
                 className="min-h-12 rounded-2xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-neutral-200 disabled:cursor-wait disabled:opacity-50"
               >
-                Engeli Kaldir
+                Engeli Kaldır
               </button>
             ) : profileStatus !== "self" ? (
               <button
@@ -335,7 +335,7 @@ export function PublicDriverProfileOverlay({
                 onClick={() => onBlockDriver?.(profile)}
                 className="min-h-12 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 text-xs font-semibold text-rose-200 disabled:cursor-wait disabled:opacity-50"
               >
-                Surucuyu Engelle
+                Sürücüyü Engelle
               </button>
             ) : null}
           </div>
@@ -344,8 +344,8 @@ export function PublicDriverProfileOverlay({
             <div className="rounded-2xl border border-rose-400/20 bg-rose-500/[0.06] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-white">Konvoy Sec</p>
-                  <p className="mt-1 text-xs text-neutral-500">Bu surucuyu davet etmek istedigin planli konvoyu sec.</p>
+                  <p className="text-sm font-semibold text-white">Konvoy Seç</p>
+                  <p className="mt-1 text-xs text-neutral-500">Bu sürücüyü davet etmek istediğin planlı konvoyu seç.</p>
                 </div>
                 <span className="rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-neutral-400">
                   {eligibleConvoys.length} konvoy
@@ -368,9 +368,9 @@ export function PublicDriverProfileOverlay({
                       </span>
                       <span className="shrink-0 text-xs font-bold text-rose-200">
                         {convoyInvitePendingId === convoy.id
-                          ? "Gonderiliyor..."
+                          ? "Gönderiliyor..."
                           : inviteSent
-                            ? "Davet Gonderildi"
+                            ? "Davet Gönderildi"
                             : `${convoy.attendees?.length ?? 0}/${convoy.capacity ?? "--"}`}
                       </span>
                     </button>
@@ -387,7 +387,7 @@ export function PublicDriverProfileOverlay({
                 onClick={() => setReportOpen((current) => !current)}
                 className="min-h-12 w-full rounded-xl border border-rose-400/20 px-4 text-xs font-semibold text-rose-200"
               >
-                {reportOpen ? "Rapor Formunu Kapat" : "Surucuyu Raporla"}
+                {reportOpen ? "Rapor Formunu Kapat" : "Sürücüyü Raporla"}
               </button>
               {reportOpen ? (
                 <form
@@ -406,19 +406,19 @@ export function PublicDriverProfileOverlay({
                     onChange={(event) => setReportReason(event.target.value)}
                     className="min-h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-neutral-200"
                   >
-                    <option value="dangerous-driving">Tehlikeli surus</option>
+                    <option value="dangerous-driving">Tehlikeli sürüş</option>
                     <option value="harassment">Taciz veya rahatsizlik</option>
                     <option value="spam">Spam</option>
                     <option value="false-information">Yanlis bilgi</option>
-                    <option value="inappropriate-content">Uygunsuz icerik</option>
-                    <option value="other">Diger</option>
+                    <option value="inappropriate-content">Uygunsuz içerik</option>
+                    <option value="other">Diğer</option>
                   </select>
                   <textarea
                     value={reportDetails}
                     onChange={(event) => setReportDetails(event.target.value)}
                     maxLength={500}
                     rows={3}
-                    placeholder="Incelemeye yardimci olacak kisa bir aciklama..."
+                    placeholder="Incelemeye yardımcı olacak kısa bir açıklama..."
                     className="w-full rounded-xl border border-white/10 bg-[#171717] px-3 py-3 text-sm text-neutral-200 outline-none focus:border-rose-400/40"
                   />
                   <button
@@ -426,7 +426,7 @@ export function PublicDriverProfileOverlay({
                     disabled={moderationPending || !onReportDriver}
                     className="min-h-12 w-full rounded-xl bg-rose-500 px-4 text-xs font-black text-white disabled:opacity-50"
                   >
-                    {moderationPending ? "Rapor gonderiliyor..." : "Guvenlik Ekibine Gonder"}
+                    {moderationPending ? "Rapor gönderiliyor..." : "Güvenlik Ekibine Gönder"}
                   </button>
                 </form>
               ) : null}
@@ -437,7 +437,7 @@ export function PublicDriverProfileOverlay({
           <div className="rounded-2xl border border-white/8 bg-black/20 p-4 text-xs text-neutral-400">
             <p>Kaynak: {profile.source ?? "shared-overlay"}</p>
             <p className="mt-1">Durum: {profileStatus}</p>
-            {profile.speed ? <p className="mt-1">Anlik hiz: {profile.speed} KM/H</p> : null}
+            {profile.speed ? <p className="mt-1">Anlık hız: {profile.speed} KM/H</p> : null}
           </div>
         </div>
       </div>

@@ -155,9 +155,9 @@ describe("GoogleMapCard convoy overlays", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Konumuma Git" }));
-    expect(screen.getByRole("button", { name: "Takibi Birak" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Takibi Bırak" })).toHaveAttribute("aria-pressed", "true");
 
-    fireEvent.click(screen.getByRole("button", { name: "Takibi Birak" }));
+    fireEvent.click(screen.getByRole("button", { name: "Takibi Bırak" }));
     expect(screen.getByRole("button", { name: "Konumuma Git" })).toHaveAttribute("aria-pressed", "false");
   });
 
@@ -250,6 +250,6 @@ describe("GoogleMapCard convoy overlays", () => {
     expect(JSON.parse(markerByTitle("Other Car").dataset.icon).fillColor).toBe("#f43f5e");
     expect(markerByTitle("Self Car")).toBeUndefined();
     expect(markerByTitle("Blocked Car")).toBeUndefined();
-    expect(screen.getByLabelText("Surucu renkleri")).toBeInTheDocument();
+    expect(screen.getByLabelText("Sürücü renkleri")).toBeInTheDocument();
   });
 });

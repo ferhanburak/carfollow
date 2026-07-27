@@ -5,7 +5,7 @@ import { BottomNavigation } from "./BottomNavigation";
 const items = [
   { key: "map", label: "Harita" },
   { key: "liveMap", label: "Live Map" },
-  { key: "drive", label: "Surus" },
+  { key: "drive", label: "Sürüş" },
   { key: "social", label: "Social" },
   { key: "forum", label: "Forum" },
   { key: "leaderboard", label: "Leaders" },

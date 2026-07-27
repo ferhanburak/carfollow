@@ -9,7 +9,7 @@ import { formatNumber } from "../utils/garage";
 import { formatServiceDate, getPartHealthSnapshot } from "../utils/vehiclePassport";
 
 function getFeedbackTone(message) {
-  return /(tamamlanamadi|olusturulamadi|basarisiz|tekrar dene)/i.test(message ?? "")
+  return /(tamamlanamadi|oluşturulamadı|başarısız|tekrar dene)/i.test(message ?? "")
     ? "border-amber-400/20 bg-amber-400/10 text-amber-100"
     : "border-lime-400/20 bg-lime-400/10 text-lime-100";
 }
@@ -88,7 +88,7 @@ export function GarageScreen({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold">Vehicle Passport</p>
-            <p className="text-xs text-neutral-500">Servis gecmisi, saglik skoru ve arac gecmisi icin dogrulanabilir kayitlar.</p>
+            <p className="text-xs text-neutral-500">Servis geçmişi, sağlık skoru ve araç geçmişi için dogrulanabilir kayıtlar.</p>
           </div>
           <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.24em] text-lime-300">
             Passport Live
@@ -99,9 +99,9 @@ export function GarageScreen({
         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-neutral-500">Arac Gecmisi Raporu</p>
+              <p className="text-xs uppercase tracking-[0.22em] text-neutral-500">Araç Geçmişi Raporu</p>
               <p className="mt-2 text-sm text-neutral-300">
-                Servis, parca ve kilometre gecmisinin ozet raporunu olustur.
+                Servis, parça ve kilometre gecmisinin özet raporunu oluştur.
               </p>
             </div>
             <button
@@ -110,13 +110,13 @@ export function GarageScreen({
               onClick={onCreatePassportExport}
               className="min-h-12 shrink-0 rounded-2xl bg-lime-400 px-4 text-xs font-bold text-black shadow-[0_0_18px_rgba(163,230,53,0.28)] disabled:cursor-wait disabled:opacity-60"
             >
-              {passportExportPending ? "Hazirlaniyor..." : "Rapor Olustur"}
+              {passportExportPending ? "Hazirlaniyor..." : "Rapor Oluştur"}
             </button>
           </div>
 
           {passportExportFeedback ? (
             <div className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
-              passportExportFeedback.toLowerCase().includes("olusturuldu")
+              passportExportFeedback.toLowerCase().includes("oluşturuldu")
                 ? "border-lime-400/20 bg-lime-400/10 text-lime-100"
                 : "border-amber-400/20 bg-amber-400/10 text-amber-100"
             }`}>
@@ -129,7 +129,7 @@ export function GarageScreen({
               <div key={item.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-neutral-200">Arac gecmisi raporu</p>
+                    <p className="text-xs font-semibold text-neutral-200">Araç geçmişi raporu</p>
                     <p className="mt-1 text-xs text-neutral-500">
                       {formatServiceDate(item.generatedAt)} / {formatNumber(item.odometer)} KM
                     </p>
@@ -141,7 +141,7 @@ export function GarageScreen({
               </div>
             ))}
             {(passportExports ?? []).length === 0 ? (
-              <p className="text-xs text-neutral-500">Henuz olusturulmus rapor yok.</p>
+              <p className="text-xs text-neutral-500">Henüz olusturulmus rapor yok.</p>
             ) : null}
           </div>
         </div>
@@ -151,7 +151,7 @@ export function GarageScreen({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold">Upcoming Maintenance</p>
-            <p className="text-xs text-neutral-500">KM ve tarih bazli kalan omur birlikte izlenir.</p>
+            <p className="text-xs text-neutral-500">KM ve tarih bazli kalan ömür birlikte izlenir.</p>
           </div>
           <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">Priority Queue</span>
         </div>
@@ -176,7 +176,7 @@ export function GarageScreen({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold">Service Entry</p>
-            <p className="text-xs text-neutral-500">Parca degisimi, kontrol ve onarimlar burada kayda girilir.</p>
+            <p className="text-xs text-neutral-500">Parça degisimi, kontrol ve onarimlar burada kayda girilir.</p>
           </div>
           <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">Private Log</span>
         </div>
@@ -200,19 +200,19 @@ export function GarageScreen({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold">Service History</p>
-            <p className="text-xs text-neutral-500">Tarih, KM ve servis atolyeleriyle arac gecmisi saklanir.</p>
+            <p className="text-xs text-neutral-500">Tarih, KM ve servis atolyeleriyle araç geçmişi saklanir.</p>
           </div>
-          <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">{filteredServiceLogs.length} gorunuyor</span>
+          <span className="text-xs uppercase tracking-[0.24em] text-neutral-500">{filteredServiceLogs.length} görünüyor</span>
         </div>
 
         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-lg font-semibold text-neutral-100">
-                {historySelectedPart?.name ?? "Tum Parcalar"}
+                {historySelectedPart?.name ?? "Tüm Parçalar"}
               </p>
               <p className="mt-1 text-xs text-neutral-500">
-                Tum servis gecmisini gor veya asagidan belirli bir parcayi filtrele.
+                Tüm servis gecmisini gör veya aşağıdan belirli bir parçayı filtrele.
               </p>
             </div>
             {historySelectedPart ? (
@@ -221,13 +221,13 @@ export function GarageScreen({
                 onClick={() => onPrimeServiceLogForm(historySelectedPart.key, "replacement")}
                 className="min-h-12 shrink-0 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 text-xs font-semibold text-lime-200"
               >
-                Bugun Degisti
+                Bugun Değişti
               </button>
             ) : null}
           </div>
 
           <label className="mt-4 block text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-500" htmlFor="service-history-part">
-            Gecmis Parcasi
+            Geçmiş Parçası
           </label>
           <select
             id="service-history-part"
@@ -235,16 +235,16 @@ export function GarageScreen({
             onChange={(event) => setHistoryPartFilter(event.target.value)}
             className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 text-sm text-neutral-100 outline-none focus:border-lime-400"
           >
-            <option value="all">Tum Parcalar</option>
+            <option value="all">Tüm Parçalar</option>
             {safeParts.map((part) => (
               <option key={part.key} value={part.key}>{part.name}</option>
             ))}
           </select>
 
           <div className="mt-4 grid grid-cols-3 gap-3">
-            <InsightCard label="Kayit" value={`${partScopedServiceLogs.length}`} />
+            <InsightCard label="Kayıt" value={`${partScopedServiceLogs.length}`} />
             <InsightCard label="Toplam Masraf" value={`${formatNumber(historySpend)} TL`} />
-            <InsightCard label="Son Islem" value={lastHistoryLog ? formatServiceDate(lastHistoryLog.serviceDate) : "--"} />
+            <InsightCard label="Son İşlem" value={lastHistoryLog ? formatServiceDate(lastHistoryLog.serviceDate) : "--"} />
           </div>
         </div>
 

@@ -38,7 +38,7 @@ export function AuthScreen({
             <p className="text-xs uppercase tracking-[0.4em] text-lime-400">CRUISER // ACCESS</p>
             <h1 className="mt-3 text-3xl font-black tracking-tight">Car Culture. Live Utility. Night Logic.</h1>
             <p className="mt-3 max-w-sm text-sm text-neutral-400">
-              Premium surus agina baglan, haritada spot kesfet, servis omrunu canli takip et.
+              Premium sürüş agina bağlan, haritada spot kesfet, servis omrunu canlı takip et.
             </p>
           </div>
         </div>
@@ -64,9 +64,9 @@ export function AuthScreen({
         <div className="flex-1 space-y-5 px-5 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           {isFirebaseAuth ? (
             <div className="rounded-2xl border border-lime-400/20 bg-lime-400/8 px-4 py-3 text-sm text-neutral-300">
-              <p className="font-semibold text-lime-200">Guvenli Hesap</p>
+              <p className="font-semibold text-lime-200">Güvenli Hesap</p>
               <p className="mt-1 text-xs text-neutral-500">
-                E-posta hesap anahtarin, plaka ise CRUISER icindeki aranabilir surucu kimligindir.
+                E-posta hesap anahtarin, plaka ise CRUISER icindeki aranabilir sürücü kimligindir.
               </p>
             </div>
           ) : null}
@@ -120,7 +120,7 @@ export function AuthScreen({
               </button>
               {authMode === "error" ? (
                 <div className="rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
-                  {authError || "Kimlik dogrulama islemi tamamlanamadi."}
+                  {authError || "Kimlik doğrulama işlemi tamamlanamadi."}
                 </div>
               ) : null}
               {authFeedback ? (
@@ -150,7 +150,7 @@ export function AuthScreen({
                   </Field>
                 ) : null}
 
-                <Field label="Gorunen Ad" required>
+                <Field label="Görünen Ad" required>
                   <input
                     value={signUpForm.fullName}
                     onChange={(event) =>
@@ -186,7 +186,7 @@ export function AuthScreen({
                   <FieldError>{signUpErrors.password}</FieldError>
                 </Field>
 
-                <Field label="Arac Turu" required>
+                <Field label="Araç Turu" required>
                   <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-black/20 p-2">
                     {[
                       ["car", "Otomobil"],
@@ -195,7 +195,7 @@ export function AuthScreen({
                       <button
                         key={value}
                         type="button"
-                        aria-label={`${label} sec`}
+                        aria-label={`${label} seç`}
                         onClick={() => onSignUpFormChange((current) => ({ ...current, vehicleType: value }))}
                         className={`min-h-12 rounded-xl text-sm font-semibold transition ${
                           signUpForm.vehicleType === value
@@ -264,9 +264,9 @@ export function AuthScreen({
                   <FieldError>{signUpErrors.odometer}</FieldError>
                 </Field>
 
-                <Field label="Profil Fotografi">
+                <Field label="Profil Fotoğrafı">
                   <input
-                    aria-label="Profil Fotografi"
+                    aria-label="Profil Fotoğrafı"
                     type="file"
                     accept="image/*"
                     onChange={(event) => onSignUpAvatarChange?.(event.target.files?.[0] ?? null)}
@@ -275,7 +275,7 @@ export function AuthScreen({
                   <FieldError>{signUpErrors.avatar}</FieldError>
                   {signUpForm.avatarPreview ? (
                     <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
-                      <img src={signUpForm.avatarPreview} alt="Profil fotografi onizleme" className="h-16 w-16 rounded-2xl object-cover" />
+                      <img src={signUpForm.avatarPreview} alt="Profil fotoğrafı önizleme" className="h-16 w-16 rounded-2xl object-cover" />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-neutral-200">{signUpForm.avatarFileName}</p>
                         <p className="mt-1 text-xs text-neutral-500">En fazla 5 MB</p>
@@ -298,17 +298,17 @@ export function AuthScreen({
                 <details className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs text-neutral-400">
                   <summary className="cursor-pointer font-semibold text-neutral-200">KVKK Aydinlatma Metni</summary>
                   <div className="mt-3 space-y-2 leading-5">
-                    <p>Hesap, arac, plaka, profil ve servis verileri CRUISER hesabini olusturmak, topluluk ozelliklerini sunmak ve guvenligi saglamak icin islenir.</p>
-                    <p>Arkadaslik ozelligi icin hesabini bilen giris yapmis kullanicilar tam plakanla seni bulabilir. Toplu plaka listesi sunulmaz ve arama istekleri sinirlandirilir.</p>
-                    <p>Konum hassasiyeti, Live Map plaka gorunurlugu ve diger sosyal profil alanlarini daha sonra Profil &gt; Gizlilik alanindan degistirebilirsin.</p>
+                    <p>Hesap, araç, plaka, profil ve servis verileri CRUISER hesabını olusturmak, topluluk ozelliklerini sunmak ve guvenligi saglamak için islenir.</p>
+                    <p>Arkadaşlık özelliği için hesabını bilen giriş yapmış kullanıcılar tam plakanla seni bulabilir. Toplu plaka listesi sunulmaz ve arama istekleri sınırlandırılır.</p>
+                    <p>Konum hassasiyeti, Live Map plaka gorunurlugu ve diğer sosyal profil alanlarını daha sonra Profil &gt; Gizlilik alanından değiştirebilirsin.</p>
                   </div>
                 </details>
 
                 <details className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-xs text-neutral-400">
-                  <summary className="cursor-pointer font-semibold text-neutral-200">Kullanim Kosullari</summary>
+                  <summary className="cursor-pointer font-semibold text-neutral-200">Kullanım Koşulları</summary>
                   <div className="mt-3 space-y-2 leading-5">
-                    <p>CRUISER topluluk, surus ve arac kaydi ozellikleri guvenli ve hukuka uygun bicimde kullanilmalidir.</p>
-                    <p>Yaniltici arac bilgisi, taciz, tehlikeli surus organizasyonu ve diger kullanicilarin guvenligini riske atan davranislar hesap kisitlamasina neden olabilir.</p>
+                    <p>CRUISER topluluk, sürüş ve araç kaydı ozellikleri güvenli ve hukuka uygun bicimde kullanilmalidir.</p>
+                    <p>Yanıltıcı araç bilgisi, taciz, tehlikeli sürüş organizasyonu ve diğer kullanıcıların güvenliğini riske atan davranışlar hesap kısıtlamasına neden olabilir.</p>
                   </div>
                 </details>
 
@@ -319,7 +319,7 @@ export function AuthScreen({
                     onChange={(event) => onSignUpFormChange((current) => ({ ...current, termsAccepted: event.target.checked }))}
                     className="mt-0.5 h-5 w-5 shrink-0 accent-lime-400"
                   />
-                  <span><span className="mr-1 font-bold text-rose-400">*</span>Kullanim Kosullarini kabul ediyorum.</span>
+                  <span><span className="mr-1 font-bold text-rose-400">*</span>Kullanım Koşullarını kabul ediyorum.</span>
                 </label>
                 <FieldError>{signUpErrors.termsAccepted}</FieldError>
 
@@ -330,11 +330,11 @@ export function AuthScreen({
                     onChange={(event) => onSignUpFormChange((current) => ({ ...current, plateSearchEnabled: event.target.checked }))}
                     className="mt-0.5 h-5 w-5 shrink-0 accent-lime-400"
                   />
-                  <span>Tam plakam yazildiginda diger kullanicilarin beni bulabilmesini istiyorum. <span className="text-neutral-500">Istege bagli</span></span>
+                  <span>Tam plakam yazıldığında diğer kullanıcıların beni bulabilmesini istiyorum. <span className="text-neutral-500">Istege bağlı</span></span>
                 </label>
 
                 <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-xs leading-5 text-neutral-400">
-                  KVKK Aydinlatma Metni kayit sirasinda sunulur ve metin surumu sistemde kaydedilir. Istege bagli plaka aramasi daha sonra Gizlilik ayarlarindan degistirilebilir.
+                  KVKK Aydinlatma Metni kayıt sirasinda sunulur ve metin surumu sistemde kaydedilir. Istege bağlı plaka aramasi daha sonra Gizlilik ayarlarindan degistirilebilir.
                 </div>
               </div>
 
@@ -343,7 +343,7 @@ export function AuthScreen({
                 disabled={isBusy}
                 className="min-h-12 w-full rounded-2xl bg-lime-400 font-bold text-black shadow-[0_0_24px_rgba(163,230,53,0.4)] transition hover:scale-[1.01] disabled:cursor-wait disabled:opacity-60"
               >
-                {isBusy ? "Hesap Olusturuluyor..." : "Build My Garage"}
+                {isBusy ? "Hesap Oluşturuluyor..." : "Build My Garage"}
               </button>
               {authMode === "error" && authError ? (
                 <div className="rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">

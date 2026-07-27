@@ -36,7 +36,7 @@ export function useLiveLocation({ enabled = false } = {}) {
     }
 
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setState({ ...initialLocationState, status: "unavailable", error: "Bu cihaz GPS erisimi sunmuyor." });
+      setState({ ...initialLocationState, status: "unavailable", error: "Bu cihaz GPS erişimi sunmuyor." });
       return undefined;
     }
 
@@ -55,7 +55,7 @@ export function useLiveLocation({ enabled = false } = {}) {
 
         startTransition(() => {
           setState({
-            error: reading.gpsStatus === "weak" ? "GPS hassasiyeti zayif; son guvenilir konum korunuyor." : "",
+            error: reading.gpsStatus === "weak" ? "GPS hassasiyeti zayıf; son güvenilir konum korunuyor." : "",
             location: filteredLocationRef.current,
             sample: { id: sequenceRef.current, position: samplePosition },
             status: reading.gpsStatus,

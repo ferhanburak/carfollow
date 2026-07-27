@@ -15,7 +15,7 @@ test("notification documents expose a bounded action projection", () => {
     id: "friend-request-1",
     userId: "target-user",
     type: "friend-request",
-    title: "Yeni arkadaslik istegi",
+    title: "Yeni arkadaşlık isteği",
     body: "  Poyraz   seni eklemek istiyor. ",
     actor: { id: "actor-user", fullName: "Poyraz", plate: "06 PWA 101" },
     action: { type: "social", targetId: "actor-user" },
@@ -40,8 +40,8 @@ test("user inbox accepts the approved social and convoy activity matrix", () => 
 
 test("community role labels are explicit for role-change notifications", () => {
   assert.equal(getCommunityRoleLabel("captain"), "Kaptan");
-  assert.equal(getCommunityRoleLabel("manager"), "Konvoy yoneticisi");
-  assert.equal(getCommunityRoleLabel("participant"), "Katilimci");
+  assert.equal(getCommunityRoleLabel("manager"), "Konvoy yöneticisi");
+  assert.equal(getCommunityRoleLabel("participant"), "Katılımcı");
 });
 
 test("moderation reports reject unknown reasons and sanitize details", () => {
@@ -52,11 +52,11 @@ test("moderation reports reject unknown reasons and sanitize details", () => {
     targetType: "driver",
     targetId: "target-user",
     reason: "dangerous-driving",
-    details: "  Konvoyda   tehlikeli surus. ",
+    details: "  Konvoyda   tehlikeli sürüş. ",
     timestamp,
   });
 
-  assert.equal(report.details, "Konvoyda tehlikeli surus.");
+  assert.equal(report.details, "Konvoyda tehlikeli sürüş.");
   assert.equal(report.status, "open");
   assert.throws(() => buildModerationReportDocument({
     reportId: "bad",

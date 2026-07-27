@@ -4,10 +4,10 @@ import { normalizePrivacySettings } from "../utils/privacy";
 
 const sections = [
   { key: "privacy", code: "01", title: "Gizlilik ve Konum", description: "Live Map gorunurlugu, konum hassasiyeti ve Safe Zone." },
-  { key: "blocked", code: "02", title: "Engellenen Kullanicilar", description: "Engelledigin suruculeri gor ve engelleri yonet." },
-  { key: "vehicle", code: "03", title: "Arac ve Profil", description: "Arac setup'i, bolge, garaj ve profil gorunumu." },
-  { key: "account", code: "04", title: "Hesap ve Veri Kontrolleri", description: "Dogrulama, veri aktarimi, KVKK ve hesap silme." },
-  { key: "security", code: "05", title: "Sifre ve Guvenlik", description: "Hesap e-postasi ve guvenli sifre degistirme akisi." },
+  { key: "blocked", code: "02", title: "Engellenen Kullanıcılar", description: "Engellediğin sürücüleri gör ve engelleri yönet." },
+  { key: "vehicle", code: "03", title: "Araç ve Profil", description: "Araç setup'i, bölge, garaj ve profil görünümü." },
+  { key: "account", code: "04", title: "Hesap ve Veri Kontrolleri", description: "Doğrulama, veri aktarimi, KVKK ve hesap silme." },
+  { key: "security", code: "05", title: "Şifre ve Güvenlik", description: "Hesap e-postasi ve güvenli şifre değiştirme akışı." },
 ];
 
 export function SettingsButton({ onClick, tone = "default" }) {
@@ -31,10 +31,10 @@ export function SettingsButton({ onClick, tone = "default" }) {
 
 function SettingsHome({ isFirebaseAuth, onRequestLogout, onSelect, user }) {
   const values = {
-    privacy: user.privacy?.safeZoneEnabled ? "Safe Zone acik" : "Standart",
-    blocked: `${user.blockedDrivers?.length ?? 0} surucu`,
+    privacy: user.privacy?.safeZoneEnabled ? "Safe Zone açık" : "Standart",
+    blocked: `${user.blockedDrivers?.length ?? 0} sürücü`,
     vehicle: user.model,
-    account: isFirebaseAuth ? (user.emailVerified ? "Dogrulandi" : "Dogrulama gerekli") : "Demo hesap",
+    account: isFirebaseAuth ? (user.emailVerified ? "Doğrulandı" : "Doğrulama gerekli") : "Demo hesap",
     security: isFirebaseAuth ? user.email : "Demo hesap",
   };
 
@@ -68,7 +68,7 @@ function SettingsHome({ isFirebaseAuth, onRequestLogout, onSelect, user }) {
         >
           Oturumu Kapat
         </button>
-        <p className="mt-2 text-center text-[11px] leading-4 text-neutral-600">Hesap verilerin silinmez; yalnizca bu cihazdaki oturum kapanir.</p>
+        <p className="mt-2 text-center text-[11px] leading-4 text-neutral-600">Hesap verilerin silinmez; yalnızca bu cihazdaki oturum kapanir.</p>
       </div>
     </div>
   );
@@ -89,7 +89,7 @@ function PrivacySettings({ onSavePrivacySettings, socialFeedback, user }) {
       setSafeZoneFeedback("Bu cihaz konum secimini desteklemiyor.");
       return;
     }
-    setSafeZoneFeedback("Guvenli merkez aliniyor...");
+    setSafeZoneFeedback("Güvenli merkez aliniyor...");
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setPrivacy((current) => normalizePrivacySettings({
@@ -101,9 +101,9 @@ function PrivacySettings({ onSavePrivacySettings, socialFeedback, user }) {
             radiusM: current.safeZone?.radiusM ?? 300,
           },
         }));
-        setSafeZoneFeedback("Guvenli merkez ozel profiline eklendi. Kaydetmeyi unutma.");
+        setSafeZoneFeedback("Güvenli merkez özel profiline eklendi. Kaydetmeyi unutma.");
       },
-      (error) => setSafeZoneFeedback(error.message || "Konum izni alinamadi."),
+      (error) => setSafeZoneFeedback(error.message || "Konum izni alınamadı."),
       { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 },
     );
   };
@@ -113,14 +113,14 @@ function PrivacySettings({ onSavePrivacySettings, socialFeedback, user }) {
       {socialFeedback ? <p className="rounded-2xl border border-lime-400/15 bg-lime-400/10 px-4 py-3 text-xs text-lime-100">{socialFeedback}</p> : null}
       <div className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-lime-400/15 bg-lime-400/[0.04] px-4 py-3 text-sm">
         <span>
-          <span className="block">Tam plakayla arkadas aramasi</span>
-          <span className="mt-1 block text-xs text-neutral-500">Giris yapmis kullanicilar icin aktif; toplu listeleme kapali.</span>
+          <span className="block">Tam plakayla arkadaş aramasi</span>
+          <span className="mt-1 block text-xs text-neutral-500">Giriş yapmış kullanıcılar için aktif; toplu listeleme kapalı.</span>
         </span>
         <span className="rounded-full bg-lime-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-lime-300">Aktif</span>
       </div>
-      <SettingToggle label="Aramada arac modelimi goster" checked={privacy.showModelInSearch} onChange={(checked) => setPrivacy((current) => ({ ...current, showModelInSearch: checked }))} />
-      <SettingToggle label="Bolgeyi arama sonucunda goster" checked={privacy.showRegionInSearch} onChange={(checked) => setPrivacy((current) => ({ ...current, showRegionInSearch: checked }))} />
-      <SettingToggle label="Live Map'te tam plakami goster" checked={privacy.showPlateOnLiveMap} onChange={(checked) => setPrivacy((current) => ({ ...current, showPlateOnLiveMap: checked }))} />
+      <SettingToggle label="Aramada araç modelimi göster" checked={privacy.showModelInSearch} onChange={(checked) => setPrivacy((current) => ({ ...current, showModelInSearch: checked }))} />
+      <SettingToggle label="Bolgeyi arama sonucunda göster" checked={privacy.showRegionInSearch} onChange={(checked) => setPrivacy((current) => ({ ...current, showRegionInSearch: checked }))} />
+      <SettingToggle label="Live Map'te tam plakami göster" checked={privacy.showPlateOnLiveMap} onChange={(checked) => setPrivacy((current) => ({ ...current, showPlateOnLiveMap: checked }))} />
       <label className="block rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-sm">
         <span className="block">Live Map konum hassasiyeti</span>
         <select value={privacy.locationPrecision} onChange={(event) => setPrivacy((current) => ({ ...current, locationPrecision: event.target.value }))} className="mt-3 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm outline-none focus:border-lime-400">
@@ -156,7 +156,7 @@ function PrivacySettings({ onSavePrivacySettings, socialFeedback, user }) {
             <option value="1000">1 km</option>
           </select>
         </div>
-        <p className="mt-2 text-[11px] text-neutral-500">{safeZoneFeedback || (privacy.safeZone ? "Guvenli merkez kayit icin hazir; koordinat ekranda gosterilmez." : "Henuz guvenli merkez secilmedi.")}</p>
+        <p className="mt-2 text-[11px] text-neutral-500">{safeZoneFeedback || (privacy.safeZone ? "Güvenli merkez kayıt için hazır; koordinat ekranda gosterilmez." : "Henüz güvenli merkez seçilmedi.")}</p>
       </div>
       <label className="flex gap-3 rounded-2xl border border-amber-400/15 bg-amber-400/5 p-4 text-xs text-neutral-300">
         <input type="checkbox" checked={kvkkAccepted} onChange={(event) => setKvkkAccepted(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-lime-400" />
@@ -190,12 +190,12 @@ function BlockedSettings({ onUnblockDriver, socialFeedback, socialPendingKey, us
             <p className="mt-1 truncate text-sm font-semibold">{entry.fullName}</p>
             <p className="truncate text-xs text-neutral-500">{entry.model}</p>
           </div>
-          <button type="button" disabled={Boolean(socialPendingKey?.endsWith(`:${entry.userId}`))} onClick={() => onUnblockDriver(entry)} className="min-h-12 shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-neutral-200 disabled:opacity-50">Engeli Kaldir</button>
+          <button type="button" disabled={Boolean(socialPendingKey?.endsWith(`:${entry.userId}`))} onClick={() => onUnblockDriver(entry)} className="min-h-12 shrink-0 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-semibold text-neutral-200 disabled:opacity-50">Engeli Kaldır</button>
         </div>
       )) : (
         <div className="rounded-[1.5rem] border border-dashed border-white/10 px-4 py-12 text-center">
-          <p className="text-sm font-bold text-neutral-300">Engellenen surucu yok</p>
-          <p className="mt-2 text-xs text-neutral-500">Engelledigin kullanicilar burada gorunecek.</p>
+          <p className="text-sm font-bold text-neutral-300">Engellenen sürücü yok</p>
+          <p className="mt-2 text-xs text-neutral-500">Engellediğin kullanıcılar burada görünecek.</p>
         </div>
       )}
     </div>
@@ -218,21 +218,21 @@ function VehicleSettings({ onProfileAvatarFileChange, onProfileFormChange, onSub
         </CompactField>
         <ProfileInput label="Garage / Shop" value={profileForm.garage} error={profileErrors.garage} onChange={(value) => onProfileFormChange((current) => ({ ...current, garage: value }))} />
         <ProfileInput label="Mevcut KM" type="number" value={profileForm.odometer} error={profileErrors.odometer} onChange={(value) => onProfileFormChange((current) => ({ ...current, odometer: value }))} />
-        <CompactField label="Profil Fotografi">
-          <input aria-label="Profil Fotografi" type="file" accept="image/*" onChange={(event) => onProfileAvatarFileChange?.(event.target.files?.[0] ?? null)} className="block min-h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-3 py-2 text-sm text-neutral-300 file:mr-3 file:rounded-xl file:border-0 file:bg-lime-400 file:px-3 file:py-2 file:font-semibold file:text-black" />
+        <CompactField label="Profil Fotoğrafı">
+          <input aria-label="Profil Fotoğrafı" type="file" accept="image/*" onChange={(event) => onProfileAvatarFileChange?.(event.target.files?.[0] ?? null)} className="block min-h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-3 py-2 text-sm text-neutral-300 file:mr-3 file:rounded-xl file:border-0 file:bg-lime-400 file:px-3 file:py-2 file:font-semibold file:text-black" />
           {profileErrors.avatar ? <p className="text-xs text-rose-300">{profileErrors.avatar}</p> : null}
           {profileForm.avatarPreview ? (
             <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
-              <img src={profileForm.avatarPreview} alt="Profil fotografi onizleme" className="h-16 w-16 rounded-2xl object-cover" />
+              <img src={profileForm.avatarPreview} alt="Profil fotoğrafı önizleme" className="h-16 w-16 rounded-2xl object-cover" />
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{profileForm.avatarFileName || "Mevcut profil fotografi"}</p>
+                <p className="truncate text-sm font-semibold">{profileForm.avatarFileName || "Mevcut profil fotoğrafı"}</p>
                 <p className="mt-1 text-xs text-neutral-500">Cihazdan JPG, PNG veya WebP / en fazla 5 MB</p>
               </div>
             </div>
           ) : null}
         </CompactField>
-        <p className="rounded-2xl border border-amber-400/15 bg-amber-400/[0.06] px-4 py-3 text-xs leading-5 text-amber-100">Kilometre artirilabilir. Eski 12.000 KM varsayimina sahip hesaplar kilometreyi bir kez asagi yonlu duzeltebilir.</p>
-        <button type="submit" disabled={profilePending} className="min-h-12 rounded-2xl bg-lime-400 font-bold text-black shadow-[0_0_20px_rgba(163,230,53,0.3)] disabled:cursor-wait disabled:opacity-50">{profilePending ? "Guncelleniyor..." : "Profili Guncelle"}</button>
+        <p className="rounded-2xl border border-amber-400/15 bg-amber-400/[0.06] px-4 py-3 text-xs leading-5 text-amber-100">Kilometre artırılabilir. Eski 12.000 KM varsayimina sahip hesaplar kilometreyi bir kez aşağı yönlü düzeltebilir.</p>
+        <button type="submit" disabled={profilePending} className="min-h-12 rounded-2xl bg-lime-400 font-bold text-black shadow-[0_0_20px_rgba(163,230,53,0.3)] disabled:cursor-wait disabled:opacity-50">{profilePending ? "Güncelleniyor..." : "Profili Güncelle"}</button>
       </form>
     </div>
   );
@@ -254,15 +254,15 @@ function AccountSettings({ accountFeedback, accountPending, isFirebaseAuth, onDe
   return (
     <div className="space-y-3">
       {accountFeedback ? <p className="rounded-2xl border border-lime-400/15 bg-lime-400/10 px-4 py-3 text-xs text-lime-100">{accountFeedback}</p> : null}
-      <button type="button" disabled={accountPending || user.emailVerified} onClick={onSendEmailVerification} className="min-h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold disabled:opacity-50">{user.emailVerified ? "E-posta Dogrulandi" : "Dogrulama E-postasi Gonder"}</button>
+      <button type="button" disabled={accountPending || user.emailVerified} onClick={onSendEmailVerification} className="min-h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold disabled:opacity-50">{user.emailVerified ? "E-posta Doğrulandı" : "Doğrulama E-postasi Gönder"}</button>
       <button type="button" disabled={accountPending} onClick={onExportAccount} className="min-h-12 w-full rounded-2xl border border-lime-400/25 bg-lime-400/10 px-4 text-sm font-semibold text-lime-100 disabled:opacity-50">Verilerimi JSON Olarak Indir</button>
-      <button type="button" disabled={accountPending} onClick={onWithdrawConsent} className="min-h-12 w-full rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 text-sm font-semibold text-amber-100 disabled:opacity-50">KVKK Onayini Geri Cek ve Paylasimi Kapat</button>
+      <button type="button" disabled={accountPending} onClick={onWithdrawConsent} className="min-h-12 w-full rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 text-sm font-semibold text-amber-100 disabled:opacity-50">KVKK Onayini Geri Çek ve Paylaşımı Kapat</button>
       <div className="rounded-2xl border border-rose-400/20 bg-rose-500/[0.06] p-4">
-        <p className="text-sm font-semibold text-rose-100">Hesabi kalici olarak sil</p>
+        <p className="text-sm font-semibold text-rose-100">Hesabı kalıcı olarak sil</p>
         <p className="mt-2 text-xs leading-5 text-neutral-500">Aktif konvoylarini kapat ve klan sahipligini devret. Ardindan asagidaki ifadeyi aynen yaz.</p>
         <p className="mt-3 font-mono text-[11px] text-rose-200">DELETE MY CRUISER ACCOUNT</p>
         <input aria-label="Hesap silme onayi" value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} className="mt-3 h-12 w-full rounded-xl border border-rose-400/20 bg-black/30 px-3 text-sm outline-none focus:border-rose-400" />
-        <button type="button" disabled={accountPending || deleteConfirmation !== "DELETE MY CRUISER ACCOUNT"} onClick={() => onDeleteAccount?.(deleteConfirmation)} className="mt-3 min-h-12 w-full rounded-xl bg-rose-500 px-4 text-xs font-black text-white disabled:opacity-40">Hesabimi ve Kisisel Verilerimi Sil</button>
+        <button type="button" disabled={accountPending || deleteConfirmation !== "DELETE MY CRUISER ACCOUNT"} onClick={() => onDeleteAccount?.(deleteConfirmation)} className="mt-3 min-h-12 w-full rounded-xl bg-rose-500 px-4 text-xs font-black text-white disabled:opacity-40">Hesabımı ve Kişisel Verilerimi Sil</button>
       </div>
     </div>
   );
@@ -276,16 +276,16 @@ function SecuritySettings({ accountFeedback, accountPending, isFirebaseAuth, onS
       <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.03] p-4">
         <p className="text-[10px] uppercase tracking-[0.22em] text-neutral-500">Hesap E-postasi</p>
         <p className="mt-2 break-all text-sm font-semibold text-neutral-100">{user.email}</p>
-        <p className="mt-2 text-xs leading-5 text-neutral-500">Sifre degistirme baglantisi yalnizca dogrulanmis hesap e-postana gonderilir.</p>
+        <p className="mt-2 text-xs leading-5 text-neutral-500">Şifre değiştirme bağlantısı yalnızca doğrulanmış hesap e-postana gönderilir.</p>
       </div>
-      <button type="button" disabled={accountPending} onClick={onSendPasswordReset} className="min-h-12 w-full rounded-2xl bg-lime-400 px-4 text-sm font-bold text-black disabled:opacity-50">Sifre Degistirme Baglantisi Gonder</button>
-      <p className="rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-xs leading-5 text-neutral-500">E-postadaki baglanti tek kullanimliktir. CRUISER mevcut sifreni uygulama icinde saklamaz.</p>
+      <button type="button" disabled={accountPending} onClick={onSendPasswordReset} className="min-h-12 w-full rounded-2xl bg-lime-400 px-4 text-sm font-bold text-black disabled:opacity-50">Şifre Değiştirme Bağlantısı Gönder</button>
+      <p className="rounded-2xl border border-white/8 bg-black/20 px-4 py-3 text-xs leading-5 text-neutral-500">E-postadaki bağlantı tek kullanımlıktır. CRUISER mevcut şifreni uygulama içinde saklamaz.</p>
     </div>
   );
 }
 
 function DemoAccountNotice() {
-  return <div className="rounded-[1.5rem] border border-amber-400/15 bg-amber-400/10 px-4 py-8 text-center text-sm text-amber-100">Bu islem guvenli hesapla giris yapildiginda kullanilabilir.</div>;
+  return <div className="rounded-[1.5rem] border border-amber-400/15 bg-amber-400/10 px-4 py-8 text-center text-sm text-amber-100">Bu işlem güvenli hesapla giriş yapıldığında kullanılabilir.</div>;
 }
 
 export function SettingsCenter({
@@ -326,13 +326,13 @@ export function SettingsCenter({
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               {activeSection ? (
-                <button type="button" onClick={() => onSelectSection(null)} aria-label="Ayarlar listesine don" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-lg">&larr;</button>
+                <button type="button" onClick={() => onSelectSection(null)} aria-label="Ayarlar listesine dön" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-lg">&larr;</button>
               ) : (
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-lime-400/20 bg-lime-400/10 font-mono text-xs text-lime-300">SYS</span>
               )}
               <div className="min-w-0">
                 <h2 className="truncate text-lg font-black">{activeSection?.title ?? "Ayarlar Merkezi"}</h2>
-                <p className="truncate text-xs text-neutral-500">{activeSection?.description ?? "Hesap, arac, konum ve guvenlik kontrolleri"}</p>
+                <p className="truncate text-xs text-neutral-500">{activeSection?.description ?? "Hesap, araç, konum ve güvenlik kontrolleri"}</p>
               </div>
             </div>
             <button type="button" onClick={onClose} aria-label="Ayarlar merkezini kapat" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-xl text-neutral-300">&times;</button>

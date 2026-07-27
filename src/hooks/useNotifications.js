@@ -22,7 +22,7 @@ export function useNotifications(user) {
     let unsubscribe = () => {};
     void subscribeFirebaseNotifications(
       (nextNotifications) => !cancelled && setNotifications(nextNotifications),
-      (error) => !cancelled && setNotificationFeedback(error instanceof Error ? error.message : "Bildirimler yuklenemedi."),
+      (error) => !cancelled && setNotificationFeedback(error instanceof Error ? error.message : "Bildirimler yüklenemedi."),
     ).then((nextUnsubscribe) => {
       if (cancelled) {
         nextUnsubscribe();
@@ -47,7 +47,7 @@ export function useNotifications(user) {
       setNotificationFeedback("");
       return true;
     } catch (error) {
-      setNotificationFeedback(error instanceof Error ? error.message : "Bildirim guncellenemedi.");
+      setNotificationFeedback(error instanceof Error ? error.message : "Bildirim güncellenemedi.");
       return false;
     }
   };
@@ -62,7 +62,7 @@ export function useNotifications(user) {
       setNotificationFeedback("");
       return true;
     } catch (error) {
-      setNotificationFeedback(error instanceof Error ? error.message : "Bildirimler guncellenemedi.");
+      setNotificationFeedback(error instanceof Error ? error.message : "Bildirimler güncellenemedi.");
       return false;
     }
   };

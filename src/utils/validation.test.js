@@ -16,6 +16,6 @@ describe("meet event route validation", () => {
 
   it("requires two nodes for a route convoy", () => {
     const errors = validateMapPinForm({ ...validBase(), eventMode: "convoy", routePoints: [] });
-    expect(errors.routePoints).toBe("Rota konvoyu icin en az 2 rota noktasi sec.");
+    expect(errors.routePoints).toBe("Rota konvoyu için en az 2 rota noktasi seç.");
   });
 });

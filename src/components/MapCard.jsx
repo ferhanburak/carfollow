@@ -392,17 +392,17 @@ function getActiveDriverIcon(relation, locationVisibility) {
 }
 
 function getDriverRelationLabel(relation) {
-  if (relation === "friend") return "Arkadas";
+  if (relation === "friend") return "Arkadaş";
   if (relation === "clan") return "Klan";
-  return "Diger surucu";
+  return "Diğer sürücü";
 }
 
 function MapDriverLegend() {
   return (
-    <div aria-label="Surucu renkleri" className="pointer-events-none absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-xl border border-white/10 bg-black/75 px-2.5 py-2 text-[9px] text-neutral-300 backdrop-blur">
-      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />Arkadas</span>
+    <div aria-label="Sürücü renkleri" className="pointer-events-none absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-xl border border-white/10 bg-black/75 px-2.5 py-2 text-[9px] text-neutral-300 backdrop-blur">
+      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />Arkadaş</span>
       <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-400" />Klan</span>
-      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-500" />Diger</span>
+      <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-rose-500" />Diğer</span>
     </div>
   );
 }
@@ -508,7 +508,7 @@ function getTripStatusLabel(value) {
     return "Iptal";
   }
 
-  return "Hazir";
+  return "Hazır";
 }
 
 function getFriendshipStatus(user, plate) {
@@ -883,7 +883,7 @@ export function GoogleMapCard({
                 : "border-white/15 bg-black/75 text-white"
             }`}
           >
-            {followCurrentLocation ? "Takibi Birak" : "Konumuma Git"}
+            {followCurrentLocation ? "Takibi Bırak" : "Konumuma Git"}
           </button>
         </div>
       </div>
@@ -1051,16 +1051,16 @@ export function GoogleMapCard({
                       className="min-h-10 rounded-xl bg-lime-400 px-2 text-[10px] font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {selectedGhostFriendship === "friend"
-                        ? "Arkadas"
+                        ? "Arkadaş"
                         : selectedGhostFriendship === "incoming"
                           ? "Bekliyor"
                           : selectedGhostFriendship === "outgoing"
-                            ? "Gonderildi"
+                            ? "Gönderildi"
                             : selectedGhostFriendship === "blocked"
                               ? "Engelli"
                             : selectedGhostFriendship === "self"
                               ? "Sen"
-                              : "Arkadas Ekle"}
+                              : "Arkadaş Ekle"}
                     </button>
                     <button
                       type="button"
@@ -1068,7 +1068,7 @@ export function GoogleMapCard({
                       onClick={() => onOpenDriverConversation?.(selectedGhostMarker)}
                       className="min-h-10 rounded-xl border border-lime-400/20 bg-lime-400/10 px-2 text-[10px] font-semibold text-lime-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      DM Gonder
+                      DM Gönder
                     </button>
                   </div>
                 </div>

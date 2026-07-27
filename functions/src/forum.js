@@ -8,8 +8,8 @@ function buildForumThreadDocument({ id, input, profile, timestamp }) {
   const category = String(input?.category ?? "");
   const title = cleanText(input?.title, 100);
   const body = cleanText(input?.body, 2400);
-  if (!FORUM_CATEGORIES.has(category)) throw new Error("Gecerli bir forum kategorisi secin.");
-  if (title.length < 4 || body.length < 8) throw new Error("Baslik ve paylasim metni cok kisa.");
+  if (!FORUM_CATEGORIES.has(category)) throw new Error("Geçerli bir forum kategorisi secin.");
+  if (title.length < 4 || body.length < 8) throw new Error("Başlık ve paylaşım metni çok kısa.");
 
   return {
     id,
@@ -33,7 +33,7 @@ function buildForumThreadDocument({ id, input, profile, timestamp }) {
 
 function buildForumReplyDocument({ id, threadId, body, profile, timestamp }) {
   const cleanBody = cleanText(body, 1200);
-  if (cleanBody.length < 2) throw new Error("Yanit metni cok kisa.");
+  if (cleanBody.length < 2) throw new Error("Yanıt metni çok kısa.");
   return {
     id,
     threadId,

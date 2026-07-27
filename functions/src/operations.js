@@ -25,10 +25,10 @@ const USER_NOTIFICATION_TYPES = Object.freeze([
 
 const COMMUNITY_ROLE_LABELS = Object.freeze({
   captain: "Kaptan",
-  manager: "Konvoy yoneticisi",
-  member: "Uye",
+  manager: "Konvoy yöneticisi",
+  member: "Üye",
   owner: "Kurucu",
-  participant: "Katilimci",
+  participant: "Katılımcı",
 });
 
 function sanitizeOperationalText(value, maxLength) {
@@ -65,7 +65,7 @@ function isUserNotificationType(type) {
   return USER_NOTIFICATION_TYPES.includes(String(type ?? ""));
 }
 
-function getCommunityRoleLabel(role, fallback = "Uye") {
+function getCommunityRoleLabel(role, fallback = "Üye") {
   return COMMUNITY_ROLE_LABELS[String(role ?? "")] ?? fallback;
 }
 

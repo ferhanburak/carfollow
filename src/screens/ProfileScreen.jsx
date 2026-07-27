@@ -25,9 +25,9 @@ export function ProfileScreen({
   const garageStat = personalStats.find((stat) => stat.key === "garage");
   const compactPersonalStats = personalStats.filter((stat) => stat.key !== "garage");
   const socialSummary = [
-    { key: "friends", label: "Arkadas", value: `${user.friends?.length ?? 0}` },
-    { key: "incoming", label: "Gelen Istek", value: `${user.incomingRequests?.length ?? 0}` },
-    { key: "outgoing", label: "Giden Istek", value: `${user.outgoingRequests?.length ?? 0}` },
+    { key: "friends", label: "Arkadaş", value: `${user.friends?.length ?? 0}` },
+    { key: "incoming", label: "Gelen İstek", value: `${user.incomingRequests?.length ?? 0}` },
+    { key: "outgoing", label: "Giden İstek", value: `${user.outgoingRequests?.length ?? 0}` },
     { key: "clan-invites", label: "Klan Daveti", value: `${user.clanInvites?.length ?? 0}` },
   ];
   const profileHealth = [
@@ -73,7 +73,7 @@ export function ProfileScreen({
             ))
           ) : (
             <div className="w-full rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-3 text-sm text-neutral-500">
-              Henuz aktif unvan yok. Profil, surus ve sosyal ilerleme ile ilk badge'lerini acabilirsin.
+              Henüz aktif unvan yok. Profil, sürüş ve sosyal ilerleme ile ilk badge'lerini açabilirsin.
             </div>
           )}
         </div>

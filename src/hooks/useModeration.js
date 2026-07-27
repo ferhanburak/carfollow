@@ -16,18 +16,18 @@ export function useModeration(user) {
       return false;
     }
     if (!firebaseEnabled) {
-      setModerationFeedback("Raporlama yalnizca Firebase modunda kullanilabilir.");
+      setModerationFeedback("Raporlama yalnızca Firebase modunda kullanılabilir.");
       return false;
     }
 
     setModerationPending(true);
-    setModerationFeedback("Rapor guvenlik ekibine iletiliyor...");
+    setModerationFeedback("Rapor güvenlik ekibine iletiliyor...");
     try {
       await submitFirebaseModerationReport({ targetType: "driver", targetId, reason, details });
-      setModerationFeedback("Rapor alindi. Inceleme kaydi olusturuldu.");
+      setModerationFeedback("Rapor alındı. Inceleme kaydı oluşturuldu.");
       return true;
     } catch (error) {
-      setModerationFeedback(error instanceof Error ? error.message : "Rapor gonderilemedi.");
+      setModerationFeedback(error instanceof Error ? error.message : "Rapor gönderilemedi.");
       return false;
     } finally {
       setModerationPending(false);

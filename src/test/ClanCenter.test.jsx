@@ -73,7 +73,7 @@ describe("ClanCenter", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Uye / Kaptan Yap" }));
+    await user.click(screen.getByRole("button", { name: "Üye / Kaptan Yap" }));
     expect(onUpdateMemberRole).toHaveBeenCalledWith(targetMember, "captain");
 
     rerender(
@@ -95,8 +95,8 @@ describe("ClanCenter", () => {
         user={{ id: "member-3", clanRole: "member", driverScore: 70 }}
       />,
     );
-    expect(screen.queryByRole("button", { name: "Uye / Kaptan Yap" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Klandan Cikar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Üye / Kaptan Yap" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Klandan Çıkar" })).not.toBeInTheDocument();
   });
 
   it("reveals past event attendees and requires confirmation before deletion", async () => {
@@ -106,7 +106,7 @@ describe("ClanCenter", () => {
     const event = {
       id: "event-1",
       name: "Ankara Night Run",
-      route: "Golbasi - Incek",
+      route: "Gölbaşı - Incek",
       time: "22:30",
       lifecycleStatus: "completed",
       attendees: [{ userId: "driver-1", plate: "06 TEST 01", fullName: "Test Driver", model: "Golf GTI", driverScore: 88, tripStatus: "arrived" }],
@@ -135,13 +135,13 @@ describe("ClanCenter", () => {
       />,
     );
 
-    expect(screen.getByText("Gecmis")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Ankara Night Run katilimcilarini goster" }));
+    expect(screen.getByText("Geçmiş")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ankara Night Run katilimcilarini göster" }));
     expect(screen.getByText("06 TEST 01")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /06 TEST 01/i }));
     expect(onOpenProfile).toHaveBeenCalledWith(expect.objectContaining({ userId: "driver-1", convoyId: "event-1" }));
 
-    await user.click(screen.getByRole("button", { name: "Gecmisten Sil" }));
+    await user.click(screen.getByRole("button", { name: "Geçmişten Sil" }));
     expect(onDeleteEvent).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Silmeyi Onayla" }));
     expect(onDeleteEvent).toHaveBeenCalledWith("event-1");
@@ -182,7 +182,7 @@ describe("ClanCenter", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Test Cruise katilimcilarini goster" }));
+    await user.click(screen.getByRole("button", { name: "Test Cruise katilimcilarini göster" }));
     await user.click(screen.getByRole("button", { name: "Planlanan Eventi Sil" }));
     await user.click(screen.getByRole("button", { name: "Silmeyi Onayla" }));
     expect(onDeleteEvent).toHaveBeenCalledWith("planned-1");

@@ -62,7 +62,7 @@ function getJoinButtonLabel(joinState, visibility) {
     return "Konvoyda";
   }
   if (joinState === "requested") {
-    return "Istek Gonderildi";
+    return "İstek Gönderildi";
   }
   if (joinState === "invited") {
     return "Daveti Kabul Et";
@@ -71,18 +71,18 @@ function getJoinButtonLabel(joinState, visibility) {
     return "Join Cruise";
   }
 
-  return "Katilim Istegi Gonder";
+  return "Katılım Istegi Gönder";
 }
 
 function getLifecycleLabel(value) {
   if (value === "rolling") {
-    return "Basladi";
+    return "Başladı";
   }
   if (value === "delayed") {
     return "Gecikiyor";
   }
   if (value === "completed") {
-    return "Tamamlandi";
+    return "Tamamlandı";
   }
   if (value === "cancelled") {
     return "Iptal Edildi";
@@ -102,7 +102,7 @@ function getTripStatusLabel(value) {
     return "Iptal";
   }
 
-  return "Hazir";
+  return "Hazır";
 }
 
 function formatLaunchTime(pin) {
@@ -149,8 +149,8 @@ function ConvoyInvitePanel({ attendees, invitedGuests, pendingRequests, onInvite
     <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/[0.05] p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-white">Konvoya Surucu Davet Et</p>
-          <p className="mt-1 text-xs text-neutral-500">Arkadaslik gerekmeden tam plakayla surucu ara.</p>
+          <p className="text-sm font-semibold text-white">Konvoya Sürücü Davet Et</p>
+          <p className="mt-1 text-xs text-neutral-500">Arkadaşlık gerekmeden tam plakayla sürücü ara.</p>
         </div>
         <span className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-rose-200">Host</span>
       </div>
@@ -173,13 +173,13 @@ function ConvoyInvitePanel({ attendees, invitedGuests, pendingRequests, onInvite
           const hasPendingRequest = pendingRequests.some((entry) => matchesDriver(entry, profile));
           const isUnavailable = isSelf || isAttendee || isInvited || hasPendingRequest;
           const profileId = profile.userId ?? profile.firebaseUid ?? profile.id ?? profile.plate;
-          const buttonLabel = isSelf ? "Bu Sensin" : isAttendee ? "Konvoyda" : isInvited ? "Davet Edildi" : hasPendingRequest ? "Istek Bekliyor" : pendingUserId === profileId ? "Gonderiliyor..." : "Davet Et";
+          const buttonLabel = isSelf ? "Bu Sensin" : isAttendee ? "Konvoyda" : isInvited ? "Davet Edildi" : hasPendingRequest ? "İstek Bekliyor" : pendingUserId === profileId ? "Gönderiliyor..." : "Davet Et";
           return (
             <div key={profileId} className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-black/20 p-3">
               <div className="min-w-0">
                 <p className="truncate font-mono text-xs tracking-[0.14em] text-lime-300">{profile.plate}</p>
                 <p className="mt-1 truncate text-sm font-semibold text-white">{profile.fullName ?? "CRUISER Driver"}</p>
-                <p className="truncate text-xs text-neutral-500">{profile.model || "Arac bilgisi gizli"}</p>
+                <p className="truncate text-xs text-neutral-500">{profile.model || "Araç bilgisi gizli"}</p>
               </div>
               <button
                 type="button"
@@ -193,7 +193,7 @@ function ConvoyInvitePanel({ attendees, invitedGuests, pendingRequests, onInvite
           );
         }) : null}
         {query.trim().length >= 5 && !searchResults.length ? (
-          <p className="rounded-xl border border-dashed border-white/10 px-3 py-3 text-xs text-neutral-500">Bu plakaya ait davet edilebilir bir surucu bulunamadi.</p>
+          <p className="rounded-xl border border-dashed border-white/10 px-3 py-3 text-xs text-neutral-500">Bu plakaya ait davet edilebilir bir sürücü bulunamadı.</p>
         ) : null}
       </div>
     </div>
@@ -261,14 +261,14 @@ function ConvoyEditPanel({ onUpdate, pin }) {
   return (
     <div className="mt-3">
       <button type="button" onClick={() => setOpen((current) => !current)} className="min-h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-neutral-200">
-        {open ? "Duzenlemeyi Kapat" : "Konvoy Bilgilerini Duzenle"}
+        {open ? "Duzenlemeyi Kapat" : "Konvoy Bilgilerini Düzenle"}
       </button>
       {open ? (
         <form onSubmit={submit} className="mt-3 space-y-3 rounded-2xl border border-white/8 bg-black/25 p-3">
-          <label className="block text-xs text-neutral-400">Konvoy Adi *
+          <label className="block text-xs text-neutral-400">Konvoy Adı *
             <input required value={form.name} onChange={(event) => updateField("name", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-white outline-none focus:border-lime-400" />
           </label>
-          <label className="block text-xs text-neutral-400">Rota Aciklamasi *
+          <label className="block text-xs text-neutral-400">Rota Açıklaması *
             <input required value={form.route} onChange={(event) => updateField("route", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-white outline-none focus:border-lime-400" />
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -279,24 +279,24 @@ function ConvoyEditPanel({ onUpdate, pin }) {
               <input required type="number" min="2" max="50" value={form.capacity} onChange={(event) => updateField("capacity", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-white outline-none focus:border-lime-400" />
             </label>
           </div>
-          <label className="block text-xs text-neutral-400">Baslangic Tarihi
+          <label className="block text-xs text-neutral-400">Başlangıç Tarihi
             <input type="datetime-local" value={form.scheduledStartAt} onChange={(event) => updateField("scheduledStartAt", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-white outline-none focus:border-lime-400" />
           </label>
           <div className="grid grid-cols-2 gap-2">
-            <label className="block text-xs text-neutral-400">Gorunurluk
+            <label className="block text-xs text-neutral-400">Görünürlük
               <select value={form.visibility} onChange={(event) => updateField("visibility", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-2 text-xs text-white outline-none focus:border-lime-400">
-                <option value="public">Herkese Acik</option><option value="friends">Arkadaslar</option><option value="clan">Klan</option>
+                <option value="public">Herkese Açık</option><option value="friends">Arkadaşlar</option><option value="clan">Klan</option>
               </select>
             </label>
-            <label className="block text-xs text-neutral-400">Katilim
+            <label className="block text-xs text-neutral-400">Katılım
               <select value={form.accessPolicy} onChange={(event) => updateField("accessPolicy", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-2 text-xs text-white outline-none focus:border-lime-400">
-                <option value="open">Acik</option><option value="request">Onayli</option><option value="trusted">Guvenilir</option>
+                <option value="open">Açık</option><option value="request">Onaylı</option><option value="trusted">Güvenilir</option>
               </select>
             </label>
           </div>
           <label className="block text-xs text-neutral-400">Detay Gorunurlugu
             <select value={form.detailVisibility} onChange={(event) => updateField("detailVisibility", event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm text-white outline-none focus:border-lime-400">
-              <option value="public">Herkese Acik</option><option value="trusted">Guvenilir Suruculer</option>
+              <option value="public">Herkese Açık</option><option value="trusted">Güvenilir Sürücüler</option>
             </select>
           </label>
           <div className="grid grid-cols-3 gap-2">
@@ -390,7 +390,7 @@ export function MeetPinPanel({
         <div className="mt-4 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
           <p className="font-semibold">Otomatik konvoy takibi</p>
           <p className="mt-1 text-xs text-sky-100/75">
-            Baslangic saatinde onayli suruculerin GPS takibi acilir. Her surucu hedefin 50 metre alaninda iki ardisik hassas konum olcumuyle dogrulanir. Son aktif surucu dogrulandiginda konvoy tamamlanir ve oylama acilir.
+            Başlangıç saatinde onaylı sürücülerin GPS takibi açılır. Her sürücü hedefin 50 metre alanında iki ardışık hassas konum ölçümüyle doğrulanır. Son aktif sürücü doğrulandığında konvoy tamamlanır ve oylama açılır.
           </p>
         </div>
       ) : null}
@@ -469,7 +469,7 @@ export function MeetPinPanel({
               onClick={() => onSetAttendeeTripStatus(user.plate, "cancelled")}
               className="mt-3 min-h-12 w-full rounded-2xl border border-rose-400/30 bg-rose-500/10 px-3 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/20"
             >
-              Konvoydan Ayril
+              Konvoydan Ayrıl
             </button>
           ) : null}
         </div>
@@ -579,14 +579,14 @@ export function MeetPinPanel({
                       Tasinlik +1
                     </button>
                   </div>
-                  {attendee.managementRole === "manager" ? <p className="mt-3 text-[10px] uppercase tracking-[0.18em] text-amber-300">Yardimci Yonetici</p> : null}
+                  {attendee.managementRole === "manager" ? <p className="mt-3 text-[10px] uppercase tracking-[0.18em] text-amber-300">Yardımcı Yönetici</p> : null}
                   {isHost && !isSelf ? (
                     <button
                       type="button"
                       onClick={() => onSetConvoyMemberRole?.(attendee, attendee.managementRole === "manager" ? "member" : "manager")}
                       className="mt-3 min-h-12 w-full rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 text-sm font-semibold text-amber-200"
                     >
-                      {attendee.managementRole === "manager" ? "Yonetici / Yetkiyi Kaldir" : "Katilimci / Yonetici Yap"}
+                      {attendee.managementRole === "manager" ? "Yönetici / Yetkiyi Kaldır" : "Katılımcı / Yönetici Yap"}
                     </button>
                   ) : null}
                   {canManage && !isSelf && !(isManager && attendee.managementRole === "manager") && !["completed", "cancelled"].includes(lifecycleStatus) ? (
@@ -595,7 +595,7 @@ export function MeetPinPanel({
                       onClick={() => onRemoveConvoyMember?.(attendee)}
                       className="mt-3 min-h-12 w-full rounded-2xl border border-rose-400/25 bg-rose-500/10 px-4 text-sm font-semibold text-rose-200"
                     >
-                      Konvoydan Cikar
+                      Konvoydan Çıkar
                     </button>
                   ) : null}
                 </div>

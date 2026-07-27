@@ -26,7 +26,7 @@ export function ServiceHistoryList({ logs, onDelete, partsByKey, pendingId = "" 
   if (!safeLogs.length) {
     return (
       <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
-        Henuz servis kaydi yok. Ilk kayitla birlikte Vehicle Passport olusmaya baslayacak.
+        Henüz servis kaydı yok. İlk kayıtla birlikte Vehicle Passport oluşmaya başlayacak.
       </div>
     );
   }
@@ -60,8 +60,8 @@ export function ServiceHistoryList({ logs, onDelete, partsByKey, pendingId = "" 
             {log.notes ? <p className="mt-3 text-xs text-neutral-400">{log.notes}</p> : null}
             {isConfirming ? (
               <div role="alert" className="mt-4 rounded-2xl border border-rose-400/25 bg-rose-500/[0.08] p-3">
-                <p className="text-xs font-semibold text-rose-100">Bu servis kaydi kalici olarak silinecek.</p>
-                <p className="mt-1 text-[11px] leading-4 text-neutral-400">Passport toplamlari ve bagli parca gecmisi yeniden hesaplanir.</p>
+                <p className="text-xs font-semibold text-rose-100">Bu servis kaydı kalıcı olarak silinecek.</p>
+                <p className="mt-1 text-[11px] leading-4 text-neutral-400">Passport toplamları ve bağlı parça geçmişi yeniden hesaplanır.</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -89,7 +89,7 @@ export function ServiceHistoryList({ logs, onDelete, partsByKey, pendingId = "" 
                 aria-label={`${partName} servis kaydini sil`}
                 className="mt-4 min-h-12 w-full rounded-xl border border-rose-400/20 bg-rose-500/[0.06] px-3 text-xs font-semibold text-rose-200 disabled:opacity-40"
               >
-                Hatali Kaydi Sil
+                Hatalı Kaydı Sil
               </button>
             )}
           </div>

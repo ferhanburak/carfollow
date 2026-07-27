@@ -24,14 +24,14 @@ export function VehicleHealthCenter({ odometer, onSelectPart, parts, selectedPar
       />
 
       {isOpen ? (
-        <div className="fixed inset-0 z-[45] bg-black/85 backdrop-blur-md md:p-4" role="dialog" aria-modal="true" aria-label="Parca sagligi merkezi">
+        <div className="fixed inset-0 z-[45] bg-black/85 backdrop-blur-md md:p-4" role="dialog" aria-modal="true" aria-label="Parça sağlığı merkezi">
           <section className="mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden border-white/10 bg-[#090909] shadow-[0_24px_90px_rgba(0,0,0,0.9)] md:h-[calc(100dvh-2rem)] md:rounded-[2rem] md:border">
             <header className="app-safe-top shrink-0 border-b border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.16),transparent_44%),#111111] px-4 pb-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-black">Parca Sagligi</h2>
+                  <h2 className="text-lg font-black">Parça Sağlığı</h2>
                 </div>
-                <button type="button" onClick={() => setIsOpen(false)} aria-label="Parca sagligi merkezini kapat" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-xl text-neutral-300">&times;</button>
+                <button type="button" onClick={() => setIsOpen(false)} aria-label="Parça sağlığı merkezini kapat" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-xl text-neutral-300">&times;</button>
               </div>
             </header>
 
@@ -62,8 +62,8 @@ export function VehicleHealthCenter({ odometer, onSelectPart, parts, selectedPar
                         <div className={`h-full rounded-full ${getHealthTone(snapshot)} transition-all duration-700`} style={{ width: `${snapshot.health}%` }} />
                       </div>
                       <div className="mt-2 flex items-center justify-between text-xs text-neutral-500">
-                        <span>{formatNumber(snapshot.kmRemaining)} KM kaldi</span>
-                        <span>{snapshot.daysRemaining === null ? "--" : `${snapshot.daysRemaining} gun`}</span>
+                        <span>{formatNumber(snapshot.kmRemaining)} KM kaldı</span>
+                        <span>{snapshot.daysRemaining === null ? "--" : `${snapshot.daysRemaining} gün`}</span>
                       </div>
                     </button>
                   );

@@ -29,7 +29,7 @@ export function useForum(user, enabled = true) {
     subscribeFirebaseForum(
       user.firebaseUid ?? user.userId ?? user.id,
       (nextThreads) => !cancelled && setThreads(nextThreads),
-      () => !cancelled && setFeedback("Forum akisi su anda yenilenemedi."),
+      () => !cancelled && setFeedback("Forum akışı su anda yenilenemedi."),
     ).then((nextUnsubscribe) => {
       if (cancelled) nextUnsubscribe();
       else unsubscribe = nextUnsubscribe;
@@ -42,7 +42,7 @@ export function useForum(user, enabled = true) {
 
   const createThread = async () => {
     if (!form.title.trim() || !form.body.trim()) {
-      setFeedback("Zorunlu alanlari doldurunuz.");
+      setFeedback("Zorunlu alanları doldurunuz.");
       return false;
     }
     setPendingKey("create");
@@ -52,7 +52,7 @@ export function useForum(user, enabled = true) {
       setForm(emptyForm);
       return true;
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Paylasim olusturulamadi.");
+      setFeedback(error instanceof Error ? error.message : "Paylaşım oluşturulamadı.");
       return false;
     } finally {
       setPendingKey("");
@@ -64,7 +64,7 @@ export function useForum(user, enabled = true) {
     try {
       await toggleFirebaseForumLike(threadId);
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Begeni kaydedilemedi.");
+      setFeedback(error instanceof Error ? error.message : "Beğeni kaydedilemedi.");
     } finally {
       setPendingKey("");
     }
@@ -77,7 +77,7 @@ export function useForum(user, enabled = true) {
       await addFirebaseForumReply(threadId, body);
       return true;
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Yanit gonderilemedi.");
+      setFeedback(error instanceof Error ? error.message : "Yanıt gönderilemedi.");
       return false;
     } finally {
       setPendingKey("");

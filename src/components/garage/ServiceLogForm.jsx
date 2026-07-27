@@ -16,7 +16,7 @@ export function ServiceLogForm({
       <fieldset className="col-span-2 grid grid-cols-2 gap-3 border-0 p-0" disabled={disabled}>
       {activePart ? (
         <div className="col-span-2 rounded-2xl border border-lime-400/20 bg-lime-400/10 px-4 py-3 text-sm text-lime-100">
-          Secili Parca: <span className="font-semibold">{activePart.name}</span>
+          Seçili Parça: <span className="font-semibold">{activePart.name}</span>
         </div>
       ) : null}
       <CompactField label="Part">

@@ -92,13 +92,13 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
       : null;
 
     setServiceLogPending(true);
-    setServiceLogFeedback("Vehicle Passport kaydi guvenli olarak isleniyor...");
+    setServiceLogFeedback("Vehicle Passport kaydı güvenli olarak işleniyor...");
     try {
       const syncResult = syncServiceLog
         ? await syncServiceLog(nextLog, servicedPart)
         : { ok: true, mode: "mock" };
       if (syncResult?.ok === false) {
-        setServiceLogFeedback("Servis kaydi su anda tamamlanamadi. Lutfen tekrar dene.");
+        setServiceLogFeedback("Servis kaydı su anda tamamlanamadi. Lütfen tekrar dene.");
         return null;
       }
 
@@ -111,7 +111,7 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
       setServiceLogForm(createServiceLogForm(nextUserSnapshot));
       setServiceLogErrors({});
       setServiceLogFeedback(
-        `${nextUserSnapshot.parts?.find((part) => part.key === nextLog.partKey)?.name ?? "Part"} kaydi Vehicle Passport'a eklendi.`,
+        `${nextUserSnapshot.parts?.find((part) => part.key === nextLog.partKey)?.name ?? "Part"} kaydı Vehicle Passport'a eklendi.`,
       );
       return nextLog;
     } finally {
@@ -129,16 +129,16 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
     if (!targetLog || serviceLogPending || serviceLogDeletePendingId) return false;
 
     setServiceLogDeletePendingId(serviceLogId);
-    setServiceLogFeedback("Servis kaydi ve bagli hesaplamalar siliniyor...");
+    setServiceLogFeedback("Servis kaydı ve bağlı hesaplamalar siliniyor...");
     try {
       if (user.firebaseUid) {
         await deleteFirebaseServiceLog(serviceLogId);
       }
       setUser((current) => current ? removeServiceLogFromUser(current, serviceLogId) : current);
-      setServiceLogFeedback("Secilen servis kaydi gecmisten silindi ve Vehicle Passport yeniden hesaplandi.");
+      setServiceLogFeedback("Seçilen servis kaydı geçmişten silindi ve Vehicle Passport yeniden hesaplandi.");
       return true;
     } catch (error) {
-      setServiceLogFeedback(error instanceof Error ? error.message : "Servis kaydi silinemedi. Lutfen tekrar dene.");
+      setServiceLogFeedback(error instanceof Error ? error.message : "Servis kaydı silinemedi. Lütfen tekrar dene.");
       return false;
     } finally {
       setServiceLogDeletePendingId("");
@@ -168,18 +168,18 @@ export function useVehiclePassport({ user, setUser, syncServiceLog }) {
     }
 
     setPassportExportPending(true);
-    setPassportExportFeedback("Arac gecmisi raporu hazirlaniyor...");
+    setPassportExportFeedback("Araç geçmişi raporu hazirlaniyor...");
     try {
       const result = await createFirebaseVehiclePassportExport();
       const nextExport = result?.export;
       if (nextExport) {
         setPassportExports((current) => [nextExport, ...current.filter((item) => item.id !== nextExport.id)]);
       }
-      setPassportExportFeedback("Arac gecmisi raporu olusturuldu.");
+      setPassportExportFeedback("Araç geçmişi raporu oluşturuldu.");
       return result;
     } catch (error) {
       console.error("Vehicle history report could not be created", error);
-      setPassportExportFeedback("Arac gecmisi raporu su anda olusturulamadi. Lutfen tekrar dene.");
+      setPassportExportFeedback("Araç geçmişi raporu su anda oluşturulamadı. Lütfen tekrar dene.");
       return null;
     } finally {
       setPassportExportPending(false);

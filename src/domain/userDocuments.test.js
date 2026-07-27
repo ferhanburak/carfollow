@@ -84,7 +84,7 @@ describe("user document contracts", () => {
       monthlyAverageSpeedKmh: 52,
       lifetimeDriveSeconds: 7200,
       lifetimeMaxSpeedKmh: 141,
-      achievementBadges: ["Gece Savascisi"],
+      achievementBadges: ["Gece Savaşçısı"],
       driverStats: { monthlyKm: 842 },
       odometer: 68420,
       clan: "Manual Clan",

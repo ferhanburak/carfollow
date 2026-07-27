@@ -157,7 +157,7 @@ describe("drive telemetry", () => {
   it("maps browser permission failures to a clear status", () => {
     expect(getGeolocationErrorStatus({ code: 1 })).toEqual({
       status: "denied",
-      message: "Konum izni reddedildi. Surus verisi kaydedilmiyor.",
+      message: "Konum izni reddedildi. Sürüş verisi kaydedilmiyor.",
     });
   });
 

@@ -12,7 +12,7 @@ describe("driver stats domain", () => {
 
   it("merges authoritative stats and unlocked titles into the user", () => {
     const user = mergeDriverStatsIntoUser(
-      { id: "user-1", badges: ["Yeni Uye"], monthlyKm: 10 },
+      { id: "user-1", badges: ["Yeni Üye"], monthlyKm: 10 },
       {
         monthlyKm: 24.8,
         monthlyNightKm: 8,
@@ -33,7 +33,7 @@ describe("driver stats domain", () => {
     expect(user.monthlyMaxSpeedKmh).toBe(112);
     expect(user.lifetimeDriveSeconds).toBe(7200);
     expect(user.lifetimeMaxSpeedKmh).toBe(138);
-    expect(user.badges).toEqual(["Yeni Uye", "Garaj Arsivi"]);
+    expect(user.badges).toEqual(["Yeni Üye", "Garaj Arsivi"]);
     expect(user.driverStats.completedSessions).toBe(3);
   });
 

@@ -3,7 +3,7 @@ function FieldLabel({ label, required, optional }) {
     <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">
       {label}
       {required ? <span className="ml-1 text-rose-400" aria-hidden="true">*</span> : null}
-      {optional ? <span className="ml-2 text-[9px] tracking-[0.12em] text-neutral-600">Istege bagli</span> : null}
+      {optional ? <span className="ml-2 text-[9px] tracking-[0.12em] text-neutral-600">Istege bağlı</span> : null}
     </span>
   );
 }

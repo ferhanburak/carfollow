@@ -26,13 +26,13 @@ import {
 
 function getSocialErrorMessage(error) {
   const messages = {
-    "functions/already-exists": "Bu surucuyle zaten aktif bir arkadaslik akisi var.",
-    "functions/failed-precondition": "Bu sosyal islem mevcut durumda yapilamaz.",
-    "functions/not-found": "Sosyal kayit bulunamadi veya daha once degisti.",
-    "functions/permission-denied": "Bu surucuyle sosyal etkilesime izin verilmiyor.",
-    "functions/unauthenticated": "Bu islem icin tekrar giris yapmalisin.",
+    "functions/already-exists": "Bu sürücüyle zaten aktif bir arkadaşlık akışı var.",
+    "functions/failed-precondition": "Bu sosyal işlem mevcut durumda yapilamaz.",
+    "functions/not-found": "Sosyal kayıt bulunamadı veya daha önce değişti.",
+    "functions/permission-denied": "Bu sürücüyle sosyal etkileşime izin verilmiyor.",
+    "functions/unauthenticated": "Bu işlem için tekrar giriş yapmalisin.",
   };
-  return messages[error?.code] ?? (error instanceof Error ? error.message : "Sosyal islem tamamlanamadi.");
+  return messages[error?.code] ?? (error instanceof Error ? error.message : "Sosyal işlem tamamlanamadi.");
 }
 
 function socialEntrySignature(entry) {
@@ -195,7 +195,7 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
     }
     socialPendingRef.current = pendingKey;
     setSocialPendingKey(pendingKey);
-    setSocialFeedback("Islem Firebase uzerinde dogrulaniyor...");
+    setSocialFeedback("İşlem Firebase üzerinde doğrulanıyor...");
     try {
       await action();
       setSocialFeedback(successMessage);
@@ -213,17 +213,17 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
     const target = resolveSocialTarget(profile);
     if (firebaseEnabled) {
       if (!target?.userId) {
-        setSocialFeedback("Bu surucunun Firebase Public Profile kaydi bulunamadi.");
+        setSocialFeedback("Bu sürücünün Firebase Public Profile kaydı bulunamadı.");
         return false;
       }
       return runFirebaseAction(
         `request:${target.userId}`,
         () => requestFirebaseFriendship(target.userId),
-        `${target.fullName} icin arkadaslik istegi gonderildi.`,
+        `${target.fullName} için arkadaşlık isteği gönderildi.`,
       );
     }
     setUser((current) => sendFriendRequest(current, target));
-    setSocialFeedback(`${target.fullName} icin arkadaslik istegi gonderildi.`);
+    setSocialFeedback(`${target.fullName} için arkadaşlık isteği gönderildi.`);
     return true;
   };
 
@@ -247,11 +247,11 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
       return runFirebaseAction(
         `decline:${request.userId}`,
         () => respondFirebaseFriendship(request.userId, "declined"),
-        `${request.fullName ?? plate} istegi reddedildi.`,
+        `${request.fullName ?? plate} isteği reddedildi.`,
       );
     }
     setUser((current) => rejectFriendRequest(current, plate));
-    setSocialFeedback(`${request?.fullName ?? plate} istegi reddedildi.`);
+    setSocialFeedback(`${request?.fullName ?? plate} isteği reddedildi.`);
     return true;
   };
 
@@ -261,11 +261,11 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
       return runFirebaseAction(
         `cancel:${request.userId}`,
         () => cancelFirebaseFriendshipRequest(request.userId),
-        `${request.fullName ?? plate} icin giden istek geri cekildi.`,
+        `${request.fullName ?? plate} için giden istek geri çekildi.`,
       );
     }
     setUser((current) => cancelOutgoingFriendRequest(current, plate));
-    setSocialFeedback(`${request?.fullName ?? plate} icin giden istek geri cekildi.`);
+    setSocialFeedback(`${request?.fullName ?? plate} için giden istek geri çekildi.`);
     return true;
   };
 
@@ -275,11 +275,11 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
       return runFirebaseAction(
         `remove:${friend.userId}`,
         () => removeFirebaseFriendship(friend.userId),
-        `${friend.fullName ?? plate} arkadas listesinden cikarildi.`,
+        `${friend.fullName ?? plate} arkadaş listesinden çıkarıldı.`,
       );
     }
     setUser((current) => removeFriend(current, plate));
-    setSocialFeedback(`${friend?.fullName ?? plate} arkadas listesinden cikarildi.`);
+    setSocialFeedback(`${friend?.fullName ?? plate} arkadaş listesinden çıkarıldı.`);
     return true;
   };
 
@@ -287,7 +287,7 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
     const target = resolveSocialTarget(profile);
     if (firebaseEnabled) {
       if (!target?.userId) {
-        setSocialFeedback("Bu surucunun Firebase Public Profile kaydi bulunamadi.");
+        setSocialFeedback("Bu sürücünün Firebase Public Profile kaydı bulunamadı.");
         return false;
       }
       return runFirebaseAction(
@@ -306,11 +306,11 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
       return runFirebaseAction(
         `unblock:${profile.userId}`,
         () => unblockFirebaseDriver(profile.userId),
-        `${profile.fullName ?? profile.plate} engeli kaldirildi.`,
+        `${profile.fullName ?? profile.plate} engeli kaldırıldı.`,
       );
     }
     setUser((current) => unblockCommunityMember(current, profile.plate));
-    setSocialFeedback(`${profile.fullName ?? profile.plate} engeli kaldirildi.`);
+    setSocialFeedback(`${profile.fullName ?? profile.plate} engeli kaldırıldı.`);
     return true;
   };
 
@@ -322,7 +322,7 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
         privacy: nextPrivacy,
         privacyConsent: acceptKvkk ? { kvkkAcceptedAt: Date.now(), version: nextPrivacy.kvkkConsentVersion } : current.privacyConsent,
       }));
-      setSocialFeedback("Gizlilik tercihleri guncellendi.");
+      setSocialFeedback("Gizlilik tercihleri güncellendi.");
       return Promise.resolve(true);
     }
     return runFirebaseAction(
@@ -331,7 +331,7 @@ export function useSocialGraph({ socialDirectory, user, setUser }) {
         const result = await updateFirebasePrivacySettings(nextPrivacy, acceptKvkk);
         setUser((current) => ({ ...current, privacy: result.privacy, privacyConsent: result.privacyConsent }));
       },
-      "Gizlilik tercihleri guncellendi.",
+      "Gizlilik tercihleri güncellendi.",
     );
   };
 

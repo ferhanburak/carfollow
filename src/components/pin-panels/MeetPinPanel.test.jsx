@@ -23,7 +23,7 @@ function createPin(overrides = {}) {
     id: "convoy-1",
     type: "meet",
     name: "Night Route",
-    route: "Golbasi",
+    route: "Gölbaşı",
     time: "22:00",
     capacity: 12,
     createdByPlate: host.plate,
@@ -81,15 +81,15 @@ describe("MeetPinPanel convoy management", () => {
     const onUpdateConvoyDetails = vi.fn().mockResolvedValue(true);
     renderPanel({ onUpdateConvoyDetails });
 
-    await user.click(screen.getByRole("button", { name: "Konvoy Bilgilerini Duzenle" }));
-    const nameInput = screen.getByRole("textbox", { name: /Konvoy Adi/ });
+    await user.click(screen.getByRole("button", { name: "Konvoy Bilgilerini Düzenle" }));
+    const nameInput = screen.getByRole("textbox", { name: /Konvoy Adı/ });
     await user.clear(nameInput);
     await user.type(nameInput, "Ankara Gece Konvoyu");
     await user.click(screen.getByRole("button", { name: "Degisiklikleri Kaydet" }));
 
     expect(onUpdateConvoyDetails).toHaveBeenCalledWith(expect.objectContaining({
       name: "Ankara Gece Konvoyu",
-      route: "Golbasi",
+      route: "Gölbaşı",
       capacity: 12,
     }));
   });
@@ -103,7 +103,7 @@ describe("MeetPinPanel convoy management", () => {
       onSetConvoyMemberRole,
     });
 
-    await user.click(screen.getByRole("button", { name: "Katilimci / Yonetici Yap" }));
+    await user.click(screen.getByRole("button", { name: "Katılımcı / Yönetici Yap" }));
     expect(onSetConvoyMemberRole).toHaveBeenCalledWith(expect.objectContaining({
       userId: driver.userId,
     }), "manager");

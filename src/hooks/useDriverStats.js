@@ -16,11 +16,11 @@ function createDriveSessionId(userId) {
 
 function getDriverStatsError(error, fallback) {
   const messages = {
-    "functions/failed-precondition": "Guvenli surus oturumu baslatilamadi. Vehicle Passport kaydini kontrol et.",
-    "functions/not-found": "Surus backend Function'i henuz yayinlanmamis.",
-    "functions/permission-denied": "Bu surus oturumu Firebase hesabinla eslesmiyor.",
-    "functions/unauthenticated": "Guvenli surus icin yeniden giris yapman gerekiyor.",
-    "cruiser/functions-unavailable": "Firebase Functions baglantisi hazir degil.",
+    "functions/failed-precondition": "Güvenli sürüş oturumu baslatilamadi. Vehicle Passport kaydini kontrol et.",
+    "functions/not-found": "Sürüş backend Function'i henüz yayınlanmamış.",
+    "functions/permission-denied": "Bu sürüş oturumu Firebase hesabinla eşleşmiyor.",
+    "functions/unauthenticated": "Güvenli sürüş için yeniden giriş yapman gerekiyor.",
+    "cruiser/functions-unavailable": "Firebase Functions bağlantısı hazır değil.",
   };
 
   return messages[error?.code] ?? (error instanceof Error ? error.message : fallback);
@@ -89,7 +89,7 @@ export function useDriverStats({ user, setUser }) {
           setDriverStatsStatus({
             mode: "firebase",
             state: "error",
-            error: getDriverStatsError(error, "Surucu istatistikleri yuklenemedi."),
+            error: getDriverStatsError(error, "Sürücü istatistikleri yüklenemedi."),
             lastSyncAt: null,
           });
         }
@@ -134,7 +134,7 @@ export function useDriverStats({ user, setUser }) {
       setDriverStatsStatus({ mode: "firebase", state: "active", error: "", lastSyncAt: Date.now() });
       return { ok: true, ...result };
     } catch (error) {
-      const message = getDriverStatsError(error, "Guvenli surus oturumu baslatilamadi.");
+      const message = getDriverStatsError(error, "Güvenli sürüş oturumu baslatilamadi.");
       setDriverStatsStatus({ mode: "firebase", state: "error", error: message, lastSyncAt: null });
       return { ok: false, error: message };
     }
@@ -190,7 +190,7 @@ export function useDriverStats({ user, setUser }) {
       setDriverStatsStatus({ mode: "firebase", state: "synced", error: "", lastSyncAt: Date.now() });
       return { ok: true, ...result };
     } catch (error) {
-      const message = getDriverStatsError(error, "Surus oturumu tamamlanamadi.");
+      const message = getDriverStatsError(error, "Sürüş oturumu tamamlanamadi.");
       setDriverStatsStatus({ mode: "firebase", state: "error", error: message, lastSyncAt: null });
       return { ok: false, error: message };
     }

@@ -24,25 +24,25 @@ import { validateSignUpForm } from "../utils/validation";
 function getAuthErrorMessage(error) {
   const messages = {
     "auth/email-already-in-use": "Bu e-posta adresi zaten kullaniliyor.",
-    "auth/invalid-credential": "E-posta veya sifre hatali.",
-    "auth/invalid-email": "Gecerli bir e-posta adresi gir.",
-    "auth/network-request-failed": "Firebase baglantisi kurulamadi. Internet baglantisini kontrol et.",
-    "auth/operation-not-allowed": "Firebase Console'da Email/Password giris yontemini etkinlestir.",
-    "auth/too-many-requests": "Cok fazla deneme yapildi. Biraz bekleyip tekrar dene.",
-    "auth/weak-password": "Sifre en az 8 karakter olmali.",
+    "auth/invalid-credential": "E-posta veya şifre hatalı.",
+    "auth/invalid-email": "Geçerli bir e-posta adresi gir.",
+    "auth/network-request-failed": "Firebase bağlantısı kurulamadi. Internet baglantisini kontrol et.",
+    "auth/operation-not-allowed": "Firebase Console'da Email/Password giriş yöntemini etkinleştir.",
+    "auth/too-many-requests": "Çok fazla deneme yapildi. Biraz bekleyip tekrar dene.",
+    "auth/weak-password": "Şifre en az 8 karakter olmali.",
     "cruiser/firebase-unavailable": "Firebase su anda kullanilamiyor.",
-    "cruiser/plate-already-in-use": "Bu plaka baska bir CRUISER hesabinda kayitli.",
-    "cruiser/profile-not-found": "Firebase hesabi bulundu fakat CRUISER profili eksik.",
-    "cruiser/vehicle-not-found": "Hesabin aktif arac kaydi bulunamadi.",
-    "cruiser/vehicle-owner-mismatch": "Arac sahipligi bu Firebase hesabi ile eslesmiyor.",
-    "cruiser/vehicle-passport-not-found": "Vehicle Passport kaydi yuklenemedi.",
-    "permission-denied": "Firebase guvenlik kurallari bu hesap islemini reddetti.",
-    "functions/failed-precondition": "Bu islem icin gerekli on kosullar tamamlanmadi. Aktif konvoyu kapat, klan sahipligini devret veya yeniden giris yap.",
-    "functions/invalid-argument": "Gonderilen hesap islemi bilgileri gecersiz.",
-    "functions/resource-exhausted": "Cok fazla istek gonderildi. Biraz bekleyip tekrar dene.",
+    "cruiser/plate-already-in-use": "Bu plaka başka bir CRUISER hesabinda kayıtlı.",
+    "cruiser/profile-not-found": "Firebase hesabı bulundu fakat CRUISER profili eksik.",
+    "cruiser/vehicle-not-found": "Hesabin aktif araç kaydı bulunamadı.",
+    "cruiser/vehicle-owner-mismatch": "Araç sahipliği bu Firebase hesabı ile eşleşmiyor.",
+    "cruiser/vehicle-passport-not-found": "Vehicle Passport kaydı yüklenemedi.",
+    "permission-denied": "Firebase güvenlik kurallari bu hesap islemini reddetti.",
+    "functions/failed-precondition": "Bu işlem için gerekli on koşullar tamamlanmadı. Aktif konvoyu kapat, klan sahipligini devret veya yeniden giriş yap.",
+    "functions/invalid-argument": "Gönderilen hesap işlemi bilgileri geçersiz.",
+    "functions/resource-exhausted": "Çok fazla istek gönderildi. Biraz bekleyip tekrar dene.",
   };
 
-  return messages[error?.code] ?? (error instanceof Error ? error.message : "Kimlik dogrulama islemi tamamlanamadi.");
+  return messages[error?.code] ?? (error instanceof Error ? error.message : "Kimlik doğrulama işlemi tamamlanamadi.");
 }
 
 export function useCruiserAuth() {
@@ -194,13 +194,13 @@ export function useCruiserAuth() {
         finishAuthentication(match, options);
         return true;
       }
-      setAuthError("Profil bulunamadi. Asagidaki test profillerinden biriyle hizli giris yapabilirsin.");
+      setAuthError("Profil bulunamadı. Asagidaki test profillerinden biriyle hızlı giriş yapabilirsin.");
       setAuthMode("error");
       return false;
     }
 
     if (!loginForm.email.trim() || !loginForm.password) {
-      setAuthError("E-posta ve sifre gerekli.");
+      setAuthError("E-posta ve şifre gerekli.");
       setAuthMode("error");
       return false;
     }
@@ -233,7 +233,7 @@ export function useCruiserAuth() {
     setAuthError("");
     setAuthFeedback("");
     if (Object.keys(validationErrors).length > 0) {
-      setAuthError("Zorunlu alanlari doldurunuz.");
+      setAuthError("Zorunlu alanları doldurunuz.");
       setAuthMode("error");
       return null;
     }
@@ -287,7 +287,7 @@ export function useCruiserAuth() {
       setSignUpForm((current) => ({ ...current, avatarFile: file, avatarFileName: file.name, avatarPreview }));
       return true;
     } catch (error) {
-      setSignUpErrors((current) => ({ ...current, avatar: error instanceof Error ? error.message : "Fotograf okunamadi." }));
+      setSignUpErrors((current) => ({ ...current, avatar: error instanceof Error ? error.message : "Fotoğraf okunamadı." }));
       return false;
     }
   };
@@ -313,7 +313,7 @@ export function useCruiserAuth() {
     if (!firebaseAuthEnabled) return false;
     const email = loginForm.email.trim();
     if (!email) {
-      setAuthError("Sifre sifirlama baglantisi icin e-posta adresini gir.");
+      setAuthError("Şifre sıfırlama bağlantısı için e-posta adresini gir.");
       setAuthMode("error");
       return false;
     }
@@ -321,7 +321,7 @@ export function useCruiserAuth() {
     setAuthFeedback("");
     try {
       await sendFirebasePasswordReset(email);
-      setAuthFeedback("Sifre sifirlama baglantisi e-posta adresine gonderildi.");
+      setAuthFeedback("Şifre sıfırlama bağlantısı e-posta adresine gönderildi.");
       return true;
     } catch (error) {
       setAuthError(getAuthErrorMessage(error));
@@ -335,7 +335,7 @@ export function useCruiserAuth() {
     setAccountFeedback("");
     try {
       await sendFirebaseEmailVerification();
-      setAccountFeedback("Dogrulama e-postasi gonderildi. Baglantiyi actiktan sonra tekrar giris yap.");
+      setAccountFeedback("Doğrulama e-postasi gönderildi. Bağlantıyı açtıktan sonra tekrar giriş yap.");
       return true;
     } catch (error) {
       setAccountFeedback(getAuthErrorMessage(error));
@@ -347,7 +347,7 @@ export function useCruiserAuth() {
 
   const handleAccountPasswordReset = async () => {
     if (!firebaseAuthEnabled || !user?.email) {
-      setAccountFeedback("Sifre degistirme yalnizca Firebase hesabiyla kullanilabilir.");
+      setAccountFeedback("Şifre değiştirme yalnızca Firebase hesabıyla kullanılabilir.");
       return false;
     }
 
@@ -355,7 +355,7 @@ export function useCruiserAuth() {
     setAccountFeedback("");
     try {
       await sendFirebasePasswordReset(user.email);
-      setAccountFeedback("Sifre degistirme baglantisi hesap e-postana gonderildi.");
+      setAccountFeedback("Şifre değiştirme bağlantısı hesap e-postana gönderildi.");
       return true;
     } catch (error) {
       setAccountFeedback(getAuthErrorMessage(error));
@@ -397,7 +397,7 @@ export function useCruiserAuth() {
         privacy: result.privacy,
         privacyConsent: { ...(current.privacyConsent ?? {}), withdrawnAt: result.withdrawnAt },
       } : current);
-      setAccountFeedback("KVKK onayi geri cekildi; plaka kesfi ve konum paylasimi kapatildi.");
+      setAccountFeedback("KVKK onayi geri çekildi; plaka kesfi ve konum paylaşımı kapatildi.");
       return true;
     } catch (error) {
       setAccountFeedback(getAuthErrorMessage(error));

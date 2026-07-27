@@ -16,7 +16,7 @@ export function UpcomingMaintenanceList({ items }) {
   if (!items.length) {
     return (
       <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-neutral-400">
-        Tum kritik parcalar guvende. Yeni bir servis planlamasi gerekmiyor.
+        Tüm kritik parçalar güvende. Yeni bir servis planlaması gerekmiyor.
       </div>
     );
   }
@@ -31,10 +31,10 @@ export function UpcomingMaintenanceList({ items }) {
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-neutral-300">
             <div className="rounded-xl bg-black/20 px-3 py-2">
-              Kalan Omur: {formatNumber(item.snapshot.kmRemaining)} KM
+              Kalan Ömür: {formatNumber(item.snapshot.kmRemaining)} KM
             </div>
             <div className="rounded-xl bg-black/20 px-3 py-2">
-              Tarih Payi: {item.snapshot.daysRemaining === null ? "--" : `${item.snapshot.daysRemaining} gun`}
+              Tarih Payi: {item.snapshot.daysRemaining === null ? "--" : `${item.snapshot.daysRemaining} gün`}
             </div>
           </div>
         </div>

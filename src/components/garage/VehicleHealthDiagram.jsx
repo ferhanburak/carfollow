@@ -72,12 +72,12 @@ export function VehicleHealthDiagram({
       <button
         type="button"
         onClick={onOpen}
-        aria-label="Arac parca sagligi detaylarini ac"
+        aria-label="Araç parça sağlığı detaylarini ac"
         className="mt-4 w-full rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(163,230,53,0.1),transparent_44%),linear-gradient(180deg,#121212,#0c0c0c)] p-4 text-left transition hover:border-lime-400/30"
       >
         <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-neutral-200">Parca durumuna dokunarak bak</p>
+                  <p className="text-sm font-semibold text-neutral-200">Parça durumuna dokunarak bak</p>
           </div>
           <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-lime-300">Detay</span>
         </div>
@@ -101,7 +101,7 @@ export function VehicleHealthDiagram({
 
         <div className="mt-3 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-xl bg-lime-400/10 px-2 py-2 text-xs text-lime-200">{statusCounts.healthy} iyi</div>
-          <div className="rounded-xl bg-amber-400/10 px-2 py-2 text-xs text-amber-200">{statusCounts.warning} yaklasan</div>
+          <div className="rounded-xl bg-amber-400/10 px-2 py-2 text-xs text-amber-200">{statusCounts.warning} yaklaşan</div>
           <div className="rounded-xl bg-rose-500/10 px-2 py-2 text-xs text-rose-200">{statusCounts.critical} kritik</div>
         </div>
       </button>
@@ -176,10 +176,10 @@ export function VehicleHealthDiagram({
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-neutral-300">
               <div className="rounded-xl bg-black/20 px-3 py-2">Kalan KM: {selectedSnapshot?.kmRemaining?.toLocaleString("tr-TR") ?? "--"}</div>
-              <div className="rounded-xl bg-black/20 px-3 py-2">Kalan Gun: {selectedSnapshot?.daysRemaining ?? "--"}</div>
+              <div className="rounded-xl bg-black/20 px-3 py-2">Kalan Gün: {selectedSnapshot?.daysRemaining ?? "--"}</div>
             </div>
             <div className="mt-3 text-xs text-neutral-400">
-              Son degisim: {selectedPart?.replacedAt ?? "--"} @ {Number(selectedPart?.replacedKm ?? 0).toLocaleString("tr-TR")} KM
+              Son değişim: {selectedPart?.replacedAt ?? "--"} @ {Number(selectedPart?.replacedKm ?? 0).toLocaleString("tr-TR")} KM
             </div>
           </div>
 

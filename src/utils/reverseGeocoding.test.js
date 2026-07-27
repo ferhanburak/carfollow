@@ -10,12 +10,12 @@ describe("reverse geocoding helpers", () => {
       address_components: [
         { long_name: "7. Cadde", types: ["route"] },
         { long_name: "Bahcelievler Mahallesi", types: ["neighborhood"] },
-        { long_name: "Cankaya", types: ["administrative_area_level_2"] },
+        { long_name: "Çankaya", types: ["administrative_area_level_2"] },
         { long_name: "Ankara", types: ["administrative_area_level_1"] },
       ],
     }];
 
-    expect(formatDistrictLocation(results)).toBe("Bahcelievler Mahallesi / Cankaya");
+    expect(formatDistrictLocation(results)).toBe("Bahcelievler Mahallesi / Çankaya");
     expect(formatDistrictLocation(results)).not.toContain("7. Cadde");
   });
 

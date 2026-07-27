@@ -53,9 +53,9 @@ function getLiveRouteMetrics(selectedPin, driveHud, isDriving) {
 function buildNavigationSummary(selectedPin, driveHud, isDriving, user) {
   if (selectedPin?.type !== "meet") {
     return {
-      title: selectedPin?.name ?? "Serbest surus",
-      subtitle: selectedPin ? "Popup icin marker'a dokun" : "Yakindaki markerlari incele",
-      eta: isDriving ? "Canli" : "Hazir",
+      title: selectedPin?.name ?? "Serbest sürüş",
+      subtitle: selectedPin ? "Popup için marker'a dokun" : "Yakindaki markerlari incele",
+      eta: isDriving ? "Canlı" : "Hazır",
     };
   }
 
@@ -63,7 +63,7 @@ function buildNavigationSummary(selectedPin, driveHud, isDriving, user) {
   if (!accessState.canViewDetails) {
     return {
       title: "Restricted convoy",
-      subtitle: "Detaylar guven kurallari nedeniyle gizli",
+      subtitle: "Detaylar güven kurallari nedeniyle gizli",
       eta: "Locked",
     };
   }
@@ -78,11 +78,11 @@ function buildNavigationSummary(selectedPin, driveHud, isDriving, user) {
     title: isDriving
       ? stops[1]
         ? `${stops[1]} yonune devam et`
-        : "Cruise rotasi aktif"
+        : "Cruise rotası aktif"
       : selectedPin.name,
     subtitle: isDriving
-      ? `${driveHud.etaNode} · ${routeMetrics.remainingKm.toFixed(1)} km kaldi`
-      : `${selectedPin.time} · ${selectedPin.attendees.length} katilimci`,
+      ? `${driveHud.etaNode} · ${routeMetrics.remainingKm.toFixed(1)} km kaldı`
+      : `${selectedPin.time} · ${selectedPin.attendees.length} katılımcı`,
     eta: isDriving
       ? routeMetrics.etaMinutes ? `${routeMetrics.etaMinutes} dk` : "GPS bekleniyor"
       : `${Math.max(4, stops.length * 3)} dk`,
@@ -91,13 +91,13 @@ function buildNavigationSummary(selectedPin, driveHud, isDriving, user) {
 
 function getLifecycleLabel(value) {
   if (value === "rolling") {
-    return "Basladi";
+    return "Başladı";
   }
   if (value === "delayed") {
     return "Gecikiyor";
   }
   if (value === "completed") {
-    return "Tamamlandi";
+    return "Tamamlandı";
   }
   if (value === "cancelled") {
     return "Iptal Edildi";
@@ -140,7 +140,7 @@ function buildConvoyTimeline(pin, user, driveHud, isDriving) {
       subtitle: accessState.reason,
       progress: 0,
       segments: [
-        { label: "Hazir", value: 0 },
+        { label: "Hazır", value: 0 },
         { label: "Yolda", value: 0 },
         { label: "Vardi", value: 0 },
       ],
@@ -162,16 +162,16 @@ function buildConvoyTimeline(pin, user, driveHud, isDriving) {
 
   return {
     locked: false,
-    title: `${getLifecycleLabel(pin.lifecycleStatus)} · ${attendees.length} surucu`,
+    title: `${getLifecycleLabel(pin.lifecycleStatus)} · ${attendees.length} sürücü`,
     subtitle: isDriving
-      ? `${driveHud.etaNode} · ${routeMetrics.remainingKm.toFixed(1)} km kaldi · ${
-        routeMetrics.etaMinutes ? `ETA ${routeMetrics.etaMinutes} dk` : "ETA icin hareket bekleniyor"
+      ? `${driveHud.etaNode} · ${routeMetrics.remainingKm.toFixed(1)} km kaldı · ${
+        routeMetrics.etaMinutes ? `ETA ${routeMetrics.etaMinutes} dk` : "ETA için hareket bekleniyor"
       }`
       : `${pin.route} · ${pin.time}`,
     progress,
     metrics: routeMetrics,
     segments: [
-      { label: "Hazir", value: summary.ready },
+      { label: "Hazır", value: summary.ready },
       { label: "Yolda", value: summary.enroute },
       { label: "Vardi", value: summary.arrived },
       { label: "Iptal", value: summary.cancelled },
@@ -261,15 +261,15 @@ export function MapScreen({
     selectedPin?.type === "meet" && !getConvoyAccessState(selectedPin, user).canViewDetails
       ? "Restricted Convoy"
       : selectedPin?.name;
-  const liveStatusLabel = isDriving ? "Canli rota acik" : "Harita izleme";
-  const selectedLabel = selectedPin ? selectedPin.name : "Marker secilmedi";
+  const liveStatusLabel = isDriving ? "Canlı rota açık" : "Harita izleme";
+  const selectedLabel = selectedPin ? selectedPin.name : "Marker seçilmedi";
   const accessLabel =
     selectedPin?.type === "meet"
       ? getConvoyAccessState(selectedPin, user).canViewDetails
-        ? "Convoy acik"
+        ? "Convoy açık"
         : "Convoy kilitli"
       : selectedPin
-        ? "Node secili"
+        ? "Node seçili"
         : "Serbest mod";
 
   return (
@@ -289,22 +289,22 @@ export function MapScreen({
             {convoyTracking?.status === "tracking"
               ? "Konvoy GPS aktif"
               : convoyTracking?.status === "verifying"
-                ? "Varis dogrulaniyor"
+                ? "Varis doğrulanıyor"
                 : convoyTracking?.status === "low-accuracy"
-                  ? "GPS hassasiyeti dusuk"
+                  ? "GPS hassasiyeti düşük"
               : convoyTracking?.status === "arrived"
                 ? "Hedefe varildi"
                 : convoyTracking?.status === "completed"
-                  ? "Konvoy tamamlandi"
-                  : driveSessionStatus === "error" ? "Baglanti sorunu" : liveStatusLabel}
+                  ? "Konvoy tamamlandı"
+                  : driveSessionStatus === "error" ? "Bağlantı sorunu" : liveStatusLabel}
           </p>
         </div>
         <div className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-3 py-2">
-          <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Secili</p>
+          <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Seçili</p>
           <p className="mt-1 truncate text-xs font-bold text-white">{selectedLabel}</p>
         </div>
         <div className="rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-3 py-2">
-          <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Erisim</p>
+          <p className="text-[9px] uppercase tracking-[0.22em] text-neutral-500">Erişim</p>
           <p className="mt-1 truncate text-xs font-bold text-white">{accessLabel}</p>
         </div>
       </div>
@@ -314,12 +314,12 @@ export function MapScreen({
           {convoyTracking.error || (convoyTracking.status === "requesting"
             ? "Konvoy saati geldi. GPS izni bekleniyor..."
             : convoyTracking.status === "verifying"
-              ? `Varis dogrulaniyor (${convoyTracking.arrivalConfirmationCount ?? 1}/${convoyTracking.arrivalConfirmationRequired ?? 2}). Hedef alaninda kal.`
+              ? `Varis doğrulanıyor (${convoyTracking.arrivalConfirmationCount ?? 1}/${convoyTracking.arrivalConfirmationRequired ?? 2}). Hedef alanında kal.`
               : convoyTracking.status === "low-accuracy"
-                ? "Hedef alanindasin ancak GPS hassasiyeti dusuk. Acik alanda konum dogrulamasi bekleniyor."
+                ? "Hedef alanindasin ancak GPS hassasiyeti düşük. Açık alanda konum doğrulaması bekleniyor."
             : convoyTracking.status === "arrived"
-              ? "Rota sonuna ulastin. Diger suruculer bekleniyor."
-              : "Konvoy tamamlandi. Surucu oylamasi acildi.")}
+              ? "Rota sonuna ulaştın. Diğer sürücüler bekleniyor."
+              : "Konvoy tamamlandı. Sürücü oylaması açıldı.")}
         </div>
       ) : null}
 

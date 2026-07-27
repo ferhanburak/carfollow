@@ -24,13 +24,13 @@ const initialClanForm = { name: "", tag: "", description: "" };
 
 function getClanErrorMessage(error) {
   const messages = {
-    "functions/already-exists": "Bu klan adi, tag veya davet zaten kullaniliyor.",
-    "functions/failed-precondition": "Bu klan islemi mevcut durumda yapilamaz.",
-    "functions/not-found": "Klan veya davet kaydi bulunamadi.",
-    "functions/permission-denied": "Bu klan islemi icin gerekli yetkin yok.",
-    "functions/unauthenticated": "Bu islem icin tekrar giris yapmalisin.",
+    "functions/already-exists": "Bu klan adı, tag veya davet zaten kullaniliyor.",
+    "functions/failed-precondition": "Bu klan işlemi mevcut durumda yapilamaz.",
+    "functions/not-found": "Klan veya davet kaydı bulunamadı.",
+    "functions/permission-denied": "Bu klan işlemi için gerekli yetkin yok.",
+    "functions/unauthenticated": "Bu işlem için tekrar giriş yapmalisin.",
   };
-  return messages[error?.code] ?? (error instanceof Error ? error.message : "Klan islemi tamamlanamadi.");
+  return messages[error?.code] ?? (error instanceof Error ? error.message : "Klan işlemi tamamlanamadi.");
 }
 
 function inviteSignature(invites = []) {
@@ -145,7 +145,7 @@ export function useClanGraph({ clans, setClans, user, setUser }) {
     }
     pendingRef.current = pendingKey;
     setClanPendingKey(pendingKey);
-    setClanFeedback("Klan islemi Firebase uzerinde dogrulaniyor...");
+    setClanFeedback("Klan işlemi Firebase üzerinde doğrulanıyor...");
     try {
       const result = await action();
       setClanFeedback(typeof successMessage === "function" ? successMessage(result) : successMessage);
@@ -181,15 +181,15 @@ export function useClanGraph({ clans, setClans, user, setUser }) {
   const inviteFriendToClan = (friend) => {
     if (firebaseEnabled) {
       if (!currentClan?.id || !friend?.userId) {
-        setClanFeedback("Davet icin aktif bir klan ve Firebase profili gerekli.");
+        setClanFeedback("Davet için aktif bir klan ve Firebase profili gerekli.");
         return false;
       }
       return runFirebaseAction(
         `invite:${friend.userId}`,
         () => inviteFirebaseClanMember(currentClan.id, friend.userId),
         (result) => result?.duplicate
-          ? `${friend.fullName ?? friend.plate} icin klan daveti zaten bekliyor.`
-          : `${friend.fullName ?? friend.plate} icin klan daveti gonderildi.`,
+          ? `${friend.fullName ?? friend.plate} için klan daveti zaten bekliyor.`
+          : `${friend.fullName ?? friend.plate} için klan daveti gönderildi.`,
       );
     }
     const result = sendClanInvite(safeUser, friend, clans);
@@ -219,7 +219,7 @@ export function useClanGraph({ clans, setClans, user, setUser }) {
       return runFirebaseAction(
         `${decision}:${inviteId}`,
         () => respondFirebaseClanInvite(invite.clanId, decision),
-        decision === "accepted" ? `${invite.clanName} klanina uye oldun.` : "Klan daveti reddedildi.",
+        decision === "accepted" ? `${invite.clanName} klanina üye oldun.` : "Klan daveti reddedildi.",
       );
     }
     const result = decision === "accepted"
@@ -235,7 +235,7 @@ export function useClanGraph({ clans, setClans, user, setUser }) {
 
   const leaveCurrentClan = () => {
     if (!firebaseEnabled || !currentClan?.id) {
-      setClanFeedback("Bu islem Firebase klanlari icin kullanilabilir.");
+      setClanFeedback("Bu işlem Firebase klanlari için kullanılabilir.");
       return false;
     }
     return runFirebaseAction("leave", () => leaveFirebaseClan(currentClan.id), "Klandan ayrildin.");
@@ -244,17 +244,17 @@ export function useClanGraph({ clans, setClans, user, setUser }) {
   const updateClanMemberRole = (member, role) => runFirebaseAction(
     `role:${member.userId}`,
     () => updateFirebaseClanMemberRole(currentClan.id, member.userId, role),
-    `${member.fullName} icin rol ${role === "captain" ? "kaptan" : "uye"} olarak guncellendi.`,
+    `${member.fullName} için rol ${role === "captain" ? "kaptan" : "üye"} olarak güncellendi.`,
   );
   const removeClanMember = (member) => runFirebaseAction(
     `remove:${member.userId}`,
     () => removeFirebaseClanMember(currentClan.id, member.userId),
-    `${member.fullName} klandan cikarildi.`,
+    `${member.fullName} klandan çıkarıldı.`,
   );
   const transferClanOwnership = (member) => runFirebaseAction(
     `transfer:${member.userId}`,
     () => transferFirebaseClanOwnership(currentClan.id, member.userId),
-    `Klan sahipligi ${member.fullName} kullanicisina devredildi.`,
+    `Klan sahipliği ${member.fullName} kullanıcısına devredildi.`,
   );
 
   return {

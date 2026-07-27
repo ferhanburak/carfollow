@@ -24,7 +24,7 @@ function renderProfile(overrides = {}) {
   return render(
     <PublicDriverProfileOverlay
       hostableConvoys={[
-        { id: "convoy-1", name: "Night Route", route: "Golbasi", time: "22:00", capacity: 12, attendees: [] },
+        { id: "convoy-1", name: "Night Route", route: "Gölbaşı", time: "22:00", capacity: 12, attendees: [] },
         { id: "convoy-2", name: "Morning Route", route: "Incek", time: "08:00", capacity: 8, attendees: [] },
       ]}
       onClose={vi.fn()}
@@ -46,13 +46,13 @@ describe("PublicDriverProfileOverlay community invitations", () => {
     const onInviteToConvoy = vi.fn();
     renderProfile({ onInviteFriendToClan, onInviteToConvoy });
 
-    expect(screen.getByRole("button", { name: "Mesaj Gonder" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Mesaj Gönder" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Klana Davet" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Konvoya Davet" })).toBeEnabled();
 
     await user.click(screen.getByRole("button", { name: "Klana Davet" }));
     await user.click(screen.getByRole("button", { name: "Konvoya Davet" }));
-    expect(screen.getByText("Konvoy Sec")).toBeInTheDocument();
+    expect(screen.getByText("Konvoy Seç")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Morning Route/i }));
 
     expect(onInviteFriendToClan).toHaveBeenCalledWith(stranger);
@@ -79,6 +79,6 @@ describe("PublicDriverProfileOverlay community invitations", () => {
       }],
     });
 
-    expect(screen.getByRole("button", { name: "Davet Gonderildi" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Davet Gönderildi" })).toBeDisabled();
   });
 });

@@ -39,7 +39,7 @@ export async function deleteFirebaseProfileAvatar(storagePath) {
 
 export async function updateFirebaseVehicleProfile(profile) {
   const services = await getFirebaseServices();
-  if (!services?.authUser) throw profileError("cruiser/unauthenticated", "Firebase hesabi gerekli.");
+  if (!services?.authUser) throw profileError("cruiser/unauthenticated", "Firebase hesabı gerekli.");
   const { httpsCallable } = await import("firebase/functions");
   const result = await httpsCallable(services.functions, "updateVehicleProfile")({ profile });
   return result.data;

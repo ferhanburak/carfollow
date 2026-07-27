@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ProfileAvatar } from "../components/ProfileAvatar";
 
 const categories = [
-  { key: "all", label: "Tum Akis", tabLabel: "Tumu" },
+  { key: "all", label: "Tüm Akis", tabLabel: "Tumu" },
   { key: "places", label: "Rota & Mekan", tabLabel: "Rota" },
   { key: "builds", label: "Modifiye & Build", tabLabel: "Modifiye" },
   { key: "technical", label: "Teknik Destek", tabLabel: "Teknik" },
@@ -47,13 +47,13 @@ function ThreadCard({ onAddReply, onToggleLike, pendingKey, thread }) {
       <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-300">{thread.body}</p>
       {thread.location ? <p className="mt-3 rounded-xl border border-sky-400/15 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">Konum: {thread.location}</p> : null}
       {thread.setup ? <p className="mt-3 rounded-xl border border-amber-400/15 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">Setup: {thread.setup}</p> : null}
-      {thread.vehicleKm ? <p className="mt-3 text-xs text-neutral-500">Arac KM: {Number(thread.vehicleKm).toLocaleString("tr-TR")}</p> : null}
+      {thread.vehicleKm ? <p className="mt-3 text-xs text-neutral-500">Araç KM: {Number(thread.vehicleKm).toLocaleString("tr-TR")}</p> : null}
       <div className="mt-4 flex items-center gap-7 text-neutral-500">
         <button
           type="button"
           disabled={pendingKey === `like:${thread.id}`}
           onClick={() => onToggleLike(thread.id)}
-          aria-label={thread.likedByViewer ? "Faydali isaretini kaldir" : "Faydali bul"}
+          aria-label={thread.likedByViewer ? "Faydalı isaretini kaldır" : "Faydalı bul"}
           className={`flex min-h-12 items-center gap-2 text-xs font-semibold transition active:scale-90 ${thread.likedByViewer ? "text-lime-400" : "hover:text-lime-300"}`}
         >
           <ActionIcon><path d="M7 10v10H4V10h3Zm3 10V9l3-5c1.3.3 2 1.3 2 2.5L14.5 10H20l-1.4 8.4A2 2 0 0 1 16.6 20H10Z" /></ActionIcon>
@@ -74,7 +74,7 @@ function ThreadCard({ onAddReply, onToggleLike, pendingKey, thread }) {
           ))}
           <textarea value={reply} onChange={(event) => setReply(event.target.value)} rows={2} placeholder="Yanitini yaz..." className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-3 text-sm outline-none focus:border-lime-400" />
           <button type="button" disabled={!reply.trim() || pendingKey === `reply:${thread.id}`} onClick={submitReply} className="min-h-12 w-full rounded-xl bg-lime-400 text-xs font-bold text-black disabled:opacity-40">
-            {pendingKey === `reply:${thread.id}` ? "Gonderiliyor..." : "Yanitla"}
+            {pendingKey === `reply:${thread.id}` ? "Gönderiliyor..." : "Yanitla"}
           </button>
         </div>
       ) : null}
@@ -114,16 +114,16 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
             <select value={form.category} onChange={(event) => onFormChange((current) => ({ ...current, category: event.target.value }))} className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm">
               {categories.slice(1).map((category) => <option key={category.key} value={category.key}>{category.label}</option>)}
             </select>
-            <input value={form.title} onChange={(event) => onFormChange((current) => ({ ...current, title: event.target.value }))} placeholder="Baslik *" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm outline-none focus:border-lime-400" />
+            <input value={form.title} onChange={(event) => onFormChange((current) => ({ ...current, title: event.target.value }))} placeholder="Başlık *" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm outline-none focus:border-lime-400" />
             <textarea value={form.body} onChange={(event) => onFormChange((current) => ({ ...current, body: event.target.value }))} rows={4} placeholder="Paylasimini anlat *" className="w-full rounded-xl border border-white/10 bg-[#171717] px-3 py-3 text-sm outline-none focus:border-lime-400" />
             {form.category === "places" ? <input value={form.location} onChange={(event) => onFormChange((current) => ({ ...current, location: event.target.value }))} placeholder="Mekan veya rota" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm" /> : null}
-            {form.category === "builds" ? <input value={form.setup} onChange={(event) => onFormChange((current) => ({ ...current, setup: event.target.value }))} placeholder="Parcalar ve setup" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm" /> : null}
-            {form.category === "technical" ? <input type="number" min="0" value={form.vehicleKm} onChange={(event) => onFormChange((current) => ({ ...current, vehicleKm: event.target.value }))} placeholder="Arac kilometresi" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm" /> : null}
+            {form.category === "builds" ? <input value={form.setup} onChange={(event) => onFormChange((current) => ({ ...current, setup: event.target.value }))} placeholder="Parçalar ve setup" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm" /> : null}
+            {form.category === "technical" ? <input type="number" min="0" value={form.vehicleKm} onChange={(event) => onFormChange((current) => ({ ...current, vehicleKm: event.target.value }))} placeholder="Araç kilometresi" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm" /> : null}
             {feedback ? <p className="text-xs text-rose-300">{feedback}</p> : null}
             <div className="flex items-center justify-between border-t border-white/10 pt-3">
               <button type="button" onClick={() => setComposerOpen(false)} className="min-h-12 px-2 text-xs font-bold text-neutral-500 transition hover:text-white active:scale-90">Vazgec</button>
               <button type="button" disabled={pendingKey === "create"} onClick={publishThread} className="min-h-12 rounded-full bg-lime-400 px-5 text-sm font-black text-black transition active:scale-95 disabled:opacity-50">
-                {pendingKey === "create" ? "Yayinlaniyor..." : "Paylas"}
+                {pendingKey === "create" ? "Yayinlaniyor..." : "Paylaş"}
               </button>
             </div>
           </div>
@@ -133,7 +133,7 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
 
       <div>
         {visibleThreads.map((thread) => <ThreadCard key={thread.id} onAddReply={addReply} onToggleLike={toggleLike} pendingKey={pendingKey} thread={thread} />)}
-        {!visibleThreads.length ? <div className="p-8 text-center text-sm text-neutral-500">Bu kategoride henuz paylasim yok. Ilk paylasimi sen yap.</div> : null}
+        {!visibleThreads.length ? <div className="p-8 text-center text-sm text-neutral-500">Bu kategoride henüz paylaşım yok. İlk paylaşımı sen yap.</div> : null}
       </div>
     </section>
   );

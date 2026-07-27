@@ -357,7 +357,7 @@ export function processGpsPosition(previousPoint, position) {
 
 export function getGeolocationErrorStatus(error) {
   if (error?.code === 1) {
-    return { status: "denied", message: "Konum izni reddedildi. Surus verisi kaydedilmiyor." };
+    return { status: "denied", message: "Konum izni reddedildi. Sürüş verisi kaydedilmiyor." };
   }
   if (error?.code === 2) {
     return { status: "unavailable", message: "GPS konumu su anda alinamiyor." };
@@ -366,5 +366,5 @@ export function getGeolocationErrorStatus(error) {
     return { status: "timeout", message: "GPS yaniti zaman asimina ugradi; yeniden deneniyor." };
   }
 
-  return { status: "error", message: "GPS verisi okunamadi." };
+  return { status: "error", message: "GPS verisi okunamadı." };
 }

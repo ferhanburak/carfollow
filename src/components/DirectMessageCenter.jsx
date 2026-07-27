@@ -31,7 +31,7 @@ function formatPresenceLabel(presence) {
   if (!lastSeen) return "offline";
 
   const diffMinutes = Math.max(1, Math.round((Date.now() - lastSeen) / 60000));
-  return diffMinutes < 60 ? `${diffMinutes} dk once` : `${Math.round(diffMinutes / 60)} sa once`;
+  return diffMinutes < 60 ? `${diffMinutes} dk önce` : `${Math.round(diffMinutes / 60)} sa önce`;
 }
 
 function getConversationProfile(conversation) {
@@ -116,7 +116,7 @@ export function DirectMessageCenter({
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
               {view === "chat" ? (
-                <button type="button" onClick={onShowInbox} aria-label="Sohbet listesine don" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-lg">
+                <button type="button" onClick={onShowInbox} aria-label="Sohbet listesine dön" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-lg">
                   &larr;
                 </button>
               ) : (
@@ -167,7 +167,7 @@ export function DirectMessageCenter({
                       <span className="truncate text-sm font-bold text-neutral-100">{conversation.participantName}</span>
                     </span>
                     <span className="mt-1 block truncate font-mono text-[10px] tracking-[0.14em] text-lime-300">{conversation.participantPlate}</span>
-                    <span className="mt-1 block truncate text-xs text-neutral-500">{conversation.lastMessage?.body ?? "Henuz mesaj yok"}</span>
+                    <span className="mt-1 block truncate text-xs text-neutral-500">{conversation.lastMessage?.body ?? "Henüz mesaj yok"}</span>
                   </span>
                   <span className="flex shrink-0 flex-col items-end gap-2">
                     <span className="text-[10px] text-neutral-600">{formatMessageTime(conversation.lastMessage?.createdAt)}</span>
@@ -178,8 +178,8 @@ export function DirectMessageCenter({
                 </button>
               )) : (
                 <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.02] px-5 py-12 text-center">
-                  <p className="text-sm font-bold text-neutral-300">Henuz sohbet yok</p>
-                  <p className="mt-2 text-xs leading-5 text-neutral-500">Social ekranindan bir arkadasinin profilini acip mesaj gonderebilirsin.</p>
+                  <p className="text-sm font-bold text-neutral-300">Henüz sohbet yok</p>
+                  <p className="mt-2 text-xs leading-5 text-neutral-500">Social ekranindan bir arkadasinin profilini acip mesaj gönderebilirsin.</p>
                 </div>
               )}
             </div>
@@ -199,11 +199,11 @@ export function DirectMessageCenter({
                         </div>
                       </div>
                     );
-                  }) : <p className="py-10 text-center text-xs text-neutral-500">Ilk mesaji sen gonder.</p>}
+                  }) : <p className="py-10 text-center text-xs text-neutral-500">İlk mesajı sen gönder.</p>}
                   <div ref={messagesEndRef} />
                 </div>
               ) : (
-                <div className="py-12 text-center text-sm text-neutral-500">Sohbet bulunamadi.</div>
+                <div className="py-12 text-center text-sm text-neutral-500">Sohbet bulunamadı.</div>
               )}
             </div>
             {activeTypingUsers.length ? <p className="shrink-0 px-4 pb-2 text-xs text-lime-300">{activeTypingUsers.map((entry) => entry.plate).join(", ")} yaziyor...</p> : null}
@@ -219,7 +219,7 @@ export function DirectMessageCenter({
                   className="min-h-12 max-h-28 flex-1 resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm outline-none focus:border-lime-400"
                 />
                 <button type="submit" disabled={!selectedConversation || !messageDraft.trim()} className="flex h-12 min-w-16 items-center justify-center rounded-2xl bg-lime-400 px-4 text-xs font-black text-black disabled:cursor-not-allowed disabled:opacity-40">
-                  Gonder
+                  Gönder
                 </button>
               </div>
             </form>

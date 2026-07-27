@@ -14,7 +14,7 @@ function formatDriveDuration(seconds) {
 
 function getGpsStatusLabel(status) {
   const labels = {
-    denied: "IZIN REDDEDILDI",
+    denied: "İZİN REDDEDILDI",
     error: "GPS HATASI",
     idle: "GPS HAZIR",
     live: "GPS CANLI",
@@ -43,7 +43,7 @@ export function DriveScreen({
 }) {
   const resolvedLocation = useReverseGeocodedLocation(driveHud.location, isDriving);
   const locationLabel = resolvedLocation.label || (
-    isDriving ? "Konum bekleniyor" : "Surusu baslat"
+    isDriving ? "Konum bekleniyor" : "Sürüşü başlat"
   );
   const accuracy = Number(driveHud.accuracy);
 
@@ -53,7 +53,7 @@ export function DriveScreen({
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h3 className="text-base font-black uppercase tracking-tight">
-              {isDriving ? "Surus Modu Aktif" : "Suruse Hazir"}
+              {isDriving ? "Sürüş Modu Aktif" : "Sürüşe Hazır"}
             </h3>
             <p className="mt-1 truncate text-[10px] text-neutral-400">
               <span className="font-semibold text-lime-300">{getGpsStatusLabel(driveHud.gpsStatus)}</span>
@@ -88,8 +88,8 @@ export function DriveScreen({
 
       <div className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold">Canli Aktif Suruculer</p>
-          <span className="text-[10px] uppercase tracking-[0.16em] text-lime-300">Canli</span>
+          <p className="text-sm font-semibold">Canlı Aktif Sürücüler</p>
+          <span className="text-[10px] uppercase tracking-[0.16em] text-lime-300">Canlı</span>
         </div>
         {drivers.length > 0 ? (
           <div className="mt-3 space-y-2">
@@ -108,8 +108,8 @@ export function DriveScreen({
           </div>
         ) : (
           <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-black/20 px-4 py-5 text-center">
-            <p className="text-sm font-semibold text-neutral-300">Su anda aktif surucu yok</p>
-            <p className="mt-1 text-xs text-neutral-500">Suruse baslayan suruculer burada gorunur.</p>
+            <p className="text-sm font-semibold text-neutral-300">Su anda aktif sürücü yok</p>
+            <p className="mt-1 text-xs text-neutral-500">Sürüşe baslayan sürücüler burada görünür.</p>
           </div>
         )}
       </div>

@@ -67,7 +67,7 @@ describe("Firebase notification repository", () => {
           },
           {
             id: "role",
-            data: () => ({ type: "clan-role", title: "Klan rolun guncellendi", createdAt: { toMillis: () => 450 } }),
+            data: () => ({ type: "clan-role", title: "Klan rolün güncellendi", createdAt: { toMillis: () => 450 } }),
           },
         ],
       });

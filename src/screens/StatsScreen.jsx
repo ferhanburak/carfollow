@@ -84,19 +84,19 @@ const leaderboardMetrics = [
   {
     key: "monthlyKm",
     label: "KM",
-    summaryLabel: "Aylik KM",
+    summaryLabel: "Aylık KM",
     format: (value) => `${formatNumber(value)} KM`,
   },
   {
     key: "monthlyDriveSeconds",
-    label: "Surus Suresi",
-    summaryLabel: "Surus",
+    label: "Sürüş Süresi",
+    summaryLabel: "Sürüş",
     format: (value) => formatDriveTime(value),
   },
   {
     key: "monthlyMaxSpeedKmh",
-    label: "Maksimum Hiz",
-    summaryLabel: "Max Hiz",
+    label: "Maksimum Hız",
+    summaryLabel: "Max Hız",
     format: (value) => `${Math.round(Number(value) || 0)} KM/H`,
   },
 ];
@@ -213,7 +213,7 @@ export function StatsScreen({
             data-testid="incoming-clan-invite-alert"
             className="mb-4 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100"
           >
-            {user.clanInvites.length} bekleyen klan davetin var. Klan Kur alanindan kabul veya red islemi yapabilirsin.
+            {user.clanInvites.length} bekleyen klan davetin var. Klan Kur alanından kabul veya red işlemi yapabilirsin.
           </div>
         ) : null}
 
@@ -270,7 +270,7 @@ export function StatsScreen({
       {showSocial ? (
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-black">Arkadas Bul ve Baglan</h3>
+          <h3 className="text-xl font-black">Arkadaş Bul ve Bağlan</h3>
           <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">
             {(user.friends ?? []).length} friends
           </div>
@@ -283,11 +283,11 @@ export function StatsScreen({
         <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold">Kullanici Ara</p>
-              <p className="mt-1 text-xs text-neutral-500">Tam plakayla ara. Yalnizca birebir eslesen kayit gosterilir.</p>
+              <p className="text-sm font-semibold">Kullanıcı Ara</p>
+              <p className="mt-1 text-xs text-neutral-500">Tam plakayla ara. Yalnızca birebir eslesen kayıt gösterilir.</p>
             </div>
             <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-neutral-400">
-              {hasSearchResults ? `${Math.min(friendSearchResults.length, 8)} sonuc` : "Hazir"}
+              {hasSearchResults ? `${Math.min(friendSearchResults.length, 8)} sonuç` : "Hazır"}
             </span>
           </div>
           <input
@@ -303,7 +303,7 @@ export function StatsScreen({
                   <button type="button" onClick={() => openProfileDrawer(entry, "search")} className="text-left">
                     <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
                     <p className="mt-1 text-sm font-semibold">{entry.fullName ?? "CRUISER Driver"}</p>
-                    <p className="text-xs text-neutral-500">{entry.model ?? "Arac bilgisi gizli"}{entry.region ? ` / ${entry.region}` : ""}</p>
+                    <p className="text-xs text-neutral-500">{entry.model ?? "Araç bilgisi gizli"}{entry.region ? ` / ${entry.region}` : ""}</p>
                   </button>
                   {entry.friendshipStatus === "none" ? (
                     <button
@@ -312,7 +312,7 @@ export function StatsScreen({
                       onClick={() => requestFriend(entry)}
                       className="min-h-12 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black disabled:cursor-wait disabled:opacity-50"
                     >
-                      Arkadas Ekle
+                      Arkadaş Ekle
                     </button>
                   ) : entry.friendshipStatus === "outgoing" ? (
                     <button
@@ -320,7 +320,7 @@ export function StatsScreen({
                       disabled
                       className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-300 disabled:cursor-not-allowed disabled:opacity-70"
                     >
-                      Istek Gonderildi
+                      İstek Gönderildi
                     </button>
                   ) : entry.friendshipStatus === "incoming" ? (
                     <div className="flex gap-2">
@@ -355,7 +355,7 @@ export function StatsScreen({
                       onClick={() => inviteFriendToClan(entry)}
                       className="min-h-12 rounded-xl border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-xs font-semibold text-lime-200 disabled:cursor-wait disabled:opacity-50"
                     >
-                      {hasPendingClanInvite(entry) ? "Davet Gonderildi" : "Klana Davet"}
+                      {hasPendingClanInvite(entry) ? "Davet Gönderildi" : "Klana Davet"}
                     </button>
                   ) : null}
                   {primaryHostableConvoy ? (
@@ -365,7 +365,7 @@ export function StatsScreen({
                       onClick={() => inviteDriverToMeet(primaryHostableConvoy.id, entry)}
                       className="min-h-12 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {isInvitedToConvoy(primaryHostableConvoy, entry) ? "Davet Gonderildi" : "Konvoya Davet"}
+                      {isInvitedToConvoy(primaryHostableConvoy, entry) ? "Davet Gönderildi" : "Konvoya Davet"}
                     </button>
                   ) : null}
                 </div>
@@ -373,7 +373,7 @@ export function StatsScreen({
             ))}
             {!hasSearchResults && friendSearchQuery.trim() ? (
               <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
-                Bu tam plakaya ait bir surucu bulunamadi.
+                Bu tam plakaya ait bir sürücü bulunamadı.
               </div>
             ) : null}
           </div>
@@ -381,7 +381,7 @@ export function StatsScreen({
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-            <p className="text-sm font-semibold">Gelen Istekler</p>
+            <p className="text-sm font-semibold">Gelen İstekler</p>
             <div className="mt-4 space-y-3">
               {(user.incomingRequests ?? []).length ? (
                 user.incomingRequests.map((entry) => (
@@ -413,26 +413,26 @@ export function StatsScreen({
                 ))
               ) : (
                 <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
-                  Yeni arkadas istegi yok.
+                  Yeni arkadaş isteği yok.
                 </div>
               )}
             </div>
           </div>
 
           <div aria-label="Giden istekler" className="rounded-2xl border border-white/8 bg-black/20 p-4">
-            <p className="text-sm font-semibold">Giden Istekler</p>
+            <p className="text-sm font-semibold">Giden İstekler</p>
             <div className="mt-4 space-y-3">
               {(user.outgoingRequests ?? []).length ? (
                 user.outgoingRequests.map((entry) => (
                   <div key={`${entry.userId ?? entry.plate}-outgoing`} className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
                     <button type="button" onClick={() => openProfileDrawer(entry, "outgoing")} className="min-h-12 min-w-0 flex-1 text-left">
                       <p className="truncate text-sm font-semibold text-neutral-100">{entry.fullName}</p>
-                      <p className="mt-1 truncate text-xs text-neutral-500">{entry.model || "Arac bilgisi yok"}</p>
+                      <p className="mt-1 truncate text-xs text-neutral-500">{entry.model || "Araç bilgisi yok"}</p>
                     </button>
                     <button
                       type="button"
-                      aria-label={`${entry.fullName} arkadaslik istegini geri cek`}
-                      title="Istegi geri cek"
+                      aria-label={`${entry.fullName} arkadaşlık istegini geri çek`}
+                      title="Istegi geri çek"
                       disabled={isSocialEntryPending(entry)}
                       onClick={() => withdrawFriendRequest(entry.plate)}
                       className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-neutral-300 transition active:scale-95 disabled:cursor-wait disabled:opacity-50"
@@ -449,15 +449,15 @@ export function StatsScreen({
             </div>
           </div>
 
-          <div aria-label="Arkadas listesi" className="rounded-2xl border border-white/8 bg-black/20 p-4">
-            <p className="text-sm font-semibold">Arkadas Listesi</p>
+          <div aria-label="Arkadaş listesi" className="rounded-2xl border border-white/8 bg-black/20 p-4">
+            <p className="text-sm font-semibold">Arkadaş Listesi</p>
             <div className="mt-4 space-y-3">
               {(user.friends ?? []).length ? (
                 user.friends.map((entry) => (
                   <div key={`${entry.plate}-friend`} className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
                     <button type="button" onClick={() => openProfileDrawer(entry, "friend")} className="min-h-12 w-full text-left">
                       <p className="truncate text-sm font-semibold text-neutral-100">{entry.fullName}</p>
-                      <p className="mt-1 truncate text-xs text-neutral-500">{entry.model || "Arac bilgisi yok"}</p>
+                      <p className="mt-1 truncate text-xs text-neutral-500">{entry.model || "Araç bilgisi yok"}</p>
                     </button>
                     <div className={`mt-2 grid gap-2 ${canInviteToClan ? "grid-cols-4" : "grid-cols-3"}`}>
                       <button
@@ -473,8 +473,8 @@ export function StatsScreen({
                       {canInviteToClan ? (
                         <button
                           type="button"
-                          aria-label={hasPendingClanInvite(entry) ? `${entry.fullName} klan daveti gonderildi` : `${entry.fullName} klana davet et`}
-                          title={hasPendingClanInvite(entry) ? "Davet gonderildi" : "Klana davet et"}
+                          aria-label={hasPendingClanInvite(entry) ? `${entry.fullName} klan daveti gönderildi` : `${entry.fullName} klana davet et`}
+                          title={hasPendingClanInvite(entry) ? "Davet gönderildi" : "Klana davet et"}
                           disabled={isSocialEntryPending(entry) || hasPendingClanInvite(entry)}
                           onClick={() => inviteFriendToClan(entry)}
                           className="flex min-h-12 items-center justify-center rounded-xl bg-lime-400 text-black transition active:scale-95 disabled:opacity-50"
@@ -484,8 +484,8 @@ export function StatsScreen({
                       ) : null}
                       <button
                         type="button"
-                        aria-label={`${entry.fullName} arkadasliktan cikar`}
-                        title="Arkadasliktan cikar"
+                        aria-label={`${entry.fullName} arkadaşlıktan çıkar`}
+                        title="Arkadaşlıktan çıkar"
                         disabled={isSocialEntryPending(entry)}
                         onClick={() => removeFriendship(entry.plate)}
                         className="flex min-h-12 items-center justify-center rounded-xl border border-white/10 bg-black/30 text-neutral-300 transition active:scale-95 disabled:cursor-wait disabled:opacity-50"
@@ -507,7 +507,7 @@ export function StatsScreen({
                 ))
               ) : (
                 <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-neutral-500">
-                  Henuz arkadas eklenmedi.
+                  Henüz arkadaş eklenmedi.
                 </div>
               )}
             </div>
@@ -518,7 +518,7 @@ export function StatsScreen({
       ) : null}
 
       {showLeaderboard ? (
-      <div aria-label="Aylik surucu siralamasi" className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
+      <div aria-label="Aylık sürücü sıralaması" className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
         <button
           type="button"
           aria-expanded={individualLeaderboardExpanded}
@@ -526,13 +526,13 @@ export function StatsScreen({
           className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-1 text-left active:scale-[0.99]"
         >
           <div>
-            <h3 className="text-lg font-black">Aylik Surucu Siralamasi</h3>
+            <h3 className="text-lg font-black">Aylık Sürücü Sıralaması</h3>
             <p className="mt-0.5 text-[10px] text-neutral-500">
-              {individualLeaderboardExpanded ? "Tum suruculer" : "Ilk 5 surucu"}
+              {individualLeaderboardExpanded ? "Tüm sürücüler" : "İlk 5 sürücü"}
             </p>
           </div>
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-semibold text-neutral-300">
-            {individualLeaderboardExpanded ? "Daralt" : `Tumunu Gor (${individualLeaderboard.length})`}
+            {individualLeaderboardExpanded ? "Daralt" : `Tumunu Gör (${individualLeaderboard.length})`}
           </span>
         </button>
         <div aria-label="Leaderboard olcutu" className="mt-2 grid grid-cols-3 gap-1.5 rounded-xl border border-white/8 bg-black/20 p-1">
@@ -554,7 +554,7 @@ export function StatsScreen({
         </div>
         <div className="mt-2 grid grid-cols-3 gap-1.5">
           <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
-            <p className="text-[8px] uppercase tracking-[0.14em] text-neutral-500">Siran</p>
+            <p className="text-[8px] uppercase tracking-[0.14em] text-neutral-500">Sıran</p>
             <p className="mt-0.5 text-xs font-black text-lime-300">
               #{individualLeaderboard.find((driver) => driver.plate === user.plate)?.rank ?? "--"}
             </p>
@@ -601,7 +601,7 @@ export function StatsScreen({
       ) : null}
 
       {showLeaderboard ? (
-      <div aria-label="Aylik klan siralamasi" className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
+      <div aria-label="Aylık klan sıralaması" className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
         <button
           type="button"
           aria-expanded={clanLeaderboardExpanded}
@@ -609,13 +609,13 @@ export function StatsScreen({
           className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-1 text-left active:scale-[0.99]"
         >
           <div>
-            <h3 className="text-lg font-black">Aylik Klan Siralamasi</h3>
+            <h3 className="text-lg font-black">Aylık Klan Sıralaması</h3>
             <p className="mt-0.5 text-[10px] text-neutral-500">
-              {clanLeaderboardExpanded ? "Tum klanlar" : "Ilk 5 klan"}
+              {clanLeaderboardExpanded ? "Tüm klanlar" : "İlk 5 klan"}
             </p>
           </div>
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-semibold text-neutral-300">
-            {clanLeaderboardExpanded ? "Daralt" : `Tumunu Gor (${clanLeaderboard.length})`}
+            {clanLeaderboardExpanded ? "Daralt" : `Tumunu Gör (${clanLeaderboard.length})`}
           </span>
         </button>
         <div aria-label="Klan leaderboard olcutu" className="mt-2 grid grid-cols-3 gap-1.5 rounded-xl border border-white/8 bg-black/20 p-1">
@@ -647,7 +647,7 @@ export function StatsScreen({
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{clan.name}</p>
-                    <p className="truncate text-[11px] text-neutral-500">{clan.members} uye</p>
+                    <p className="truncate text-[11px] text-neutral-500">{clan.members} üye</p>
                   </div>
                 </div>
                 <div className="shrink-0 text-right">

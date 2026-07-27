@@ -43,9 +43,9 @@ describe("GarageScreen", () => {
 
     expect(screen.queryByText(props.user.primaryVehicleId)).not.toBeInTheDocument();
     expect(screen.queryByText("Records Match")).not.toBeInTheDocument();
-    expect(screen.queryByText("Kayit Durumu")).not.toBeInTheDocument();
+    expect(screen.queryByText("Kayıt Durumu")).not.toBeInTheDocument();
     expect(screen.getByText("Vehicle History Report")).toBeInTheDocument();
-    expect(screen.getByText("Arac Gecmisi Raporu")).toBeInTheDocument();
+    expect(screen.getByText("Araç Geçmişi Raporu")).toBeInTheDocument();
     expect(screen.queryByText(/Firebase|UID:|Connection:/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Service Log Ekle" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Receipt Ekle" })).toBeEnabled();
@@ -63,15 +63,15 @@ describe("GarageScreen", () => {
     const user = userEvent.setup();
     render(<GarageScreen {...buildProps()} />);
 
-    expect(screen.queryByRole("dialog", { name: "Parca sagligi merkezi" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Arac parca sagligi detaylarini ac" }));
+    expect(screen.queryByRole("dialog", { name: "Parça sağlığı merkezi" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Araç parça sağlığı detaylarini ac" }));
 
-    const dialog = screen.getByRole("dialog", { name: "Parca sagligi merkezi" });
-    expect(within(dialog).getByText("Parca Sagligi")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "Parça sağlığı merkezi" });
+    expect(within(dialog).getByText("Parça Sağlığı")).toBeInTheDocument();
     expect(within(dialog).getAllByText(/%\d+/).length).toBeGreaterThan(1);
 
-    await user.click(within(dialog).getByRole("button", { name: "Parca sagligi merkezini kapat" }));
-    expect(screen.queryByRole("dialog", { name: "Parca sagligi merkezi" })).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Parça sağlığı merkezini kapat" }));
+    expect(screen.queryByRole("dialog", { name: "Parça sağlığı merkezi" })).not.toBeInTheDocument();
   });
 
   it("shows every service record by default and filters history independently by part", async () => {
@@ -79,7 +79,7 @@ describe("GarageScreen", () => {
     const props = buildProps();
     render(<GarageScreen {...props} />);
 
-    const historyPartFilter = screen.getByRole("combobox", { name: "Gecmis Parcasi" });
+    const historyPartFilter = screen.getByRole("combobox", { name: "Geçmiş Parçası" });
     expect(historyPartFilter).toHaveValue("all");
     props.user.serviceLogs.forEach((log) => {
       const partName = props.user.parts.find((part) => part.key === log.partKey)?.name ?? log.partKey;
@@ -105,7 +105,7 @@ describe("GarageScreen", () => {
     await userEventDriver.click(screen.getByRole("button", { name: `${partName} servis kaydini sil` }));
 
     const warning = screen.getByRole("alert");
-    expect(within(warning).getByText("Bu servis kaydi kalici olarak silinecek.")).toBeInTheDocument();
+    expect(within(warning).getByText("Bu servis kaydı kalıcı olarak silinecek.")).toBeInTheDocument();
     expect(props.onDeleteServiceLog).not.toHaveBeenCalled();
 
     await userEventDriver.click(within(warning).getByRole("button", { name: "Silmeyi Onayla" }));

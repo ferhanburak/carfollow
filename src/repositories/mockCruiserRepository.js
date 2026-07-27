@@ -139,7 +139,7 @@ export function createSignedUpUser(signUpForm, identity = {}) {
       },
     } : {}),
     odometer,
-    badges: ["Yeni Uye", "Garajda Aktif"],
+    badges: ["Yeni Üye", "Garajda Aktif"],
     clan: "Lowline Union",
     clanRole: "member",
     region: "Ankara Merkez",

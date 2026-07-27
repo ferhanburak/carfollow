@@ -28,7 +28,7 @@ describe("App", () => {
     await user.type(passwordInput, "wrongpass");
     await user.click(screen.getByRole("button", { name: "Enter CRUISER" }));
 
-    expect(screen.getAllByText(/Profil bulunamadi/i)).toHaveLength(1);
+    expect(screen.getAllByText(/Profil bulunamadı/i)).toHaveLength(1);
   });
 
   it("logs in from a quick profile and shows the map shell", async () => {
@@ -42,9 +42,9 @@ describe("App", () => {
     expect(within(compactHeader).getByText("Seat Ibiza Cupra")).toBeInTheDocument();
     expect(within(compactHeader).queryByText(/CRUISER \/\//i)).not.toBeInTheDocument();
     expect(within(compactHeader).queryByText("Odometer")).not.toBeInTheDocument();
-    expect(within(within(compactHeader).getByRole("button", { name: "Suruse Basla" })).queryByText("Baslat")).not.toBeInTheDocument();
+    expect(within(within(compactHeader).getByRole("button", { name: "Sürüşe Başla" })).queryByText("Başlat")).not.toBeInTheDocument();
     expect(screen.queryByText("Node Management Hub")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Event, photo spot ve wash noktalarini burada yonet/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Event, photo spot ve wash noktalarini burada yönet/i)).not.toBeInTheDocument();
     expect(await screen.findByText("Etkinlik Haritası")).toBeInTheDocument();
     expect(await screen.findByRole("heading", { name: "Etkinlik Ekle" })).toBeInTheDocument();
     const spotMarker = await screen.findByRole("button", { name: "Mogan Lake Sunset (spot)" });
@@ -76,14 +76,14 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /34 MOTO 410/i }));
-    await user.click(screen.getByRole("button", { name: "Suruse Basla" }));
+    await user.click(screen.getByRole("button", { name: "Sürüşe Başla" }));
 
-    expect(await screen.findByText(/Surus Modu Aktif|Surus Modu Hazir/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Sürüş Modu Aktif|Sürüş Modu Hazır/i)).toBeInTheDocument();
     expect(screen.queryByText("Live GPS HUD")).not.toBeInTheDocument();
     expect(screen.queryByText("Current Setup")).not.toBeInTheDocument();
     expect(screen.queryByText("Trip Energy")).not.toBeInTheDocument();
     expect(await screen.findByText("Oturum")).toBeInTheDocument();
-    expect(await screen.findByText("Canli Aktif Suruculer")).toBeInTheDocument();
+    expect(await screen.findByText("Canlı Aktif Sürücüler")).toBeInTheDocument();
     expect(screen.queryByText("Secure Drive Session")).not.toBeInTheDocument();
     expect(screen.queryByText(/Telemetry Sync|UID:|Connection:|RTDB|Firebase Live/i)).not.toBeInTheDocument();
   });
@@ -97,7 +97,7 @@ describe("App", () => {
 
     expect(await screen.findAllByRole("button", { name: "Bildirim merkezi" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "DM merkezi" })).toHaveLength(1);
-    expect(screen.getAllByRole("button", { name: "Suruse Basla" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Sürüşe Başla" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Ayarlar merkezi" })).toHaveLength(1);
 
     const liveMap = screen.getByTestId("live-map-screen");
@@ -105,13 +105,13 @@ describe("App", () => {
     expect(within(liveMap).getByText("Seat Ibiza Cupra")).toBeInTheDocument();
     expect(within(liveMap).queryByText("CRUISER LIVE MAP")).not.toBeInTheDocument();
     expect(within(liveMap).queryByText("Selected Node")).not.toBeInTheDocument();
-    expect(within(liveMap).queryByText("Serbest surus")).not.toBeInTheDocument();
+    expect(within(liveMap).queryByText("Serbest sürüş")).not.toBeInTheDocument();
 
     await user.click(within(liveMap).getByRole("button", { name: "Mogan Lake Sunset (spot)" }));
     expect(within(liveMap).getByTestId("live-map-node-overlay")).toBeInTheDocument();
     await user.click(within(liveMap).getByRole("button", { name: "Kapat" }));
     expect(within(liveMap).queryByTestId("live-map-node-overlay")).not.toBeInTheDocument();
-    expect(within(liveMap).getByText("Marker secilmedi")).toBeInTheDocument();
+    expect(within(liveMap).getByText("Marker seçilmedi")).toBeInTheDocument();
   });
 
   it("opens recent conversations from the global DM button", async () => {
@@ -130,7 +130,7 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: /Ece Yalin/i }));
     expect(screen.getByRole("textbox", { name: "Mesaj yaz" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sohbet listesine don" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sohbet listesine dön" })).toBeInTheDocument();
   });
 
   it("opens profile controls from the global settings center", async () => {
@@ -142,17 +142,17 @@ describe("App", () => {
 
     expect(screen.getByRole("dialog", { name: "Ayarlar merkezi paneli" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Gizlilik ve Konum/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Engellenen Kullanicilar/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Arac ve Profil/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Engellenen Kullanıcılar/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Araç ve Profil/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Hesap ve Veri Kontrolleri/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Sifre ve Guvenlik/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Şifre ve Güvenlik/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Oturumu Kapat" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /Arac ve Profil/i }));
+    await user.click(screen.getByRole("button", { name: /Araç ve Profil/i }));
     expect(screen.getByRole("textbox", { name: "Vehicle Model" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Profili Guncelle" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Profili Güncelle" })).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Ayarlar listesine don" }));
+    await user.click(screen.getByRole("button", { name: "Ayarlar listesine dön" }));
     await user.click(screen.getByRole("button", { name: "Oturumu Kapat" }));
     expect(screen.getByText("Oturumu kapat?")).toBeInTheDocument();
 
@@ -168,7 +168,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
     await user.click(screen.getByRole("button", { name: /Social/i }));
 
-    expect(await screen.findByText("Arkadas Bul ve Baglan")).toBeInTheDocument();
+    expect(await screen.findByText("Arkadaş Bul ve Bağlan")).toBeInTheDocument();
     expect(screen.queryByText("DM Panel")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Klani Kur" })).not.toBeInTheDocument();
 
@@ -176,15 +176,15 @@ describe("App", () => {
     expect(within(outgoingRequests).getByText("Mete Alp")).toBeInTheDocument();
     expect(within(outgoingRequests).getByText("Golf GTI")).toBeInTheDocument();
     expect(within(outgoingRequests).queryByText("16 GTI 232")).not.toBeInTheDocument();
-    expect(within(outgoingRequests).getByRole("button", { name: "Mete Alp arkadaslik istegini geri cek" })).toBeInTheDocument();
+    expect(within(outgoingRequests).getByRole("button", { name: "Mete Alp arkadaşlık istegini geri çek" })).toBeInTheDocument();
 
-    const friends = screen.getByLabelText("Arkadas listesi");
+    const friends = screen.getByLabelText("Arkadaş listesi");
     expect(within(friends).getByText("Ece Yalin")).toBeInTheDocument();
     expect(within(friends).getByText("Ducati Monster")).toBeInTheDocument();
     expect(within(friends).queryByText("35 SRT 908")).not.toBeInTheDocument();
     expect(within(friends).getByRole("button", { name: "Ece Yalin ile sohbet ac" })).toBeInTheDocument();
-    expect(within(friends).getByRole("button", { name: /Ece Yalin (klana davet et|klan daveti gonderildi)/ })).toBeInTheDocument();
-    expect(within(friends).getByRole("button", { name: "Ece Yalin arkadasliktan cikar" })).toBeInTheDocument();
+    expect(within(friends).getByRole("button", { name: /Ece Yalin (klana davet et|klan daveti gönderildi)/ })).toBeInTheDocument();
+    expect(within(friends).getByRole("button", { name: "Ece Yalin arkadaşlıktan çıkar" })).toBeInTheDocument();
     expect(within(friends).getByRole("button", { name: "Ece Yalin engelle" })).toBeInTheDocument();
 
     const clanCard = screen.getByRole("button", { name: "Neon Wolves klan detaylarini ac" });
@@ -192,8 +192,8 @@ describe("App", () => {
     expect(screen.getByRole("dialog", { name: "Klan merkezi paneli" })).toBeInTheDocument();
     expect(screen.getByText("Klan Kadrosu")).toBeInTheDocument();
     expect(screen.getByText("Klan Eventleri")).toBeInTheDocument();
-    expect(screen.getByText("Event Sayisi")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Klandan Ayril" })).toBeInTheDocument();
+    expect(screen.getByText("Event Sayısı")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Klandan Ayrıl" })).toBeInTheDocument();
   });
 
   it("blocks invalid sign up and shows field errors", async () => {
@@ -203,8 +203,8 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Sign Up" }));
     await user.click(screen.getByRole("button", { name: "Build My Garage" }));
 
-    expect(screen.getAllByText("Zorunlu alanlari doldurunuz.").length).toBeGreaterThan(0);
-    expect(screen.getByText("Gorunen ad zorunludur.")).toBeInTheDocument();
+    expect(screen.getAllByText("Zorunlu alanları doldurunuz.").length).toBeGreaterThan(0);
+    expect(screen.getByText("Görünen ad zorunludur.")).toBeInTheDocument();
     expect(screen.getByText("Plate is required.")).toBeInTheDocument();
     expect(screen.queryByText("Primary garage is required.")).not.toBeInTheDocument();
     expect(screen.getByText("Mevcut KM 0 ile 5.000.000 arasinda olmali.")).toBeInTheDocument();
@@ -215,20 +215,20 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: "Sign Up" }));
-    await user.type(screen.getByLabelText(/Gorunen Ad/), "Yeni Surucu");
+    await user.type(screen.getByLabelText(/Görünen Ad/), "Yeni Sürücü");
     await user.type(screen.getByLabelText(/Plate/), "06 NEW 606");
     await user.type(screen.getByLabelText(/Password/), "secure123");
     await user.type(screen.getByLabelText(/Car\/Bike Model/), "Honda Civic");
     await user.type(screen.getByLabelText(/Horsepower/), "182");
     await user.type(screen.getByLabelText(/Mevcut KM/), "54321");
     await user.type(screen.getByLabelText(/Primary Garage\/Tuning Shop/), "Ankara Garage");
-    await user.upload(screen.getByLabelText("Profil Fotografi"), new File(["avatar"], "avatar.png", { type: "image/png" }));
-    await user.click(screen.getByRole("checkbox", { name: /Kullanim Kosullarini kabul ediyorum/i }));
-    expect(await screen.findByAltText("Profil fotografi onizleme")).toBeInTheDocument();
+    await user.upload(screen.getByLabelText("Profil Fotoğrafı"), new File(["avatar"], "avatar.png", { type: "image/png" }));
+    await user.click(screen.getByRole("checkbox", { name: /Kullanım Koşullarını kabul ediyorum/i }));
+    expect(await screen.findByAltText("Profil fotoğrafı önizleme")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Build My Garage" }));
     await user.click(await screen.findByRole("button", { name: "Ayarlar merkezi" }));
-    await user.click(screen.getByRole("button", { name: /Arac ve Profil/i }));
+    await user.click(screen.getByRole("button", { name: /Araç ve Profil/i }));
     expect(screen.getByRole("spinbutton", { name: "Mevcut KM" })).toHaveValue(54321);
   });
 
@@ -240,8 +240,8 @@ describe("App", () => {
     await user.click(await screen.findByRole("button", { name: "+ Ekle" }));
     fireEvent.submit(screen.getByRole("button", { name: "Event Ekle" }).closest("form"));
 
-    expect((await screen.findAllByText("Zorunlu alanlari doldurunuz.")).length).toBeGreaterThan(0);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Zorunlu alanlari doldurunuz.");
+    expect((await screen.findAllByText("Zorunlu alanları doldurunuz.")).length).toBeGreaterThan(0);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Zorunlu alanları doldurunuz.");
     expect(await screen.findByText("Node name is required.")).toBeInTheDocument();
     expect(await screen.findByText("Route summary is required.")).toBeInTheDocument();
   });
@@ -252,14 +252,14 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
     await user.click(screen.getByRole("button", { name: "Ayarlar merkezi" }));
-    await user.click(screen.getByRole("button", { name: /Arac ve Profil/i }));
+    await user.click(screen.getByRole("button", { name: /Araç ve Profil/i }));
 
     expect(screen.getByRole("spinbutton", { name: "Mevcut KM" })).toHaveValue(68420);
-    expect(screen.getByLabelText("Profil Fotografi")).toHaveAttribute("type", "file");
+    expect(screen.getByLabelText("Profil Fotoğrafı")).toHaveAttribute("type", "file");
     expect(screen.queryByLabelText("Avatar URL")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Profili Guncelle" }));
-    expect(await screen.findByText("Profil, fotograf ve kilometre bilgileri guncellendi.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Profili Güncelle" }));
+    expect(await screen.findByText("Profil, fotoğraf ve kilometre bilgileri güncellendi.")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
@@ -296,9 +296,9 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
     await user.click(screen.getByRole("button", { name: "Profil" }));
     await user.click(await screen.findByRole("button", { name: "Servis" }));
-    await user.click(await screen.findByRole("button", { name: "Arac parca sagligi detaylarini ac" }));
+    await user.click(await screen.findByRole("button", { name: "Araç parça sağlığı detaylarini ac" }));
 
-    const dialog = screen.getByRole("dialog", { name: "Parca sagligi merkezi" });
+    const dialog = screen.getByRole("dialog", { name: "Parça sağlığı merkezi" });
     const batteryActions = within(dialog).getAllByRole("button", { name: /Battery/i });
     await user.click(batteryActions.at(-1));
 
@@ -334,11 +334,11 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
     await user.click(screen.getByRole("button", { name: /Profil/i }));
 
-    expect(await screen.findByText("Basarimlar")).toBeInTheDocument();
+    expect(await screen.findByText("Başarımlar")).toBeInTheDocument();
     expect(screen.getByText("Driver Stats Snapshot")).toBeInTheDocument();
-    expect(screen.getByText("Aylik Surus")).toBeInTheDocument();
-    expect(screen.getByText("Aylik Max Hiz")).toBeInTheDocument();
-    expect(screen.queryByText("Onayli Surus")).not.toBeInTheDocument();
+    expect(screen.getByText("Aylık Sürüş")).toBeInTheDocument();
+    expect(screen.getByText("Aylık Max Hız")).toBeInTheDocument();
+    expect(screen.queryByText("Onaylı Sürüş")).not.toBeInTheDocument();
     expect(screen.getByText("Social Cockpit")).toBeInTheDocument();
     expect(screen.getByLabelText("Driver stats")).toHaveClass("p-3");
     expect(screen.getByLabelText("Social cockpit")).toHaveClass("p-3");
@@ -349,8 +349,8 @@ describe("App", () => {
     expect(screen.getByText("Crew Apex")).toBeInTheDocument();
     expect(screen.queryByText("Garaj Arsivi")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Basarim detaylarini ac" }));
-    expect(screen.getByRole("dialog", { name: "Basarim merkezi paneli" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Başarım detaylarini ac" }));
+    expect(screen.getByRole("dialog", { name: "Başarım merkezi paneli" })).toBeInTheDocument();
     expect(screen.getByText("Devam Edenler")).toBeInTheDocument();
     expect(screen.getByText("Tamamlananlar")).toBeInTheDocument();
     expect(screen.getByText("Garaj Arsivi")).toBeInTheDocument();
@@ -363,28 +363,28 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
     await user.click(screen.getByRole("button", { name: /Leaders/i }));
 
-    expect(await screen.findByText("Aylik Surucu Siralamasi")).toBeInTheDocument();
-    expect(screen.getByText("Aylik Klan Siralamasi")).toBeInTheDocument();
+    expect(await screen.findByText("Aylık Sürücü Sıralaması")).toBeInTheDocument();
+    expect(screen.getByText("Aylık Klan Sıralaması")).toBeInTheDocument();
     const metricGroup = screen.getByLabelText("Leaderboard olcutu");
     expect(within(metricGroup).getByRole("button", { name: "KM" })).toHaveAttribute("aria-pressed", "true");
 
-    await user.click(within(metricGroup).getByRole("button", { name: "Surus Suresi" }));
-    expect(within(metricGroup).getByRole("button", { name: "Surus Suresi" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(within(metricGroup).getByRole("button", { name: "Sürüş Süresi" }));
+    expect(within(metricGroup).getByRole("button", { name: "Sürüş Süresi" })).toHaveAttribute("aria-pressed", "true");
 
-    await user.click(within(metricGroup).getByRole("button", { name: "Maksimum Hiz" }));
-    expect(within(metricGroup).getByRole("button", { name: "Maksimum Hiz" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("Max Hiz")).toBeInTheDocument();
+    await user.click(within(metricGroup).getByRole("button", { name: "Maksimum Hız" }));
+    expect(within(metricGroup).getByRole("button", { name: "Maksimum Hız" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Max Hız")).toBeInTheDocument();
 
     const clanMetricGroup = screen.getByLabelText("Klan leaderboard olcutu");
-    await user.click(within(clanMetricGroup).getByRole("button", { name: "Surus Suresi" }));
-    expect(within(clanMetricGroup).getByRole("button", { name: "Surus Suresi" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(within(clanMetricGroup).getByRole("button", { name: "Sürüş Süresi" }));
+    expect(within(clanMetricGroup).getByRole("button", { name: "Sürüş Süresi" })).toHaveAttribute("aria-pressed", "true");
 
-    const driverLeaderboard = screen.getByLabelText("Aylik surucu siralamasi");
+    const driverLeaderboard = screen.getByLabelText("Aylık sürücü sıralaması");
     expect(within(driverLeaderboard).queryByText("Verified")).not.toBeInTheDocument();
     expect(within(driverLeaderboard).queryByText("06 PWA 101")).not.toBeInTheDocument();
 
-    await user.click(within(driverLeaderboard).getByRole("button", { name: /Aylik Surucu Siralamasi/i }));
-    expect(within(driverLeaderboard).getByText("Tum suruculer")).toBeInTheDocument();
+    await user.click(within(driverLeaderboard).getByRole("button", { name: /Aylık Sürücü Sıralaması/i }));
+    expect(within(driverLeaderboard).getByText("Tüm sürücüler")).toBeInTheDocument();
   });
 
   it("opens the shared public driver profile from stats", async () => {
@@ -396,6 +396,6 @@ describe("App", () => {
     await user.click((await screen.findAllByRole("button", { name: /35 SRT 908/i }))[0]);
 
     expect(screen.getByText("Konvoy Uyumu")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Mesaj Gonder" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mesaj Gönder" })).toBeInTheDocument();
   });
 });

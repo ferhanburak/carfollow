@@ -245,7 +245,7 @@ test("keeps previously unlocked monthly achievements after a period reset", () =
     existingStats: {
       periodKey: "2026-06",
       monthlyNightKm: 520,
-      achievementBadges: ["Gece Savascisi"],
+      achievementBadges: ["Gece Savaşçısı"],
     },
     profile: { id: "user-1", odometer: 20000, driverScore: 80, harmonyVotes: 1 },
     passport: { serviceLogCount: 0 },

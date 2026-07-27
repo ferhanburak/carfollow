@@ -388,7 +388,7 @@ function App() {
                 />
                 <button
                   type="button"
-                  aria-label={driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}
+                  aria-label={driveSessionPending ? "Isleniyor..." : isDriving ? "Sürüşü Durdur" : "Sürüşe Başla"}
                   onClick={toggleDrive}
                   disabled={driveSessionPending}
                   className={`h-12 w-12 shrink-0 rounded-2xl px-0 text-[10px] font-bold transition ${
@@ -485,7 +485,7 @@ function App() {
                     />
                     <button
                       type="button"
-                      aria-label={driveSessionPending ? "Isleniyor..." : isDriving ? "Surusu Durdur" : "Suruse Basla"}
+                      aria-label={driveSessionPending ? "Isleniyor..." : isDriving ? "Sürüşü Durdur" : "Sürüşe Başla"}
                       onClick={toggleDrive}
                       disabled={driveSessionPending}
                       className={`h-12 w-12 rounded-2xl px-0 text-xs font-bold transition ${
@@ -731,7 +731,7 @@ function App() {
           <div className="w-full max-w-sm rounded-[1.75rem] border border-white/10 bg-[#171717] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.6)]">
             <p className="text-xs uppercase tracking-[0.28em] text-rose-300">Account Session</p>
             <h3 className="mt-2 text-xl font-black">Oturumu kapat?</h3>
-            <p className="mt-2 text-sm text-neutral-400">Bu cihazdaki CRUISER oturumun kapanacak. Daha sonra e-posta ve sifrenle tekrar giris yapabilirsin.</p>
+            <p className="mt-2 text-sm text-neutral-400">Bu cihazdaki CRUISER oturumun kapanacak. Daha sonra e-posta ve sifrenle tekrar giriş yapabilirsin.</p>
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button type="button" onClick={() => setShowLogoutConfirm(false)} className="min-h-12 rounded-2xl border border-white/10 bg-white/5 font-semibold text-neutral-200">Vazgec</button>
               <button

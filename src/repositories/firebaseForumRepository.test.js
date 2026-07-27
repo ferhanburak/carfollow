@@ -10,7 +10,7 @@ describe("buildForumState", () => {
         { id: "new", status: "active", createdAt: 200 },
         { id: "hidden", status: "hidden", createdAt: 300 },
       ],
-      replies: [{ id: "reply-1", threadId: "new", body: "Yanit", createdAt: 250 }],
+      replies: [{ id: "reply-1", threadId: "new", body: "Yanıt", createdAt: 250 }],
       likes: [{ id: "like-1", threadId: "new", userId: "user-1" }],
     });
 

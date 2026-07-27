@@ -244,14 +244,14 @@ export function useDirectMessages({ user, setUser }) {
 
   const openConversation = async (friend) => {
     if (!(user.friends ?? []).some((entry) => entry.plate === friend?.plate)) {
-      setChatFeedback("Sohbet acmak icin once arkadas olmalisiniz.");
+      setChatFeedback("Sohbet acmak için önce arkadaş olmalisiniz.");
       return false;
     }
     const targetUserId = friend.userId ?? friend.id;
     let nextConversationId = buildConversationId(user.plate, friend.plate);
     if (firebaseMessagingEnabled) {
       if (!targetUserId) {
-        setChatFeedback("Surucu kimligi bulunamadi.");
+        setChatFeedback("Sürücü kimligi bulunamadı.");
         return false;
       }
       try {
@@ -264,7 +264,7 @@ export function useDirectMessages({ user, setUser }) {
     }
     setActiveConversationId(nextConversationId);
     if (!firebaseMessagingEnabled) setUser((current) => markConversationRead(current, nextConversationId));
-    setChatFeedback(`${friend.fullName} ile sohbet hazir.`);
+    setChatFeedback(`${friend.fullName} ile sohbet hazır.`);
     return nextConversationId;
   };
 
@@ -273,7 +273,7 @@ export function useDirectMessages({ user, setUser }) {
       return false;
     }
     if (!(user.friends ?? []).some((entry) => entry.plate === friend.plate)) {
-      setChatFeedback("Mesaj gondermek icin aktif arkadaslik gerekli.");
+      setChatFeedback("Mesaj gondermek için aktif arkadaşlık gerekli.");
       return false;
     }
 
@@ -282,14 +282,14 @@ export function useDirectMessages({ user, setUser }) {
     const threadId = firebaseMessagingEnabled ? null : buildConversationId(user.plate, friend.plate);
     if (firebaseMessagingEnabled) {
       if (!targetUserId) {
-        setChatFeedback("Surucu kimligi bulunamadi.");
+        setChatFeedback("Sürücü kimligi bulunamadı.");
         return false;
       }
       try {
         const result = await sendFirebaseDirectMessage(targetUserId, trimmedMessage);
         setActiveConversationId(result.threadId);
       } catch (error) {
-        setChatFeedback(error instanceof Error ? error.message : "Mesaj gonderilemedi.");
+        setChatFeedback(error instanceof Error ? error.message : "Mesaj gönderilemedi.");
         return false;
       }
     } else {

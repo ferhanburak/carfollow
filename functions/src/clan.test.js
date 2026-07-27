@@ -31,7 +31,7 @@ test("buildClanDocument seeds an owner-led public clan summary", () => {
     owner,
     name: "Ankara Apex",
     tag: "apex",
-    description: "Gece rotalari",
+    description: "Gece rotaları",
     periodKey: "2026-07",
     timestamp,
   });

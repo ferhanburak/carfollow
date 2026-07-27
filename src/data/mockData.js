@@ -35,7 +35,7 @@ export const quickProfiles = [
     horsepower: 248,
     garage: "Ankara Apex Garage",
     odometer: 68420,
-    badges: ["Gece Savascisi", "Asfalt Aglatan", "Grid Hunter"],
+    badges: ["Gece Savaşçısı", "Asfalt Ağlatan", "Grid Hunter"],
     clan: "Neon Wolves",
     clanRole: "owner",
     region: "Ankara Bati",
@@ -57,14 +57,14 @@ export const quickProfiles = [
       rearTires: { replacedKm: 44800, replacedAt: "2024-12-06" },
     }),
     serviceLogs: [
-      { id: "s1", partKey: "oil", type: "replacement", serviceDate: "2026-03-10", serviceKm: 64500, serviceShop: "Ankara Apex Garage", cost: 2250, notes: "5W-40 ve filtre seti degisti." },
+      { id: "s1", partKey: "oil", type: "replacement", serviceDate: "2026-03-10", serviceKm: 64500, serviceShop: "Ankara Apex Garage", cost: 2250, notes: "5W-40 ve filtre seti değişti." },
       { id: "s2", partKey: "frontBrakes", type: "replacement", serviceDate: "2025-11-02", serviceKm: 59200, serviceShop: "Ankara Apex Garage", cost: 4850, notes: "On balatalar ve disk kontrolu yapildi." },
       { id: "s3", partKey: "frontTires", type: "replacement", serviceDate: "2025-04-16", serviceKm: 49500, serviceShop: "Ankara Apex Garage", cost: 13200, notes: "On lastikler performans seti ile yenilendi." },
     ],
     fuelLogs: [
       { id: "f1", liters: 36, price: 1848, currentKm: 68110, station: "OPET Bilkent" },
-      { id: "f2", liters: 32, price: 1664, currentKm: 67640, station: "Shell Esenboga" },
-      { id: "f3", liters: 34, price: 1734, currentKm: 67120, station: "Total Cayyolu" },
+      { id: "f2", liters: 32, price: 1664, currentKm: 67640, station: "Shell Esenboğa" },
+      { id: "f3", liters: 34, price: 1734, currentKm: 67120, station: "Total Çayyolu" },
     ],
     monthlyKm: 842,
     driverScore: 91,
@@ -76,7 +76,7 @@ export const quickProfiles = [
         plate: "35 SRT 908",
         fullName: "Ece Yalin",
         model: "Ducati Monster",
-        region: "Izmir Cevre",
+        region: "Izmir Çevre",
         clan: "Midnight Apex",
         avatar: "",
         status: "accepted",
@@ -151,7 +151,7 @@ export const quickProfiles = [
             id: "msg-seed-1",
             authorPlate: "35 SRT 908",
             authorName: "Ece Yalin",
-            body: "Mogan cikisi icin 22:30 bulusalim mi?",
+            body: "Mogan cikisi için 22:30 bulusalim mi?",
             createdAt: 1752231600000,
           },
           {
@@ -197,8 +197,8 @@ export const quickProfiles = [
       rearTires: { replacedKm: 23340, replacedAt: "2026-02-20" },
     }),
     serviceLogs: [
-      { id: "ms1", partKey: "oil", type: "replacement", serviceDate: "2026-04-18", serviceKm: 25800, serviceShop: "MotoLab Istanbul", cost: 1650, notes: "Sentetik yag ve filtre degisimi." },
-      { id: "ms2", partKey: "frontBrakes", type: "inspection", serviceDate: "2026-02-08", serviceKm: 24940, serviceShop: "MotoLab Istanbul", cost: 450, notes: "Balata kalinligi olculdu, degisim gerekmiyor." },
+      { id: "ms1", partKey: "oil", type: "replacement", serviceDate: "2026-04-18", serviceKm: 25800, serviceShop: "MotoLab Istanbul", cost: 1650, notes: "Sentetik yağ ve filtre degisimi." },
+      { id: "ms2", partKey: "frontBrakes", type: "inspection", serviceDate: "2026-02-08", serviceKm: 24940, serviceShop: "MotoLab Istanbul", cost: 450, notes: "Balata kalınlığı ölçüldü, değişim gerekmiyor." },
       { id: "ms3", partKey: "chain", type: "repair", serviceDate: "2025-10-02", serviceKm: 22400, serviceShop: "MotoLab Istanbul", cost: 1200, notes: "Zincir gergisi ve temizligi yapildi." },
     ],
     fuelLogs: [
@@ -265,7 +265,7 @@ export const quickProfiles = [
             id: "msg-seed-3",
             authorPlate: "34 TURBO 54",
             authorName: "Can Sarp",
-            body: "Arkadaslara ozel mini konvoy acalim mi?",
+            body: "Arkadaslara özel mini konvoy acalim mi?",
             createdAt: 1752235200000,
           },
         ],
@@ -290,7 +290,7 @@ export const individualDriverSeed = [
     plate: "35 SRT 908",
     fullName: "Ece Yalin",
     model: "Ducati Monster",
-    region: "Izmir Cevre",
+    region: "Izmir Çevre",
     clan: "Midnight Apex",
     monthlyKm: 774,
     driverScore: 89,
@@ -334,7 +334,7 @@ export const initialMapPins = [
     likes: 128,
     galleryLikes: 314,
     tags: ["#SmoothAsphalt", "#EpicSunset", "#CinematicPull"],
-    description: "Golden hour rollers ve dusuk trafikli sahil hatti.",
+    description: "Golden hour rollers ve düşük trafikli sahil hatti.",
     gallery: [
       {
         id: "g1",
@@ -372,7 +372,7 @@ export const initialMapPins = [
         water: 4,
         allowsBuckets: true,
         shadowDrying: true,
-        note: "Kopuk dolgun, kurutma alani biraz dar.",
+        note: "Köpük dolgun, kurutma alanı biraz dar.",
       },
       {
         id: "r2",
@@ -381,7 +381,7 @@ export const initialMapPins = [
         water: 3,
         allowsBuckets: true,
         shadowDrying: false,
-        note: "Basinc iyi ama kirec bazen belli oluyor.",
+        note: "Basınç iyi ama kireç bazen belli oluyor.",
       },
       {
         id: "r3",
@@ -412,7 +412,7 @@ export const initialMapPins = [
         water: 4,
         allowsBuckets: true,
         shadowDrying: true,
-        note: "Jet guclu, gece aydinlatmasi baya iyi.",
+        note: "Jet güçlü, gece aydınlatması baya iyi.",
       },
       {
         id: "r5",
@@ -421,7 +421,7 @@ export const initialMapPins = [
         water: 5,
         allowsBuckets: true,
         shadowDrying: true,
-        note: "Kirec dusuk, bezle kurulama alani rahat.",
+        note: "Kireç düşük, bezle kurulama alanı rahat.",
       },
     ],
   },
@@ -452,7 +452,7 @@ export const initialMapPins = [
         plate: "35 SRT 908",
         fullName: "Ece Yalin",
         model: "Ducati Monster",
-        region: "Izmir Cevre",
+        region: "Izmir Çevre",
       },
       {
         plate: "34 MOTO 410",
@@ -519,10 +519,10 @@ export const initialMapPins = [
 ];
 
 export const initialClans = [
-  { id: "c1", name: "Neon Wolves", tag: "WOLF", description: "Ankara cikisli gece surusu ve hatchback odakli ekip.", km: 14280, members: 31, captainPlate: "06 PWA 101", visibility: "friends" },
+  { id: "c1", name: "Neon Wolves", tag: "WOLF", description: "Ankara çıkışlı gece sürüşü ve hatchback odaklı ekip.", km: 14280, members: 31, captainPlate: "06 PWA 101", visibility: "friends" },
   { id: "c2", name: "Midnight Apex", tag: "APEX", description: "Sport bike ve precision cruise karisimi premium convoy ekibi.", km: 12840, members: 28, captainPlate: "35 SRT 908", visibility: "public" },
-  { id: "c3", name: "Turbo Syndicate", tag: "TRBO", description: "Istanbul merkezli hizli organize bulusma ve rolling squad.", km: 11770, members: 24, captainPlate: "34 TURBO 54", visibility: "public" },
-  { id: "c4", name: "Lowline Union", tag: "LOW", description: "Fitment, static setup ve chill route seven suruculerin grubu.", km: 9640, members: 19, captainPlate: "07 VTEC 707", visibility: "friends" },
+  { id: "c3", name: "Turbo Syndicate", tag: "TRBO", description: "Istanbul merkezli hızlı organize bulusma ve rolling squad.", km: 11770, members: 24, captainPlate: "34 TURBO 54", visibility: "public" },
+  { id: "c4", name: "Lowline Union", tag: "LOW", description: "Fitment, static setup ve chill route seven sürücülerin grubu.", km: 9640, members: 19, captainPlate: "07 VTEC 707", visibility: "friends" },
 ];
 
 export const tuningOptions = ["Stock", "Stage 1", "Stage 2+", "Stage 3"];
@@ -530,7 +530,7 @@ export const tuningOptions = ["Stock", "Stage 1", "Stage 2+", "Stage 3"];
 export const navItems = [
   { key: "map", label: "Harita" },
   { key: "liveMap", label: "Live Map" },
-  { key: "drive", label: "Surus" },
+  { key: "drive", label: "Sürüş" },
   { key: "social", label: "Social" },
   { key: "forum", label: "Forum" },
   { key: "leaderboard", label: "Leaders" },

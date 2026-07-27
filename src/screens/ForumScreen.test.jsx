@@ -20,10 +20,10 @@ describe("ForumScreen", () => {
     render(<ForumScreen {...props} />);
 
     expect(screen.queryByRole("heading", { name: "Forum" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tum Akis" })).toBeInTheDocument();
-    expect(screen.getByText("Bu kategoride henuz paylasim yok. Ilk paylasimi sen yap.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tüm Akis" })).toBeInTheDocument();
+    expect(screen.getByText("Bu kategoride henüz paylaşım yok. İlk paylaşımı sen yap.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Ne paylasmak istersin?" }));
-    expect(screen.getByPlaceholderText("Baslik *")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Paylas" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Başlık *")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Paylaş" })).toBeInTheDocument();
   });
 });

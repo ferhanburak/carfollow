@@ -8,12 +8,12 @@ export function validateSignUpForm(form, options = {}) {
       errors.email = "Enter a valid e-mail address.";
     }
   }
-  if (!form.fullName.trim()) errors.fullName = "Gorunen ad zorunludur.";
+  if (!form.fullName.trim()) errors.fullName = "Görünen ad zorunludur.";
   if (!form.plate.trim()) errors.plate = "Plate is required.";
   if (!form.password.trim() || form.password.trim().length < 8) {
-    errors.password = "Sifre en az 8 karakter olmali.";
+    errors.password = "Şifre en az 8 karakter olmali.";
   }
-  if (!["car", "motorcycle"].includes(form.vehicleType)) errors.vehicleType = "Arac turu zorunludur.";
+  if (!["car", "motorcycle"].includes(form.vehicleType)) errors.vehicleType = "Araç turu zorunludur.";
   if (!form.model.trim()) errors.model = "Car/Bike model is required.";
   if (String(form.horsepower).trim() && Number(form.horsepower) <= 0) {
     errors.horsepower = "Horsepower must be greater than 0.";
@@ -22,7 +22,7 @@ export function validateSignUpForm(form, options = {}) {
     errors.odometer = "Mevcut KM 0 ile 5.000.000 arasinda olmali.";
   }
   if (form.termsAccepted !== true) {
-    errors.termsAccepted = "Kaydi tamamlamak icin Kullanim Kosullarini kabul etmelisin.";
+    errors.termsAccepted = "Kaydı tamamlamak için Kullanım Koşullarını kabul etmelisin.";
   }
   return errors;
 }
@@ -112,7 +112,7 @@ export function validateMapPinForm(form) {
       errors.eventMode = "Event mode must be meetup or convoy.";
     }
     if (form.eventMode === "convoy" && (!Array.isArray(form.routePoints) || form.routePoints.length < 2)) {
-      errors.routePoints = "Rota konvoyu icin en az 2 rota noktasi sec.";
+      errors.routePoints = "Rota konvoyu için en az 2 rota noktasi seç.";
     }
   }
   if (form.type === "wash") {

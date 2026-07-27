@@ -7,11 +7,11 @@ const profile = { userId: "user-1", fullName: "Test Driver", plate: "06 TEST 01"
 test("buildForumThreadDocument keeps only category-specific metadata", () => {
   const thread = buildForumThreadDocument({
     id: "thread-1",
-    input: { category: "places", title: "Mogan rotasi", body: "Gun batiminda guzel bir surus rotasi.", location: "Mogan Golu", setup: "ignored" },
+    input: { category: "places", title: "Mogan rotası", body: "Gün batımında güzel bir sürüş rotası.", location: "Mogan Gölü", setup: "ignored" },
     profile,
     timestamp: 123,
   });
-  assert.equal(thread.location, "Mogan Golu");
+  assert.equal(thread.location, "Mogan Gölü");
   assert.equal(thread.setup, "");
   assert.equal(thread.likeCount, 0);
 });

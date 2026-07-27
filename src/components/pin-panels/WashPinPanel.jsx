@@ -54,7 +54,7 @@ export function WashPinPanel({
             value={washForm.note}
             onChange={(event) => onWashFormChange((current) => ({ ...current, note: event.target.value }))}
             className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
-            placeholder="Basinc, kirec, kurutma alani..."
+            placeholder="Basınç, kireç, kurutma alanı..."
           />
           {washErrors.note ? <p className="text-xs text-rose-300">{washErrors.note}</p> : null}
         </CompactField>

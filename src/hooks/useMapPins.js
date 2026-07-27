@@ -168,7 +168,7 @@ export function useMapPins({ initialWorld, user }) {
     if (firebaseMapEnabled) {
       try {
         await deleteFirebaseMapSpotPhoto(photoId);
-        setSpotPhotoFeedback("Foto ve ona ait begeniler kalici olarak silindi.");
+        setSpotPhotoFeedback("Foto ve ona ait beğeniler kalıcı olarak silindi.");
         return true;
       } catch (error) {
         setSpotPhotoFeedback(error instanceof Error ? error.message : "Foto silinemedi.");
@@ -191,7 +191,7 @@ export function useMapPins({ initialWorld, user }) {
 
   const reportSpotPhoto = async (photoId) => {
     if (!firebaseMapEnabled) {
-      setSpotPhotoFeedback("Foto raporlama yalnizca Firebase modunda kullanilabilir.");
+      setSpotPhotoFeedback("Foto raporlama yalnızca Firebase modunda kullanılabilir.");
       return false;
     }
     try {
@@ -201,7 +201,7 @@ export function useMapPins({ initialWorld, user }) {
         reason: "inappropriate-content",
         details: `Photo reported from map spot ${selectedPin?.id ?? "unknown"}.`,
       });
-      setSpotPhotoFeedback("Foto guvenlik ekibinin inceleme kuyruguna gonderildi.");
+      setSpotPhotoFeedback("Foto güvenlik ekibinin inceleme kuyruguna gönderildi.");
       return true;
     } catch (error) {
       setSpotPhotoFeedback(error instanceof Error ? error.message : "Foto raporlanamadi.");
@@ -260,7 +260,7 @@ export function useMapPins({ initialWorld, user }) {
 
     const accessState = getConvoyAccessState(selectedPin, user);
     if (!accessState.canJoin) {
-      setConvoyFeedback(accessState.reason || "Bu konvoya katilman host guven kurallari nedeniyle kapali.");
+      setConvoyFeedback(accessState.reason || "Bu konvoya katilman host güven kurallari nedeniyle kapalı.");
       return;
     }
 
@@ -270,9 +270,9 @@ export function useMapPins({ initialWorld, user }) {
         await refreshFirebaseConvoys();
         setConvoyFeedback(result?.membershipStatus === "approved"
           ? `${result?.convoyName ?? selectedPin.name} konvoyuna katildin.`
-          : "Katilim istegin konvoy yonetimine gonderildi.");
+          : "Katılım isteğin konvoy yonetimine gönderildi.");
       } catch (error) {
-        setConvoyFeedback(error instanceof Error ? error.message : "Katilim istegi kaydedilemedi.");
+        setConvoyFeedback(error instanceof Error ? error.message : "Katılım isteği kaydedilemedi.");
       }
       return;
     }
@@ -285,11 +285,11 @@ export function useMapPins({ initialWorld, user }) {
     });
 
     if (nextPin?.convoyStatus === "full") {
-      setConvoyFeedback("Bu konvoy kapasiteye ulasti.");
+      setConvoyFeedback("Bu konvoy kapasiteye ulaştı.");
     } else if (nextPin?.convoyStatus === "restricted") {
-      setConvoyFeedback("Bu konvoyun minimum guven kurallari seni su an kabul etmiyor.");
+      setConvoyFeedback("Bu konvoyun minimum güven kurallari seni su an kabul etmiyor.");
     } else if ((nextPin?.pendingRequests ?? []).some((entry) => entry.plate === user.plate)) {
-      setConvoyFeedback("Katilim istegin konvoy yonetimine gonderildi.");
+      setConvoyFeedback("Katılım isteğin konvoy yonetimine gönderildi.");
     } else if ((nextPin?.attendees ?? []).some((entry) => entry.plate === user.plate)) {
       setConvoyFeedback(`${selectedPin.name} konvoyuna katildin.`);
     }
@@ -309,7 +309,7 @@ export function useMapPins({ initialWorld, user }) {
         await refreshFirebaseConvoys();
         setConvoyFeedback(`${plate} konvoya kabul edildi.`);
       } catch (error) {
-        setConvoyFeedback(error instanceof Error ? error.message : "Katilim istegi onaylanamadi.");
+        setConvoyFeedback(error instanceof Error ? error.message : "Katılım isteği onaylanamadı.");
       }
       return;
     }
@@ -321,7 +321,7 @@ export function useMapPins({ initialWorld, user }) {
     });
 
     if (nextPin?.convoyStatus === "full") {
-      setConvoyFeedback("Kapasite dolu oldugu icin istek onaylanamadi.");
+      setConvoyFeedback("Kapasite dolu olduğu için istek onaylanamadı.");
     } else {
       setConvoyFeedback(`${plate} konvoya kabul edildi.`);
     }
@@ -342,9 +342,9 @@ export function useMapPins({ initialWorld, user }) {
       try {
         await respondFirebaseConvoyJoin(selectedPin.id, request.userId, "declined");
         await refreshFirebaseConvoys();
-        setConvoyFeedback(`${plate} icin katilim istegi reddedildi.`);
+        setConvoyFeedback(`${plate} için katılım isteği reddedildi.`);
       } catch (error) {
-        setConvoyFeedback(error instanceof Error ? error.message : "Katilim istegi reddedilemedi.");
+        setConvoyFeedback(error instanceof Error ? error.message : "Katılım isteği reddedilemedi.");
       }
       return;
     }
@@ -355,7 +355,7 @@ export function useMapPins({ initialWorld, user }) {
       return nextPins;
     });
 
-    setConvoyFeedback(`${plate} icin katilim istegi reddedildi.`);
+    setConvoyFeedback(`${plate} için katılım isteği reddedildi.`);
 
     if (nextPin) {
       void saveFirebaseMapPin(nextPin);
@@ -368,15 +368,15 @@ export function useMapPins({ initialWorld, user }) {
       setMapPins((current) => current.map((pin) => pin.id === selectedPin.id
         ? { ...pin, attendees: (pin.attendees ?? []).filter((entry) => entry.plate !== attendee.plate) }
         : pin));
-      setConvoyFeedback(`${attendee.plate} konvoydan cikarildi.`);
+      setConvoyFeedback(`${attendee.plate} konvoydan çıkarıldı.`);
       return;
     }
     try {
       await removeFirebaseConvoyMember(selectedPin.id, attendee.userId);
       await refreshFirebaseConvoys();
-      setConvoyFeedback(`${attendee.plate} konvoydan cikarildi.`);
+      setConvoyFeedback(`${attendee.plate} konvoydan çıkarıldı.`);
     } catch (error) {
-      setConvoyFeedback(error instanceof Error ? error.message : "Surucu konvoydan cikarilamadi.");
+      setConvoyFeedback(error instanceof Error ? error.message : "Sürücü konvoydan cikarilamadi.");
     }
   };
 
@@ -392,7 +392,7 @@ export function useMapPins({ initialWorld, user }) {
         setConvoyFeedback(`${profile.fullName} aktif konvoya davet edildi.`);
         return true;
       } catch (error) {
-        setConvoyFeedback(error instanceof Error ? error.message : "Konvoy daveti gonderilemedi.");
+        setConvoyFeedback(error instanceof Error ? error.message : "Konvoy daveti gönderilemedi.");
         return false;
       }
     }
@@ -414,7 +414,7 @@ export function useMapPins({ initialWorld, user }) {
   const deleteClanEvent = async (convoyId) => {
     const target = mapPins.find((pin) => pin.id === convoyId && pin.type === "meet");
     if (!target || !["planning", "completed", "cancelled"].includes(target.lifecycleStatus ?? "planning")) {
-      setClanEventFeedback("Surus halindeki etkinlikler silinemez.");
+      setClanEventFeedback("Sürüş halindeki etkinlikler silinemez.");
       return false;
     }
 
@@ -432,7 +432,7 @@ export function useMapPins({ initialWorld, user }) {
       return true;
     } catch (error) {
       console.error("Clan event could not be deleted", error);
-      setClanEventFeedback("Etkinlik su anda silinemedi. Lutfen tekrar dene.");
+      setClanEventFeedback("Etkinlik su anda silinemedi. Lütfen tekrar dene.");
       return false;
     } finally {
       setClanEventPendingId("");
@@ -450,9 +450,9 @@ export function useMapPins({ initialWorld, user }) {
       try {
         await rateFirebaseConvoyMember(selectedPin.id, attendee.userId, signal);
         await refreshFirebaseConvoys();
-        setConvoyFeedback(`${plate} icin surucu geri bildirimi kaydedildi.`);
+        setConvoyFeedback(`${plate} için sürücü geri bildirimi kaydedildi.`);
       } catch (error) {
-        setConvoyFeedback(error instanceof Error ? error.message : "Surucu geri bildirimi kaydedilemedi.");
+        setConvoyFeedback(error instanceof Error ? error.message : "Sürücü geri bildirimi kaydedilemedi.");
       }
       return;
     }
@@ -477,9 +477,9 @@ export function useMapPins({ initialWorld, user }) {
       try {
         await updateFirebaseConvoyLifecycle(selectedPin.id, lifecycleStatus);
         await refreshFirebaseConvoys();
-        setConvoyFeedback(`Konvoy durumu "${lifecycleStatus}" olarak guncellendi.`);
+        setConvoyFeedback(`Konvoy durumu "${lifecycleStatus}" olarak güncellendi.`);
       } catch (error) {
-        setConvoyFeedback(error instanceof Error ? error.message : "Konvoy durumu guncellenemedi.");
+        setConvoyFeedback(error instanceof Error ? error.message : "Konvoy durumu güncellenemedi.");
       }
       return;
     }
@@ -490,7 +490,7 @@ export function useMapPins({ initialWorld, user }) {
       return nextPins;
     });
 
-    setConvoyFeedback(`Konvoy durumu "${lifecycleStatus}" olarak guncellendi.`);
+    setConvoyFeedback(`Konvoy durumu "${lifecycleStatus}" olarak güncellendi.`);
     if (nextPin) {
       void saveFirebaseMapPin(nextPin);
     }
@@ -502,15 +502,15 @@ export function useMapPins({ initialWorld, user }) {
       try {
         await updateFirebaseConvoyDetails(selectedPin.id, details);
         await refreshFirebaseConvoys();
-        setConvoyFeedback("Konvoy bilgileri guncellendi.");
+        setConvoyFeedback("Konvoy bilgileri güncellendi.");
         return true;
       } catch (error) {
-        setConvoyFeedback(error instanceof Error ? error.message : "Konvoy bilgileri guncellenemedi.");
+        setConvoyFeedback(error instanceof Error ? error.message : "Konvoy bilgileri güncellenemedi.");
         return false;
       }
     }
     setMapPins((current) => current.map((pin) => pin.id === selectedPin.id ? { ...pin, ...details } : pin));
-    setConvoyFeedback("Konvoy bilgileri guncellendi.");
+    setConvoyFeedback("Konvoy bilgileri güncellendi.");
     return true;
   };
 
@@ -519,23 +519,23 @@ export function useMapPins({ initialWorld, user }) {
     if (firebaseMapEnabled) {
       const memberUserId = attendee.userId ?? attendee.firebaseUid ?? attendee.id;
       if (!memberUserId) {
-        setConvoyFeedback("Bu katilimcinin Firebase profili bulunamadi.");
+        setConvoyFeedback("Bu katilimcinin Firebase profili bulunamadı.");
         return false;
       }
       try {
         await setFirebaseConvoyMemberRole(selectedPin.id, memberUserId, managementRole);
         await refreshFirebaseConvoys();
-        setConvoyFeedback(managementRole === "manager" ? `${attendee.plate} yonetici yapildi.` : `${attendee.plate} yonetim yetkisi kaldirildi.`);
+        setConvoyFeedback(managementRole === "manager" ? `${attendee.plate} yönetici yapildi.` : `${attendee.plate} yönetim yetkisi kaldırıldı.`);
         return true;
       } catch (error) {
-        setConvoyFeedback(error instanceof Error ? error.message : "Konvoy yetkisi guncellenemedi.");
+        setConvoyFeedback(error instanceof Error ? error.message : "Konvoy yetkisi güncellenemedi.");
         return false;
       }
     }
     setMapPins((current) => current.map((pin) => pin.id === selectedPin.id
       ? { ...pin, attendees: (pin.attendees ?? []).map((entry) => entry.plate === attendee.plate ? { ...entry, managementRole } : entry) }
       : pin));
-    setConvoyFeedback(managementRole === "manager" ? `${attendee.plate} yonetici yapildi.` : `${attendee.plate} yonetim yetkisi kaldirildi.`);
+    setConvoyFeedback(managementRole === "manager" ? `${attendee.plate} yönetici yapildi.` : `${attendee.plate} yönetim yetkisi kaldırıldı.`);
     return true;
   };
 
@@ -548,9 +548,9 @@ export function useMapPins({ initialWorld, user }) {
       try {
         await updateFirebaseConvoyTripStatus(selectedPin.id, tripStatus);
         await refreshFirebaseConvoys();
-        setConvoyFeedback(`${plate} durumu "${tripStatus}" olarak guncellendi.`);
+        setConvoyFeedback(`${plate} durumu "${tripStatus}" olarak güncellendi.`);
       } catch (error) {
-        setConvoyFeedback(error instanceof Error ? error.message : "Surus durumu guncellenemedi.");
+        setConvoyFeedback(error instanceof Error ? error.message : "Sürüş durumu güncellenemedi.");
       }
       return;
     }
@@ -561,7 +561,7 @@ export function useMapPins({ initialWorld, user }) {
       return nextPins;
     });
 
-    setConvoyFeedback(`${plate} durumu "${tripStatus}" olarak guncellendi.`);
+    setConvoyFeedback(`${plate} durumu "${tripStatus}" olarak güncellendi.`);
     if (nextPin) {
       void saveFirebaseMapPin(nextPin);
     }
@@ -590,7 +590,7 @@ export function useMapPins({ initialWorld, user }) {
       routePoints: [],
     }));
     setMapPickMode("node");
-    setMapPinFeedback("Taslak event rotasi temizlendi.");
+    setMapPinFeedback("Taslak event rotası temizlendi.");
   };
 
   const removeLastDraftRoutePoint = () => {
@@ -598,7 +598,7 @@ export function useMapPins({ initialWorld, user }) {
       ...current,
       routePoints: current.routePoints.slice(0, -1),
     }));
-    setMapPinFeedback("Son rota noktasi kaldirildi.");
+    setMapPinFeedback("Son rota noktasi kaldırıldı.");
   };
 
   const pickMapLocation = (coords) => {
@@ -634,7 +634,7 @@ export function useMapPins({ initialWorld, user }) {
       lng: normalizedCoords.lng,
       source: "map",
     });
-    setMapPinFeedback("Map uzerinden yeni lokasyon secildi.");
+    setMapPinFeedback("Map uzerinden yeni lokasyon seçildi.");
     setMapPinErrors((current) => ({
       ...current,
       lat: undefined,
@@ -651,7 +651,7 @@ export function useMapPins({ initialWorld, user }) {
     const validationErrors = validateMapPinForm(mapPinForm);
     setMapPinErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
-      setMapPinFeedback("Zorunlu alanlari doldurunuz.");
+      setMapPinFeedback("Zorunlu alanları doldurunuz.");
       return;
     }
 

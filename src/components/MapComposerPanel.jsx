@@ -42,7 +42,7 @@ export function MapComposerPanel({
   const isWash = form.type === "wash";
   const routePointCount = form.routePoints.length;
   const hasErrors = showRequiredNotice || Object.values(errors ?? {}).some(Boolean);
-  const visibleFeedback = showRequiredNotice ? "Zorunlu alanlari doldurunuz." : feedback;
+  const visibleFeedback = showRequiredNotice ? "Zorunlu alanları doldurunuz." : feedback;
 
   useEffect(() => {
     setShowRequiredNotice(false);
@@ -55,7 +55,7 @@ export function MapComposerPanel({
           <h2 className="text-sm font-black text-neutral-100">Etkinlik Ekle</h2>
           {!resolvedOpen ? (
             <p className="mt-1 text-[11px] leading-4 text-neutral-500">
-              Haritada etkinlik eklemek istediginiz konuma tiklayin.
+              Haritada etkinlik eklemek istediğiniz konuma tıklayın.
             </p>
           ) : null}
         </div>
@@ -90,7 +90,7 @@ export function MapComposerPanel({
               <p className="mt-1 text-sm text-neutral-300">
                 {draftLocation
                   ? `Ana nokta: ${draftLocation.lat}, ${draftLocation.lng}`
-                  : "Haritada bos bir alana dokun veya secili node konumunu kopyala."}
+                  : "Haritada bos bir alana dokun veya seçili node konumunu kopyala."}
               </p>
             </div>
             <button
@@ -98,7 +98,7 @@ export function MapComposerPanel({
               onClick={onUseSelectedCoordinates}
               className="min-h-12 rounded-2xl border border-white/10 bg-black/20 px-4 text-xs font-semibold text-neutral-300"
             >
-              Secili Node
+              Seçili Node
               <br />
               Konumu
             </button>
@@ -249,7 +249,7 @@ export function MapComposerPanel({
                       value={form.route}
                       onChange={(event) => onFormChange((current) => ({ ...current, route: event.target.value }))}
                       className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
-                      placeholder={form.eventMode === "meetup" ? "Mogan Golu ana otopark" : "Beytepe -> Incek -> Mogan"}
+                      placeholder={form.eventMode === "meetup" ? "Mogan Gölü ana otopark" : "Beytepe -> Incek -> Mogan"}
                     />
                     {errors.route ? <p className="text-xs text-rose-300">{errors.route}</p> : null}
                   </CompactField>
@@ -392,7 +392,7 @@ export function MapComposerPanel({
                         );
                       })
                     ) : (
-                      <p className="text-xs text-neutral-500">Davet eklemek icin once arkadas listeni buyut.</p>
+                      <p className="text-xs text-neutral-500">Davet eklemek için önce arkadaş listeni buyut.</p>
                     )}
                   </div>
                 </CompactField>
@@ -409,7 +409,7 @@ export function MapComposerPanel({
                         {" "}
                         {mapPickMode === "route" ? "Rota noktasi ekleme" : "Ana event lokasyonu secme"}
                       </p>
-                      <p className="mt-1 text-xs text-neutral-500">{routePointCount} rota noktasi secildi.</p>
+                      <p className="mt-1 text-xs text-neutral-500">{routePointCount} rota noktasi seçildi.</p>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <button
@@ -466,7 +466,7 @@ export function MapComposerPanel({
                   <div className="rounded-2xl border border-lime-400/15 bg-lime-400/[0.05] px-4 py-4">
                     <p className="text-xs font-semibold text-lime-200">Tek nokta bulusma aktif</p>
                     <p className="mt-1 text-xs leading-5 text-neutral-500">
-                      Yalnizca ana event konumu kaydedilir. Rota ve otomatik varis takibi kullanilmaz.
+                      Yalnızca ana event konumu kaydedilir. Rota ve otomatik varis takibi kullanilmaz.
                     </p>
                   </div>
                 )}
@@ -504,7 +504,7 @@ export function MapComposerPanel({
                     value={form.note}
                     onChange={(event) => onFormChange((current) => ({ ...current, note: event.target.value }))}
                     className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
-                    placeholder="Kirec, kopuk ve kurutma alani notu..."
+                    placeholder="Kireç, köpük ve kurutma alanı notu..."
                   />
                   {errors.note ? <p className="text-xs text-rose-300">{errors.note}</p> : null}
                 </CompactField>

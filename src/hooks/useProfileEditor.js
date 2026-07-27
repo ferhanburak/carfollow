@@ -29,22 +29,22 @@ function validateProfileForm(form, user) {
     errors.fullName = "Isim gerekli.";
   }
   if (!form.model.trim()) {
-    errors.model = "Arac modeli gerekli.";
+    errors.model = "Araç modeli gerekli.";
   }
   if (!String(form.horsepower).trim() || Number(form.horsepower) <= 0) {
-    errors.horsepower = "HP 0'dan buyuk olmali.";
+    errors.horsepower = "HP 0'dan büyük olmali.";
   }
   if (!form.garage.trim()) {
     errors.garage = "Garaj / servis bilgisi gerekli.";
   }
   if (!form.region.trim()) {
-    errors.region = "Bolge gerekli.";
+    errors.region = "Bölge gerekli.";
   }
   const odometer = Number(form.odometer);
   if (!String(form.odometer).trim() || !Number.isFinite(odometer) || odometer < 0 || odometer > 5000000) {
     errors.odometer = "Mevcut KM 0 ile 5.000.000 arasinda olmali.";
   } else if (odometer < Number(user?.odometer ?? 0) && user?.odometerOrigin) {
-    errors.odometer = "Kayitli kilometre geriye alinamaz.";
+    errors.odometer = "Kayıtlı kilometre geriye alinamaz.";
   }
 
   return errors;
@@ -92,7 +92,7 @@ export function useProfileEditor({ user, setUser }) {
       setProfileErrors((current) => ({ ...current, avatar: undefined }));
       return true;
     } catch (error) {
-      setProfileErrors((current) => ({ ...current, avatar: error instanceof Error ? error.message : "Fotograf okunamadi." }));
+      setProfileErrors((current) => ({ ...current, avatar: error instanceof Error ? error.message : "Fotoğraf okunamadı." }));
       return false;
     }
   };
@@ -135,13 +135,13 @@ export function useProfileEditor({ user, setUser }) {
       setProfileForm((current) => ({ ...current, ...nextProfile, avatarFile: null, avatarFileName: "", avatarPreview: avatar }));
       setProfileErrors({});
       setProfileFeedback(backendResult?.correctionApplied
-        ? "Eski 12.000 KM varsayimi duzeltildi; profil ve parca baslangiclari guncellendi."
-        : "Profil, fotograf ve kilometre bilgileri guncellendi.");
+        ? "Eski 12.000 KM varsayımı düzeltildi; profil ve parça başlangıçları güncellendi."
+        : "Profil, fotoğraf ve kilometre bilgileri güncellendi.");
       return true;
     } catch (error) {
       const message = error?.code === "functions/failed-precondition"
-        ? "Kilometre daha once dogrulandigi icin geriye alinamadi. Daha yuksek veya esit bir KM gir."
-        : error instanceof Error ? error.message : "Profil guncellenemedi.";
+        ? "Kilometre daha önce doğrulandığı için geriye alınamadı. Daha yüksek veya eşit bir KM gir."
+        : error instanceof Error ? error.message : "Profil güncellenemedi.";
       setProfileFeedback(message);
       return false;
     } finally {
