@@ -30,4 +30,28 @@ describe("ForumScreen", () => {
     expect(screen.getByRole("button", { name: "Paylaşımı iptal et" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Paylaş" })).toBeInTheDocument();
   });
+
+  it("shows a clear error when the selected image is larger than 10 MB", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ForumScreen {...props} />);
+    await user.click(screen.getByRole("button", { name: "Ne paylaşmak istersin?" }));
+
+    const image = new File(["large-image"], "large.jpg", { type: "image/jpeg" });
+    Object.defineProperty(image, "size", { value: 10 * 1024 * 1024 + 1 });
+    await user.upload(container.querySelector('input[type="file"]'), image);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Görsel en fazla 10 MB olabilir.");
+  });
+
+  it("rejects non-image files with a visible error", async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    const { container } = render(<ForumScreen {...props} />);
+    await user.click(screen.getByRole("button", { name: "Ne paylaşmak istersin?" }));
+    await user.upload(
+      container.querySelector('input[type="file"]'),
+      new File(["not-an-image"], "notes.txt", { type: "text/plain" }),
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Yalnızca görsel dosyası seçebilirsiniz.");
+  });
 });

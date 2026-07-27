@@ -77,11 +77,22 @@ export async function uploadFirebaseForumImage(file) {
     .slice(-100);
   const storagePath = `artifacts/${resolveAppId()}/forumThreads/${services.authUser.uid}/${Date.now()}-${safeName}`;
   const storageRef = ref(services.storage, storagePath);
-  await uploadBytes(storageRef, file, {
-    cacheControl: "public,max-age=86400",
-    contentType: file.type,
-  });
-  return { imageUrl: await getDownloadURL(storageRef), storagePath };
+  try {
+    await uploadBytes(storageRef, file, {
+      cacheControl: "public,max-age=86400",
+      contentType: file.type,
+    });
+    return { imageUrl: await getDownloadURL(storageRef), storagePath };
+  } catch (error) {
+    const errorMessages = {
+      "storage/canceled": "Görsel yükleme iptal edildi.",
+      "storage/quota-exceeded": "Görsel yükleme kotası doldu. Lütfen daha sonra tekrar deneyin.",
+      "storage/retry-limit-exceeded": "Görsel yüklenemedi. İnternet bağlantınızı kontrol edip tekrar deneyin.",
+      "storage/unauthenticated": "Görsel yüklemek için yeniden giriş yapmanız gerekiyor.",
+      "storage/unauthorized": "Bu görseli yükleme izniniz bulunmuyor.",
+    };
+    throw new Error(errorMessages[error?.code] ?? "Görsel yüklenemedi. Lütfen tekrar deneyin.");
+  }
 }
 
 export async function createFirebaseForumThread(thread, imageFile) {

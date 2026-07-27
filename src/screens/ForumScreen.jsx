@@ -190,8 +190,8 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
                 </button>
               </div>
             ) : null}
-            {imageError ? <p className="text-xs text-rose-300">{imageError}</p> : null}
-            {feedback ? <p className="text-xs text-rose-300">{feedback}</p> : null}
+            {imageError ? <p role="alert" className="text-xs text-rose-300">{imageError}</p> : null}
+            {feedback ? <p role="alert" className="text-xs text-rose-300">{feedback}</p> : null}
             <div className="flex items-center justify-between border-t border-white/10 pt-3">
               <input ref={imageInputRef} type="file" accept="image/*" onChange={selectImage} className="hidden" />
               <button
@@ -219,7 +219,7 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
           </div>
           )}
         </div>
-        {!composerOpen && feedback ? <p className="ml-14 mt-2 text-xs text-rose-300">{feedback}</p> : null}
+        {!composerOpen && feedback ? <p role="alert" className="ml-14 mt-2 text-xs text-rose-300">{feedback}</p> : null}
       </div>
 
       <div>
