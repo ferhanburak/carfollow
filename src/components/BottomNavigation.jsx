@@ -53,12 +53,21 @@ function NavigationIcon({ name }) {
   );
 }
 
-function ForumHomeMark() {
+function CruiserRoadMark() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 32 32" className="h-9 w-9" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 2.8 27 6.4v8.2c0 7.1-4.4 11.8-11 14.6C9.4 26.4 5 21.7 5 14.6V6.4Z" strokeWidth="1.7" />
-      <path d="M9.3 9.7h13.4v8.5h-7.8l-4.1 3v-3H9.3Z" strokeWidth="1.8" />
-      <path d="M12.5 13.1h7M12.5 15.8h4.6" strokeWidth="1.6" />
+    <svg aria-hidden="true" viewBox="0 0 40 40" className="h-10 w-10" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 2.8 34 7.2v10.5c0 9-5.5 14.9-14 18.5-8.5-3.6-14-9.5-14-18.5V7.2Z" strokeWidth="1.5" opacity=".9" />
+
+      <path d="M14.2 31.5c10-4.2 1.4-7.8 8.3-11.3 6.8-3.4 7-7.1 3.7-11.6" strokeWidth="2.1" />
+      <path d="M23.8 32.2c9.4-6.6.6-9.2 6.1-12.8 5.1-3.3 4.3-7.8 1.4-11.2" strokeWidth="2.1" />
+      <path d="M19.4 31.6c9.4-5.4 1-8.4 7.3-11.9 6-3.3 5.5-7.5 2.1-11.4" strokeWidth="1" strokeDasharray="2.2 2.8" opacity=".85" />
+
+      <path d="M8.6 11.2h8.1v5.7H8.6Z" strokeWidth="1.5" />
+      <path d="m10.2 11.2 1-1.8h2.9l1 1.8" strokeWidth="1.3" />
+      <circle cx="12.7" cy="14.1" r="1.5" strokeWidth="1.3" />
+
+      <path d="M31.6 20.4c0 2.7-3.4 6.2-3.4 6.2s-3.4-3.5-3.4-6.2a3.4 3.4 0 1 1 6.8 0Z" strokeWidth="1.5" />
+      <circle cx="28.2" cy="20.3" r=".9" fill="currentColor" stroke="none" />
     </svg>
   );
 }
@@ -96,7 +105,7 @@ export function BottomNavigation({ activeTab, items, onSelect }) {
                     }`
               }`}
             >
-              {isPrimary ? <ForumHomeMark /> : <NavigationIcon name={item.key} />}
+              {isPrimary ? <CruiserRoadMark /> : <NavigationIcon name={item.key} />}
               <span className={`absolute h-0.5 rounded-full bg-current transition-all ${
                 isPrimary ? "bottom-1.5" : "bottom-1"
               } ${isActive ? "w-3 opacity-70" : "w-0 opacity-0"}`} />
