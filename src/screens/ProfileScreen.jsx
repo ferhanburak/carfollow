@@ -15,7 +15,6 @@ function CompactMetric({ label, value }) {
 
 export function ProfileScreen({
   onOpenService,
-  onOpenStats,
   profileCompletion,
   user,
 }) {
@@ -78,19 +77,12 @@ export function ProfileScreen({
           )}
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={onOpenStats}
-            className="min-h-12 rounded-2xl bg-lime-400 font-semibold text-black shadow-[0_0_20px_rgba(163,230,53,0.3)]"
-          >
-            Stats Ekranina Git
-          </button>
+        <div className="mt-4">
           <button
             type="button"
             onClick={onOpenService}
             aria-label="Servis"
-            className="min-h-12 rounded-2xl border border-white/10 bg-black/20 font-semibold text-neutral-200"
+            className="min-h-12 w-full rounded-2xl border border-white/10 bg-black/20 font-semibold text-neutral-200 transition hover:border-lime-400/30 hover:text-lime-300 active:scale-[0.99]"
           >
             Servis
           </button>

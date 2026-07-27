@@ -640,7 +640,6 @@ function App() {
             {activeTab === "profile" ? (
               <ProfileScreen
                 onOpenService={() => setActiveTab("garage")}
-                onOpenStats={() => setActiveTab("leaderboard")}
                 profileCompletion={profileCompletion}
                 user={user}
               />

@@ -59,7 +59,7 @@ function CruiserRoadMark() {
       aria-hidden="true"
       alt=""
       src="/cruiser-road-mark.png"
-      className="h-[3.35rem] w-[3.35rem] rounded-full object-contain drop-shadow-[0_0_8px_rgba(163,230,53,0.35)]"
+      className="h-[3.35rem] w-[3.35rem] object-contain drop-shadow-[0_0_10px_rgba(163,230,53,0.72)]"
     />
   );
 }
@@ -87,7 +87,7 @@ export function BottomNavigation({ activeTab, items, onSelect }) {
                 isPrimary
                   ? `z-10 h-16 w-16 -translate-y-3.5 justify-self-center rounded-full border-2 ${
                       isActive
-                        ? "border-lime-200 bg-lime-400 text-black shadow-[0_0_0_5px_rgba(10,10,10,0.95),0_0_32px_rgba(163,230,53,0.58)]"
+                        ? "border-lime-200 bg-[#050505] text-lime-300 shadow-[0_0_0_5px_rgba(10,10,10,0.95),0_0_34px_rgba(163,230,53,0.68)]"
                         : "border-lime-400/70 bg-[#171717] text-lime-300 shadow-[0_0_0_5px_rgba(10,10,10,0.95),0_0_22px_rgba(163,230,53,0.2)] hover:border-lime-300 hover:text-lime-200"
                     }`
                   : `min-h-12 w-full rounded-2xl ${

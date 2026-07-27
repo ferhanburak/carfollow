@@ -62,15 +62,6 @@ export function AuthScreen({
         </div>
 
         <div className="flex-1 space-y-5 px-5 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-          {isFirebaseAuth ? (
-            <div className="rounded-2xl border border-lime-400/20 bg-lime-400/8 px-4 py-3 text-sm text-neutral-300">
-              <p className="font-semibold text-lime-200">Güvenli Hesap</p>
-              <p className="mt-1 text-xs text-neutral-500">
-                E-posta hesap anahtarin, plaka ise CRUISER icindeki aranabilir sürücü kimligindir.
-              </p>
-            </div>
-          ) : null}
-
           {authTab === "login" ? (
             <form className="space-y-4" onSubmit={onLogin}>
               <Field label={isFirebaseAuth ? "E-mail" : "Vehicle Plate"}>
