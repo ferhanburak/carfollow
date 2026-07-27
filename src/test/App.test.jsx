@@ -365,7 +365,15 @@ describe("App", () => {
 
     expect(await screen.findByText("Aylık Sürücü Sıralaması")).toBeInTheDocument();
     expect(screen.getByText("Aylık Klan Sıralaması")).toBeInTheDocument();
-    const metricGroup = screen.getByLabelText("Leaderboard olcutu");
+    const periodGroup = screen.getByLabelText("Sürücü sıralama dönemi");
+    expect(within(periodGroup).getByRole("button", { name: "Aylık" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(within(periodGroup).getByRole("button", { name: "Haftalık" }));
+    expect(screen.getByText("Haftalık Sürücü Sıralaması")).toBeInTheDocument();
+    await user.click(within(periodGroup).getByRole("button", { name: "Günlük" }));
+    expect(screen.getByText("Günlük Sürücü Sıralaması")).toBeInTheDocument();
+    await user.click(within(periodGroup).getByRole("button", { name: "Aylık" }));
+
+    const metricGroup = screen.getByLabelText("Leaderboard ölçütü");
     expect(within(metricGroup).getByRole("button", { name: "KM" })).toHaveAttribute("aria-pressed", "true");
 
     await user.click(within(metricGroup).getByRole("button", { name: "Sürüş Süresi" }));
@@ -375,7 +383,7 @@ describe("App", () => {
     expect(within(metricGroup).getByRole("button", { name: "Maksimum Hız" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Max Hız")).toBeInTheDocument();
 
-    const clanMetricGroup = screen.getByLabelText("Klan leaderboard olcutu");
+    const clanMetricGroup = screen.getByLabelText("Klan leaderboard ölçütü");
     await user.click(within(clanMetricGroup).getByRole("button", { name: "Sürüş Süresi" }));
     expect(within(clanMetricGroup).getByRole("button", { name: "Sürüş Süresi" })).toHaveAttribute("aria-pressed", "true");
 

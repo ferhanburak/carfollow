@@ -80,26 +80,81 @@ function SocialActionIcon({ name }) {
   );
 }
 
+const leaderboardPeriods = [
+  { key: "monthly", shortLabel: "A", label: "Aylık" },
+  { key: "weekly", shortLabel: "H", label: "Haftalık" },
+  { key: "daily", shortLabel: "G", label: "Günlük" },
+];
+
 const leaderboardMetrics = [
   {
-    key: "monthlyKm",
+    key: "km",
+    fieldSuffix: "Km",
     label: "KM",
-    summaryLabel: "Aylık KM",
+    summaryLabel: "KM",
     format: (value) => `${formatNumber(value)} KM`,
   },
   {
-    key: "monthlyDriveSeconds",
+    key: "driveSeconds",
+    fieldSuffix: "DriveSeconds",
     label: "Sürüş Süresi",
     summaryLabel: "Sürüş",
     format: (value) => formatDriveTime(value),
   },
   {
-    key: "monthlyMaxSpeedKmh",
+    key: "maxSpeedKmh",
+    fieldSuffix: "MaxSpeedKmh",
     label: "Maksimum Hız",
     summaryLabel: "Max Hız",
     format: (value) => `${Math.round(Number(value) || 0)} KM/H`,
   },
 ];
+
+function SegmentedControl({ ariaLabel, items, onChange, value, compact = false }) {
+  const selectedIndex = Math.max(0, items.findIndex((item) => item.key === value));
+
+  return (
+    <div
+      aria-label={ariaLabel}
+      className={`relative grid overflow-hidden rounded-full border border-white/10 bg-black/35 p-1 ${
+        compact ? "w-[8.75rem]" : "w-full"
+      }`}
+      role="group"
+      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-1 left-1 top-1 rounded-full bg-lime-400 shadow-[0_0_18px_rgba(163,230,53,0.28)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        style={{
+          transform: `translateX(${selectedIndex * 100}%)`,
+          width: `calc((100% - 0.5rem) / ${items.length})`,
+        }}
+      />
+      {items.map((item) => (
+        <button
+          key={item.key}
+          type="button"
+          aria-label={item.label}
+          aria-pressed={value === item.key}
+          onClick={() => onChange(item.key)}
+          className={`relative z-10 rounded-full px-1 font-bold transition-colors duration-300 active:scale-95 ${
+            compact ? "min-h-12 text-[11px]" : "min-h-12 text-[10px]"
+          } ${value === item.key ? "text-black" : "text-neutral-400 hover:text-white"}`}
+        >
+          {compact ? item.shortLabel : item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function getLeaderboardMetric(periodKey, metricKey) {
+  const metric = leaderboardMetrics.find((entry) => entry.key === metricKey) ?? leaderboardMetrics[0];
+  return {
+    ...metric,
+    fieldKey: `${periodKey}${metric.fieldSuffix}`,
+  };
+}
 
 export function StatsScreen({
   acceptIncomingClanInvite,
@@ -142,30 +197,37 @@ export function StatsScreen({
   mode = "social",
 }) {
   const [clanCenterOpen, setClanCenterOpen] = useState(false);
-  const [leaderboardMetricKey, setLeaderboardMetricKey] = useState("monthlyKm");
-  const [clanLeaderboardMetricKey, setClanLeaderboardMetricKey] = useState("monthlyKm");
+  const [leaderboardPeriodKey, setLeaderboardPeriodKey] = useState("monthly");
+  const [leaderboardMetricKey, setLeaderboardMetricKey] = useState("km");
+  const [clanLeaderboardPeriodKey, setClanLeaderboardPeriodKey] = useState("monthly");
+  const [clanLeaderboardMetricKey, setClanLeaderboardMetricKey] = useState("km");
   const [individualLeaderboardExpanded, setIndividualLeaderboardExpanded] = useState(false);
   const [clanLeaderboardExpanded, setClanLeaderboardExpanded] = useState(false);
   const baseIndividualLeaderboard = Array.isArray(individualLeaderboardEntries)
     ? individualLeaderboardEntries
     : buildIndividualLeaderboard(user, individualDriverSeed);
+  const activeLeaderboardPeriod = leaderboardPeriods.find(
+    (period) => period.key === leaderboardPeriodKey,
+  ) ?? leaderboardPeriods[0];
+  const activeLeaderboardMetric = getLeaderboardMetric(leaderboardPeriodKey, leaderboardMetricKey);
   const individualLeaderboard = useMemo(
-    () => rankIndividualLeaderboard(baseIndividualLeaderboard, leaderboardMetricKey),
-    [baseIndividualLeaderboard, leaderboardMetricKey],
+    () => rankIndividualLeaderboard(baseIndividualLeaderboard, activeLeaderboardMetric.fieldKey),
+    [activeLeaderboardMetric.fieldKey, baseIndividualLeaderboard],
   );
-  const activeLeaderboardMetric = leaderboardMetrics.find(
-    (metric) => metric.key === leaderboardMetricKey,
-  ) ?? leaderboardMetrics[0];
+  const activeClanLeaderboardPeriod = leaderboardPeriods.find(
+    (period) => period.key === clanLeaderboardPeriodKey,
+  ) ?? leaderboardPeriods[0];
+  const activeClanLeaderboardMetric = getLeaderboardMetric(
+    clanLeaderboardPeriodKey,
+    clanLeaderboardMetricKey,
+  );
   const clanLeaderboard = useMemo(
     () => rankIndividualLeaderboard(
       clans.map((clan) => ({ ...clan, monthlyKm: Number(clan.monthlyKm ?? clan.km ?? 0) })),
-      clanLeaderboardMetricKey,
+      activeClanLeaderboardMetric.fieldKey,
     ),
-    [clanLeaderboardMetricKey, clans],
+    [activeClanLeaderboardMetric.fieldKey, clans],
   );
-  const activeClanLeaderboardMetric = leaderboardMetrics.find(
-    (metric) => metric.key === clanLeaderboardMetricKey,
-  ) ?? leaderboardMetrics[0];
   const visibleIndividualLeaderboard = individualLeaderboardExpanded
     ? individualLeaderboard
     : individualLeaderboard.slice(0, 5);
@@ -518,7 +580,7 @@ export function StatsScreen({
       ) : null}
 
       {showLeaderboard ? (
-      <div aria-label="Aylık sürücü sıralaması" className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
+      <div aria-label={`${activeLeaderboardPeriod.label} sürücü sıralaması`} className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
         <button
           type="button"
           aria-expanded={individualLeaderboardExpanded}
@@ -526,31 +588,31 @@ export function StatsScreen({
           className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-1 text-left active:scale-[0.99]"
         >
           <div>
-            <h3 className="text-lg font-black">Aylık Sürücü Sıralaması</h3>
+            <h3 className="text-lg font-black">{activeLeaderboardPeriod.label} Sürücü Sıralaması</h3>
             <p className="mt-0.5 text-[10px] text-neutral-500">
               {individualLeaderboardExpanded ? "Tüm sürücüler" : "İlk 5 sürücü"}
             </p>
           </div>
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-semibold text-neutral-300">
-            {individualLeaderboardExpanded ? "Daralt" : `Tumunu Gör (${individualLeaderboard.length})`}
+            {individualLeaderboardExpanded ? "Daralt" : `Tümünü Gör (${individualLeaderboard.length})`}
           </span>
         </button>
-        <div aria-label="Leaderboard olcutu" className="mt-2 grid grid-cols-3 gap-1.5 rounded-xl border border-white/8 bg-black/20 p-1">
-          {leaderboardMetrics.map((metric) => (
-            <button
-              key={metric.key}
-              type="button"
-              aria-pressed={leaderboardMetricKey === metric.key}
-              onClick={() => setLeaderboardMetricKey(metric.key)}
-              className={`min-h-11 rounded-lg px-1 text-[9px] font-bold transition active:scale-95 ${
-                leaderboardMetricKey === metric.key
-                  ? "bg-lime-400 text-black shadow-[0_0_16px_rgba(163,230,53,0.28)]"
-                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              {metric.label}
-            </button>
-          ))}
+        <div className="mt-2 flex justify-center">
+          <SegmentedControl
+            ariaLabel="Sürücü sıralama dönemi"
+            compact
+            items={leaderboardPeriods}
+            onChange={setLeaderboardPeriodKey}
+            value={leaderboardPeriodKey}
+          />
+        </div>
+        <div className="mt-2">
+          <SegmentedControl
+            ariaLabel="Leaderboard ölçütü"
+            items={leaderboardMetrics}
+            onChange={setLeaderboardMetricKey}
+            value={leaderboardMetricKey}
+          />
         </div>
         <div className="mt-2 grid grid-cols-3 gap-1.5">
           <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
@@ -562,7 +624,7 @@ export function StatsScreen({
           <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
             <p className="text-[8px] uppercase tracking-[0.14em] text-neutral-500">{activeLeaderboardMetric.summaryLabel}</p>
             <p className="mt-0.5 truncate text-xs font-black text-lime-300">
-              {activeLeaderboardMetric.format(user[activeLeaderboardMetric.key])}
+              {activeLeaderboardMetric.format(user[activeLeaderboardMetric.fieldKey])}
             </p>
           </div>
           <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
@@ -590,7 +652,7 @@ export function StatsScreen({
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-black text-lime-300">
-                    {activeLeaderboardMetric.format(driver[activeLeaderboardMetric.key])}
+                    {activeLeaderboardMetric.format(driver[activeLeaderboardMetric.fieldKey])}
                   </p>
                 </div>
               </button>
@@ -601,7 +663,7 @@ export function StatsScreen({
       ) : null}
 
       {showLeaderboard ? (
-      <div aria-label="Aylık klan sıralaması" className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
+      <div aria-label={`${activeClanLeaderboardPeriod.label} klan sıralaması`} className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
         <button
           type="button"
           aria-expanded={clanLeaderboardExpanded}
@@ -609,31 +671,31 @@ export function StatsScreen({
           className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-1 text-left active:scale-[0.99]"
         >
           <div>
-            <h3 className="text-lg font-black">Aylık Klan Sıralaması</h3>
+            <h3 className="text-lg font-black">{activeClanLeaderboardPeriod.label} Klan Sıralaması</h3>
             <p className="mt-0.5 text-[10px] text-neutral-500">
               {clanLeaderboardExpanded ? "Tüm klanlar" : "İlk 5 klan"}
             </p>
           </div>
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-semibold text-neutral-300">
-            {clanLeaderboardExpanded ? "Daralt" : `Tumunu Gör (${clanLeaderboard.length})`}
+            {clanLeaderboardExpanded ? "Daralt" : `Tümünü Gör (${clanLeaderboard.length})`}
           </span>
         </button>
-        <div aria-label="Klan leaderboard olcutu" className="mt-2 grid grid-cols-3 gap-1.5 rounded-xl border border-white/8 bg-black/20 p-1">
-          {leaderboardMetrics.map((metric) => (
-            <button
-              key={metric.key}
-              type="button"
-              aria-pressed={clanLeaderboardMetricKey === metric.key}
-              onClick={() => setClanLeaderboardMetricKey(metric.key)}
-              className={`min-h-11 rounded-lg px-1 text-[9px] font-bold transition active:scale-95 ${
-                clanLeaderboardMetricKey === metric.key
-                  ? "bg-lime-400 text-black shadow-[0_0_16px_rgba(163,230,53,0.28)]"
-                  : "text-neutral-400 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              {metric.label}
-            </button>
-          ))}
+        <div className="mt-2 flex justify-center">
+          <SegmentedControl
+            ariaLabel="Klan sıralama dönemi"
+            compact
+            items={leaderboardPeriods}
+            onChange={setClanLeaderboardPeriodKey}
+            value={clanLeaderboardPeriodKey}
+          />
+        </div>
+        <div className="mt-2">
+          <SegmentedControl
+            ariaLabel="Klan leaderboard ölçütü"
+            items={leaderboardMetrics}
+            onChange={setClanLeaderboardMetricKey}
+            value={clanLeaderboardMetricKey}
+          />
         </div>
         <div className="mt-3 space-y-2">
           {visibleClanLeaderboard.map((clan) => (
@@ -652,7 +714,7 @@ export function StatsScreen({
                 </div>
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-black text-lime-300">
-                    {activeClanLeaderboardMetric.format(clan[activeClanLeaderboardMetric.key])}
+                    {activeClanLeaderboardMetric.format(clan[activeClanLeaderboardMetric.fieldKey])}
                   </p>
                 </div>
               </div>

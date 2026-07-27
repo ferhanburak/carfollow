@@ -1,5 +1,9 @@
 import { getFirebaseServices, isFirebaseModeEnabled } from "../services/firebaseClient";
-import { getDriverStatsPeriod } from "../domain/driverStats";
+import {
+  getDriverStatsDayPeriod,
+  getDriverStatsPeriod,
+  getDriverStatsWeekPeriod,
+} from "../domain/driverStats";
 import { PUBLIC_COLLECTIONS, publicCollectionPath, resolveAppId } from "../services/firebasePaths";
 
 function toMillis(value) {
@@ -10,7 +14,7 @@ function sortNewest(items, timestampField = "createdAt") {
   return [...items].sort((left, right) => toMillis(right[timestampField]) - toMillis(left[timestampField]));
 }
 
-function normalizeClan(clan, leaderboardEntry, periodKey) {
+function normalizeClan(clan, leaderboardEntry, periodKey, dailyPeriodKey, weeklyPeriodKey) {
   const isCurrentPeriod = clan.monthlyKmPeriod === periodKey;
   const currentMonthlyKm = Number(
     leaderboardEntry?.monthlyKm ?? (
@@ -25,8 +29,20 @@ function normalizeClan(clan, leaderboardEntry, periodKey) {
   const monthlyMaxSpeedKmh = Number(
     leaderboardEntry?.monthlyMaxSpeedKmh ?? (isCurrentPeriod ? clan.monthlyMaxSpeedKmh : 0) ?? 0,
   );
+  const dailySource = leaderboardEntry ?? clan;
+  const weeklySource = leaderboardEntry ?? clan;
+  const isCurrentDay = dailySource.dailyPeriodKey === dailyPeriodKey;
+  const isCurrentWeek = weeklySource.weeklyPeriodKey === weeklyPeriodKey;
   return {
     ...clan,
+    dailyKm: isCurrentDay ? Number(dailySource.dailyKm ?? 0) : 0,
+    dailyDriveSeconds: isCurrentDay ? Number(dailySource.dailyDriveSeconds ?? 0) : 0,
+    dailyMaxSpeedKmh: isCurrentDay ? Number(dailySource.dailyMaxSpeedKmh ?? 0) : 0,
+    dailyPeriodKey,
+    weeklyKm: isCurrentWeek ? Number(weeklySource.weeklyKm ?? 0) : 0,
+    weeklyDriveSeconds: isCurrentWeek ? Number(weeklySource.weeklyDriveSeconds ?? 0) : 0,
+    weeklyMaxSpeedKmh: isCurrentWeek ? Number(weeklySource.weeklyMaxSpeedKmh ?? 0) : 0,
+    weeklyPeriodKey,
     km: currentMonthlyKm,
     monthlyKm: currentMonthlyKm,
     monthlyDriveSeconds,
@@ -57,13 +73,21 @@ export function buildFirebaseClanState({
 }) {
   const membership = memberships[0] ?? null;
   const periodKey = getDriverStatsPeriod();
+  const dailyPeriodKey = getDriverStatsDayPeriod();
+  const weeklyPeriodKey = getDriverStatsWeekPeriod();
   const leaderboardByClan = new Map(
     leaderboardEntries
       .filter((entry) => entry.periodKey === periodKey && entry.clanId)
       .map((entry) => [entry.clanId, entry]),
   );
   const normalizedClans = clans
-    .map((clan) => normalizeClan(clan, leaderboardByClan.get(clan.id), periodKey))
+    .map((clan) => normalizeClan(
+      clan,
+      leaderboardByClan.get(clan.id),
+      periodKey,
+      dailyPeriodKey,
+      weeklyPeriodKey,
+    ))
     .sort((left, right) => Number(right.km ?? 0) - Number(left.km ?? 0));
   const currentClan = membership
     ? normalizedClans.find((clan) => clan.id === membership.clanId) ?? null

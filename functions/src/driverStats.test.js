@@ -9,7 +9,9 @@ const {
   buildPartLifeSnapshot,
   calculateAcceptedDriveKm,
   calculateAcceptedDriveSummary,
+  getDayKey,
   getMonthKey,
+  getWeekKey,
   isNightTime,
 } = require("./driverStats");
 
@@ -53,6 +55,10 @@ test("resets clan and member totals when a new monthly period starts", () => {
       monthlyKm: 900,
       monthlyDriveSeconds: 7200,
       monthlyMaxSpeedKmh: 180,
+      dailyPeriodKey: "2026-07-12",
+      dailyKm: 50,
+      weeklyPeriodKey: "2026-07-06",
+      weeklyKm: 300,
     },
     member: {
       clanId: "clan-1",
@@ -60,13 +66,21 @@ test("resets clan and member totals when a new monthly period starts", () => {
       monthlyKm: 240,
       monthlyDriveSeconds: 3600,
       monthlyMaxSpeedKmh: 150,
+      dailyPeriodKey: "2026-07-12",
+      dailyKm: 20,
+      weeklyPeriodKey: "2026-07-06",
+      weeklyKm: 80,
     },
     acceptedKm: 5.2,
     movingSeconds: 240,
     maxSpeedKmh: 126,
     periodKey: "2026-07",
+    dayPeriodKey: "2026-07-13",
+    weekPeriodKey: "2026-07-13",
   });
 
+  assert.equal(aggregate.clanPatch.dailyKm, 5.2);
+  assert.equal(aggregate.clanPatch.weeklyKm, 5.2);
   assert.equal(aggregate.clanPatch.monthlyKm, 5.2);
   assert.equal(aggregate.clanPatch.monthlyDriveSeconds, 240);
   assert.equal(aggregate.clanPatch.monthlyMaxSpeedKmh, 126);
@@ -74,6 +88,8 @@ test("resets clan and member totals when a new monthly period starts", () => {
   assert.equal(aggregate.memberPatch.monthlyKm, 5.2);
   assert.equal(aggregate.memberPatch.monthlyDriveSeconds, 240);
   assert.equal(aggregate.memberPatch.monthlyMaxSpeedKmh, 126);
+  assert.equal(aggregate.memberPatch.dailyKm, 5.2);
+  assert.equal(aggregate.memberPatch.weeklyKm, 5.2);
   assert.equal(aggregate.leaderboardEntry.id, "2026-07__clan-1");
   assert.equal(aggregate.leaderboardEntry.monthlyDriveSeconds, 240);
   assert.equal(aggregate.leaderboardEntry.monthlyMaxSpeedKmh, 126);
@@ -109,6 +125,9 @@ test("accumulates current clan drive time and preserves the highest speed", () =
 
 test("uses the Istanbul calendar for monthly periods and night sessions", () => {
   assert.equal(getMonthKey(new Date("2026-06-30T22:30:00.000Z")), "2026-07");
+  assert.equal(getDayKey(new Date("2026-06-30T22:30:00.000Z")), "2026-07-01");
+  assert.equal(getWeekKey(new Date("2026-07-05T20:59:00.000Z")), "2026-06-29");
+  assert.equal(getWeekKey(new Date("2026-07-05T21:01:00.000Z")), "2026-07-06");
   assert.equal(isNightTime(new Date("2026-07-13T21:30:00.000Z")), true);
   assert.equal(isNightTime(new Date("2026-07-13T09:30:00.000Z")), false);
 });
@@ -238,6 +257,41 @@ test("adds accepted night distance to monthly and lifetime totals", () => {
   assert.equal(stats.lifetimeMaxSpeedKmh, 126);
   assert.equal(stats.monthlyAverageSpeedKmh, 78);
   assert.equal(stats.completedSessions, 4);
+});
+
+test("tracks daily and weekly totals independently from the monthly period", () => {
+  const stats = applyCompletedDriveToStats({
+    existingStats: {
+      periodKey: "2026-07",
+      monthlyKm: 120,
+      dailyPeriodKey: "2026-07-12",
+      dailyKm: 18,
+      dailyDriveSeconds: 900,
+      dailyMaxSpeedKmh: 140,
+      weeklyPeriodKey: "2026-07-13",
+      weeklyKm: 24,
+      weeklyDriveSeconds: 1200,
+      weeklyMaxSpeedKmh: 132,
+    },
+    profile: { id: "user-1", odometer: 68400, driverScore: 90 },
+    passport: { serviceLogCount: 0 },
+    vehicle: { odometer: 68405 },
+    acceptedKm: 5,
+    movingSeconds: 240,
+    maxSpeedKmh: 136,
+    isNight: false,
+    now: new Date("2026-07-13T10:00:00.000Z"),
+  });
+
+  assert.equal(stats.dailyPeriodKey, "2026-07-13");
+  assert.equal(stats.dailyKm, 5);
+  assert.equal(stats.dailyDriveSeconds, 240);
+  assert.equal(stats.dailyMaxSpeedKmh, 136);
+  assert.equal(stats.weeklyPeriodKey, "2026-07-13");
+  assert.equal(stats.weeklyKm, 29);
+  assert.equal(stats.weeklyDriveSeconds, 1440);
+  assert.equal(stats.weeklyMaxSpeedKmh, 136);
+  assert.equal(stats.monthlyKm, 125);
 });
 
 test("keeps previously unlocked monthly achievements after a period reset", () => {

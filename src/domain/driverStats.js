@@ -8,6 +8,33 @@ export function getDriverStatsPeriod(dateValue = new Date()) {
   return `${values.year}-${values.month}`;
 }
 
+function getZonedDateParts(dateValue = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(dateValue));
+  return Object.fromEntries(parts.map((part) => [part.type, part.value]));
+}
+
+export function getDriverStatsDayPeriod(dateValue = new Date()) {
+  const values = getZonedDateParts(dateValue);
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+export function getDriverStatsWeekPeriod(dateValue = new Date()) {
+  const values = getZonedDateParts(dateValue);
+  const localDate = new Date(Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+  ));
+  const daysSinceMonday = (localDate.getUTCDay() + 6) % 7;
+  localDate.setUTCDate(localDate.getUTCDate() - daysSinceMonday);
+  return localDate.toISOString().slice(0, 10);
+}
+
 function uniqueStrings(values) {
   return [...new Set((values ?? []).filter(Boolean).map(String))];
 }
@@ -20,6 +47,14 @@ export function mergeDriverStatsIntoUser(user, stats) {
   const achievementBadges = uniqueStrings(stats.achievementBadges);
   return {
     ...user,
+    dailyKm: Number(stats.dailyKm ?? user.dailyKm ?? 0),
+    dailyDriveSeconds: Number(stats.dailyDriveSeconds ?? user.dailyDriveSeconds ?? 0),
+    dailyMaxSpeedKmh: Number(stats.dailyMaxSpeedKmh ?? user.dailyMaxSpeedKmh ?? 0),
+    dailyPeriodKey: stats.dailyPeriodKey ?? user.dailyPeriodKey,
+    weeklyKm: Number(stats.weeklyKm ?? user.weeklyKm ?? 0),
+    weeklyDriveSeconds: Number(stats.weeklyDriveSeconds ?? user.weeklyDriveSeconds ?? 0),
+    weeklyMaxSpeedKmh: Number(stats.weeklyMaxSpeedKmh ?? user.weeklyMaxSpeedKmh ?? 0),
+    weeklyPeriodKey: stats.weeklyPeriodKey ?? user.weeklyPeriodKey,
     monthlyKm: Number(stats.monthlyKm ?? user.monthlyKm ?? 0),
     monthlyNightKm: Number(stats.monthlyNightKm ?? user.monthlyNightKm ?? 0),
     monthlyDriveSeconds: Number(stats.monthlyDriveSeconds ?? user.monthlyDriveSeconds ?? 0),
@@ -37,6 +72,8 @@ export function mergeDriverStatsIntoUser(user, stats) {
 }
 
 export function normalizeIndividualLeaderboard(entries, currentUser, periodKey = getDriverStatsPeriod()) {
+  const dailyPeriodKey = getDriverStatsDayPeriod();
+  const weeklyPeriodKey = getDriverStatsWeekPeriod();
   const currentUserId = currentUser?.firebaseUid ?? currentUser?.id;
   const matchingEntries = (entries ?? []).filter((entry) => entry?.periodKey === periodKey);
   const entriesByUser = new Map(
@@ -55,6 +92,14 @@ export function normalizeIndividualLeaderboard(entries, currentUser, periodKey =
       model: currentUser.model,
       region: currentUser.region,
       clan: currentUser.clan,
+      dailyPeriodKey: currentUser.dailyPeriodKey,
+      dailyKm: Number(currentUser.dailyKm ?? 0),
+      dailyDriveSeconds: Number(currentUser.dailyDriveSeconds ?? 0),
+      dailyMaxSpeedKmh: Number(currentUser.dailyMaxSpeedKmh ?? 0),
+      weeklyPeriodKey: currentUser.weeklyPeriodKey,
+      weeklyKm: Number(currentUser.weeklyKm ?? 0),
+      weeklyDriveSeconds: Number(currentUser.weeklyDriveSeconds ?? 0),
+      weeklyMaxSpeedKmh: Number(currentUser.weeklyMaxSpeedKmh ?? 0),
       monthlyKm: Number(currentUser.monthlyKm ?? 0),
       monthlyNightKm: Number(currentUser.monthlyNightKm ?? 0),
       monthlyDriveSeconds: Number(currentUser.monthlyDriveSeconds ?? 0),
@@ -81,6 +126,20 @@ export function normalizeIndividualLeaderboard(entries, currentUser, periodKey =
     })
     .map((entry, index) => ({
       ...entry,
+      dailyKm: entry.dailyPeriodKey === dailyPeriodKey ? Number(entry.dailyKm ?? 0) : 0,
+      dailyDriveSeconds: entry.dailyPeriodKey === dailyPeriodKey
+        ? Number(entry.dailyDriveSeconds ?? 0)
+        : 0,
+      dailyMaxSpeedKmh: entry.dailyPeriodKey === dailyPeriodKey
+        ? Number(entry.dailyMaxSpeedKmh ?? 0)
+        : 0,
+      weeklyKm: entry.weeklyPeriodKey === weeklyPeriodKey ? Number(entry.weeklyKm ?? 0) : 0,
+      weeklyDriveSeconds: entry.weeklyPeriodKey === weeklyPeriodKey
+        ? Number(entry.weeklyDriveSeconds ?? 0)
+        : 0,
+      weeklyMaxSpeedKmh: entry.weeklyPeriodKey === weeklyPeriodKey
+        ? Number(entry.weeklyMaxSpeedKmh ?? 0)
+        : 0,
       monthlyKm: Number(entry.monthlyKm ?? 0),
       monthlyDriveSeconds: Number(entry.monthlyDriveSeconds ?? 0),
       monthlyMaxSpeedKmh: Number(entry.monthlyMaxSpeedKmh ?? 0),

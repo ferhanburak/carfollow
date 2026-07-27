@@ -93,16 +93,30 @@ export function buildPersonalStats(user) {
 }
 
 export function rankIndividualLeaderboard(entries, metricKey = "monthlyKm") {
-  const supportedMetric = ["monthlyKm", "monthlyDriveSeconds", "monthlyMaxSpeedKmh"].includes(metricKey)
+  const supportedMetric = [
+    "dailyKm",
+    "dailyDriveSeconds",
+    "dailyMaxSpeedKmh",
+    "weeklyKm",
+    "weeklyDriveSeconds",
+    "weeklyMaxSpeedKmh",
+    "monthlyKm",
+    "monthlyDriveSeconds",
+    "monthlyMaxSpeedKmh",
+  ].includes(metricKey)
     ? metricKey
     : "monthlyKm";
+  const periodPrefix = supportedMetric.startsWith("daily")
+    ? "daily"
+    : supportedMetric.startsWith("weekly") ? "weekly" : "monthly";
+  const distanceMetricKey = `${periodPrefix}Km`;
 
   return [...(entries ?? [])]
     .sort((left, right) => {
       const metricDifference = Number(right[supportedMetric] ?? 0) - Number(left[supportedMetric] ?? 0);
       if (metricDifference !== 0) return metricDifference;
 
-      const distanceDifference = Number(right.monthlyKm ?? 0) - Number(left.monthlyKm ?? 0);
+      const distanceDifference = Number(right[distanceMetricKey] ?? 0) - Number(left[distanceMetricKey] ?? 0);
       if (distanceDifference !== 0) return distanceDifference;
 
       return Number(right.driverScore ?? 0) - Number(left.driverScore ?? 0);
@@ -122,6 +136,12 @@ export function buildIndividualLeaderboard(user, seededDrivers = [], metricKey =
       model: user.model,
       region: user.region,
       clan: user.clan,
+      dailyKm: Number(user.dailyKm ?? 0),
+      dailyDriveSeconds: Number(user.dailyDriveSeconds ?? 0),
+      dailyMaxSpeedKmh: Number(user.dailyMaxSpeedKmh ?? 0),
+      weeklyKm: Number(user.weeklyKm ?? 0),
+      weeklyDriveSeconds: Number(user.weeklyDriveSeconds ?? 0),
+      weeklyMaxSpeedKmh: Number(user.weeklyMaxSpeedKmh ?? 0),
       monthlyKm: Number(user.monthlyKm ?? 0),
       monthlyDriveSeconds: Number(user.monthlyDriveSeconds ?? 0),
       monthlyMaxSpeedKmh: Number(user.monthlyMaxSpeedKmh ?? 0),
