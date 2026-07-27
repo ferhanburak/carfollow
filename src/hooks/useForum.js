@@ -9,7 +9,6 @@ import {
 
 const emptyForm = {
   category: "roadlife",
-  title: "",
   body: "",
   location: "",
   setup: "",
@@ -40,15 +39,15 @@ export function useForum(user, enabled = true) {
     };
   }, [enabled, user]);
 
-  const createThread = async () => {
-    if (!form.title.trim() || !form.body.trim()) {
+  const createThread = async (imageFile = null) => {
+    if (!form.body.trim()) {
       setFeedback("Zorunlu alanları doldurunuz.");
       return false;
     }
     setPendingKey("create");
     setFeedback("");
     try {
-      await createFirebaseForumThread(form);
+      await createFirebaseForumThread(form, imageFile);
       setForm(emptyForm);
       return true;
     } catch (error) {

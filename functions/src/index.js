@@ -2917,6 +2917,29 @@ exports.createForumThread = secureCall("createForumThread", { rateLimit: { limit
   const userId = requireAuth(request);
   const profile = await getUserProfile(userId);
   const threadRef = publicCollection("forumThreads").doc();
+  const storagePath = sanitizeOperationalText(request.data?.thread?.storagePath, 512);
+  const imageUrl = sanitizeOperationalText(request.data?.thread?.imageUrl, 2048);
+  if (Boolean(storagePath) !== Boolean(imageUrl)) {
+    throw new HttpsError("invalid-argument", "Forum görseli bilgileri eksik.");
+  }
+  if (storagePath) {
+    const expectedPrefix = `artifacts/${APP_ID}/forumThreads/${userId}/`;
+    if (!storagePath.startsWith(expectedPrefix) || storagePath.includes("..")) {
+      throw new HttpsError("permission-denied", "Geçersiz forum görseli yolu.");
+    }
+    const storageFile = admin.storage().bucket().file(storagePath);
+    const [exists] = await storageFile.exists();
+    if (!exists) {
+      throw new HttpsError("failed-precondition", "Forum görseli yüklenemedi.");
+    }
+    const [metadata] = await storageFile.getMetadata();
+    if (
+      !String(metadata.contentType ?? "").startsWith("image/") ||
+      Number(metadata.size ?? 0) > 10 * 1024 * 1024
+    ) {
+      throw new HttpsError("invalid-argument", "Forum görseli geçersiz.");
+    }
+  }
   try {
     const thread = buildForumThreadDocument({
       id: threadRef.id,

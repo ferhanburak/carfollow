@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ProfileAvatar } from "../components/ProfileAvatar";
 
 const categories = [
-  { key: "all", label: "Tüm Akis", tabLabel: "Tumu" },
-  { key: "places", label: "Rota & Mekan", tabLabel: "Rota" },
-  { key: "builds", label: "Modifiye & Build", tabLabel: "Modifiye" },
-  { key: "technical", label: "Teknik Destek", tabLabel: "Teknik" },
-  { key: "roadlife", label: "Road Life", tabLabel: "Hayat" },
+  { key: "all", label: "Tüm Paylaşımlar", tabLabel: "Tümü" },
+  { key: "places", label: "Etkinlik, Mekan & Rota", tabLabel: "Keşfet" },
+  { key: "builds", label: "Modifikasyon & Araçlar", tabLabel: "Modifiye" },
+  { key: "technical", label: "Arıza & Teknik Destek", tabLabel: "Teknik" },
+  { key: "roadlife", label: "Yoldan & Hayattan", tabLabel: "Günlük" },
 ];
 
 const categoryMeta = Object.fromEntries(categories.map((category) => [category.key, category]));
@@ -43,8 +43,14 @@ function ThreadCard({ onAddReply, onToggleLike, pendingKey, thread }) {
           {thread.createdAt ? new Date(thread.createdAt).toLocaleDateString("tr-TR") : ""}
         </span>
       </div>
-      <h3 className="mt-3 text-base font-black text-white">{thread.title}</h3>
       <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-300">{thread.body}</p>
+      {thread.imageUrl ? (
+        <img
+          src={thread.imageUrl}
+          alt="Paylaşım görseli"
+          className="mt-3 max-h-[28rem] w-full rounded-2xl border border-white/10 bg-black/30 object-cover"
+        />
+      ) : null}
       {thread.location ? <p className="mt-3 rounded-xl border border-sky-400/15 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">Konum: {thread.location}</p> : null}
       {thread.setup ? <p className="mt-3 rounded-xl border border-amber-400/15 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">Setup: {thread.setup}</p> : null}
       {thread.vehicleKm ? <p className="mt-3 text-xs text-neutral-500">Araç KM: {Number(thread.vehicleKm).toLocaleString("tr-TR")}</p> : null}
@@ -85,10 +91,49 @@ function ThreadCard({ onAddReply, onToggleLike, pendingKey, thread }) {
 export function ForumScreen({ addReply, createThread, feedback, form, onFormChange, pendingKey, threads, toggleLike, user }) {
   const [activeCategory, setActiveCategory] = useState("all");
   const [composerOpen, setComposerOpen] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [imageError, setImageError] = useState("");
+  const imageInputRef = useRef(null);
   const visibleThreads = activeCategory === "all" ? threads : threads.filter((thread) => thread.category === activeCategory);
 
+  useEffect(() => () => {
+    if (imagePreview && typeof URL.revokeObjectURL === "function") {
+      URL.revokeObjectURL(imagePreview);
+    }
+  }, [imagePreview]);
+
   const publishThread = async () => {
-    if (await createThread()) setComposerOpen(false);
+    if (await createThread(imageFile)) {
+      setComposerOpen(false);
+      setImageFile(null);
+      setImagePreview("");
+      setImageError("");
+    }
+  };
+
+  const closeComposer = () => {
+    setComposerOpen(false);
+    setImageFile(null);
+    setImagePreview("");
+    setImageError("");
+  };
+
+  const selectImage = (event) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setImageError("Yalnızca görsel dosyası seçebilirsiniz.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setImageError("Görsel en fazla 10 MB olabilir.");
+      return;
+    }
+    setImageFile(file);
+    setImageError("");
+    setImagePreview(typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : "");
   };
 
   return (
@@ -105,29 +150,75 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
       <div className="border-b border-white/10 px-4 py-4">
         <div className="flex items-start gap-3">
           <ProfileAvatar src={user?.avatar} label={user?.fullName} className="h-11 w-11 rounded-full" />
-          <button type="button" onClick={() => setComposerOpen(true)} className="min-h-12 flex-1 text-left text-base text-neutral-500 transition active:scale-[0.98]">
-            Ne paylasmak istersin?
-          </button>
-        </div>
-        {composerOpen ? (
-          <div className="ml-14 mt-1 space-y-3">
-            <select value={form.category} onChange={(event) => onFormChange((current) => ({ ...current, category: event.target.value }))} className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm">
-              {categories.slice(1).map((category) => <option key={category.key} value={category.key}>{category.label}</option>)}
-            </select>
-            <input value={form.title} onChange={(event) => onFormChange((current) => ({ ...current, title: event.target.value }))} placeholder="Başlık *" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm outline-none focus:border-lime-400" />
-            <textarea value={form.body} onChange={(event) => onFormChange((current) => ({ ...current, body: event.target.value }))} rows={4} placeholder="Paylasimini anlat *" className="w-full rounded-xl border border-white/10 bg-[#171717] px-3 py-3 text-sm outline-none focus:border-lime-400" />
+          {!composerOpen ? (
+            <button type="button" onClick={() => setComposerOpen(true)} className="min-h-12 flex-1 text-left text-base text-neutral-500 transition active:scale-[0.98]">
+              Ne paylaşmak istersin?
+            </button>
+          ) : (
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex items-center gap-2">
+              <select value={form.category} onChange={(event) => onFormChange((current) => ({ ...current, category: event.target.value }))} className="h-12 min-w-0 flex-1 rounded-xl border border-white/10 bg-[#171717] px-3 text-sm">
+                {categories.slice(1).map((category) => <option key={category.key} value={category.key}>{category.label}</option>)}
+              </select>
+              <button
+                type="button"
+                aria-label="Paylaşımı iptal et"
+                title="Kapat"
+                onClick={closeComposer}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/10 text-neutral-400 transition hover:border-rose-400/30 hover:text-rose-300 active:scale-90"
+              >
+                <ActionIcon><path d="m6 6 12 12M18 6 6 18" /></ActionIcon>
+              </button>
+            </div>
+            <textarea value={form.body} onChange={(event) => onFormChange((current) => ({ ...current, body: event.target.value }))} rows={4} placeholder="Paylaşımını anlat *" className="w-full rounded-xl border border-white/10 bg-[#171717] px-3 py-3 text-sm outline-none focus:border-lime-400" />
             {form.category === "places" ? <input value={form.location} onChange={(event) => onFormChange((current) => ({ ...current, location: event.target.value }))} placeholder="Mekan veya rota" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm" /> : null}
             {form.category === "builds" ? <input value={form.setup} onChange={(event) => onFormChange((current) => ({ ...current, setup: event.target.value }))} placeholder="Parçalar ve setup" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm" /> : null}
             {form.category === "technical" ? <input type="number" min="0" value={form.vehicleKm} onChange={(event) => onFormChange((current) => ({ ...current, vehicleKm: event.target.value }))} placeholder="Araç kilometresi" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm" /> : null}
+            {imagePreview ? (
+              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+                <img src={imagePreview} alt="Seçilen paylaşım görseli" className="max-h-72 w-full object-cover" />
+                <button
+                  type="button"
+                  aria-label="Seçilen görseli kaldır"
+                  onClick={() => {
+                    setImageFile(null);
+                    setImagePreview("");
+                  }}
+                  className="absolute right-2 top-2 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/75 text-white backdrop-blur active:scale-90"
+                >
+                  <ActionIcon><path d="m6 6 12 12M18 6 6 18" /></ActionIcon>
+                </button>
+              </div>
+            ) : null}
+            {imageError ? <p className="text-xs text-rose-300">{imageError}</p> : null}
             {feedback ? <p className="text-xs text-rose-300">{feedback}</p> : null}
             <div className="flex items-center justify-between border-t border-white/10 pt-3">
-              <button type="button" onClick={() => setComposerOpen(false)} className="min-h-12 px-2 text-xs font-bold text-neutral-500 transition hover:text-white active:scale-90">Vazgec</button>
-              <button type="button" disabled={pendingKey === "create"} onClick={publishThread} className="min-h-12 rounded-full bg-lime-400 px-5 text-sm font-black text-black transition active:scale-95 disabled:opacity-50">
-                {pendingKey === "create" ? "Yayinlaniyor..." : "Paylaş"}
+              <input ref={imageInputRef} type="file" accept="image/*" onChange={selectImage} className="hidden" />
+              <button
+                type="button"
+                aria-label="Görsel ekle"
+                title="Görsel ekle"
+                onClick={() => imageInputRef.current?.click()}
+                className={`flex h-12 w-12 items-center justify-center rounded-full border transition active:scale-90 ${
+                  imageFile ? "border-lime-400/40 bg-lime-400/10 text-lime-300" : "border-white/10 text-neutral-400 hover:text-white"
+                }`}
+              >
+                <ActionIcon><rect x="4" y="5" width="16" height="14" rx="2" /><circle cx="9" cy="10" r="1.5" /><path d="m5 17 4-4 3 3 2-2 5 4" /></ActionIcon>
+              </button>
+              <button
+                type="button"
+                aria-label="Paylaş"
+                title="Paylaş"
+                disabled={pendingKey === "create"}
+                onClick={publishThread}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-lime-400 text-black shadow-[0_0_20px_rgba(163,230,53,0.32)] transition active:scale-90 disabled:opacity-50"
+              >
+                <ActionIcon><path d="m4 4 17 8-17 8 3-8-3-8Z" /><path d="M7 12h14" /></ActionIcon>
               </button>
             </div>
           </div>
-        ) : null}
+          )}
+        </div>
         {!composerOpen && feedback ? <p className="ml-14 mt-2 text-xs text-rose-300">{feedback}</p> : null}
       </div>
 

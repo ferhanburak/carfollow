@@ -63,6 +63,43 @@ async function callForumFunction(name, data) {
   return response.data;
 }
 
-export const createFirebaseForumThread = (thread) => callForumFunction("createForumThread", { thread });
+export async function uploadFirebaseForumImage(file) {
+  if (!file) return { imageUrl: "", storagePath: "" };
+  if (!file.type?.startsWith("image/")) throw new Error("Yalnızca görsel dosyası seçebilirsiniz.");
+  if (file.size > 10 * 1024 * 1024) throw new Error("Görsel en fazla 10 MB olabilir.");
+
+  const services = await getFirebaseServices();
+  if (!services?.storage || !services?.authUser) throw new Error("Firebase Storage kullanılamıyor.");
+  const { getDownloadURL, ref, uploadBytes } = await import("firebase/storage");
+  const safeName = String(file.name || "forum-image")
+    .normalize("NFKD")
+    .replace(/[^\w.-]+/g, "-")
+    .slice(-100);
+  const storagePath = `artifacts/${resolveAppId()}/forumThreads/${services.authUser.uid}/${Date.now()}-${safeName}`;
+  const storageRef = ref(services.storage, storagePath);
+  await uploadBytes(storageRef, file, {
+    cacheControl: "public,max-age=86400",
+    contentType: file.type,
+  });
+  return { imageUrl: await getDownloadURL(storageRef), storagePath };
+}
+
+export async function createFirebaseForumThread(thread, imageFile) {
+  let uploadedImage = { imageUrl: "", storagePath: "" };
+  try {
+    uploadedImage = await uploadFirebaseForumImage(imageFile);
+    return await callForumFunction("createForumThread", {
+      thread: { ...thread, ...uploadedImage },
+    });
+  } catch (error) {
+    if (uploadedImage.storagePath) {
+      const services = await getFirebaseServices();
+      const { deleteObject, ref } = await import("firebase/storage");
+      await deleteObject(ref(services.storage, uploadedImage.storagePath)).catch(() => {});
+    }
+    throw error;
+  }
+}
+
 export const toggleFirebaseForumLike = (threadId) => callForumFunction("toggleForumLike", { threadId });
 export const addFirebaseForumReply = (threadId, body) => callForumFunction("addForumReply", { threadId, body });

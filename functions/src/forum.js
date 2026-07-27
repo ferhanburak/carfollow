@@ -6,16 +6,16 @@ function cleanText(value, maxLength) {
 
 function buildForumThreadDocument({ id, input, profile, timestamp }) {
   const category = String(input?.category ?? "");
-  const title = cleanText(input?.title, 100);
   const body = cleanText(input?.body, 2400);
   if (!FORUM_CATEGORIES.has(category)) throw new Error("Geçerli bir forum kategorisi secin.");
-  if (title.length < 4 || body.length < 8) throw new Error("Başlık ve paylaşım metni çok kısa.");
+  if (body.length < 8) throw new Error("Paylaşım metni çok kısa.");
 
   return {
     id,
     category,
-    title,
     body,
+    imageUrl: cleanText(input?.imageUrl, 2048),
+    storagePath: cleanText(input?.storagePath, 512),
     location: category === "places" ? cleanText(input?.location, 160) : "",
     setup: category === "builds" ? cleanText(input?.setup, 300) : "",
     vehicleKm: category === "technical" ? Math.max(0, Math.round(Number(input?.vehicleKm ?? 0))) : 0,
