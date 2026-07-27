@@ -40,6 +40,26 @@ function buildThreadMetadata({ threadId, leftProfile, rightProfile, timestamp })
   };
 }
 
+function buildThreadSetupUpdates({ threadId, leftProfile, rightProfile, timestamp }) {
+  const metadata = buildThreadMetadata({ threadId, leftProfile, rightProfile, timestamp });
+  const leftUserId = String(leftProfile?.userId ?? leftProfile?.firebaseUid ?? leftProfile?.id ?? "");
+  const rightUserId = String(rightProfile?.userId ?? rightProfile?.firebaseUid ?? rightProfile?.id ?? "");
+  return {
+    [`threads/${threadId}/id`]: threadId,
+    [`threads/${threadId}/participantUids`]: metadata.participantUids,
+    [`threads/${threadId}/participantProfiles`]: metadata.participantProfiles,
+    [`threads/${threadId}/schemaVersion`]: metadata.schemaVersion,
+    [`threads/${threadId}/createdAt`]: timestamp,
+    [`threads/${threadId}/updatedAt`]: timestamp,
+    [`userThreads/${leftUserId}/${threadId}/threadId`]: threadId,
+    [`userThreads/${leftUserId}/${threadId}/counterpartUid`]: rightUserId,
+    [`userThreads/${leftUserId}/${threadId}/updatedAt`]: timestamp,
+    [`userThreads/${rightUserId}/${threadId}/threadId`]: threadId,
+    [`userThreads/${rightUserId}/${threadId}/counterpartUid`]: leftUserId,
+    [`userThreads/${rightUserId}/${threadId}/updatedAt`]: timestamp,
+  };
+}
+
 function buildDirectMessage({ messageId, senderProfile, body, timestamp }) {
   const sender = projectChatProfile(senderProfile);
   return {
@@ -58,6 +78,7 @@ module.exports = {
   buildDirectMessage,
   buildDirectMessageThreadId,
   buildThreadMetadata,
+  buildThreadSetupUpdates,
   projectChatProfile,
   sanitizeMessageBody,
 };

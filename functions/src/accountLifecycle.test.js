@@ -3,6 +3,7 @@ const test = require("node:test");
 const {
   ACCOUNT_DELETE_CONFIRMATION,
   buildAccountExport,
+  buildRealtimeAccountDeletionUpdates,
   buildWithdrawnPrivacySettings,
   hasRecentAuthentication,
   requireDeletionConfirmation,
@@ -36,4 +37,21 @@ test("account export keeps private and social sections explicitly separated", ()
   assert.equal(payload.exportVersion, 1);
   assert.equal(payload.collections.vehicles[0].id, "vehicle-1");
   assert.equal(payload.social.friendships[0].id, "edge-1");
+});
+
+test("account deletion avoids overlapping Realtime Database update paths", () => {
+  const updates = buildRealtimeAccountDeletionUpdates({
+    appId: "cruiser-app-prod",
+    userId: "driver-1",
+    threads: [{
+      threadId: "thread-1",
+      participantIds: ["driver-1", "driver-2"],
+    }],
+  });
+  const root = "artifacts/cruiser-app-prod/realtime/directMessages";
+
+  assert.equal(updates[`${root}/userThreads/driver-1`], null);
+  assert.equal(updates[`${root}/userThreads/driver-1/thread-1`], undefined);
+  assert.equal(updates[`${root}/userThreads/driver-2/thread-1`], null);
+  assert.equal(updates[`${root}/threads/thread-1`], null);
 });

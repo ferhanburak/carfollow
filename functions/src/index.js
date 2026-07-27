@@ -64,7 +64,7 @@ const {
 const {
   buildDirectMessage,
   buildDirectMessageThreadId,
-  buildThreadMetadata,
+  buildThreadSetupUpdates,
   sanitizeMessageBody,
 } = require("./directMessages");
 const {
@@ -94,6 +94,7 @@ const {
 const {
   ACCOUNT_DELETE_CONFIRMATION,
   buildAccountExport,
+  buildRealtimeAccountDeletionUpdates,
   buildWithdrawnPrivacySettings,
   hasRecentAuthentication,
   requireDeletionConfirmation,
@@ -562,20 +563,10 @@ async function ensureDirectMessageThreadState(actorUserId, targetUserId) {
   const threadRef = realtimeDb.ref(`${rootPath}/threads/${threadId}`);
   const existing = await threadRef.get();
   const timestamp = Date.now();
-  const metadata = buildThreadMetadata({ threadId, leftProfile: actor, rightProfile: target, timestamp });
-  const createdAt = existing.exists() ? Number(existing.child("createdAt").val() ?? timestamp) : timestamp;
-  const updates = {
-    [`threads/${threadId}/id`]: threadId,
-    [`threads/${threadId}/participantUids`]: metadata.participantUids,
-    [`threads/${threadId}/participantProfiles`]: metadata.participantProfiles,
-    [`threads/${threadId}/schemaVersion`]: metadata.schemaVersion,
-    [`threads/${threadId}/createdAt`]: createdAt,
-    [`threads/${threadId}/updatedAt`]: timestamp,
-    [`userThreads/${actorUserId}/${threadId}`]: { threadId, counterpartUid: targetUserId, updatedAt: timestamp },
-    [`userThreads/${targetUserId}/${threadId}`]: { threadId, counterpartUid: actorUserId, updatedAt: timestamp },
-  };
-  await realtimeDb.ref(rootPath).update(updates);
-  return { actor, target, threadId, rootPath, timestamp };
+  const threadSetupUpdates = existing.exists()
+    ? {}
+    : buildThreadSetupUpdates({ threadId, leftProfile: actor, rightProfile: target, timestamp });
+  return { actor, target, threadId, rootPath, timestamp, threadSetupUpdates };
 }
 
 async function migrateLegacyConvoyPins() {
@@ -615,21 +606,29 @@ exports.requestFriendship = secureCall("requestFriendship", { rateLimit: { limit
   const requesterUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, requesterUserId);
 
-  const [requester, target] = await Promise.all([
-    getUserProfile(requesterUserId),
-    getUserProfile(targetUserId),
-  ]);
   const friendshipId = buildPairId(requesterUserId, targetUserId);
   const friendshipRef = friendshipDocument(requesterUserId, targetUserId);
   const requesterBlockRef = blockedDriverDocument(requesterUserId, targetUserId);
   const targetBlockRef = blockedDriverDocument(targetUserId, requesterUserId);
+  const requesterProfileRef = privateUserDocument(requesterUserId, "profile", "current");
+  const targetProfileRef = privateUserDocument(targetUserId, "profile", "current");
 
   const outcome = await db.runTransaction(async (transaction) => {
-    const [existing, requesterBlock, targetBlock] = await Promise.all([
+    const [existing, requesterBlock, targetBlock, requesterProfile, targetProfile] = await Promise.all([
       transaction.get(friendshipRef),
       transaction.get(requesterBlockRef),
       transaction.get(targetBlockRef),
+      transaction.get(requesterProfileRef),
+      transaction.get(targetProfileRef),
     ]);
+    const requester = {
+      id: requesterUserId,
+      ...requireSnapshot(requesterProfile, "not-found", "Requester profile not found."),
+    };
+    const target = {
+      id: targetUserId,
+      ...requireSnapshot(targetProfile, "not-found", "Target profile not found."),
+    };
     if (requesterBlock.exists || targetBlock.exists) {
       throw new HttpsError("permission-denied", "A friendship request cannot be created for this driver.");
     }
@@ -931,19 +930,13 @@ exports.deleteMyAccount = secureCall("deleteMyAccount", { rateLimit: { limit: 3,
 
   const directMessageRoot = realtimeDb.ref(`artifacts/${APP_ID}/realtime/directMessages`);
   const userThreadsSnapshot = await directMessageRoot.child(`userThreads/${userId}`).get();
-  const realtimeUpdates = {
-    [`artifacts/${APP_ID}/realtime/presence/${userId}`]: null,
-    [`artifacts/${APP_ID}/realtime/telemetry/${userId}`]: null,
-    [`artifacts/${APP_ID}/realtime/directMessages/userThreads/${userId}`]: null,
-  };
+  const threads = [];
   for (const threadId of Object.keys(userThreadsSnapshot.val() ?? {})) {
     const threadSnapshot = await directMessageRoot.child(`threads/${threadId}`).get();
     const participantIds = Object.keys(threadSnapshot.child("participantUids").val() ?? {});
-    realtimeUpdates[`artifacts/${APP_ID}/realtime/directMessages/threads/${threadId}`] = null;
-    participantIds.forEach((participantId) => {
-      realtimeUpdates[`artifacts/${APP_ID}/realtime/directMessages/userThreads/${participantId}/${threadId}`] = null;
-    });
+    threads.push({ threadId, participantIds });
   }
+  const realtimeUpdates = buildRealtimeAccountDeletionUpdates({ appId: APP_ID, userId, threads });
   await realtimeDb.ref().update(realtimeUpdates);
 
   const bucket = admin.storage().bucket();
@@ -964,6 +957,9 @@ exports.ensureDirectMessageThread = secureCall("ensureDirectMessageThread", asyn
   const actorUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, actorUserId);
   const state = await ensureDirectMessageThreadState(actorUserId, targetUserId);
+  if (Object.keys(state.threadSetupUpdates).length) {
+    await realtimeDb.ref(state.rootPath).update(state.threadSetupUpdates);
+  }
   return { ok: true, threadId: state.threadId };
 });
 
@@ -981,6 +977,7 @@ exports.sendDirectMessage = secureCall("sendDirectMessage", { rateLimit: { limit
   const timestamp = Date.now();
   const message = buildDirectMessage({ messageId: messageRef.key, senderProfile: state.actor, body, timestamp });
   await realtimeDb.ref(state.rootPath).update({
+    ...state.threadSetupUpdates,
     [`threads/${state.threadId}/messages/${message.id}`]: message,
     [`threads/${state.threadId}/lastMessage`]: message,
     [`threads/${state.threadId}/updatedAt`]: timestamp,
@@ -1787,26 +1784,46 @@ exports.inviteClanMember = secureCall("inviteClanMember", { rateLimit: { limit: 
   const { clanId } = request.data ?? {};
   assertClanId(clanId);
 
-  const [actor, target] = await Promise.all([getUserProfile(actorUserId), getUserProfile(targetUserId)]);
   const clanRef = publicCollection("clans").doc(clanId);
   const actorMemberRef = clanMemberDocument(clanId, actorUserId);
   const targetMemberRef = clanMemberDocument(clanId, targetUserId);
   const inviteRef = clanInviteDocument(clanId, targetUserId);
   const actorBlockRef = blockedDriverDocument(actorUserId, targetUserId);
   const targetBlockRef = blockedDriverDocument(targetUserId, actorUserId);
+  const actorProfileRef = privateUserDocument(actorUserId, "profile", "current");
+  const targetProfileRef = privateUserDocument(targetUserId, "profile", "current");
 
   let duplicateInvite = false;
 
   await db.runTransaction(async (transaction) => {
-    const [clanSnapshot, actorMember, targetMember, invite, actorBlock, targetBlock] = await Promise.all([
+    const [
+      clanSnapshot,
+      actorMember,
+      targetMember,
+      invite,
+      actorBlock,
+      targetBlock,
+      actorProfile,
+      targetProfile,
+    ] = await Promise.all([
       transaction.get(clanRef),
       transaction.get(actorMemberRef),
       transaction.get(targetMemberRef),
       transaction.get(inviteRef),
       transaction.get(actorBlockRef),
       transaction.get(targetBlockRef),
+      transaction.get(actorProfileRef),
+      transaction.get(targetProfileRef),
     ]);
     const clan = requireSnapshot(clanSnapshot, "not-found", "Clan not found.");
+    const actor = {
+      id: actorUserId,
+      ...requireSnapshot(actorProfile, "not-found", "Inviter profile not found."),
+    };
+    const target = {
+      id: targetUserId,
+      ...requireSnapshot(targetProfile, "not-found", "Target profile not found."),
+    };
     const actorRole = getClanMemberRole(actorMember, actorUserId);
     if (!canInviteClanMember(actorRole)) {
       throw new HttpsError("permission-denied", "Only an owner or captain can invite members.");
@@ -2955,7 +2972,6 @@ exports.resolveModerationReport = secureCall("resolveModerationReport", { rateLi
 
 exports.createForumThread = secureCall("createForumThread", { rateLimit: { limit: 8, windowSeconds: 3600 } }, async (request) => {
   const userId = requireAuth(request);
-  const profile = await getUserProfile(userId);
   const threadRef = publicCollection("forumThreads").doc();
   const storagePath = sanitizeOperationalText(request.data?.thread?.storagePath, 512);
   const imageUrl = sanitizeOperationalText(request.data?.thread?.imageUrl, 2048);
@@ -2980,18 +2996,23 @@ exports.createForumThread = secureCall("createForumThread", { rateLimit: { limit
       throw new HttpsError("invalid-argument", "Forum görseli geçersiz.");
     }
   }
-  try {
-    const thread = buildForumThreadDocument({
-      id: threadRef.id,
-      input: request.data?.thread,
-      profile: { ...profile, userId },
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    await threadRef.set(thread);
-    return { ok: true, threadId: threadRef.id };
-  } catch (error) {
-    throw new HttpsError("invalid-argument", error.message);
-  }
+  await db.runTransaction(async (transaction) => {
+    const profileSnapshot = await transaction.get(privateUserDocument(userId, "profile", "current"));
+    const profile = requireSnapshot(profileSnapshot, "not-found", "User profile not found.");
+    let thread;
+    try {
+      thread = buildForumThreadDocument({
+        id: threadRef.id,
+        input: request.data?.thread,
+        profile: { ...profile, userId },
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } catch (error) {
+      throw new HttpsError("invalid-argument", error.message);
+    }
+    transaction.set(threadRef, thread);
+  });
+  return { ok: true, threadId: threadRef.id };
 });
 
 exports.toggleForumLike = secureCall("toggleForumLike", { rateLimit: { limit: 90, windowSeconds: 3600 } }, async (request) => {

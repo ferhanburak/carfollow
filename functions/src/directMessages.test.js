@@ -4,6 +4,7 @@ const {
   buildDirectMessage,
   buildDirectMessageThreadId,
   buildThreadMetadata,
+  buildThreadSetupUpdates,
   sanitizeMessageBody,
 } = require("./directMessages");
 
@@ -20,6 +21,21 @@ test("thread metadata maps immutable participants by uid", () => {
   const metadata = buildThreadMetadata({ threadId: "thread-1", leftProfile: left, rightProfile: right, timestamp: 10 });
   assert.deepEqual(metadata.participantUids, { "driver-b": true, "driver-a": true });
   assert.equal(metadata.participantProfiles["driver-a"].plate, "34 RIGHT 34");
+});
+
+test("thread setup uses non-overlapping Realtime Database update paths", () => {
+  const updates = buildThreadSetupUpdates({
+    threadId: "thread-1",
+    leftProfile: left,
+    rightProfile: right,
+    timestamp: 10,
+  });
+  const paths = Object.keys(updates);
+
+  for (const path of paths) {
+    assert.equal(paths.some((candidate) => candidate !== path && candidate.startsWith(`${path}/`)), false);
+  }
+  assert.equal(updates["userThreads/driver-b/thread-1/counterpartUid"], "driver-a");
 });
 
 test("messages use server-owned sender identity and sanitized body", () => {

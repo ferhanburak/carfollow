@@ -40,11 +40,34 @@ function buildAccountExport({ userId, profile, collections, social, exportedAt }
   };
 }
 
+function buildRealtimeAccountDeletionUpdates({ appId, userId, threads = [] }) {
+  const root = `artifacts/${appId}/realtime`;
+  const updates = {
+    [`${root}/presence/${userId}`]: null,
+    [`${root}/telemetry/${userId}`]: null,
+    [`${root}/directMessages/userThreads/${userId}`]: null,
+  };
+
+  for (const { threadId, participantIds = [] } of threads) {
+    updates[`${root}/directMessages/threads/${threadId}`] = null;
+    for (const participantId of participantIds) {
+      // The user's parent index is already deleted above; adding a child path
+      // to the same multi-location update would make Realtime Database reject it.
+      if (participantId && participantId !== userId) {
+        updates[`${root}/directMessages/userThreads/${participantId}/${threadId}`] = null;
+      }
+    }
+  }
+
+  return updates;
+}
+
 module.exports = {
   ACCOUNT_DELETE_CONFIRMATION,
   ACCOUNT_EXPORT_VERSION,
   RECENT_LOGIN_MAX_AGE_SECONDS,
   buildAccountExport,
+  buildRealtimeAccountDeletionUpdates,
   buildWithdrawnPrivacySettings,
   hasRecentAuthentication,
   requireDeletionConfirmation,
