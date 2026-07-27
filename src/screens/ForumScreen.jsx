@@ -3,11 +3,11 @@ import { ProfileAvatar } from "../components/ProfileAvatar";
 import { useReverseGeocodedLocation } from "../hooks/useReverseGeocodedLocation";
 
 const categories = [
-  { key: "all", label: "Tüm Paylaşımlar", tabLabel: "Tümü" },
-  { key: "places", label: "Etkinlik, Mekan & Rota", tabLabel: "Etkinlik & Mekan" },
-  { key: "builds", label: "Modifikasyon & Araçlar", tabLabel: "Modifikasyon" },
-  { key: "technical", label: "Arıza & Teknik Destek", tabLabel: "Arıza & Teknik" },
-  { key: "roadlife", label: "Yoldan & Hayattan", tabLabel: "Günlük Yaşam" },
+  { key: "all", label: "Tüm Paylaşımlar", tabLines: ["Tümü"] },
+  { key: "places", label: "Etkinlik, Mekan & Rota", tabLines: ["Etkinlik", "Mekan"] },
+  { key: "builds", label: "Modifikasyon & Araçlar", tabLines: ["Modifiye", "Araçlar"] },
+  { key: "technical", label: "Arıza & Teknik Destek", tabLines: ["Arıza", "Teknik"] },
+  { key: "roadlife", label: "Yoldan & Hayattan", tabLines: ["Yol", "Hayat"] },
 ];
 
 const categoryMeta = Object.fromEntries(categories.map((category) => [category.key, category]));
@@ -198,10 +198,10 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
 
   return (
     <section className="-mx-1 overflow-hidden rounded-[1.65rem] border border-white/10 bg-[#0b0b0b] pb-3">
-      <div className="flex gap-1 overflow-x-auto border-b border-white/10 px-3 scrollbar-none">
+      <div className="grid grid-cols-5 border-b border-white/10 px-1">
         {categories.map((category) => (
-          <button key={category.key} type="button" aria-label={category.label} onClick={() => setActiveCategory(category.key)} className={`relative min-h-14 shrink-0 px-3 text-[11px] font-bold transition active:scale-95 ${activeCategory === category.key ? "text-white" : "text-neutral-500 hover:text-neutral-300"}`}>
-            <span>{category.tabLabel}</span>
+          <button key={category.key} type="button" aria-label={category.label} onClick={() => setActiveCategory(category.key)} className={`relative flex min-h-16 min-w-0 flex-col items-center justify-center px-1 text-[10px] font-bold leading-[1.15] transition min-[390px]:text-[11px] active:scale-95 ${activeCategory === category.key ? "text-white" : "text-neutral-500 hover:text-neutral-300"}`}>
+            {category.tabLines.map((line) => <span key={line} className="block max-w-full truncate">{line}</span>)}
             <span className={`absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-lime-400 transition-opacity ${activeCategory === category.key ? "opacity-100" : "opacity-0"}`} />
           </button>
         ))}
