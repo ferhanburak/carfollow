@@ -50,13 +50,8 @@ beforeEach(() => {
 });
 
 describe("Firebase driver stats repository", () => {
-  it("refreshes private stats and reads the public leaderboard", async () => {
-    mocks.invokeCallable.mockResolvedValue({
-      data: {
-        stats: { userId: "user-1", monthlyKm: 24.8 },
-        partHealth: [{ key: "oil", healthPercent: 74 }],
-      },
-    });
+  it("uses cached private stats and reads the public leaderboard without a callable round trip", async () => {
+    mocks.getDoc.mockResolvedValue(documentSnapshot({ userId: "user-1", monthlyKm: 24.8 }));
     mocks.getDocs.mockResolvedValue({
       docs: [{
         id: "2026-07__user-1",
@@ -66,23 +61,43 @@ describe("Firebase driver stats repository", () => {
 
     const state = await loadFirebaseDriverStatsState();
 
-    expect(mocks.invokeCallable).toHaveBeenCalledWith("refreshDriverStats", {});
+    expect(mocks.invokeCallable).not.toHaveBeenCalled();
     expect(state.stats.monthlyKm).toBe(24.8);
-    expect(state.partHealth).toEqual([{ key: "oil", healthPercent: 74 }]);
+    expect(state.partHealth).toEqual([]);
     expect(state.leaderboardEntries).toHaveLength(1);
     expect(state.warning).toBe("");
   });
 
-  it("falls back to the readable stats document when refresh is unavailable", async () => {
-    mocks.invokeCallable.mockRejectedValue(Object.assign(new Error("Function missing"), {
-      code: "functions/not-found",
-    }));
-    mocks.getDoc.mockResolvedValue(documentSnapshot({ userId: "user-1", monthlyKm: 12 }));
+  it("refreshes stats when the cached document is missing", async () => {
+    mocks.getDoc.mockResolvedValue(documentSnapshot());
+    mocks.invokeCallable.mockResolvedValue({
+      data: {
+        stats: { userId: "user-1", monthlyKm: 12 },
+        partHealth: [{ key: "oil", healthPercent: 74 }],
+      },
+    });
 
     const state = await loadFirebaseDriverStatsState();
 
     expect(state.stats.monthlyKm).toBe(12);
-    expect(state.warning).toContain("Function missing");
+    expect(state.partHealth).toEqual([{ key: "oil", healthPercent: 74 }]);
+    expect(mocks.invokeCallable).toHaveBeenCalledWith("refreshDriverStats", {});
+    expect(state.warning).toBe("");
+  });
+
+  it("forces a refresh after a service record change", async () => {
+    mocks.invokeCallable.mockResolvedValue({
+      data: {
+        stats: { userId: "user-1", serviceRecordCount: 4 },
+        partHealth: [],
+      },
+    });
+
+    const state = await loadFirebaseDriverStatsState({ forceRefresh: true });
+
+    expect(mocks.getDoc).not.toHaveBeenCalled();
+    expect(mocks.invokeCallable).toHaveBeenCalledWith("refreshDriverStats", {});
+    expect(state.stats.serviceRecordCount).toBe(4);
   });
 
   it("sends idempotent start and finish payloads to callable functions", async () => {

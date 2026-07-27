@@ -708,11 +708,30 @@ exports.getPublicDriverProfile = secureCall("getPublicDriverProfile", { rateLimi
     throw new HttpsError("invalid-argument", "A valid targetUserId is required.");
   }
 
-  const [actorSnapshot, targetSnapshot, actorBlockSnapshot, targetBlockSnapshot] = await Promise.all([
+  const convoyId = String(request.data?.context?.convoyId ?? "");
+  const hasValidConvoyContext = convoyId && convoyId.length <= 128 && !convoyId.includes("/");
+  const [
+    actorSnapshot,
+    targetSnapshot,
+    actorBlockSnapshot,
+    targetBlockSnapshot,
+    friendshipSnapshot,
+    actorMember,
+    targetMember,
+  ] = await Promise.all([
     privateUserDocument(actorUserId, "profile", "current").get(),
     privateUserDocument(targetUserId, "profile", "current").get(),
     blockedDriverDocument(actorUserId, targetUserId).get(),
     blockedDriverDocument(targetUserId, actorUserId).get(),
+    actorUserId === targetUserId
+      ? Promise.resolve(null)
+      : friendshipDocument(actorUserId, targetUserId).get(),
+    hasValidConvoyContext
+      ? publicDocument("convoyMembers", buildScopedMemberId(convoyId, actorUserId)).get()
+      : Promise.resolve(null),
+    hasValidConvoyContext
+      ? publicDocument("convoyMembers", buildScopedMemberId(convoyId, targetUserId)).get()
+      : Promise.resolve(null),
   ]);
   if (!targetSnapshot.exists || actorBlockSnapshot.exists || targetBlockSnapshot.exists) {
     return { ok: true, driver: null };
@@ -723,23 +742,17 @@ exports.getPublicDriverProfile = secureCall("getPublicDriverProfile", { rateLimi
   let relation = actorUserId === targetUserId ? PROFILE_RELATIONS.SELF : PROFILE_RELATIONS.STRANGER;
 
   if (relation === PROFILE_RELATIONS.STRANGER) {
-    const friendshipSnapshot = await friendshipDocument(actorUserId, targetUserId).get();
-    if (friendshipSnapshot.exists && friendshipSnapshot.data().status === "accepted") {
+    if (friendshipSnapshot?.exists && friendshipSnapshot.data().status === "accepted") {
       relation = PROFILE_RELATIONS.FRIEND;
     } else if (actor.clanId && actor.clanId === target.clanId) {
       relation = PROFILE_RELATIONS.CLAN;
     }
   }
 
-  const convoyId = String(request.data?.context?.convoyId ?? "");
-  if (relation === PROFILE_RELATIONS.STRANGER && convoyId && convoyId.length <= 128 && !convoyId.includes("/")) {
-    const [actorMember, targetMember] = await Promise.all([
-      publicDocument("convoyMembers", buildScopedMemberId(convoyId, actorUserId)).get(),
-      publicDocument("convoyMembers", buildScopedMemberId(convoyId, targetUserId)).get(),
-    ]);
+  if (relation === PROFILE_RELATIONS.STRANGER && hasValidConvoyContext) {
     if (
-      actorMember.exists && actorMember.data().membershipStatus === "approved" &&
-      targetMember.exists && targetMember.data().membershipStatus === "approved"
+      actorMember?.exists && actorMember.data().membershipStatus === "approved" &&
+      targetMember?.exists && targetMember.data().membershipStatus === "approved"
     ) {
       relation = PROFILE_RELATIONS.CONVOY;
     }

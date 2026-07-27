@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { mergeDriverStatsIntoUser, normalizeIndividualLeaderboard } from "../domain/driverStats";
 import {
   finishFirebaseDriveSession,
@@ -40,6 +40,8 @@ function mergePartHealthIntoUser(user, partHealth) {
 
 export function useDriverStats({ user, setUser }) {
   const serverOwned = isFirebaseRepositoryEnabled();
+  const loadedUserIdRef = useRef(null);
+  const serviceLogCountRef = useRef(null);
   const [leaderboardEntries, setLeaderboardEntries] = useState([]);
   const [driverStatsStatus, setDriverStatsStatus] = useState({
     mode: serverOwned ? "firebase" : "mock",
@@ -58,9 +60,17 @@ export function useDriverStats({ user, setUser }) {
       return undefined;
     }
 
+    const userId = user.firebaseUid ?? user.id;
+    const serviceLogCount = user.serviceLogs?.length ?? 0;
+    const forceRefresh = loadedUserIdRef.current === userId
+      && serviceLogCountRef.current !== null
+      && serviceLogCountRef.current !== serviceLogCount;
+    loadedUserIdRef.current = userId;
+    serviceLogCountRef.current = serviceLogCount;
+
     let cancelled = false;
     setDriverStatsStatus((current) => ({ ...current, state: "loading", error: "" }));
-    void loadFirebaseDriverStatsState()
+    void loadFirebaseDriverStatsState({ forceRefresh })
       .then((result) => {
         if (cancelled || !result) {
           return;
@@ -101,9 +111,7 @@ export function useDriverStats({ user, setUser }) {
   }, [
     serverOwned,
     setUser,
-    user?.driverScore,
     user?.firebaseUid,
-    user?.harmonyVotes,
     user?.id,
     user?.serviceLogs?.length,
   ]);

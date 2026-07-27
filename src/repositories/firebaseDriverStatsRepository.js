@@ -37,8 +37,8 @@ async function callDriverFunction(functionName, payload = {}) {
   }
 }
 
-async function readDriverStatsDocument(services) {
-  const { doc, getDoc } = await import("firebase/firestore");
+async function readDriverStatsDocument(services, firestoreModule = null) {
+  const { doc, getDoc } = firestoreModule ?? await import("firebase/firestore");
   const snapshot = await getDoc(doc(
     services.firestore,
     privateUserDocumentPath(
@@ -51,13 +51,13 @@ async function readDriverStatsDocument(services) {
   return snapshot.exists() ? snapshot.data() : null;
 }
 
-export async function loadFirebaseIndividualLeaderboard() {
-  const services = await getFirebaseServices();
+export async function loadFirebaseIndividualLeaderboard(servicesOverride = null, firestoreModule = null) {
+  const services = servicesOverride ?? await getFirebaseServices();
   if (!services) {
     return [];
   }
 
-  const { collection, getDocs, query } = await import("firebase/firestore");
+  const { collection, getDocs, query } = firestoreModule ?? await import("firebase/firestore");
   const snapshot = await getDocs(query(collection(
     services.firestore,
     publicCollectionPath(PUBLIC_COLLECTIONS.individualLeaderboard, resolveAppId()),
@@ -70,7 +70,7 @@ export async function loadFirebaseIndividualLeaderboard() {
   }));
 }
 
-export async function loadFirebaseDriverStatsState() {
+export async function loadFirebaseDriverStatsState({ forceRefresh = false } = {}) {
   const services = await getFirebaseServices();
   if (!services) {
     return null;
@@ -79,31 +79,50 @@ export async function loadFirebaseDriverStatsState() {
   let stats = null;
   let partHealth = [];
   const warnings = [];
-  try {
-    const refreshed = await callDriverFunction("refreshDriverStats");
-    stats = refreshed?.stats ?? null;
-    partHealth = refreshed?.partHealth ?? [];
-  } catch (error) {
-    warnings.push(error.message);
+  const firestoreModule = await import("firebase/firestore");
+  const leaderboardPromise = loadFirebaseIndividualLeaderboard(services, firestoreModule)
+    .then((entries) => ({ entries, error: null }))
+    .catch((error) => ({ entries: [], error }));
+
+  if (!forceRefresh) {
     try {
-      stats = await readDriverStatsDocument(services);
+      stats = await readDriverStatsDocument(services, firestoreModule);
     } catch (readError) {
       warnings.push(readError instanceof Error ? readError.message : "Driver stats could not be read.");
     }
   }
 
-  let leaderboardEntries = [];
-  try {
-    leaderboardEntries = await loadFirebaseIndividualLeaderboard();
-  } catch (error) {
-    warnings.push(error instanceof Error ? error.message : "Leaderboard could not be read.");
+  if (forceRefresh || !stats) {
+    try {
+      const refreshed = await callDriverFunction("refreshDriverStats");
+      stats = refreshed?.stats ?? stats;
+      partHealth = refreshed?.partHealth ?? [];
+    } catch (error) {
+      warnings.push(error.message);
+      if (!stats) {
+        try {
+          stats = await readDriverStatsDocument(services, firestoreModule);
+        } catch (readError) {
+          warnings.push(readError instanceof Error ? readError.message : "Driver stats could not be read.");
+        }
+      }
+    }
+  }
+
+  const leaderboardResult = await leaderboardPromise;
+  if (leaderboardResult.error) {
+    warnings.push(
+      leaderboardResult.error instanceof Error
+        ? leaderboardResult.error.message
+        : "Leaderboard could not be read.",
+    );
   }
 
   return {
     authUid: services.authUser.uid,
     stats,
     partHealth,
-    leaderboardEntries,
+    leaderboardEntries: leaderboardResult.entries,
     warning: warnings.filter(Boolean).join(" "),
     syncedAt: Date.now(),
   };
