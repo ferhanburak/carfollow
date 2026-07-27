@@ -10,9 +10,7 @@ import {
 const emptyForm = {
   category: "roadlife",
   body: "",
-  location: "",
-  setup: "",
-  vehicleKm: "",
+  location: null,
 };
 
 export function useForum(user, enabled = true) {

@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { ProfileAvatar } from "../components/ProfileAvatar";
+import { useReverseGeocodedLocation } from "../hooks/useReverseGeocodedLocation";
 
 const categories = [
   { key: "all", label: "Tüm Paylaşımlar", tabLabel: "Tümü" },
-  { key: "places", label: "Etkinlik, Mekan & Rota", tabLabel: "Keşfet" },
-  { key: "builds", label: "Modifikasyon & Araçlar", tabLabel: "Modifiye" },
-  { key: "technical", label: "Arıza & Teknik Destek", tabLabel: "Teknik" },
-  { key: "roadlife", label: "Yoldan & Hayattan", tabLabel: "Günlük" },
+  { key: "places", label: "Etkinlik, Mekan & Rota", tabLabel: "Etkinlik & Mekan" },
+  { key: "builds", label: "Modifikasyon & Araçlar", tabLabel: "Modifikasyon" },
+  { key: "technical", label: "Arıza & Teknik Destek", tabLabel: "Arıza & Teknik" },
+  { key: "roadlife", label: "Yoldan & Hayattan", tabLabel: "Günlük Yaşam" },
 ];
 
 const categoryMeta = Object.fromEntries(categories.map((category) => [category.key, category]));
@@ -26,6 +27,11 @@ function ThreadCard({ onAddReply, onToggleLike, pendingKey, thread }) {
   const submitReply = async () => {
     if (await onAddReply(thread.id, reply)) setReply("");
   };
+  const sharedLocation = thread.location && typeof thread.location === "object" ? thread.location : null;
+  const locationLabel = sharedLocation?.label || (typeof thread.location === "string" ? thread.location : "");
+  const locationUrl = sharedLocation
+    ? `https://www.google.com/maps/search/?api=1&query=${sharedLocation.lat},${sharedLocation.lng}`
+    : "";
 
   return (
     <article className="border-b border-white/10 px-4 py-4 transition-colors hover:bg-white/[0.025]">
@@ -51,9 +57,16 @@ function ThreadCard({ onAddReply, onToggleLike, pendingKey, thread }) {
           className="mt-3 max-h-[28rem] w-full rounded-2xl border border-white/10 bg-black/30 object-cover"
         />
       ) : null}
-      {thread.location ? <p className="mt-3 rounded-xl border border-sky-400/15 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">Konum: {thread.location}</p> : null}
-      {thread.setup ? <p className="mt-3 rounded-xl border border-amber-400/15 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">Setup: {thread.setup}</p> : null}
-      {thread.vehicleKm ? <p className="mt-3 text-xs text-neutral-500">Araç KM: {Number(thread.vehicleKm).toLocaleString("tr-TR")}</p> : null}
+      {locationLabel ? (
+        locationUrl ? (
+          <a href={locationUrl} target="_blank" rel="noreferrer" className="mt-3 flex min-h-12 items-center gap-2 rounded-xl border border-sky-400/15 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-200 transition active:scale-[0.98]">
+            <ActionIcon><path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z" /><circle cx="12" cy="10" r="2" /></ActionIcon>
+            {locationLabel}
+          </a>
+        ) : (
+          <p className="mt-3 rounded-xl border border-sky-400/15 bg-sky-500/10 px-3 py-3 text-xs text-sky-200">{locationLabel}</p>
+        )
+      ) : null}
       <div className="mt-4 flex items-center gap-7 text-neutral-500">
         <button
           type="button"
@@ -94,8 +107,12 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [imageError, setImageError] = useState("");
+  const [locationError, setLocationError] = useState("");
+  const [locationPending, setLocationPending] = useState(false);
   const imageInputRef = useRef(null);
   const visibleThreads = activeCategory === "all" ? threads : threads.filter((thread) => thread.category === activeCategory);
+  const draftLocation = form.location && typeof form.location === "object" ? form.location : null;
+  const resolvedLocation = useReverseGeocodedLocation(draftLocation, Boolean(draftLocation));
 
   useEffect(() => () => {
     if (imagePreview && typeof URL.revokeObjectURL === "function") {
@@ -103,12 +120,21 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
     }
   }, [imagePreview]);
 
+  useEffect(() => {
+    if (!draftLocation || !resolvedLocation.label || draftLocation.label === resolvedLocation.label) return;
+    onFormChange((current) => ({
+      ...current,
+      location: current.location ? { ...current.location, label: resolvedLocation.label } : null,
+    }));
+  }, [draftLocation, onFormChange, resolvedLocation.label]);
+
   const publishThread = async () => {
     if (await createThread(imageFile)) {
       setComposerOpen(false);
       setImageFile(null);
       setImagePreview("");
       setImageError("");
+      setLocationError("");
     }
   };
 
@@ -117,6 +143,7 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
     setImageFile(null);
     setImagePreview("");
     setImageError("");
+    setLocationError("");
   };
 
   const selectImage = (event) => {
@@ -136,12 +163,45 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
     setImagePreview(typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : "");
   };
 
+  const selectCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Bu cihazda konum özelliği kullanılamıyor.");
+      return;
+    }
+    setLocationPending(true);
+    setLocationError("");
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        onFormChange((current) => ({
+          ...current,
+          location: {
+            accuracy: Math.round(coords.accuracy || 0),
+            label: "Konum belirleniyor...",
+            lat: Number(coords.latitude.toFixed(6)),
+            lng: Number(coords.longitude.toFixed(6)),
+          },
+        }));
+        setLocationPending(false);
+      },
+      (error) => {
+        const messages = {
+          1: "Konum izni verilmedi. Tarayıcı ayarlarından konum iznini açabilirsiniz.",
+          2: "Konumunuz belirlenemedi. GPS bağlantınızı kontrol edip tekrar deneyin.",
+          3: "Konum belirleme zaman aşımına uğradı. Lütfen tekrar deneyin.",
+        };
+        setLocationError(messages[error.code] ?? "Konum eklenemedi. Lütfen tekrar deneyin.");
+        setLocationPending(false);
+      },
+      { enableHighAccuracy: true, maximumAge: 30_000, timeout: 12_000 },
+    );
+  };
+
   return (
     <section className="-mx-1 overflow-hidden rounded-[1.65rem] border border-white/10 bg-[#0b0b0b] pb-3">
-      <div className="grid grid-cols-5 border-b border-white/10 px-1">
+      <div className="flex gap-1 overflow-x-auto border-b border-white/10 px-3 scrollbar-none">
         {categories.map((category) => (
-          <button key={category.key} type="button" aria-label={category.label} onClick={() => setActiveCategory(category.key)} className={`relative min-h-14 min-w-0 px-1 text-[10px] font-bold transition min-[390px]:text-[11px] active:scale-95 ${activeCategory === category.key ? "text-white" : "text-neutral-500 hover:text-neutral-300"}`}>
-            <span className="block truncate">{category.tabLabel}</span>
+          <button key={category.key} type="button" aria-label={category.label} onClick={() => setActiveCategory(category.key)} className={`relative min-h-14 shrink-0 px-3 text-[11px] font-bold transition active:scale-95 ${activeCategory === category.key ? "text-white" : "text-neutral-500 hover:text-neutral-300"}`}>
+            <span>{category.tabLabel}</span>
             <span className={`absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-lime-400 transition-opacity ${activeCategory === category.key ? "opacity-100" : "opacity-0"}`} />
           </button>
         ))}
@@ -171,9 +231,19 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
               </button>
             </div>
             <textarea value={form.body} onChange={(event) => onFormChange((current) => ({ ...current, body: event.target.value }))} rows={4} placeholder="Paylaşımını anlat *" className="w-full rounded-xl border border-white/10 bg-[#171717] px-3 py-3 text-sm outline-none focus:border-lime-400" />
-            {form.category === "places" ? <input value={form.location} onChange={(event) => onFormChange((current) => ({ ...current, location: event.target.value }))} placeholder="Mekan veya rota" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm" /> : null}
-            {form.category === "builds" ? <input value={form.setup} onChange={(event) => onFormChange((current) => ({ ...current, setup: event.target.value }))} placeholder="Parçalar ve setup" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm" /> : null}
-            {form.category === "technical" ? <input type="number" min="0" value={form.vehicleKm} onChange={(event) => onFormChange((current) => ({ ...current, vehicleKm: event.target.value }))} placeholder="Araç kilometresi" className="h-12 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-sm" /> : null}
+            {draftLocation ? (
+              <div className="flex min-h-12 items-center justify-between gap-2 rounded-xl border border-sky-400/20 bg-sky-500/10 px-3 text-xs text-sky-200">
+                <span className="min-w-0 truncate">{resolvedLocation.label || draftLocation.label}</span>
+                <button
+                  type="button"
+                  aria-label="Konumu kaldır"
+                  onClick={() => onFormChange((current) => ({ ...current, location: null }))}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sky-100 transition active:scale-90"
+                >
+                  <ActionIcon><path d="m6 6 12 12M18 6 6 18" /></ActionIcon>
+                </button>
+              </div>
+            ) : null}
             {imagePreview ? (
               <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/30">
                 <img src={imagePreview} alt="Seçilen paylaşım görseli" className="max-h-72 w-full object-cover" />
@@ -191,20 +261,35 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
               </div>
             ) : null}
             {imageError ? <p role="alert" className="text-xs text-rose-300">{imageError}</p> : null}
+            {locationError ? <p role="alert" className="text-xs text-rose-300">{locationError}</p> : null}
             {feedback ? <p role="alert" className="text-xs text-rose-300">{feedback}</p> : null}
             <div className="flex items-center justify-between border-t border-white/10 pt-3">
-              <input ref={imageInputRef} type="file" accept="image/*" onChange={selectImage} className="hidden" />
-              <button
-                type="button"
-                aria-label="Görsel ekle"
-                title="Görsel ekle"
-                onClick={() => imageInputRef.current?.click()}
-                className={`flex h-12 w-12 items-center justify-center rounded-full border transition active:scale-90 ${
-                  imageFile ? "border-lime-400/40 bg-lime-400/10 text-lime-300" : "border-white/10 text-neutral-400 hover:text-white"
-                }`}
-              >
-                <ActionIcon><rect x="4" y="5" width="16" height="14" rx="2" /><circle cx="9" cy="10" r="1.5" /><path d="m5 17 4-4 3 3 2-2 5 4" /></ActionIcon>
-              </button>
+              <div className="flex items-center gap-2">
+                <input ref={imageInputRef} type="file" accept="image/*" onChange={selectImage} className="hidden" />
+                <button
+                  type="button"
+                  aria-label="Görsel ekle"
+                  title="Görsel ekle"
+                  onClick={() => imageInputRef.current?.click()}
+                  className={`flex h-12 w-12 items-center justify-center rounded-full border transition active:scale-90 ${
+                    imageFile ? "border-lime-400/40 bg-lime-400/10 text-lime-300" : "border-white/10 text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  <ActionIcon><rect x="4" y="5" width="16" height="14" rx="2" /><circle cx="9" cy="10" r="1.5" /><path d="m5 17 4-4 3 3 2-2 5 4" /></ActionIcon>
+                </button>
+                <button
+                  type="button"
+                  aria-label={draftLocation ? "Konumu yenile" : "Konum ekle"}
+                  title={draftLocation ? "Konumu yenile" : "Konum ekle"}
+                  disabled={locationPending}
+                  onClick={selectCurrentLocation}
+                  className={`flex h-12 w-12 items-center justify-center rounded-full border transition active:scale-90 disabled:opacity-50 ${
+                    draftLocation ? "border-sky-400/40 bg-sky-400/10 text-sky-300" : "border-white/10 text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  <ActionIcon><path d="M12 21s6-5.1 6-11a6 6 0 1 0-12 0c0 5.9 6 11 6 11Z" /><circle cx="12" cy="10" r="2" /></ActionIcon>
+                </button>
+              </div>
               <button
                 type="button"
                 aria-label="Paylaş"

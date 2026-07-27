@@ -10,7 +10,7 @@ test("buildForumThreadDocument keeps only category-specific metadata", () => {
     input: {
       category: "places",
       body: "Gün batımında güzel bir sürüş rotası.",
-      location: "Mogan Gölü",
+      location: { lat: 39.7654321, lng: 32.8123456, accuracy: 14.6, label: "Gölbaşı / Ankara" },
       setup: "ignored",
       imageUrl: "https://firebasestorage.googleapis.com/forum.jpg",
       storagePath: "artifacts/cruiser-app-prod/forumThreads/user-1/forum.jpg",
@@ -18,8 +18,14 @@ test("buildForumThreadDocument keeps only category-specific metadata", () => {
     profile,
     timestamp: 123,
   });
-  assert.equal(thread.location, "Mogan Gölü");
-  assert.equal(thread.setup, "");
+  assert.deepEqual(thread.location, {
+    lat: 39.765432,
+    lng: 32.812346,
+    accuracy: 15,
+    label: "Gölbaşı / Ankara",
+  });
+  assert.equal("setup" in thread, false);
+  assert.equal("vehicleKm" in thread, false);
   assert.equal(thread.imageUrl, "https://firebasestorage.googleapis.com/forum.jpg");
   assert.equal(thread.storagePath, "artifacts/cruiser-app-prod/forumThreads/user-1/forum.jpg");
   assert.equal("title" in thread, false);

@@ -4,6 +4,21 @@ function cleanText(value, maxLength) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
 }
 
+function normalizeForumLocation(value) {
+  if (!value || typeof value !== "object") return null;
+  const lat = Number(value.lat);
+  const lng = Number(value.lng);
+  if (!Number.isFinite(lat) || Math.abs(lat) > 90 || !Number.isFinite(lng) || Math.abs(lng) > 180) {
+    throw new Error("Geçerli bir konum seçin.");
+  }
+  return {
+    lat: Number(lat.toFixed(6)),
+    lng: Number(lng.toFixed(6)),
+    accuracy: Math.max(0, Math.min(5000, Math.round(Number(value.accuracy) || 0))),
+    label: cleanText(value.label, 120) || "Paylaşılan konum",
+  };
+}
+
 function buildForumThreadDocument({ id, input, profile, timestamp }) {
   const category = String(input?.category ?? "");
   const body = cleanText(input?.body, 2400);
@@ -16,9 +31,7 @@ function buildForumThreadDocument({ id, input, profile, timestamp }) {
     body,
     imageUrl: cleanText(input?.imageUrl, 2048),
     storagePath: cleanText(input?.storagePath, 512),
-    location: category === "places" ? cleanText(input?.location, 160) : "",
-    setup: category === "builds" ? cleanText(input?.setup, 300) : "",
-    vehicleKm: category === "technical" ? Math.max(0, Math.round(Number(input?.vehicleKm ?? 0))) : 0,
+    location: normalizeForumLocation(input?.location),
     authorUserId: profile.userId,
     authorName: cleanText(profile.fullName, 100),
     authorPlate: cleanText(profile.plate, 20),
@@ -51,4 +64,5 @@ module.exports = {
   FORUM_CATEGORIES,
   buildForumReplyDocument,
   buildForumThreadDocument,
+  normalizeForumLocation,
 };
