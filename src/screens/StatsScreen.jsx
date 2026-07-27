@@ -39,6 +39,47 @@ function getClanRankTone(index) {
   return "bg-white/10 text-white";
 }
 
+function SocialActionIcon({ name }) {
+  const paths = {
+    block: (
+      <>
+        <circle cx="12" cy="12" r="8" />
+        <path d="m6.5 6.5 11 11" />
+      </>
+    ),
+    chat: (
+      <>
+        <path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.7 8.7 0 0 1-3.6-.8L4 20l1.3-3.8A7.6 7.6 0 1 1 20 11.5Z" />
+        <path d="M8.5 12h.01M12 12h.01M15.5 12h.01" strokeWidth="2.4" />
+      </>
+    ),
+    clan: (
+      <>
+        <path d="M12 3 19 6.5v5c0 4.2-2.8 7.4-7 9.5-4.2-2.1-7-5.3-7-9.5v-5L12 3Z" />
+        <path d="M9 12h6M12 9v6" />
+      </>
+    ),
+    remove: (
+      <>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3.5 19c.4-3.1 2.2-5 5.5-5 1.2 0 2.2.2 3 .7M15 12l6 6M21 12l-6 6" />
+      </>
+    ),
+    undo: (
+      <>
+        <path d="m8 7-4 4 4 4" />
+        <path d="M5 11h8a6 6 0 0 1 6 6v1" />
+      </>
+    ),
+  };
+
+  return (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24">
+      {paths[name]}
+    </svg>
+  );
+}
+
 const leaderboardMetrics = [
   {
     key: "monthlyKm",
@@ -381,24 +422,25 @@ export function StatsScreen({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+          <div aria-label="Giden istekler" className="rounded-2xl border border-white/8 bg-black/20 p-4">
             <p className="text-sm font-semibold">Giden Istekler</p>
             <div className="mt-4 space-y-3">
               {(user.outgoingRequests ?? []).length ? (
                 user.outgoingRequests.map((entry) => (
-                  <div key={`${entry.userId ?? entry.plate}-outgoing`} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                    <button type="button" onClick={() => openProfileDrawer(entry, "outgoing")} className="text-left">
-                      <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
-                      <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
-                      <p className="text-xs text-neutral-500">{entry.model}</p>
+                  <div key={`${entry.userId ?? entry.plate}-outgoing`} className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                    <button type="button" onClick={() => openProfileDrawer(entry, "outgoing")} className="min-h-12 min-w-0 flex-1 text-left">
+                      <p className="truncate text-sm font-semibold text-neutral-100">{entry.fullName}</p>
+                      <p className="mt-1 truncate text-xs text-neutral-500">{entry.model || "Arac bilgisi yok"}</p>
                     </button>
                     <button
                       type="button"
+                      aria-label={`${entry.fullName} arkadaslik istegini geri cek`}
+                      title="Istegi geri cek"
                       disabled={isSocialEntryPending(entry)}
                       onClick={() => withdrawFriendRequest(entry.plate)}
-                      className="mt-3 min-h-12 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:cursor-wait disabled:opacity-50"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-neutral-300 transition active:scale-95 disabled:cursor-wait disabled:opacity-50"
                     >
-                      Istegi Geri Cek
+                      <SocialActionIcon name="undo" />
                     </button>
                   </div>
                 ))
@@ -410,58 +452,59 @@ export function StatsScreen({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+          <div aria-label="Arkadas listesi" className="rounded-2xl border border-white/8 bg-black/20 p-4">
             <p className="text-sm font-semibold">Arkadas Listesi</p>
             <div className="mt-4 space-y-3">
               {(user.friends ?? []).length ? (
                 user.friends.map((entry) => (
-                  <div key={`${entry.plate}-friend`} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <button type="button" onClick={() => openProfileDrawer(entry, "friend")} className="text-left">
-                        <p className="font-mono text-sm tracking-[0.14em] text-lime-300">{entry.plate}</p>
-                        <p className="mt-1 text-sm font-semibold">{entry.fullName}</p>
-                        <p className="text-xs text-neutral-500">{entry.model} / {entry.region}</p>
+                  <div key={`${entry.plate}-friend`} className="rounded-2xl border border-white/8 bg-white/[0.03] p-3">
+                    <button type="button" onClick={() => openProfileDrawer(entry, "friend")} className="min-h-12 w-full text-left">
+                      <p className="truncate text-sm font-semibold text-neutral-100">{entry.fullName}</p>
+                      <p className="mt-1 truncate text-xs text-neutral-500">{entry.model || "Arac bilgisi yok"}</p>
+                    </button>
+                    <div className={`mt-2 grid gap-2 ${canInviteToClan ? "grid-cols-4" : "grid-cols-3"}`}>
+                      <button
+                        type="button"
+                        aria-label={`${entry.fullName} ile sohbet ac`}
+                        title="Sohbet ac"
+                        disabled={isSocialEntryPending(entry)}
+                        onClick={() => openConversation(entry)}
+                        className="flex min-h-12 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-neutral-200 transition active:scale-95 disabled:opacity-50"
+                      >
+                        <SocialActionIcon name="chat" />
                       </button>
-                      <div className="flex min-w-[8.5rem] flex-col gap-2">
+                      {canInviteToClan ? (
                         <button
                           type="button"
-                          disabled={isSocialEntryPending(entry)}
-                          onClick={() => openConversation(entry)}
-                          className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-50"
+                          aria-label={hasPendingClanInvite(entry) ? `${entry.fullName} klan daveti gonderildi` : `${entry.fullName} klana davet et`}
+                          title={hasPendingClanInvite(entry) ? "Davet gonderildi" : "Klana davet et"}
+                          disabled={isSocialEntryPending(entry) || hasPendingClanInvite(entry)}
+                          onClick={() => inviteFriendToClan(entry)}
+                          className="flex min-h-12 items-center justify-center rounded-xl bg-lime-400 text-black transition active:scale-95 disabled:opacity-50"
                         >
-                          Sohbet Ac
+                          <SocialActionIcon name="clan" />
                         </button>
-                        {canInviteToClan ? (
-                          <button
-                            type="button"
-                            disabled={isSocialEntryPending(entry) || hasPendingClanInvite(entry)}
-                            onClick={() => inviteFriendToClan(entry)}
-                            className="min-h-12 rounded-xl bg-lime-400 px-3 py-2 text-xs font-bold text-black disabled:opacity-50"
-                          >
-                            {hasPendingClanInvite(entry) ? "Davet Gonderildi" : "Klana Davet Et"}
-                          </button>
-                        ) : (
-                          <span className="rounded-xl border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-center text-xs font-semibold text-lime-300">
-                            Friend
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          disabled={isSocialEntryPending(entry)}
-                          onClick={() => removeFriendship(entry.plate)}
-                          className="min-h-12 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs font-semibold text-neutral-300 disabled:cursor-wait disabled:opacity-50"
-                        >
-                          Arkadasliktan Cikar
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isSocialEntryPending(entry)}
-                          onClick={() => blockDriver(entry)}
-                          className="min-h-12 rounded-xl border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-200 disabled:cursor-wait disabled:opacity-50"
-                        >
-                          Engelle
-                        </button>
-                      </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        aria-label={`${entry.fullName} arkadasliktan cikar`}
+                        title="Arkadasliktan cikar"
+                        disabled={isSocialEntryPending(entry)}
+                        onClick={() => removeFriendship(entry.plate)}
+                        className="flex min-h-12 items-center justify-center rounded-xl border border-white/10 bg-black/30 text-neutral-300 transition active:scale-95 disabled:cursor-wait disabled:opacity-50"
+                      >
+                        <SocialActionIcon name="remove" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`${entry.fullName} engelle`}
+                        title="Engelle"
+                        disabled={isSocialEntryPending(entry)}
+                        onClick={() => blockDriver(entry)}
+                        className="flex min-h-12 items-center justify-center rounded-xl border border-rose-400/20 bg-rose-500/10 text-rose-200 transition active:scale-95 disabled:cursor-wait disabled:opacity-50"
+                      >
+                        <SocialActionIcon name="block" />
+                      </button>
                     </div>
                   </div>
                 ))

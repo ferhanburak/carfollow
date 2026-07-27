@@ -172,6 +172,21 @@ describe("App", () => {
     expect(screen.queryByText("DM Panel")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Klani Kur" })).not.toBeInTheDocument();
 
+    const outgoingRequests = screen.getByLabelText("Giden istekler");
+    expect(within(outgoingRequests).getByText("Mete Alp")).toBeInTheDocument();
+    expect(within(outgoingRequests).getByText("Golf GTI")).toBeInTheDocument();
+    expect(within(outgoingRequests).queryByText("16 GTI 232")).not.toBeInTheDocument();
+    expect(within(outgoingRequests).getByRole("button", { name: "Mete Alp arkadaslik istegini geri cek" })).toBeInTheDocument();
+
+    const friends = screen.getByLabelText("Arkadas listesi");
+    expect(within(friends).getByText("Ece Yalin")).toBeInTheDocument();
+    expect(within(friends).getByText("Ducati Monster")).toBeInTheDocument();
+    expect(within(friends).queryByText("35 SRT 908")).not.toBeInTheDocument();
+    expect(within(friends).getByRole("button", { name: "Ece Yalin ile sohbet ac" })).toBeInTheDocument();
+    expect(within(friends).getByRole("button", { name: /Ece Yalin (klana davet et|klan daveti gonderildi)/ })).toBeInTheDocument();
+    expect(within(friends).getByRole("button", { name: "Ece Yalin arkadasliktan cikar" })).toBeInTheDocument();
+    expect(within(friends).getByRole("button", { name: "Ece Yalin engelle" })).toBeInTheDocument();
+
     const clanCard = screen.getByRole("button", { name: "Neon Wolves klan detaylarini ac" });
     await user.click(clanCard);
     expect(screen.getByRole("dialog", { name: "Klan merkezi paneli" })).toBeInTheDocument();
