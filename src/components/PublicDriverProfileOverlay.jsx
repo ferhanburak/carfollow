@@ -191,8 +191,7 @@ export function PublicDriverProfileOverlay({
       <div className="mx-auto max-w-md rounded-[2rem] border border-white/10 bg-[#0d0d0d] shadow-[0_24px_80px_rgba(0,0,0,0.58)]">
         <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-[2rem] border-b border-white/10 bg-[#0d0d0d]/95 px-4 py-4 backdrop-blur">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.24em] text-lime-400">Public Driver Profile</p>
-            <h3 className="mt-1 text-lg font-black">{profile.fullName ?? profile.plate}</h3>
+            <h3 className="text-lg font-black">{profile.fullName ?? profile.plate}</h3>
           </div>
           <button
             type="button"

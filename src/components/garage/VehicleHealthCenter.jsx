@@ -29,8 +29,7 @@ export function VehicleHealthCenter({ odometer, onSelectPart, parts, selectedPar
             <header className="app-safe-top shrink-0 border-b border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.16),transparent_44%),#111111] px-4 pb-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">VEHICLE HEALTH</p>
-                  <h2 className="mt-1 text-lg font-black">Parca Sagligi</h2>
+                  <h2 className="text-lg font-black">Parca Sagligi</h2>
                 </div>
                 <button type="button" onClick={() => setIsOpen(false)} aria-label="Parca sagligi merkezini kapat" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-xl text-neutral-300">&times;</button>
               </div>

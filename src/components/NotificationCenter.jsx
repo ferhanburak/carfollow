@@ -55,8 +55,7 @@ export function NotificationCenter({
         <div className="fixed inset-x-3 top-20 z-40 mx-auto max-h-[70vh] max-w-md overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#101010]/98 shadow-[0_24px_80px_rgba(0,0,0,0.72)] backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">CRUISER SIGNALS</p>
-              <p className="mt-1 text-sm font-black">Bildirim Merkezi</p>
+              <p className="text-sm font-black">Bildirim Merkezi</p>
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={onMarkAllRead} className="min-h-12 rounded-xl px-3 text-[10px] font-semibold text-neutral-400">

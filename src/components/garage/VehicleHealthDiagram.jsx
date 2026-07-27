@@ -76,9 +76,8 @@ export function VehicleHealthDiagram({
         className="mt-4 w-full rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(163,230,53,0.1),transparent_44%),linear-gradient(180deg,#121212,#0c0c0c)] p-4 text-left transition hover:border-lime-400/30"
       >
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-lime-400">Interactive Vehicle Map</p>
-            <p className="mt-1 text-sm font-semibold text-neutral-200">Parca durumuna dokunarak bak</p>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-200">Parca durumuna dokunarak bak</p>
           </div>
           <span className="rounded-full border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-lime-300">Detay</span>
         </div>
@@ -113,8 +112,7 @@ export function VehicleHealthDiagram({
     <div className="rounded-[1.5rem] border border-white/10 bg-[radial-gradient(circle_at_top,_rgba(163,230,53,0.08),transparent_40%),linear-gradient(180deg,#121212,#0c0c0c)] p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.22em] text-lime-400">Interactive Vehicle Map</p>
-          <p className="mt-1 text-sm text-neutral-400">Parcaya dokun, durumunu model ustunde izle.</p>
+          <p className="text-sm text-neutral-400">Parcaya dokun, durumunu model ustunde izle.</p>
         </div>
         <span className="rounded-full border border-white/10 bg-black/20 px-3 py-2 text-[10px] uppercase tracking-[0.24em] text-neutral-400">
           {vehicleType === "motorcycle" ? "Moto Layout" : "Car Layout"}

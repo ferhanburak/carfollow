@@ -70,8 +70,7 @@ export function GarageScreen({
     <section className="space-y-4">
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Digital Garage</p>
-          <h3 className="mt-2 text-xl font-black">{user.fullName}</h3>
+          <h3 className="text-xl font-black">{user.fullName}</h3>
           <p className="mt-1 text-sm text-neutral-400">
             {user.model} / {user.tuningStage} / {user.horsepower} HP
           </p>
@@ -209,8 +208,7 @@ export function GarageScreen({
         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-lime-400">Part History Explorer</p>
-              <p className="mt-2 text-lg font-semibold text-neutral-100">
+              <p className="text-lg font-semibold text-neutral-100">
                 {historySelectedPart?.name ?? "Tum Parcalar"}
               </p>
               <p className="mt-1 text-xs text-neutral-500">

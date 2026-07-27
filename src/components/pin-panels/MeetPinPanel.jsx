@@ -345,8 +345,7 @@ export function MeetPinPanel({
     <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Group Meets & Cruises</p>
-          <h3 className="mt-2 text-xl font-black">{pin.name}</h3>
+          <h3 className="text-xl font-black">{pin.name}</h3>
         </div>
         <InsightCard label="Convoy Size" value={`${attendees.length}/${pin.capacity ?? attendees.length}`} />
       </div>

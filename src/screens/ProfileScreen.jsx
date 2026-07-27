@@ -40,8 +40,7 @@ export function ProfileScreen({
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Driver Identity</p>
-            <h3 className="mt-2 text-xl font-black">{user.fullName}</h3>
+            <h3 className="text-xl font-black">{user.fullName}</h3>
             <p className="mt-1 text-sm text-neutral-400">
               {user.plate} / {user.model}
             </p>

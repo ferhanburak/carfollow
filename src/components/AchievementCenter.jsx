@@ -64,8 +64,7 @@ export function AchievementProgressPanel({ achievements, isOpen, onClose, onOpen
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">Achievement Progress</p>
-            <h3 className="mt-2 text-lg font-black">Basarimlar</h3>
+            <h3 className="text-lg font-black">Basarimlar</h3>
           </div>
           <div className="text-right">
             <p className="text-lg font-black text-lime-300">{completed.length} / {achievements.length}</p>
@@ -100,8 +99,7 @@ export function AchievementProgressPanel({ achievements, isOpen, onClose, onOpen
             <header className="app-safe-top shrink-0 border-b border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.16),transparent_44%),#111111] px-4 pb-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">DRIVER MILESTONES</p>
-                  <h2 className="mt-1 text-lg font-black">Basarim Merkezi</h2>
+                  <h2 className="text-lg font-black">Basarim Merkezi</h2>
                   <p className="mt-1 text-xs text-neutral-500">{completed.length} / {achievements.length} basarim tamamlandi</p>
                 </div>
                 <button type="button" onClick={onClose} aria-label="Basarim merkezini kapat" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-xl text-neutral-300">&times;</button>

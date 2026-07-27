@@ -41,8 +41,7 @@ function SettingsHome({ isFirebaseAuth, onRequestLogout, onSelect, user }) {
   return (
     <div className="space-y-3">
       <div className="rounded-[1.5rem] border border-lime-400/15 bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.12),transparent_46%),#101010] p-4">
-        <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">CONTROL DECK</p>
-        <p className="mt-2 text-sm font-bold text-neutral-100">{user.fullName}</p>
+        <p className="text-sm font-bold text-neutral-100">{user.fullName}</p>
         <p className="mt-1 font-mono text-xs tracking-[0.16em] text-neutral-500">{user.plate}</p>
       </div>
       {sections.map((section) => (
@@ -332,8 +331,7 @@ export function SettingsCenter({
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-lime-400/20 bg-lime-400/10 font-mono text-xs text-lime-300">SYS</span>
               )}
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">CRUISER SYSTEM</p>
-                <h2 className="mt-1 truncate text-lg font-black">{activeSection?.title ?? "Ayarlar Merkezi"}</h2>
+                <h2 className="truncate text-lg font-black">{activeSection?.title ?? "Ayarlar Merkezi"}</h2>
                 <p className="truncate text-xs text-neutral-500">{activeSection?.description ?? "Hesap, arac, konum ve guvenlik kontrolleri"}</p>
               </div>
             </div>

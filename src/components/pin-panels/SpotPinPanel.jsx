@@ -18,8 +18,7 @@ export function SpotPinPanel({
     <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Photo Spot</p>
-          <h3 className="mt-2 text-xl font-black">{pin.name}</h3>
+          <h3 className="text-xl font-black">{pin.name}</h3>
           <p className="mt-2 text-sm text-neutral-400">{pin.description}</p>
         </div>
         <button type="button" onClick={onLikePin} className="min-h-12 rounded-2xl bg-lime-400/10 px-4 text-sm font-semibold text-lime-300">

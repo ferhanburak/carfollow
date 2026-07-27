@@ -127,8 +127,7 @@ export function DirectMessageCenter({
                 </div>
               )}
               <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">CRUISER DIRECT</p>
-                <h2 className="mt-1 truncate text-lg font-black">
+                <h2 className="truncate text-lg font-black">
                   {view === "chat" && selectedConversation ? selectedConversation.participantName : "Son Sohbetler"}
                 </h2>
                 <p className="truncate text-xs text-neutral-500">

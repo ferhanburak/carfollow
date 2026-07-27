@@ -21,8 +21,7 @@ export function ClanSummaryCard({ clan, eventCount, memberCount, onOpen, userRol
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">YOUR CLAN</p>
-          <h4 className="mt-2 truncate text-lg font-black text-neutral-100">{clan.name}</h4>
+          <h4 className="truncate text-lg font-black text-neutral-100">{clan.name}</h4>
           <p className="mt-1 text-xs uppercase tracking-[0.2em] text-lime-300">{clan.tag || "CRUISER"}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -82,8 +81,7 @@ export function ClanCreatePanel({ clanFeedback, clanForm, invites, isPending, on
 
   return (
     <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
-      <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">START A CREW</p>
-      <h4 className="mt-2 text-lg font-black">Klan Kur</h4>
+      <h4 className="text-lg font-black">Klan Kur</h4>
       <p className="mt-1 text-xs leading-5 text-neutral-500">Kendi ekibini kur veya bekleyen bir klan davetini kabul et.</p>
       {clanError ? <p className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-xs text-rose-100">{clanError}</p> : null}
       <div className="mt-4 space-y-3">
@@ -165,8 +163,7 @@ export function ClanCenter({
         <header className="app-safe-top shrink-0 border-b border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.16),transparent_44%),#111111] px-4 pb-4">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.28em] text-lime-400">CLAN COMMAND</p>
-              <h2 className="mt-1 truncate text-lg font-black">{clan.name}</h2>
+              <h2 className="truncate text-lg font-black">{clan.name}</h2>
               <p className="mt-1 text-xs uppercase tracking-[0.2em] text-neutral-500">{clan.tag} / {user.clanRole ?? "member"}</p>
             </div>
             <button type="button" onClick={onClose} aria-label="Klan merkezini kapat" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-xl text-neutral-300">&times;</button>

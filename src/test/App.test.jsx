@@ -334,7 +334,7 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
     await user.click(screen.getByRole("button", { name: /Profil/i }));
 
-    expect(await screen.findByText("Achievement Progress")).toBeInTheDocument();
+    expect(await screen.findByText("Basarimlar")).toBeInTheDocument();
     expect(screen.getByText("Driver Stats Snapshot")).toBeInTheDocument();
     expect(screen.getByText("Aylik Surus")).toBeInTheDocument();
     expect(screen.getByText("Aylik Max Hiz")).toBeInTheDocument();
@@ -395,7 +395,6 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: /Social/i }));
     await user.click((await screen.findAllByRole("button", { name: /35 SRT 908/i }))[0]);
 
-    expect(await screen.findByText("Public Driver Profile")).toBeInTheDocument();
     expect(screen.getByText("Konvoy Uyumu")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mesaj Gonder" })).toBeInTheDocument();
   });

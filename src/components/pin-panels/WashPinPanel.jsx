@@ -10,8 +10,7 @@ export function WashPinPanel({
 }) {
   return (
     <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
-      <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Car Wash Station</p>
-      <h3 className="mt-2 text-xl font-black">{pin.name}</h3>
+      <h3 className="text-xl font-black">{pin.name}</h3>
       <div className="mt-4 grid grid-cols-2 gap-3">
         <InsightCard label="Foam Quality" value={pin.rating.foam.toFixed(1)} />
         <InsightCard label="Water Quality" value={pin.rating.water.toFixed(1)} />

@@ -270,10 +270,7 @@ export function StatsScreen({
       {showSocial ? (
       <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-lime-400">Social Graph</p>
-            <h3 className="mt-2 text-xl font-black">Arkadas Bul ve Baglan</h3>
-          </div>
+          <h3 className="text-xl font-black">Arkadas Bul ve Baglan</h3>
           <div className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-neutral-400">
             {(user.friends ?? []).length} friends
           </div>

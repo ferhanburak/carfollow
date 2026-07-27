@@ -185,8 +185,7 @@ function OverlayCard({ children, title, onClose }) {
       <div onClick={(event) => event.stopPropagation()} className="flex max-h-full w-full flex-col overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#0d0d0d]/98 shadow-[0_24px_80px_rgba(0,0,0,0.72)] backdrop-blur-xl">
         <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Popup</p>
-            <h3 className="mt-1 text-base font-black text-white">{title}</h3>
+            <h3 className="text-base font-black text-white">{title}</h3>
           </div>
           <button
             type="button"
@@ -364,8 +363,7 @@ export function MapScreen({
         <div className="mt-3 rounded-[1rem] border border-white/10 bg-[linear-gradient(180deg,rgba(18,18,18,0.94),rgba(10,10,10,0.94))] px-3 py-3 backdrop-blur">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.26em] text-lime-400">Convoy Timeline</p>
-              <p className="mt-1 truncate text-sm font-bold text-white">{convoyTimeline.title}</p>
+              <p className="truncate text-sm font-bold text-white">{convoyTimeline.title}</p>
               <p className="truncate text-[10px] text-neutral-400">{convoyTimeline.subtitle}</p>
             </div>
             <div className="rounded-2xl border border-lime-400/20 bg-lime-400/10 px-3 py-2 text-right">
