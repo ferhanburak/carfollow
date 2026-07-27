@@ -21,6 +21,7 @@ const USER_NOTIFICATION_TYPES = Object.freeze([
   "convoy-response",
   "convoy-role",
   "convoy-cancelled",
+  "convoy-completed",
 ]);
 
 const COMMUNITY_ROLE_LABELS = Object.freeze({
