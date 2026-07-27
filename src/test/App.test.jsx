@@ -365,6 +365,7 @@ describe("App", () => {
 
     expect(await screen.findByText("Aylık Sürücü Sıralaması")).toBeInTheDocument();
     expect(screen.getByText("Aylık Klan Sıralaması")).toBeInTheDocument();
+    expect(screen.queryByText(/Tümünü Gör/)).not.toBeInTheDocument();
     const periodGroup = screen.getByLabelText("Sürücü sıralama dönemi");
     expect(within(periodGroup).getByRole("button", { name: "Aylık" })).toHaveAttribute("aria-pressed", "true");
     await user.click(within(periodGroup).getByRole("button", { name: "Haftalık" }));
@@ -393,6 +394,9 @@ describe("App", () => {
 
     await user.click(within(driverLeaderboard).getByRole("button", { name: /Aylık Sürücü Sıralaması/i }));
     expect(within(driverLeaderboard).getByText("Tüm sürücüler")).toBeInTheDocument();
+
+    await user.click(driverLeaderboard);
+    expect(within(driverLeaderboard).getByText("İlk 5 sürücü (tümünü görmek için tıklayınız)")).toBeInTheDocument();
   });
 
   it("opens the shared public driver profile from stats", async () => {

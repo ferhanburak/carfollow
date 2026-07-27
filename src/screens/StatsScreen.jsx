@@ -249,6 +249,12 @@ export function StatsScreen({
   const openProfileDrawer = (profile, source = "community") => {
     onOpenPublicProfile?.({ ...profile, source });
   };
+  const toggleLeaderboardFromCard = (event, toggleExpanded) => {
+    if (event.target.closest("button, [data-leaderboard-row]")) {
+      return;
+    }
+    toggleExpanded((current) => !current);
+  };
   const isSocialEntryPending = (entry) =>
     Boolean(socialPendingKey && entry?.userId && socialPendingKey.endsWith(`:${entry.userId}`));
   const hasPendingClanInvite = (entry) => (user.sentClanInvites ?? []).some((invite) =>
@@ -580,24 +586,25 @@ export function StatsScreen({
       ) : null}
 
       {showLeaderboard ? (
-      <div aria-label={`${activeLeaderboardPeriod.label} sürücü sıralaması`} className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
-        <button
-          type="button"
-          aria-expanded={individualLeaderboardExpanded}
-          onClick={() => setIndividualLeaderboardExpanded((current) => !current)}
-          className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-1 text-left active:scale-[0.99]"
-        >
-          <div>
-            <h3 className="text-lg font-black">{activeLeaderboardPeriod.label} Sürücü Sıralaması</h3>
+      <div
+        aria-label={`${activeLeaderboardPeriod.label} sürücü sıralaması`}
+        className="cursor-pointer rounded-[1.5rem] border border-white/10 bg-[#111111] p-3"
+        onClick={(event) => toggleLeaderboardFromCard(event, setIndividualLeaderboardExpanded)}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <button
+            type="button"
+            aria-expanded={individualLeaderboardExpanded}
+            onClick={() => setIndividualLeaderboardExpanded((current) => !current)}
+            className="min-h-12 min-w-0 flex-1 rounded-xl px-1 text-left active:scale-[0.99]"
+          >
+            <h3 className="text-base font-black">{activeLeaderboardPeriod.label} Sürücü Sıralaması</h3>
             <p className="mt-0.5 text-[10px] text-neutral-500">
-              {individualLeaderboardExpanded ? "Tüm sürücüler" : "İlk 5 sürücü"}
+              {individualLeaderboardExpanded
+                ? "Tüm sürücüler"
+                : "İlk 5 sürücü (tümünü görmek için tıklayınız)"}
             </p>
-          </div>
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-semibold text-neutral-300">
-            {individualLeaderboardExpanded ? "Daralt" : `Tümünü Gör (${individualLeaderboard.length})`}
-          </span>
-        </button>
-        <div className="mt-2 flex justify-center">
+          </button>
           <SegmentedControl
             ariaLabel="Sürücü sıralama dönemi"
             compact
@@ -636,6 +643,7 @@ export function StatsScreen({
           {visibleIndividualLeaderboard.map((driver) => (
             <div
               key={driver.userId ?? `${driver.plate}-individual`}
+              data-leaderboard-row
               className={`rounded-xl border p-2.5 ${
                 driver.plate === user.plate ? "border-lime-400/30 bg-lime-400/10" : "border-white/8 bg-black/20"
               }`}
@@ -663,24 +671,25 @@ export function StatsScreen({
       ) : null}
 
       {showLeaderboard ? (
-      <div aria-label={`${activeClanLeaderboardPeriod.label} klan sıralaması`} className="rounded-[1.5rem] border border-white/10 bg-[#111111] p-3">
-        <button
-          type="button"
-          aria-expanded={clanLeaderboardExpanded}
-          onClick={() => setClanLeaderboardExpanded((current) => !current)}
-          className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-1 text-left active:scale-[0.99]"
-        >
-          <div>
-            <h3 className="text-lg font-black">{activeClanLeaderboardPeriod.label} Klan Sıralaması</h3>
+      <div
+        aria-label={`${activeClanLeaderboardPeriod.label} klan sıralaması`}
+        className="cursor-pointer rounded-[1.5rem] border border-white/10 bg-[#111111] p-3"
+        onClick={(event) => toggleLeaderboardFromCard(event, setClanLeaderboardExpanded)}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <button
+            type="button"
+            aria-expanded={clanLeaderboardExpanded}
+            onClick={() => setClanLeaderboardExpanded((current) => !current)}
+            className="min-h-12 min-w-0 flex-1 rounded-xl px-1 text-left active:scale-[0.99]"
+          >
+            <h3 className="text-base font-black">{activeClanLeaderboardPeriod.label} Klan Sıralaması</h3>
             <p className="mt-0.5 text-[10px] text-neutral-500">
-              {clanLeaderboardExpanded ? "Tüm klanlar" : "İlk 5 klan"}
+              {clanLeaderboardExpanded
+                ? "Tüm klanlar"
+                : "İlk 5 klan (tümünü görmek için tıklayınız)"}
             </p>
-          </div>
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-semibold text-neutral-300">
-            {clanLeaderboardExpanded ? "Daralt" : `Tümünü Gör (${clanLeaderboard.length})`}
-          </span>
-        </button>
-        <div className="mt-2 flex justify-center">
+          </button>
           <SegmentedControl
             ariaLabel="Klan sıralama dönemi"
             compact
@@ -699,7 +708,7 @@ export function StatsScreen({
         </div>
         <div className="mt-3 space-y-2">
           {visibleClanLeaderboard.map((clan) => (
-            <div key={clan.id} className={`rounded-xl border p-2.5 ${
+            <div key={clan.id} data-leaderboard-row className={`rounded-xl border p-2.5 ${
               clan.name === user.clan ? "border-lime-400/30 bg-lime-400/10" : "border-white/8 bg-black/20"
             }`}>
               <div className="flex items-center justify-between gap-3">
