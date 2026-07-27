@@ -175,11 +175,20 @@ function secureCall(name, optionsOrHandler, maybeHandler) {
     logger.info("callable.start", logContext);
 
     try {
+      let rateLimitMs = 0;
       if (options.rateLimit && request.auth?.uid) {
+        const rateLimitStartedAt = Date.now();
         await enforceCallableRateLimit(request.auth.uid, name, options.rateLimit);
+        rateLimitMs = Date.now() - rateLimitStartedAt;
       }
+      const handlerStartedAt = Date.now();
       const result = await handler(request);
-      logger.info("callable.success", { ...logContext, durationMs: Date.now() - startedAt });
+      logger.info("callable.success", {
+        ...logContext,
+        durationMs: Date.now() - startedAt,
+        rateLimitMs,
+        handlerMs: Date.now() - handlerStartedAt,
+      });
       return result;
     } catch (error) {
       const severity = error instanceof HttpsError && ["invalid-argument", "failed-precondition"].includes(error.code)
@@ -1144,28 +1153,46 @@ exports.deleteConvoy = secureCall("deleteConvoy", { rateLimit: { limit: 12, wind
 
 exports.listAccessibleConvoys = secureCall("listAccessibleConvoys", async (request) => {
   const userId = requireAuth(request);
-  await migrateLegacyConvoyPins();
-  const profile = await getUserProfile(userId);
-  const [convoysSnapshot, membersSnapshot, friendshipsSnapshot] = await Promise.all([
+  const [profile, convoysSnapshot, viewerMembershipsSnapshot, friendshipsSnapshot] = await Promise.all([
+    getUserProfile(userId),
     publicCollection("convoys").get(),
-    publicCollection("convoyMembers").get(),
+    publicCollection("convoyMembers").where("userId", "==", userId).get(),
     publicCollection("friendships").where("participantIds", "array-contains", userId).get(),
   ]);
   const friendUserIds = new Set(friendshipsSnapshot.docs
     .filter((item) => item.data().status === "accepted")
     .flatMap((item) => item.data().participantIds ?? [])
     .filter((id) => id !== userId));
+  const viewerMembershipsByConvoy = new Map(viewerMembershipsSnapshot.docs.map((item) => {
+    const membership = item.data();
+    return [membership.convoyId, membership];
+  }));
+  const accessibleConvoys = convoysSnapshot.docs
+    .map((item) => ({ id: item.id, ...item.data() }))
+    .filter((convoy) => canSeeConvoy(
+      convoy,
+      profile,
+      friendUserIds,
+      viewerMembershipsByConvoy.get(convoy.id) ?? null,
+    ));
+
+  const memberSnapshots = await Promise.all(
+    Array.from({ length: Math.ceil(accessibleConvoys.length / 10) }, (_, index) => {
+      const convoyIds = accessibleConvoys.slice(index * 10, index * 10 + 10).map((convoy) => convoy.id);
+      return publicCollection("convoyMembers").where("convoyId", "in", convoyIds).get();
+    }),
+  );
   const membersByConvoy = new Map();
-  membersSnapshot.docs.forEach((item) => {
-    const member = item.data();
-    membersByConvoy.set(member.convoyId, [...(membersByConvoy.get(member.convoyId) ?? []), member]);
+  memberSnapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((item) => {
+      const member = item.data();
+      membersByConvoy.set(member.convoyId, [...(membersByConvoy.get(member.convoyId) ?? []), member]);
+    });
   });
-  const convoys = convoysSnapshot.docs.map((item) => ({ id: item.id, ...item.data() })).flatMap((convoy) => {
+  const convoys = accessibleConvoys.map((convoy) => {
     const members = membersByConvoy.get(convoy.id) ?? [];
-    const membership = members.find((member) => member.userId === userId) ?? null;
-    return canSeeConvoy(convoy, profile, friendUserIds, membership)
-      ? [presentConvoy(convoy, profile, membership, members)]
-      : [];
+    const membership = viewerMembershipsByConvoy.get(convoy.id) ?? null;
+    return presentConvoy(convoy, profile, membership, members);
   });
   return { ok: true, convoys };
 });
