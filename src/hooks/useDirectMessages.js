@@ -264,7 +264,7 @@ export function useDirectMessages({ user, setUser }) {
     }
     setActiveConversationId(nextConversationId);
     if (!firebaseMessagingEnabled) setUser((current) => markConversationRead(current, nextConversationId));
-    setChatFeedback(`${friend.fullName} ile sohbet hazır.`);
+    setChatFeedback("");
     return nextConversationId;
   };
 
@@ -295,7 +295,7 @@ export function useDirectMessages({ user, setUser }) {
     } else {
       setUser((current) => appendDirectMessage(current, friend, trimmedMessage));
     }
-    setChatFeedback(`${friend.fullName} sohbetine yeni mesaj eklendi.`);
+    setChatFeedback("");
     setMessageDraft("");
     if (!firebaseMessagingEnabled) setActiveConversationId(threadId);
     return true;
