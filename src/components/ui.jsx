@@ -3,7 +3,7 @@ function FieldLabel({ label, required, optional }) {
     <span className="text-xs uppercase tracking-[0.22em] text-neutral-500">
       {label}
       {required ? <span className="ml-1 text-rose-400" aria-hidden="true">*</span> : null}
-      {optional ? <span className="ml-2 text-[9px] tracking-[0.12em] text-neutral-600">Istege bağlı</span> : null}
+      {optional ? <span className="ml-2 text-xs tracking-[0.12em] text-neutral-600">Istege bağlı</span> : null}
     </span>
   );
 }
@@ -36,7 +36,7 @@ export function HudStat({ label, value, accent }) {
 
   return (
     <div className={`rounded-2xl border p-4 ${styles}`}>
-      <p className="text-[10px] uppercase tracking-[0.22em] text-neutral-500">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">{label}</p>
       <p className="mt-3 text-lg font-black">{value}</p>
     </div>
   );
@@ -45,7 +45,7 @@ export function HudStat({ label, value, accent }) {
 export function InsightCard({ label, value }) {
   return (
     <div className="rounded-2xl border border-white/8 bg-black/20 p-3">
-      <p className="text-[10px] uppercase tracking-[0.22em] text-neutral-500">{label}</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">{label}</p>
       <p className="mt-2 text-sm font-bold text-lime-300">{value}</p>
     </div>
   );

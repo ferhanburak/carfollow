@@ -117,7 +117,7 @@ function SegmentedControl({ ariaLabel, items, onChange, value, compact = false }
     <div
       aria-label={ariaLabel}
       className={`relative grid overflow-hidden rounded-full border border-white/10 bg-black/35 p-0.5 ${
-        compact ? "w-[8.25rem] shrink-0" : "w-full"
+        compact ? "w-[7.25rem] shrink-0 min-[390px]:w-[8.25rem]" : "w-full"
       }`}
       role="group"
       style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
@@ -598,10 +598,10 @@ export function StatsScreen({
             onClick={() => setIndividualLeaderboardExpanded((current) => !current)}
             className="min-h-10 min-w-0 flex-1 rounded-xl px-0.5 text-left active:scale-[0.99]"
           >
-            <h3 className="text-[15px] font-extrabold leading-5 tracking-[-0.015em]">
+            <h3 className="text-sm font-extrabold tracking-[-0.015em] min-[390px]:text-base">
               {activeLeaderboardPeriod.label} Sürücü Sıralaması
             </h3>
-            <p className="mt-0.5 text-[10px] font-medium leading-4 text-neutral-500">
+            <p className="mt-0.5 line-clamp-2 text-xs font-medium text-neutral-500">
               {individualLeaderboardExpanded
                 ? "Tüm sürücüler"
                 : "İlk 5 sürücü (tümünü görmek için tıklayınız)"}
@@ -625,20 +625,20 @@ export function StatsScreen({
         </div>
         <div className="mt-2 grid grid-cols-3 gap-1.5">
           <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
-            <p className="text-[9px] font-semibold uppercase leading-3 tracking-[0.12em] text-neutral-500">Sıran</p>
-            <p className="mt-1 text-[13px] font-extrabold leading-4 text-lime-300 tabular-nums">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">Sıran</p>
+            <p className="mt-1 text-sm font-extrabold text-lime-300 tabular-nums">
               #{individualLeaderboard.find((driver) => driver.plate === user.plate)?.rank ?? "--"}
             </p>
           </div>
           <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
-            <p className="text-[9px] font-semibold uppercase leading-3 tracking-[0.12em] text-neutral-500">{activeLeaderboardMetric.summaryLabel}</p>
-            <p className="mt-1 truncate text-[13px] font-extrabold leading-4 text-lime-300 tabular-nums">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">{activeLeaderboardMetric.summaryLabel}</p>
+            <p className="mt-1 truncate text-sm font-extrabold text-lime-300 tabular-nums">
               {activeLeaderboardMetric.format(user[activeLeaderboardMetric.fieldKey])}
             </p>
           </div>
           <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
-            <p className="text-[9px] font-semibold uppercase leading-3 tracking-[0.12em] text-neutral-500">Skor</p>
-            <p className="mt-1 text-[13px] font-extrabold leading-4 text-lime-300 tabular-nums">{user.driverScore}/100</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-neutral-500">Skor</p>
+            <p className="mt-1 text-sm font-extrabold text-lime-300 tabular-nums">{user.driverScore}/100</p>
           </div>
         </div>
         <div className="mt-3 space-y-2">
@@ -656,12 +656,12 @@ export function StatsScreen({
                     #{driver.rank}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-bold leading-4">{driver.fullName}</p>
-                    <p className="mt-0.5 truncate text-[10px] font-medium leading-4 text-neutral-500">{driver.model}</p>
+                    <p className="truncate text-sm font-bold">{driver.fullName}</p>
+                    <p className="mt-0.5 truncate text-xs font-medium text-neutral-500">{driver.model}</p>
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-[13px] font-extrabold leading-4 text-lime-300 tabular-nums">
+                  <p className="text-sm font-extrabold text-lime-300 tabular-nums">
                     {activeLeaderboardMetric.format(driver[activeLeaderboardMetric.fieldKey])}
                   </p>
                 </div>
@@ -685,10 +685,10 @@ export function StatsScreen({
             onClick={() => setClanLeaderboardExpanded((current) => !current)}
             className="min-h-10 min-w-0 flex-1 rounded-xl px-0.5 text-left active:scale-[0.99]"
           >
-            <h3 className="text-[15px] font-extrabold leading-5 tracking-[-0.015em]">
+            <h3 className="text-sm font-extrabold tracking-[-0.015em] min-[390px]:text-base">
               {activeClanLeaderboardPeriod.label} Klan Sıralaması
             </h3>
-            <p className="mt-0.5 text-[10px] font-medium leading-4 text-neutral-500">
+            <p className="mt-0.5 line-clamp-2 text-xs font-medium text-neutral-500">
               {clanLeaderboardExpanded
                 ? "Tüm klanlar"
                 : "İlk 5 klan (tümünü görmek için tıklayınız)"}
@@ -721,12 +721,12 @@ export function StatsScreen({
                     #{clan.rank}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-bold leading-4">{clan.name}</p>
-                    <p className="mt-0.5 truncate text-[10px] font-medium leading-4 text-neutral-500">{clan.members} üye</p>
+                    <p className="truncate text-sm font-bold">{clan.name}</p>
+                    <p className="mt-0.5 truncate text-xs font-medium text-neutral-500">{clan.members} üye</p>
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-[13px] font-extrabold leading-4 text-lime-300 tabular-nums">
+                  <p className="text-sm font-extrabold text-lime-300 tabular-nums">
                     {activeClanLeaderboardMetric.format(clan[activeClanLeaderboardMetric.fieldKey])}
                   </p>
                 </div>

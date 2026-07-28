@@ -1,11 +1,33 @@
 @import "@fontsource-variable/manrope";
 @import "tailwindcss";
 
+@theme {
+  --text-xs: 0.6875rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.125rem;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.375rem;
+  --text-lg: 1.0625rem;
+  --text-lg--line-height: 1.375rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.625rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.875rem;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 2.25rem;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 750;
+  --font-weight-black: 800;
+}
+
 :root {
   color: #f5f5f5;
   background: #050505;
   font-family: "Manrope Variable", ui-sans-serif, sans-serif;
   font-optical-sizing: auto;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
   font-synthesis: none;
   color-scheme: dark;
 }
@@ -24,9 +46,12 @@ body,
 body {
   margin: 0;
   min-height: 100dvh;
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
   overflow-x: hidden;
   overscroll-behavior-y: none;
   -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
   background:
     radial-gradient(circle at top, rgba(163, 230, 53, 0.14), transparent 28%),
     radial-gradient(circle at bottom, rgba(244, 63, 94, 0.1), transparent 26%),
@@ -38,6 +63,8 @@ input,
 select,
 textarea {
   font: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
 }
 
 button {
@@ -55,6 +82,32 @@ button:not(:disabled):active {
   scale: 0.955;
   translate: 0 1px;
   filter: brightness(1.16) saturate(1.08);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+/* Normalize legacy one-off sizes into the shared mobile typography scale. */
+[class~="text-[8px]"],
+[class~="text-[9px]"],
+[class~="text-[10px]"],
+[class~="text-[11px]"] {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+}
+
+[class~="text-[13px]"] {
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+}
+
+[class~="text-[15px]"] {
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
 }
 
 @keyframes action-toast-enter {

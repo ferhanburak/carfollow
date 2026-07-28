@@ -374,7 +374,7 @@ function App() {
             <div className="relative flex items-center gap-1.5">
               <div className="flex h-12 min-w-0 flex-1 flex-col justify-center rounded-2xl border border-white/10 bg-black/30 px-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                 <p className="truncate text-xs font-black text-white">{user.fullName}</p>
-                <p className="mt-0.5 truncate text-[10px] text-neutral-400">{user.model}</p>
+                <p className="mt-0.5 truncate text-xs text-neutral-400">{user.model}</p>
               </div>
               <div className="flex shrink-0 items-center gap-1.5">
                 <DirectMessageButton onClick={openDmInbox} unreadCount={unreadConversationCount} />
