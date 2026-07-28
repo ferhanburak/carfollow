@@ -10,12 +10,10 @@
     "backgroundColor": "#070807",
     "ios": {
       "bundleIdentifier": "com.ferhanburak.cruiser",
-      "buildNumber": "1",
       "supportsTablet": false
     },
     "android": {
       "package": "com.ferhanburak.cruiser",
-      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#070807",
         "foregroundImage": "./assets/images/cruiser-road-mark.png",
