@@ -114,6 +114,7 @@ const db = admin.firestore();
 const realtimeDb = admin.database();
 const APP_ID = process.env.CRUISER_APP_ID || "cruiser-app-prod";
 const APP_CHECK_ENFORCED = process.env.ENFORCE_APP_CHECK === "true";
+const LATENCY_SENSITIVE_OPTIONS = Object.freeze({ minInstances: 1 });
 
 function publicCollection(collectionName) {
   return db.collection(`artifacts/${APP_ID}/public/data/${collectionName}`);
@@ -161,8 +162,16 @@ async function enforceCallableRateLimit(userId, action, { limit, windowSeconds }
 function secureCall(name, optionsOrHandler, maybeHandler) {
   const options = typeof optionsOrHandler === "function" ? {} : optionsOrHandler;
   const handler = typeof optionsOrHandler === "function" ? optionsOrHandler : maybeHandler;
+  const callableOptions = {
+    cors: true,
+    enforceAppCheck: APP_CHECK_ENFORCED,
+    invoker: "public",
+  };
+  if (Number.isInteger(options.minInstances) && options.minInstances >= 0) {
+    callableOptions.minInstances = options.minInstances;
+  }
 
-  return onCall({ cors: true, enforceAppCheck: APP_CHECK_ENFORCED, invoker: "public" }, async (request) => {
+  return onCall(callableOptions, async (request) => {
     const startedAt = Date.now();
     const requestId = String(request.rawRequest?.headers?.["x-cloud-trace-context"] ?? `${name}-${startedAt}`)
       .split("/")[0]
@@ -602,7 +611,10 @@ async function migrateLegacyConvoyPins() {
   }
 }
 
-exports.requestFriendship = secureCall("requestFriendship", { rateLimit: { limit: 20, windowSeconds: 600 } }, async (request) => {
+exports.requestFriendship = secureCall("requestFriendship", {
+  ...LATENCY_SENSITIVE_OPTIONS,
+  rateLimit: { limit: 20, windowSeconds: 600 },
+}, async (request) => {
   const requesterUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, requesterUserId);
 
@@ -700,7 +712,10 @@ exports.searchDriverByPlate = secureCall("searchDriverByPlate", { rateLimit: { l
   return { ok: true, driver: projectPlateSearchResult(target, targetUserId) };
 });
 
-exports.getPublicDriverProfile = secureCall("getPublicDriverProfile", { rateLimit: { limit: 60, windowSeconds: 600 } }, async (request) => {
+exports.getPublicDriverProfile = secureCall("getPublicDriverProfile", {
+  ...LATENCY_SENSITIVE_OPTIONS,
+  rateLimit: { limit: 60, windowSeconds: 600 },
+}, async (request) => {
   const actorUserId = requireAuth(request);
   const targetUserId = String(request.data?.targetUserId ?? "");
   if (!targetUserId || targetUserId.length > 128 || targetUserId.includes("/")) {
@@ -953,7 +968,7 @@ exports.deleteMyAccount = secureCall("deleteMyAccount", { rateLimit: { limit: 3,
   return { ok: true, deleted: true };
 });
 
-exports.ensureDirectMessageThread = secureCall("ensureDirectMessageThread", async (request) => {
+exports.ensureDirectMessageThread = secureCall("ensureDirectMessageThread", LATENCY_SENSITIVE_OPTIONS, async (request) => {
   const actorUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, actorUserId);
   const state = await ensureDirectMessageThreadState(actorUserId, targetUserId);
@@ -963,7 +978,10 @@ exports.ensureDirectMessageThread = secureCall("ensureDirectMessageThread", asyn
   return { ok: true, threadId: state.threadId };
 });
 
-exports.sendDirectMessage = secureCall("sendDirectMessage", { rateLimit: { limit: 60, windowSeconds: 60 } }, async (request) => {
+exports.sendDirectMessage = secureCall("sendDirectMessage", {
+  ...LATENCY_SENSITIVE_OPTIONS,
+  rateLimit: { limit: 60, windowSeconds: 60 },
+}, async (request) => {
   const actorUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, actorUserId);
   let body;
@@ -1778,7 +1796,10 @@ exports.createClan = secureCall("createClan", { rateLimit: { limit: 3, windowSec
   return { ok: true, clanId: clanRef.id };
 });
 
-exports.inviteClanMember = secureCall("inviteClanMember", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
+exports.inviteClanMember = secureCall("inviteClanMember", {
+  ...LATENCY_SENSITIVE_OPTIONS,
+  rateLimit: { limit: 30, windowSeconds: 3600 },
+}, async (request) => {
   const actorUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, actorUserId);
   const { clanId } = request.data ?? {};
@@ -2970,7 +2991,10 @@ exports.resolveModerationReport = secureCall("resolveModerationReport", { rateLi
   return { ok: true, reportId, decision };
 });
 
-exports.createForumThread = secureCall("createForumThread", { rateLimit: { limit: 8, windowSeconds: 3600 } }, async (request) => {
+exports.createForumThread = secureCall("createForumThread", {
+  ...LATENCY_SENSITIVE_OPTIONS,
+  rateLimit: { limit: 8, windowSeconds: 3600 },
+}, async (request) => {
   const userId = requireAuth(request);
   const threadRef = publicCollection("forumThreads").doc();
   const storagePath = sanitizeOperationalText(request.data?.thread?.storagePath, 512);
