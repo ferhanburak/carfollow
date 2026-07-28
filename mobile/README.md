@@ -30,7 +30,38 @@ cd D:\carfollow\mobile
 npx expo start
 ```
 
-Android için terminalde `a`, web ön izlemesi için `w` tuşuna basılabilir. Arka plan konumu, native harita ve bildirim özellikleri eklendiğinde Expo Go yerine development build kullanılacaktır.
+Android için terminalde `a`, web ön izlemesi için `w` tuşuna basılabilir. Native harita, arka plan konumu ve bildirim testleri için Expo Go yerine development build kullanılır.
+
+## EAS Build
+
+İlk bulut derlemesinden önce bir kez Expo hesabıyla oturum açıp projeyi EAS'e bağlayın:
+
+```powershell
+cd D:\carfollow\mobile
+npm run eas:login
+npm run eas:init
+```
+
+Android telefona kurulabilir development APK:
+
+```powershell
+npm run build:android:dev
+```
+
+Test kullanıcılarıyla paylaşılabilir preview APK:
+
+```powershell
+npm run build:android:preview
+```
+
+Google Play için production AAB ve App Store için production IPA:
+
+```powershell
+npm run build:android:production
+npm run build:ios:production
+```
+
+Production profili sürüm kodunu EAS üzerinde otomatik artırır. Android ve iOS mağaza hesapları, uygulamayı mağazaya gönderme aşamasına kadar gerekli değildir.
 
 ## Kontroller
 
