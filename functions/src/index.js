@@ -1,4 +1,7 @@
 const admin = require("firebase-admin");
+const { getDatabaseWithUrl } = require("firebase-admin/database");
+const { getFirestore } = require("firebase-admin/firestore");
+const { getStorage } = require("firebase-admin/storage");
 const logger = require("firebase-functions/logger");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
@@ -100,18 +103,28 @@ const {
   requireDeletionConfirmation,
 } = require("./accountLifecycle");
 
+const FUNCTIONS_REGION = process.env.CRUISER_FUNCTIONS_REGION || "europe-west1";
+const FIRESTORE_DATABASE_ID = process.env.CRUISER_FIRESTORE_DATABASE_ID || "carfollow-eu";
+const REALTIME_DATABASE_URL = process.env.CRUISER_REALTIME_DATABASE_URL ||
+  "https://carfollow-75750-eu.europe-west1.firebasedatabase.app";
+const STORAGE_BUCKET = process.env.CRUISER_STORAGE_BUCKET || "carfollow-75750-media-eu";
+
 setGlobalOptions({
-  region: "us-central1",
+  region: FUNCTIONS_REGION,
   memory: "256MiB",
   timeoutSeconds: 60,
   concurrency: 40,
   maxInstances: 5,
 });
 
-admin.initializeApp();
+const firebaseAdminApp = admin.initializeApp({
+  databaseURL: REALTIME_DATABASE_URL,
+  storageBucket: STORAGE_BUCKET,
+});
 
-const db = admin.firestore();
-const realtimeDb = admin.database();
+const db = getFirestore(firebaseAdminApp, FIRESTORE_DATABASE_ID);
+const realtimeDb = getDatabaseWithUrl(REALTIME_DATABASE_URL, firebaseAdminApp);
+const storageBucket = getStorage(firebaseAdminApp).bucket(STORAGE_BUCKET);
 const APP_ID = process.env.CRUISER_APP_ID || "cruiser-app-prod";
 const APP_CHECK_ENFORCED = process.env.ENFORCE_APP_CHECK === "true";
 const LATENCY_SENSITIVE_OPTIONS = Object.freeze({ minInstances: 1 });
@@ -954,7 +967,7 @@ exports.deleteMyAccount = secureCall("deleteMyAccount", { rateLimit: { limit: 3,
   const realtimeUpdates = buildRealtimeAccountDeletionUpdates({ appId: APP_ID, userId, threads });
   await realtimeDb.ref().update(realtimeUpdates);
 
-  const bucket = admin.storage().bucket();
+  const bucket = storageBucket;
   await Promise.allSettled([
     bucket.deleteFiles({ prefix: `artifacts/${APP_ID}/users/${userId}/avatars/` }),
     ...spotPhotos.map((document) => {
@@ -2811,7 +2824,7 @@ exports.deleteMapSpotPhoto = secureCall("deleteMapSpotPhoto", { rateLimit: { lim
     }
   });
   if (photo.storagePath) {
-    await admin.storage().bucket().file(photo.storagePath).delete({ ignoreNotFound: true }).catch((error) => {
+    await storageBucket.file(photo.storagePath).delete({ ignoreNotFound: true }).catch((error) => {
       logger.warn("map.photo.storage-delete-failed", { photoId, errorCode: error?.code ?? "unknown" });
     });
   }
@@ -3007,7 +3020,7 @@ exports.createForumThread = secureCall("createForumThread", {
     if (!storagePath.startsWith(expectedPrefix) || storagePath.includes("..")) {
       throw new HttpsError("permission-denied", "Geçersiz forum görseli yolu.");
     }
-    const storageFile = admin.storage().bucket().file(storagePath);
+    const storageFile = storageBucket.file(storagePath);
     const [exists] = await storageFile.exists();
     if (!exists) {
       throw new HttpsError("failed-precondition", "Forum görseli yüklenemedi.");

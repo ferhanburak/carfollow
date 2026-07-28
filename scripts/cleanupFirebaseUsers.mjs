@@ -5,8 +5,9 @@ import path from "node:path";
 
 const PROJECT_ID = "carfollow-75750";
 const APP_ID = "cruiser-app-prod";
-const DATABASE_URL = "https://carfollow-75750-default-rtdb.firebaseio.com";
-const STORAGE_BUCKET = "carfollow-75750.firebasestorage.app";
+const FIRESTORE_DATABASE_ID = "carfollow-eu";
+const DATABASE_URL = "https://carfollow-75750-eu.europe-west1.firebasedatabase.app";
+const STORAGE_BUCKET = "carfollow-75750-media-eu";
 const KEEP_EMAILS = new Set([
   "ferhanburakbjk@gmail.com",
   "ferhanburak@gmail.com",
@@ -73,7 +74,7 @@ async function listAuthUsers(token) {
   return users;
 }
 
-const firestoreBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+const firestoreBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${FIRESTORE_DATABASE_ID}/documents`;
 const encodeDocumentPath = (value) => value.split("/").map(encodeURIComponent).join("/");
 
 async function listCollectionIds(parentPath, token) {
@@ -320,7 +321,7 @@ async function deleteFirestoreDocuments(entries, token) {
   const names = [...entries.keys()];
   for (let index = 0; index < names.length; index += 400) {
     await requestJson(
-      `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:batchWrite`,
+      `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${FIRESTORE_DATABASE_ID}/documents:batchWrite`,
       token,
       {
         method: "POST",

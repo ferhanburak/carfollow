@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "emulators": "firebase emulators:start --project carfollow-75750",
+    "emulators": "firebase emulators:start --config firebase.emulator.json --project carfollow-75750",
     "setup:java": "powershell -ExecutionPolicy Bypass -File scripts/setupLocalJava.ps1",
     "rules:check": "node scripts/checkFirebaseRules.mjs",
     "seed:firebase": "node scripts/seedFirebase.mjs",
@@ -22,6 +22,7 @@
     "postman:test": "node scripts/runPostmanMapE2E.mjs",
     "postman:cleanup": "node scripts/cleanupPostmanE2E.mjs",
     "backend:invokers": "node scripts/auditCallableInvokers.mjs",
+    "backend:benchmark": "node scripts/benchmarkWriteLatency.mjs",
     "appcheck:status": "node scripts/checkAppCheckReadiness.mjs"
   },
   "dependencies": {

@@ -10,6 +10,13 @@ function readFirebaseConfig() {
   };
 }
 
+function readFirebaseRuntimeTargets() {
+  return {
+    firestoreDatabaseId: import.meta.env.VITE_FIRESTORE_DATABASE_ID || "carfollow-eu",
+    functionsRegion: import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION || "europe-west1",
+  };
+}
+
 function readAppCheckConfig() {
   return {
     siteKey: import.meta.env.VITE_FIREBASE_APPCHECK_SITE_KEY,
@@ -135,6 +142,7 @@ async function initializeFirebaseServices() {
   if (!firebaseInitializationPromise) {
     firebaseInitializationPromise = (async () => {
       const config = readFirebaseConfig();
+      const runtimeTargets = readFirebaseRuntimeTargets();
       const [appModule, appCheckModule, firestoreModule, databaseModule, authModule, functionsModule, storageModule] =
         await Promise.all([
           import("firebase/app"),
@@ -159,11 +167,16 @@ async function initializeFirebaseServices() {
           isTokenAutoRefreshEnabled: true,
         });
       }
-      firestoreDb = firestoreModule.getFirestore(firebaseApp);
+      const firestoreDatabaseId = isFirebaseEmulatorEnabled()
+        ? "(default)"
+        : runtimeTargets.firestoreDatabaseId;
+      firestoreDb = firestoreModule.getFirestore(firebaseApp, firestoreDatabaseId);
       realtimeDb = hasRealtimeDatabaseConfig(config) ? databaseModule.getDatabase(firebaseApp) : null;
       firebaseAuth = authModule.getAuth(firebaseApp);
-      firebaseFunctions = functionsModule.getFunctions(firebaseApp, "us-central1");
-      firebaseStorage = config.storageBucket ? storageModule.getStorage(firebaseApp) : null;
+      firebaseFunctions = functionsModule.getFunctions(firebaseApp, runtimeTargets.functionsRegion);
+      firebaseStorage = config.storageBucket
+        ? storageModule.getStorage(firebaseApp, `gs://${config.storageBucket.replace(/^gs:\/\//, "")}`)
+        : null;
 
       if (isFirebaseEmulatorEnabled() && !globalThis.__CRUISER_FIREBASE_EMULATORS_CONNECTED__) {
         const host = import.meta.env.VITE_FIREBASE_EMULATOR_HOST ?? "127.0.0.1";

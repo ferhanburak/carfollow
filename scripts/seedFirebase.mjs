@@ -9,6 +9,7 @@ if (process.env.CRUISER_ALLOW_LEGACY_SEED !== "true") {
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY,
   projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  firestoreDatabaseId: process.env.VITE_FIRESTORE_DATABASE_ID || "carfollow-eu",
   databaseURL: process.env.VITE_FIREBASE_DATABASE_URL,
 };
 
@@ -97,7 +98,7 @@ async function putFirestoreDocument(documentPath, payload) {
   const normalizedPath = trimSlashes(documentPath);
   const url =
     `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}` +
-    `/databases/(default)/documents/${normalizedPath}?key=${firebaseConfig.apiKey}`;
+    `/databases/${firebaseConfig.firestoreDatabaseId}/documents/${normalizedPath}?key=${firebaseConfig.apiKey}`;
 
   return requestJson(url, {
     method: "PATCH",

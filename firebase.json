@@ -1,17 +1,39 @@
 {
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
+  "firestore": [
+    {
+      "database": "(default)",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
+    },
+    {
+      "database": "carfollow-eu",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
+    }
+  ],
   "functions": {
     "source": "functions"
   },
-  "storage": {
-    "rules": "storage.rules"
-  },
-  "database": {
-    "rules": "database.rules.json"
-  },
+  "storage": [
+    {
+      "bucket": "carfollow-75750.firebasestorage.app",
+      "rules": "storage.rules"
+    },
+    {
+      "bucket": "carfollow-75750-media-eu",
+      "rules": "storage.rules"
+    }
+  ],
+  "database": [
+    {
+      "instance": "carfollow-75750-default-rtdb",
+      "rules": "database.rules.json"
+    },
+    {
+      "instance": "carfollow-75750-eu",
+      "rules": "database.rules.json"
+    }
+  ],
   "emulators": {
     "auth": {
       "port": 9099

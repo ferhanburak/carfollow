@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 
 const PROJECT_ID = "carfollow-75750";
 const APP_ID = "cruiser-app-prod";
-const FUNCTIONS_BASE = `https://us-central1-${PROJECT_ID}.cloudfunctions.net`;
+const FIRESTORE_DATABASE_ID = "carfollow-eu";
+const FUNCTIONS_REGION = "europe-west1";
+const FUNCTIONS_BASE = `https://${FUNCTIONS_REGION}-${PROJECT_ID}.cloudfunctions.net`;
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const runId = Date.now().toString();
 const suffix = runId.slice(-6);
@@ -106,10 +108,10 @@ async function deleteForumFixtures(threadIds) {
   const accessToken = token?.access_token;
   if (!accessToken) throw new Error("Firebase CLI did not return an access token.");
   const names = threadIds.map((threadId) => (
-    `projects/${PROJECT_ID}/databases/(default)/documents/artifacts/${APP_ID}/public/data/forumThreads/${threadId}`
+    `projects/${PROJECT_ID}/databases/${FIRESTORE_DATABASE_ID}/documents/artifacts/${APP_ID}/public/data/forumThreads/${threadId}`
   ));
   const response = await fetch(
-    `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:batchWrite`,
+    `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${FIRESTORE_DATABASE_ID}/documents:batchWrite`,
     {
       method: "POST",
       headers: {

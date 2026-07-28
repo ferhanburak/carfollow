@@ -3,14 +3,15 @@ import path from "node:path";
 
 const PROJECT_ID = "carfollow-75750";
 const APP_ID = "cruiser-app-prod";
-const STORAGE_BUCKET = "carfollow-75750.firebasestorage.app";
+const FIRESTORE_DATABASE_ID = "carfollow-eu";
+const STORAGE_BUCKET = "carfollow-75750-media-eu";
 const runId = process.argv.find((value) => value.startsWith("--run-id="))?.split("=")[1] ?? "";
 const execute = process.argv.includes("--execute");
 const allowPartial = process.argv.includes("--allow-partial");
 const confirmation = process.argv.find((value) => value.startsWith("--confirm="))?.slice(10) ?? "";
 const expectedConfirmation = `DELETE-POSTMAN-E2E-${runId}`;
 const publicRoot = `artifacts/${APP_ID}/public/data`;
-const firestoreBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+const firestoreBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${FIRESTORE_DATABASE_ID}/documents`;
 
 if (!/^\d{10,20}$/.test(runId)) {
   throw new Error("A numeric Postman run id is required: --run-id=1234567890123");
@@ -116,7 +117,7 @@ async function deleteDocuments(documents, token) {
   const names = [...new Set(documents.map((document) => document.name))];
   for (let index = 0; index < names.length; index += 400) {
     const { body } = await requestJson(
-      `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:batchWrite`,
+      `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${FIRESTORE_DATABASE_ID}/documents:batchWrite`,
       token,
       { method: "POST", body: JSON.stringify({ writes: names.slice(index, index + 400).map((name) => ({ delete: name })) }) },
     );

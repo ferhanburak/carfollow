@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PROJECT_ID = "carfollow-75750";
-const REGION = "us-central1";
+const REGION = "europe-west1";
 const execute = process.argv.includes("--execute");
 const confirmation = process.argv.find((value) => value.startsWith("--confirm="))?.slice(10) ?? "";
 const expectedConfirmation = "PUBLIC-CALLABLE-INVOKERS";

@@ -3,10 +3,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const functionsBase = "https://us-central1-carfollow-75750.cloudfunctions.net";
-const firestoreBase = "https://firestore.googleapis.com/v1/projects/carfollow-75750/databases/(default)/documents/artifacts/cruiser-app-prod/public/data";
-const firestoreDocumentsBase = "https://firestore.googleapis.com/v1/projects/carfollow-75750/databases/(default)/documents";
-const storageBucket = "carfollow-75750.firebasestorage.app";
+const functionsBase = "https://europe-west1-carfollow-75750.cloudfunctions.net";
+const firestoreBase = "https://firestore.googleapis.com/v1/projects/carfollow-75750/databases/carfollow-eu/documents/artifacts/cruiser-app-prod/public/data";
+const firestoreDocumentsBase = "https://firestore.googleapis.com/v1/projects/carfollow-75750/databases/carfollow-eu/documents";
+const storageBucket = "carfollow-75750-media-eu";
 const runId = Date.now().toString();
 
 async function readLocalApiKey() {

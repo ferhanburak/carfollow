@@ -76,6 +76,8 @@ const result = spawnSync(
   [
     firebaseCliScript,
     "emulators:exec",
+    "--config",
+    "firebase.emulator.json",
     "--only",
     "auth,firestore,database,storage",
     "--project",

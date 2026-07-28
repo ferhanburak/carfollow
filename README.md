@@ -109,16 +109,22 @@ Copy-Item .env.example .env
 - `VITE_FIREBASE_API_KEY`
 - `VITE_FIREBASE_AUTH_DOMAIN`
 - `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIRESTORE_DATABASE_ID`
 - `VITE_FIREBASE_STORAGE_BUCKET`
 - `VITE_FIREBASE_MESSAGING_SENDER_ID`
 - `VITE_FIREBASE_APP_ID`
 - `VITE_FIREBASE_DATABASE_URL`
+- `VITE_FIREBASE_FUNCTIONS_REGION`
 - `VITE_FIREBASE_APPCHECK_SITE_KEY` after registering the web app in Firebase App Check
 
 3. Switch the data source mode:
 
 ```text
 VITE_CRUISER_DATA_SOURCE=firebase
+VITE_FIRESTORE_DATABASE_ID=carfollow-eu
+VITE_FIREBASE_FUNCTIONS_REGION=europe-west1
+VITE_FIREBASE_DATABASE_URL=https://carfollow-75750-eu.europe-west1.firebasedatabase.app
+VITE_FIREBASE_STORAGE_BUCKET=carfollow-75750-media-eu
 ```
 
 4. Open Firebase Authentication -> `Sign-in method`, enable `Email/Password`, and keep `Anonymous` disabled.
@@ -209,6 +215,7 @@ The app can be installed from supported mobile browsers. Foreground GPS works ov
 - `npm run test:functions` runs the backend domain tests
 - `npm run backup:schedules` shows the active Firestore backup schedule
 - `npm run backup:list` lists available Firestore backups
+- `npm run backend:benchmark` runs a disposable two-user EU backend latency flow and cleans up its fixtures
 
 ## Local Firebase Emulators
 
@@ -389,7 +396,7 @@ Install and validate the Functions package with:
 .\use-node22.ps1 npm run test:functions
 ```
 
-The callable backend is deployed to `us-central1` on Node.js 22. Redeploy it with:
+The callable backend is deployed to `europe-west1` on Node.js 22. Redeploy it with:
 
 ```powershell
 firebase deploy --only functions --project carfollow-75750

@@ -11,3 +11,6 @@ firestore-debug.log
 database-debug.log
 ui-debug.log
 tools/
+
+.vercel
+.env*
