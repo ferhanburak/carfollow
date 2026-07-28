@@ -1,4 +1,4 @@
-const CACHE_NAME = "cruiser-shell-v2";
+const CACHE_NAME = "cruiser-shell-v3";
 const SHELL_ASSETS = ["/", "/offline.html", "/manifest.webmanifest", "/cruiser-road-mark.png", "/icons/cruiser-192.png", "/icons/cruiser-512.png"];
 
 self.addEventListener("install", (event) => {
