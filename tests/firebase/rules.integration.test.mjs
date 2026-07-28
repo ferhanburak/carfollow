@@ -756,6 +756,26 @@ describe("Realtime Database security rules", { concurrency: false }, () => {
     await assertFails(getDatabaseValue(databaseRef(unauthenticatedDb, realtimePath("presence"))));
   });
 
+  it("keeps server rate-limit counters inaccessible to clients", async () => {
+    const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).database();
+    const rateLimitPath = realtimePath(`serverRateLimits/${OWNER_ID}/requestFriendship`);
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDatabaseValue(databaseRef(context.database(), rateLimitPath), {
+        count: 1,
+        windowStartMs: 1720958400000,
+        windowEndMs: 1720958460000,
+      });
+    });
+
+    await assertFails(getDatabaseValue(databaseRef(ownerDb, rateLimitPath)));
+    await assertFails(setDatabaseValue(databaseRef(ownerDb, rateLimitPath), {
+      count: 0,
+      windowStartMs: 0,
+      windowEndMs: 0,
+    }));
+  });
+
   it("rejects invalid telemetry and cross-user telemetry writes", async () => {
     const ownerDb = testEnvironment.authenticatedContext(OWNER_ID).database();
     const otherDb = testEnvironment.authenticatedContext(OTHER_ID).database();

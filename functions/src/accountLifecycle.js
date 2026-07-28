@@ -45,6 +45,7 @@ function buildRealtimeAccountDeletionUpdates({ appId, userId, threads = [] }) {
   const updates = {
     [`${root}/presence/${userId}`]: null,
     [`${root}/telemetry/${userId}`]: null,
+    [`${root}/serverRateLimits/${userId}`]: null,
     [`${root}/directMessages/userThreads/${userId}`]: null,
   };
 

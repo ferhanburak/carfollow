@@ -4,6 +4,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { getStorage } = require("firebase-admin/storage");
 const logger = require("firebase-functions/logger");
 const { setGlobalOptions } = require("firebase-functions/v2");
+const { onInit } = require("firebase-functions/v2/core");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const {
@@ -102,6 +103,7 @@ const {
   hasRecentAuthentication,
   requireDeletionConfirmation,
 } = require("./accountLifecycle");
+const { evaluateRateLimit } = require("./rateLimit");
 
 const FUNCTIONS_REGION = process.env.CRUISER_FUNCTIONS_REGION || "europe-west1";
 const FIRESTORE_DATABASE_ID = process.env.CRUISER_FIRESTORE_DATABASE_ID || "carfollow-eu";
@@ -129,6 +131,27 @@ const APP_ID = process.env.CRUISER_APP_ID || "cruiser-app-prod";
 const APP_CHECK_ENFORCED = process.env.ENFORCE_APP_CHECK === "true";
 const LATENCY_SENSITIVE_OPTIONS = Object.freeze({ minInstances: 1 });
 
+onInit(async () => {
+  const startedAt = Date.now();
+  const results = await Promise.allSettled([
+    db.doc(`artifacts/${APP_ID}/public/data/system/runtimeWarmup`).get(),
+    realtimeDb.ref(`artifacts/${APP_ID}/realtime/runtimeWarmup`).get(),
+  ]);
+  const rejected = results.filter((result) => result.status === "rejected");
+
+  if (rejected.length) {
+    logger.warn("runtime.warmup.partial", {
+      durationMs: Date.now() - startedAt,
+      failures: rejected.length,
+    });
+    return;
+  }
+
+  logger.info("runtime.warmup.complete", {
+    durationMs: Date.now() - startedAt,
+  });
+});
+
 function publicCollection(collectionName) {
   return db.collection(`artifacts/${APP_ID}/public/data/${collectionName}`);
 }
@@ -147,29 +170,26 @@ function publicDocument(collectionName, documentId) {
 
 async function enforceCallableRateLimit(userId, action, { limit, windowSeconds }) {
   const safeAction = String(action).replace(/[^0-9A-Za-z_-]/g, "-").slice(0, 100);
-  const rateLimitRef = privateUserDocument(userId, "rateLimits", safeAction);
-  const now = Date.now();
-
-  await db.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(rateLimitRef);
-    const current = snapshot.exists ? snapshot.data() : {};
-    const currentWindowEnd = Number(current.windowEndMs ?? 0);
-    const isCurrentWindow = currentWindowEnd > now;
-    const nextCount = isCurrentWindow ? Number(current.count ?? 0) + 1 : 1;
-    if (isCurrentWindow && nextCount > limit) {
-      throw new HttpsError("resource-exhausted", "Too many requests. Please wait and try again.");
-    }
-
-    const windowEndMs = isCurrentWindow ? currentWindowEnd : now + windowSeconds * 1000;
-    transaction.set(rateLimitRef, {
-      action: safeAction,
-      count: nextCount,
-      windowStartMs: isCurrentWindow ? Number(current.windowStartMs ?? now) : now,
-      windowEndMs,
-      expiresAt: admin.firestore.Timestamp.fromMillis(windowEndMs + 24 * 60 * 60 * 1000),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  const rateLimitRef = realtimeDb.ref(
+    `artifacts/${APP_ID}/realtime/serverRateLimits/${userId}/${safeAction}`,
+  );
+  let limitExceeded = false;
+  const result = await rateLimitRef.transaction((current) => {
+    const decision = evaluateRateLimit(current, {
+      limit,
+      windowSeconds,
+      nowMs: Date.now(),
     });
-  });
+    limitExceeded = !decision.allowed;
+    return decision.allowed ? decision.state : undefined;
+  }, undefined, false);
+
+  if (!result.committed && limitExceeded) {
+    throw new HttpsError("resource-exhausted", "Too many requests. Please wait and try again.");
+  }
+  if (!result.committed) {
+    throw new HttpsError("unavailable", "Request limit service is temporarily unavailable.");
+  }
 }
 
 function secureCall(name, optionsOrHandler, maybeHandler) {

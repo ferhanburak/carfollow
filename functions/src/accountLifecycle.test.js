@@ -49,7 +49,9 @@ test("account deletion avoids overlapping Realtime Database update paths", () =>
     }],
   });
   const root = "artifacts/cruiser-app-prod/realtime/directMessages";
+  const realtimeRoot = "artifacts/cruiser-app-prod/realtime";
 
+  assert.equal(updates[`${realtimeRoot}/serverRateLimits/driver-1`], null);
   assert.equal(updates[`${root}/userThreads/driver-1`], null);
   assert.equal(updates[`${root}/userThreads/driver-1/thread-1`], undefined);
   assert.equal(updates[`${root}/userThreads/driver-2/thread-1`], null);

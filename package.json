@@ -23,6 +23,8 @@
     "postman:cleanup": "node scripts/cleanupPostmanE2E.mjs",
     "backend:invokers": "node scripts/auditCallableInvokers.mjs",
     "backend:benchmark": "node scripts/benchmarkWriteLatency.mjs",
+    "backend:deploy:critical": "firebase deploy --only functions:requestFriendship,functions:getPublicDriverProfile,functions:ensureDirectMessageThread,functions:sendDirectMessage,functions:inviteClanMember,functions:createForumThread --project carfollow-75750 --force --non-interactive && npm run backend:warm",
+    "backend:warm": "node scripts/warmCriticalFunctions.mjs",
     "appcheck:status": "node scripts/checkAppCheckReadiness.mjs"
   },
   "dependencies": {
