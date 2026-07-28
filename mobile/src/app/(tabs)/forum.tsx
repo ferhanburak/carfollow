@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -45,6 +46,7 @@ export default function ForumScreen() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [category, setCategory] = useState<ForumThread['category']>('roadlife');
   const [body, setBody] = useState('');
+  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState('');
 
@@ -61,17 +63,44 @@ export default function ForumScreen() {
     setSubmitting(true);
     setFeedback('');
     try {
-      await createForumThread(category, body);
+      await createForumThread(category, body, selectedImage);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setBody('');
+      setSelectedImage(null);
       setComposerOpen(false);
       setFeedback('Paylaşım yayınlandı.');
-    } catch {
+    } catch (error) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setFeedback('Paylaşım gönderilemedi. Lütfen tekrar deneyin.');
+      setFeedback(error instanceof Error
+        ? error.message
+        : 'Paylaşım gönderilemedi. Lütfen tekrar deneyin.');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const chooseImage = async () => {
+    setFeedback('');
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setFeedback('Görsel seçmek için fotoğraf erişimine izin vermelisin.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: false,
+      exif: false,
+      mediaTypes: ['images'],
+      quality: 0.86,
+      selectionLimit: 1,
+    });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if (Number(asset.fileSize ?? 0) > 10 * 1024 * 1024) {
+      setFeedback('Görsel en fazla 10 MB olabilir.');
+      return;
+    }
+    setSelectedImage(asset);
+    void Haptics.selectionAsync();
   };
 
   return (
@@ -153,6 +182,7 @@ export default function ForumScreen() {
                 onPress={() => {
                   setComposerOpen(false);
                   setBody('');
+                  setSelectedImage(null);
                   setFeedback('');
                 }}
                 style={styles.closeButton}
@@ -170,9 +200,39 @@ export default function ForumScreen() {
               textAlignVertical="top"
               value={body}
             />
+            {selectedImage ? (
+              <View style={styles.selectedImage}>
+                <Image
+                  contentFit="cover"
+                  source={{ uri: selectedImage.uri }}
+                  style={styles.selectedImagePreview}
+                />
+                <Pressable
+                  accessibilityLabel="Seçilen görseli kaldır"
+                  onPress={() => setSelectedImage(null)}
+                  style={styles.removeImage}
+                >
+                  <Ionicons color={colors.white} name="close" size={17} />
+                </Pressable>
+                <View style={styles.imageReady}>
+                  <Ionicons color={colors.lime} name="checkmark-circle" size={15} />
+                  <Text style={styles.imageReadyText}>Görsel hazır</Text>
+                </View>
+              </View>
+            ) : null}
             <View style={styles.composerActions}>
               <View style={styles.futureActions}>
-                <Ionicons color={colors.textFaint} name="image-outline" size={20} />
+                <Pressable
+                  accessibilityLabel="Görsel seç"
+                  onPress={() => void chooseImage()}
+                  style={({ pressed }) => [styles.mediaAction, pressed && styles.pressed]}
+                >
+                  <Ionicons
+                    color={selectedImage ? colors.lime : colors.textFaint}
+                    name="image-outline"
+                    size={21}
+                  />
+                </Pressable>
                 <Ionicons color={colors.textFaint} name="location-outline" size={20} />
               </View>
               <Pressable
@@ -348,7 +408,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  futureActions: { flexDirection: 'row', gap: 16, paddingLeft: 4 },
+  selectedImage: {
+    height: 176,
+    overflow: 'hidden',
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundRaised,
+  },
+  selectedImagePreview: { width: '100%', height: '100%' },
+  removeImage: {
+    position: 'absolute',
+    top: 9,
+    right: 9,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(5,6,5,0.82)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageReady: {
+    position: 'absolute',
+    left: 10,
+    bottom: 10,
+    minHeight: 32,
+    paddingHorizontal: 11,
+    borderRadius: 16,
+    backgroundColor: 'rgba(5,6,5,0.84)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  imageReadyText: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 10,
+  },
+  futureActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  mediaAction: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   publish: {
     width: 48,
     height: 48,

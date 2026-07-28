@@ -40,7 +40,32 @@
             "image": "./assets/images/cruiser-road-mark.png"
           }
         }
-      ]
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "CRUISER, sürüş hızını, mesafeyi ve haritadaki konumunu hesaplamak için konumuna erişir.",
+          "locationAlwaysAndWhenInUsePermission": "CRUISER, aktif sürüş oturumunu ekran kapalıyken de sürdürebilmek için konumuna erişir.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CRUISER, profilinde ve topluluk gönderilerinde paylaşacağın görselleri seçebilmek için fotoğraflarına erişir.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#a3e635",
+          "defaultChannel": "cruiser-alerts"
+        }
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
