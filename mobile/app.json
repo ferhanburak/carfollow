@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "CRUISER",
+    "slug": "carfollow-cruiser",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/cruiser-road-mark.png",
+    "scheme": "cruiser",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#070807",
+    "ios": {
+      "bundleIdentifier": "com.ferhanburak.cruiser",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.ferhanburak.cruiser",
+      "adaptiveIcon": {
+        "backgroundColor": "#070807",
+        "foregroundImage": "./assets/images/cruiser-road-mark.png",
+        "monochromeImage": "./assets/images/cruiser-road-mark.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/cruiser-road-mark.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#070807",
+          "image": "./assets/images/cruiser-road-mark.png",
+          "imageWidth": 150,
+          "dark": {
+            "backgroundColor": "#070807",
+            "image": "./assets/images/cruiser-road-mark.png"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

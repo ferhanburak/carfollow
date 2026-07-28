@@ -14,3 +14,4 @@ tools/
 
 .vercel
 .env*
+!mobile/.env.example

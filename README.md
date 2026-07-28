@@ -16,6 +16,11 @@ CRUISER is a React + Vite + Tailwind CSS single page application for car and mot
 - React
 - Vite
 - Tailwind CSS v4
+- Expo SDK 57 / React Native (`mobile/`)
+
+## Mobile App
+
+Android ve iOS uygulaması web istemcisinden bağımsız olarak `mobile/` dizininde bulunur. İlk kurulum ve çalıştırma adımları için [mobile/README.md](mobile/README.md) dosyasına bakın.
 
 ## Project Structure
 
