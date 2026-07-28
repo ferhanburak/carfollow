@@ -116,18 +116,18 @@ function SegmentedControl({ ariaLabel, items, onChange, value, compact = false }
   return (
     <div
       aria-label={ariaLabel}
-      className={`relative grid overflow-hidden rounded-full border border-white/10 bg-black/35 p-1 ${
-        compact ? "w-[8.75rem]" : "w-full"
+      className={`relative grid overflow-hidden rounded-full border border-white/10 bg-black/35 p-0.5 ${
+        compact ? "w-[8.25rem] shrink-0" : "w-full"
       }`}
       role="group"
       style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
     >
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-1 left-1 top-1 rounded-full bg-lime-400 shadow-[0_0_18px_rgba(163,230,53,0.28)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        className="pointer-events-none absolute bottom-0.5 left-0.5 top-0.5 rounded-full bg-lime-400 shadow-[0_0_16px_rgba(163,230,53,0.24)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
         style={{
           transform: `translateX(${selectedIndex * 100}%)`,
-          width: `calc((100% - 0.5rem) / ${items.length})`,
+          width: `calc((100% - 0.25rem) / ${items.length})`,
         }}
       />
       {items.map((item) => (
@@ -137,8 +137,8 @@ function SegmentedControl({ ariaLabel, items, onChange, value, compact = false }
           aria-label={item.label}
           aria-pressed={value === item.key}
           onClick={() => onChange(item.key)}
-          className={`relative z-10 rounded-full px-1 font-bold transition-colors duration-300 active:scale-95 ${
-            compact ? "min-h-12 text-[11px]" : "min-h-12 text-[10px]"
+          className={`relative z-10 rounded-full px-1 font-semibold leading-none transition-colors duration-300 active:scale-95 ${
+            compact ? "min-h-10 text-xs" : "min-h-11 whitespace-nowrap text-xs"
           } ${value === item.key ? "text-black" : "text-neutral-400 hover:text-white"}`}
         >
           {compact ? item.shortLabel : item.label}
@@ -588,18 +588,20 @@ export function StatsScreen({
       {showLeaderboard ? (
       <div
         aria-label={`${activeLeaderboardPeriod.label} sürücü sıralaması`}
-        className="cursor-pointer rounded-[1.5rem] border border-white/10 bg-[#111111] p-3"
+        className="cursor-pointer rounded-[1.5rem] border border-white/10 bg-[#111111] p-3.5"
         onClick={(event) => toggleLeaderboardFromCard(event, setIndividualLeaderboardExpanded)}
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <button
             type="button"
             aria-expanded={individualLeaderboardExpanded}
             onClick={() => setIndividualLeaderboardExpanded((current) => !current)}
-            className="min-h-12 min-w-0 flex-1 rounded-xl px-1 text-left active:scale-[0.99]"
+            className="min-h-10 min-w-0 flex-1 rounded-xl px-0.5 text-left active:scale-[0.99]"
           >
-            <h3 className="text-base font-black">{activeLeaderboardPeriod.label} Sürücü Sıralaması</h3>
-            <p className="mt-0.5 text-[10px] text-neutral-500">
+            <h3 className="text-[15px] font-extrabold leading-5 tracking-[-0.015em]">
+              {activeLeaderboardPeriod.label} Sürücü Sıralaması
+            </h3>
+            <p className="mt-0.5 text-[10px] font-medium leading-4 text-neutral-500">
               {individualLeaderboardExpanded
                 ? "Tüm sürücüler"
                 : "İlk 5 sürücü (tümünü görmek için tıklayınız)"}
@@ -623,20 +625,20 @@ export function StatsScreen({
         </div>
         <div className="mt-2 grid grid-cols-3 gap-1.5">
           <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
-            <p className="text-[8px] uppercase tracking-[0.14em] text-neutral-500">Sıran</p>
-            <p className="mt-0.5 text-xs font-black text-lime-300">
+            <p className="text-[9px] font-semibold uppercase leading-3 tracking-[0.12em] text-neutral-500">Sıran</p>
+            <p className="mt-1 text-[13px] font-extrabold leading-4 text-lime-300 tabular-nums">
               #{individualLeaderboard.find((driver) => driver.plate === user.plate)?.rank ?? "--"}
             </p>
           </div>
           <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
-            <p className="text-[8px] uppercase tracking-[0.14em] text-neutral-500">{activeLeaderboardMetric.summaryLabel}</p>
-            <p className="mt-0.5 truncate text-xs font-black text-lime-300">
+            <p className="text-[9px] font-semibold uppercase leading-3 tracking-[0.12em] text-neutral-500">{activeLeaderboardMetric.summaryLabel}</p>
+            <p className="mt-1 truncate text-[13px] font-extrabold leading-4 text-lime-300 tabular-nums">
               {activeLeaderboardMetric.format(user[activeLeaderboardMetric.fieldKey])}
             </p>
           </div>
           <div className="rounded-xl border border-white/8 bg-black/20 px-2 py-2 text-center">
-            <p className="text-[8px] uppercase tracking-[0.14em] text-neutral-500">Skor</p>
-            <p className="mt-0.5 text-xs font-black text-lime-300">{user.driverScore}/100</p>
+            <p className="text-[9px] font-semibold uppercase leading-3 tracking-[0.12em] text-neutral-500">Skor</p>
+            <p className="mt-1 text-[13px] font-extrabold leading-4 text-lime-300 tabular-nums">{user.driverScore}/100</p>
           </div>
         </div>
         <div className="mt-3 space-y-2">
@@ -648,18 +650,18 @@ export function StatsScreen({
                 driver.plate === user.plate ? "border-lime-400/30 bg-lime-400/10" : "border-white/8 bg-black/20"
               }`}
             >
-              <button type="button" onClick={() => openProfileDrawer(driver, "leaderboard")} className="flex w-full items-center justify-between gap-3 text-left">
+              <button type="button" onClick={() => openProfileDrawer(driver, "leaderboard")} className="flex min-h-[3.25rem] w-full items-center justify-between gap-3 text-left">
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${getClanRankTone(driver.rank - 1)}`}>
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-extrabold tabular-nums ${getClanRankTone(driver.rank - 1)}`}>
                     #{driver.rank}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{driver.fullName}</p>
-                    <p className="truncate text-[11px] text-neutral-500">{driver.model}</p>
+                    <p className="truncate text-[13px] font-bold leading-4">{driver.fullName}</p>
+                    <p className="mt-0.5 truncate text-[10px] font-medium leading-4 text-neutral-500">{driver.model}</p>
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-sm font-black text-lime-300">
+                  <p className="text-[13px] font-extrabold leading-4 text-lime-300 tabular-nums">
                     {activeLeaderboardMetric.format(driver[activeLeaderboardMetric.fieldKey])}
                   </p>
                 </div>
@@ -673,18 +675,20 @@ export function StatsScreen({
       {showLeaderboard ? (
       <div
         aria-label={`${activeClanLeaderboardPeriod.label} klan sıralaması`}
-        className="cursor-pointer rounded-[1.5rem] border border-white/10 bg-[#111111] p-3"
+        className="cursor-pointer rounded-[1.5rem] border border-white/10 bg-[#111111] p-3.5"
         onClick={(event) => toggleLeaderboardFromCard(event, setClanLeaderboardExpanded)}
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <button
             type="button"
             aria-expanded={clanLeaderboardExpanded}
             onClick={() => setClanLeaderboardExpanded((current) => !current)}
-            className="min-h-12 min-w-0 flex-1 rounded-xl px-1 text-left active:scale-[0.99]"
+            className="min-h-10 min-w-0 flex-1 rounded-xl px-0.5 text-left active:scale-[0.99]"
           >
-            <h3 className="text-base font-black">{activeClanLeaderboardPeriod.label} Klan Sıralaması</h3>
-            <p className="mt-0.5 text-[10px] text-neutral-500">
+            <h3 className="text-[15px] font-extrabold leading-5 tracking-[-0.015em]">
+              {activeClanLeaderboardPeriod.label} Klan Sıralaması
+            </h3>
+            <p className="mt-0.5 text-[10px] font-medium leading-4 text-neutral-500">
               {clanLeaderboardExpanded
                 ? "Tüm klanlar"
                 : "İlk 5 klan (tümünü görmek için tıklayınız)"}
@@ -711,18 +715,18 @@ export function StatsScreen({
             <div key={clan.id} data-leaderboard-row className={`rounded-xl border p-2.5 ${
               clan.name === user.clan ? "border-lime-400/30 bg-lime-400/10" : "border-white/8 bg-black/20"
             }`}>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex min-h-[3.25rem] items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ${getClanRankTone(clan.rank - 1)}`}>
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-extrabold tabular-nums ${getClanRankTone(clan.rank - 1)}`}>
                     #{clan.rank}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{clan.name}</p>
-                    <p className="truncate text-[11px] text-neutral-500">{clan.members} üye</p>
+                    <p className="truncate text-[13px] font-bold leading-4">{clan.name}</p>
+                    <p className="mt-0.5 truncate text-[10px] font-medium leading-4 text-neutral-500">{clan.members} üye</p>
                   </div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="text-sm font-black text-lime-300">
+                  <p className="text-[13px] font-extrabold leading-4 text-lime-300 tabular-nums">
                     {activeClanLeaderboardMetric.format(clan[activeClanLeaderboardMetric.fieldKey])}
                   </p>
                 </div>

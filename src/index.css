@@ -1,9 +1,12 @@
+@import "@fontsource-variable/manrope";
 @import "tailwindcss";
 
 :root {
   color: #f5f5f5;
   background: #050505;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: "Manrope Variable", ui-sans-serif, sans-serif;
+  font-optical-sizing: auto;
+  font-synthesis: none;
   color-scheme: dark;
 }
 
