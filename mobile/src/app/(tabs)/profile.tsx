@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useState, type ReactNode } from 'react';
 import {
@@ -29,6 +29,7 @@ import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { colors, fonts } from '@/theme/colors';
 
 type Panel = 'settings' | 'service' | 'achievements' | null;
+type SettingsSection = 'privacy' | 'blocked' | 'vehicle' | 'account' | 'security';
 type Achievement = {
   key: string;
   title: string;
@@ -264,18 +265,23 @@ export default function ProfileScreen() {
         visible={panel === 'service'}
       />
 
-      <SettingsPanel
+      {panel === 'settings' || section === 'settings' ? <SettingsPanel
+        blockedDrivers={social.blocked}
         onClose={() => {
           setPanel(null);
           if (section === 'settings') router.replace('/(tabs)/profile');
         }}
         onLogout={() => void signOut()}
+        onUnblockDriver={async (targetUserId) => {
+          await social.unblockDriver(targetUserId);
+          showNotice('Sürücünün engeli kaldırıldı.');
+        }}
         profile={profile}
         refreshProfile={refreshProfile}
         showNotice={showNotice}
         userId={user?.uid ?? ''}
-        visible={panel === 'settings' || section === 'settings'}
-      />
+        visible
+      /> : null}
     </ScreenShell>
   );
 }
@@ -315,12 +321,16 @@ function PartChip({ odometer, part }: { odometer: number; part: VehiclePart }) {
 
 function ModalShell({
   children,
+  onBack,
   onClose,
+  subtitle,
   title,
   visible,
 }: {
   children: ReactNode;
+  onBack?: () => void;
   onClose: () => void;
+  subtitle?: string;
   title: string;
   visible: boolean;
 }) {
@@ -328,7 +338,17 @@ function ModalShell({
     <Modal animationType="slide" onRequestClose={onClose} visible={visible}>
       <View style={styles.modalRoot}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>{title}</Text>
+          <View style={styles.modalHeaderCopy}>
+            {onBack ? (
+              <Pressable accessibilityLabel="Geri" onPress={onBack} style={styles.backButton}>
+                <Ionicons name="arrow-back" size={21} color={colors.text} />
+              </Pressable>
+            ) : null}
+            <View style={styles.modalHeading}>
+              <Text numberOfLines={1} style={styles.modalTitle}>{title}</Text>
+              {subtitle ? <Text numberOfLines={1} style={styles.modalSubtitle}>{subtitle}</Text> : null}
+            </View>
+          </View>
           <Pressable onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={22} color={colors.text} />
           </Pressable>
@@ -505,16 +525,25 @@ function ServicePanel({
 }
 
 function SettingsPanel({
+  blockedDrivers,
   onClose,
   onLogout,
+  onUnblockDriver,
   profile,
   refreshProfile,
   showNotice,
   userId,
   visible,
 }: {
+  blockedDrivers: {
+    fullName?: string;
+    model?: string;
+    plate?: string;
+    userId: string;
+  }[];
   onClose: () => void;
   onLogout: () => void;
+  onUnblockDriver: (targetUserId: string) => Promise<void>;
   profile: ReturnType<typeof useAuth>['profile'];
   refreshProfile: () => Promise<void>;
   showNotice: (text: string) => void;
@@ -528,7 +557,15 @@ function SettingsPanel({
   const [garage, setGarage] = useState(profile?.garage || 'Garaj');
   const [region, setRegion] = useState(profile?.region || 'Belirtilmedi');
   const [avatar, setAvatar] = useState(profile?.avatar ?? '');
+  const [activeSection, setActiveSection] = useState<SettingsSection | null>(null);
   const [showPlate, setShowPlate] = useState(profile?.privacy?.showPlateOnLiveMap === true);
+  const [showRegion, setShowRegion] = useState(profile?.privacy?.showRegionInSearch === true);
+  const [locationPrecision, setLocationPrecision] = useState(
+    profile?.privacy?.locationPrecision || 'exact',
+  );
+  const [safeZoneEnabled, setSafeZoneEnabled] = useState(
+    profile?.privacy?.safeZoneEnabled !== false,
+  );
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
 
@@ -591,32 +628,151 @@ function SettingsPanel({
     }
   };
 
-  const savePrivacy = async (nextShowPlate: boolean) => {
-    setShowPlate(nextShowPlate);
+  const savePrivacy = async () => {
+    setBusy('privacy');
+    setError('');
     try {
       await callFirebase('updatePrivacySettings', {
         privacy: {
           ...(profile?.privacy ?? {}),
           plateSearchEnabled: true,
-          showPlateOnLiveMap: nextShowPlate,
+          showPlateOnLiveMap: showPlate,
           showModelInSearch: true,
-          showRegionInSearch: profile?.privacy?.showRegionInSearch === true,
-          locationPrecision: profile?.privacy?.locationPrecision || 'exact',
-          safeZoneEnabled: profile?.privacy?.safeZoneEnabled !== false,
+          showRegionInSearch: showRegion,
+          locationPrecision,
+          safeZoneEnabled,
         },
         acceptKvkk: true,
       });
       await refreshProfile();
+      showNotice('Gizlilik ve konum tercihleri güncellendi.');
     } catch (privacyError) {
-      setShowPlate(!nextShowPlate);
       setError(getFirebaseErrorMessage(privacyError));
+    } finally {
+      setBusy('');
     }
   };
 
+  const sections: {
+    code: string;
+    description: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    key: SettingsSection;
+    title: string;
+    value: string;
+  }[] = [
+    {
+      key: 'privacy',
+      code: '01',
+      icon: 'location-outline',
+      title: 'Gizlilik ve Konum',
+      description: 'Canlı harita görünürlüğü, konum hassasiyeti ve güvenli bölge.',
+      value: safeZoneEnabled ? 'Güvenli bölge açık' : 'Standart',
+    },
+    {
+      key: 'blocked',
+      code: '02',
+      icon: 'ban-outline',
+      title: 'Engellenen Kullanıcılar',
+      description: 'Engellediğin sürücüleri görüntüle ve engelleri yönet.',
+      value: `${blockedDrivers.length} sürücü`,
+    },
+    {
+      key: 'vehicle',
+      code: '03',
+      icon: 'car-sport-outline',
+      title: 'Araç ve Profil',
+      description: 'Araç bilgileri, kilometre, bölge ve profil fotoğrafı.',
+      value: profile?.model || 'Araç bilgisi',
+    },
+    {
+      key: 'account',
+      code: '04',
+      icon: 'folder-open-outline',
+      title: 'Hesap ve Veri Kontrolleri',
+      description: 'E-posta doğrulama, veri aktarımı ve hesap silme.',
+      value: firebaseAuth.currentUser?.emailVerified ? 'Doğrulandı' : 'Doğrulama gerekli',
+    },
+    {
+      key: 'security',
+      code: '05',
+      icon: 'shield-checkmark-outline',
+      title: 'Şifre ve Güvenlik',
+      description: 'Hesap e-postası ve güvenli şifre yenileme akışı.',
+      value: firebaseAuth.currentUser?.email || 'Hesap güvenliği',
+    },
+  ];
+  const currentSection = sections.find((entry) => entry.key === activeSection);
+  const closePanel = () => {
+    setActiveSection(null);
+    setError('');
+    onClose();
+  };
+
   return (
-    <ModalShell onClose={onClose} title="Ayarlar" visible={visible}>
+    <ModalShell
+      onBack={activeSection ? () => {
+        setActiveSection(null);
+        setError('');
+      } : undefined}
+      onClose={closePanel}
+      subtitle={currentSection?.description || 'Hesap, araç, konum ve güvenlik kontrolleri'}
+      title={currentSection?.title || 'Ayarlar Merkezi'}
+      visible={visible}
+    >
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Text style={styles.modalSectionTitle}>Profil ve Araç</Text>
+      {!activeSection ? (
+        <>
+          <View style={styles.settingsIdentity}>
+            <View style={styles.settingsIdentityIcon}>
+              <Ionicons name="person-outline" size={21} color={colors.lime} />
+            </View>
+            <View style={styles.settingsIdentityCopy}>
+              <Text numberOfLines={1} style={styles.settingsIdentityName}>
+                {profile?.fullName || 'Sürücü'}
+              </Text>
+              <Text numberOfLines={1} style={styles.settingsIdentityPlate}>
+                {profile?.plate || profile?.model}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.settingsMenu}>
+            {sections.map((item) => (
+              <Pressable
+                key={item.key}
+                onPress={() => setActiveSection(item.key)}
+                style={({ pressed }) => [styles.settingsMenuItem, pressed && styles.pressed]}
+              >
+                <View style={styles.settingsMenuCode}>
+                  <Ionicons name={item.icon} size={20} color={colors.lime} />
+                  <Text style={styles.settingsMenuCodeText}>{item.code}</Text>
+                </View>
+                <View style={styles.settingsMenuCopy}>
+                  <Text style={styles.settingsMenuTitle}>{item.title}</Text>
+                  <Text numberOfLines={2} style={styles.settingsMenuDescription}>
+                    {item.description}
+                  </Text>
+                  <Text numberOfLines={1} style={styles.settingsMenuValue}>{item.value}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.logoutArea}>
+            <SettingAction
+              danger
+              icon="log-out-outline"
+              label="Oturumu Kapat"
+              onPress={onLogout}
+            />
+            <Text style={styles.logoutHint}>
+              Hesap verilerin silinmez; yalnızca bu cihazdaki oturum kapanır.
+            </Text>
+          </View>
+        </>
+      ) : null}
+      {activeSection === 'vehicle' ? (
+        <>
       <Pressable onPress={() => void pickAvatar()} style={styles.avatarEditor}>
         {avatar ? <Image source={{ uri: avatar }} style={styles.avatarEditorImage} /> : (
           <Ionicons name="camera" size={24} color={colors.black} />
@@ -634,29 +790,141 @@ function SettingsPanel({
           ? <ActivityIndicator color={colors.black} />
           : <Text style={styles.saveButtonText}>Değişiklikleri Kaydet</Text>}
       </Pressable>
-
-      <Text style={styles.modalSectionTitle}>Gizlilik ve Konum</Text>
+        </>
+      ) : null}
+      {activeSection === 'privacy' ? (
+        <View style={styles.settingsSection}>
       <View style={styles.settingRow}>
         <View style={styles.settingCopy}>
           <Text style={styles.settingTitle}>Canlı haritada plakayı göster</Text>
           <Text style={styles.settingDescription}>Kapalıyken diğer sürücüler plakanızı görmez.</Text>
         </View>
         <Switch
-          onValueChange={(value) => void savePrivacy(value)}
+          onValueChange={setShowPlate}
           thumbColor={showPlate ? colors.black : colors.textMuted}
           trackColor={{ false: colors.surfaceAlt, true: colors.lime }}
           value={showPlate}
         />
       </View>
-
-      <Text style={styles.modalSectionTitle}>Hesap ve Veri</Text>
+      <View style={styles.settingRow}>
+        <View style={styles.settingCopy}>
+          <Text style={styles.settingTitle}>Aramada bölgeyi göster</Text>
+          <Text style={styles.settingDescription}>
+            Plaka aramasında yalnızca seçiminiz açıksa bölgeniz görünür.
+          </Text>
+        </View>
+        <Switch
+          onValueChange={setShowRegion}
+          thumbColor={showRegion ? colors.black : colors.textMuted}
+          trackColor={{ false: colors.surfaceAlt, true: colors.lime }}
+          value={showRegion}
+        />
+      </View>
+      <View style={styles.privacyCard}>
+        <Text style={styles.settingTitle}>Canlı harita konum hassasiyeti</Text>
+        <View style={styles.segmentedControl}>
+          {([
+            ['hidden', 'Gizli'],
+            ['approximate', 'Yaklaşık'],
+            ['exact', 'Tam'],
+          ] as const).map(([value, label]) => (
+            <Pressable
+              key={value}
+              onPress={() => setLocationPrecision(value)}
+              style={[
+                styles.segmentedOption,
+                locationPrecision === value && styles.segmentedOptionActive,
+              ]}
+            >
+              <Text style={[
+                styles.segmentedOptionText,
+                locationPrecision === value && styles.segmentedOptionTextActive,
+              ]}>
+                {label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+      <View style={styles.settingRow}>
+        <View style={styles.settingCopy}>
+          <Text style={styles.settingTitle}>Güvenli Bölge</Text>
+          <Text style={styles.settingDescription}>
+            Kayıtlı güvenli bölgede canlı konum paylaşımını durdurur.
+          </Text>
+        </View>
+        <Switch
+          onValueChange={setSafeZoneEnabled}
+          thumbColor={safeZoneEnabled ? colors.black : colors.textMuted}
+          trackColor={{ false: colors.surfaceAlt, true: colors.lime }}
+          value={safeZoneEnabled}
+        />
+      </View>
+      <Pressable
+        disabled={busy === 'privacy'}
+        onPress={() => void savePrivacy()}
+        style={[styles.saveButton, busy === 'privacy' && styles.disabled]}
+      >
+        {busy === 'privacy'
+          ? <ActivityIndicator color={colors.black} />
+          : <Text style={styles.saveButtonText}>Gizlilik Tercihlerini Kaydet</Text>}
+      </Pressable>
+        </View>
+      ) : null}
+      {activeSection === 'blocked' ? (
+        <View style={styles.settingsSection}>
+          {blockedDrivers.length ? blockedDrivers.map((driver) => (
+            <View key={driver.userId} style={styles.blockedDriver}>
+              <View style={styles.blockedDriverCopy}>
+                <Text numberOfLines={1} style={styles.blockedDriverName}>
+                  {driver.fullName || 'Sürücü'}
+                </Text>
+                <Text numberOfLines={1} style={styles.blockedDriverMeta}>
+                  {driver.model || driver.plate || 'Araç bilgisi yok'}
+                </Text>
+              </View>
+              <Pressable
+                disabled={busy === `unblock:${driver.userId}`}
+                onPress={async () => {
+                  setBusy(`unblock:${driver.userId}`);
+                  setError('');
+                  try {
+                    await onUnblockDriver(driver.userId);
+                  } catch (unblockError) {
+                    setError(getFirebaseErrorMessage(unblockError));
+                  } finally {
+                    setBusy('');
+                  }
+                }}
+                style={({ pressed }) => [styles.unblockButton, pressed && styles.pressed]}
+              >
+                {busy === `unblock:${driver.userId}`
+                  ? <ActivityIndicator color={colors.text} size="small" />
+                  : <Text style={styles.unblockButtonText}>Engeli Kaldır</Text>}
+              </Pressable>
+            </View>
+          )) : (
+            <View style={styles.settingsEmpty}>
+              <Ionicons name="shield-checkmark-outline" size={28} color={colors.lime} />
+              <Text style={styles.settingsEmptyTitle}>Engellenen sürücü yok</Text>
+              <Text style={styles.settingsEmptyText}>
+                Engellediğin kullanıcılar burada görünecek.
+              </Text>
+            </View>
+          )}
+        </View>
+      ) : null}
+      {activeSection === 'account' ? (
+        <View style={styles.settingsSection}>
       <SettingAction
-        icon="key-outline"
-        label="Şifremi Sıfırla"
+        icon="mail-outline"
+        label={firebaseAuth.currentUser?.emailVerified
+          ? 'E-posta Doğrulandı'
+          : 'Doğrulama E-postası Gönder'}
         onPress={async () => {
-          if (!firebaseAuth.currentUser?.email) return;
-          await sendPasswordResetEmail(firebaseAuth, firebaseAuth.currentUser.email);
-          showNotice('Şifre sıfırlama e-postası gönderildi.');
+          if (!firebaseAuth.currentUser || firebaseAuth.currentUser.emailVerified) return;
+          await sendEmailVerification(firebaseAuth.currentUser);
+          showNotice('Doğrulama e-postası gönderildi.');
         }}
       />
       <SettingAction
@@ -667,7 +935,6 @@ function SettingsPanel({
           showNotice('Veri paketi güvenli şekilde hazırlandı.');
         }}
       />
-      <SettingAction icon="log-out-outline" label="Oturumu Kapat" onPress={onLogout} danger />
       <SettingAction
         danger
         icon="trash-outline"
@@ -693,6 +960,30 @@ function SettingsPanel({
           ],
         )}
       />
+        </View>
+      ) : null}
+      {activeSection === 'security' ? (
+        <View style={styles.settingsSection}>
+          <View style={styles.securityEmail}>
+            <Text style={styles.securityLabel}>Hesap E-postası</Text>
+            <Text selectable style={styles.securityValue}>
+              {firebaseAuth.currentUser?.email || 'E-posta bulunamadı'}
+            </Text>
+            <Text style={styles.securityHint}>
+              Şifre yenileme bağlantısı bu e-posta adresine gönderilir.
+            </Text>
+          </View>
+          <SettingAction
+            icon="key-outline"
+            label="Şifre Değiştirme Bağlantısı Gönder"
+            onPress={async () => {
+              if (!firebaseAuth.currentUser?.email) return;
+              await sendPasswordResetEmail(firebaseAuth, firebaseAuth.currentUser.email);
+              showNotice('Şifre sıfırlama e-postası gönderildi.');
+            }}
+          />
+        </View>
+      ) : null}
     </ModalShell>
   );
 }
@@ -1008,7 +1299,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  modalHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  modalHeading: { flex: 1, minWidth: 0 },
   modalTitle: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 22 },
+  modalSubtitle: {
+    marginTop: 3,
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 9,
+  },
+  backButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.black,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   closeButton: {
     width: 42,
     height: 42,
@@ -1120,6 +1435,102 @@ const styles = StyleSheet.create({
   },
   avatarEditorImage: { width: '100%', height: '100%' },
   avatarLoader: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(163,230,53,0.7)' },
+  settingsIdentity: {
+    minHeight: 72,
+    padding: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.limeMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+  },
+  settingsIdentityIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.black,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsIdentityCopy: { flex: 1, minWidth: 0 },
+  settingsIdentityName: {
+    color: colors.text,
+    fontFamily: fonts.extraBold,
+    fontSize: 14,
+  },
+  settingsIdentityPlate: {
+    marginTop: 4,
+    color: colors.lime,
+    fontFamily: fonts.bold,
+    fontSize: 9,
+    letterSpacing: 1.2,
+  },
+  settingsMenu: { marginTop: 12, gap: 9 },
+  settingsMenuItem: {
+    minHeight: 92,
+    padding: 11,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+  },
+  settingsMenuCode: {
+    width: 50,
+    height: 54,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.limeMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  settingsMenuCodeText: {
+    color: colors.lime,
+    fontFamily: fonts.bold,
+    fontSize: 7,
+    letterSpacing: 1,
+  },
+  settingsMenuCopy: { flex: 1, minWidth: 0 },
+  settingsMenuTitle: {
+    color: colors.text,
+    fontFamily: fonts.extraBold,
+    fontSize: 12,
+  },
+  settingsMenuDescription: {
+    marginTop: 3,
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 9,
+    lineHeight: 13,
+  },
+  settingsMenuValue: {
+    marginTop: 4,
+    color: colors.lime,
+    fontFamily: fonts.bold,
+    fontSize: 8,
+  },
+  logoutArea: {
+    marginTop: 14,
+    paddingTop: 13,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  logoutHint: {
+    color: colors.textFaint,
+    fontFamily: fonts.regular,
+    fontSize: 8,
+    lineHeight: 13,
+    textAlign: 'center',
+  },
+  settingsSection: { gap: 9 },
   settingRow: {
     minHeight: 70,
     padding: 13,
@@ -1134,6 +1545,122 @@ const styles = StyleSheet.create({
   settingCopy: { flex: 1 },
   settingTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 12 },
   settingDescription: { marginTop: 3, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9 },
+  privacyCard: {
+    padding: 13,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  segmentedControl: {
+    marginTop: 11,
+    padding: 3,
+    borderRadius: 15,
+    backgroundColor: colors.black,
+    flexDirection: 'row',
+    gap: 3,
+  },
+  segmentedOption: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentedOptionActive: { backgroundColor: colors.lime },
+  segmentedOptionText: {
+    color: colors.textMuted,
+    fontFamily: fonts.semibold,
+    fontSize: 9,
+  },
+  segmentedOptionTextActive: { color: colors.black, fontFamily: fonts.bold },
+  blockedDriver: {
+    minHeight: 72,
+    padding: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(244,63,94,0.18)',
+    backgroundColor: 'rgba(244,63,94,0.05)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  blockedDriverCopy: { flex: 1, minWidth: 0 },
+  blockedDriverName: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 12,
+  },
+  blockedDriverMeta: {
+    marginTop: 4,
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 9,
+  },
+  unblockButton: {
+    minWidth: 96,
+    minHeight: 42,
+    paddingHorizontal: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unblockButtonText: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 9,
+  },
+  settingsEmpty: {
+    paddingVertical: 40,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  settingsEmptyTitle: {
+    marginTop: 10,
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 13,
+  },
+  settingsEmptyText: {
+    marginTop: 5,
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 9,
+    textAlign: 'center',
+  },
+  securityEmail: {
+    padding: 15,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  securityLabel: {
+    color: colors.textFaint,
+    fontFamily: fonts.bold,
+    fontSize: 8,
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
+  },
+  securityValue: {
+    marginTop: 8,
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 12,
+  },
+  securityHint: {
+    marginTop: 8,
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 9,
+    lineHeight: 14,
+  },
   settingAction: {
     minHeight: 54,
     marginBottom: 8,
@@ -1149,6 +1676,7 @@ const styles = StyleSheet.create({
   settingActionDanger: { borderColor: 'rgba(244,63,94,0.25)', backgroundColor: 'rgba(244,63,94,0.06)' },
   settingActionText: { flex: 1, color: colors.text, fontFamily: fonts.bold, fontSize: 12 },
   settingActionTextDanger: { color: '#fda4af' },
+  disabled: { opacity: 0.55 },
   error: {
     padding: 11,
     borderRadius: 14,
