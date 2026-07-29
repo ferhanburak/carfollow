@@ -225,6 +225,10 @@ export function useSocialWorld() {
       `clan-${targetUserId}`,
       () => callFirebase('inviteClanMember', { clanId: currentClan?.id, targetUserId }),
     ),
+    cancelClanInvite: (targetUserId: string) => run(
+      `clan-${targetUserId}`,
+      () => callFirebase('cancelClanInvite', { clanId: currentClan?.id, targetUserId }),
+    ),
     respondClanInvite: (clanId: string, decision: 'accepted' | 'declined') => run(
       `clan-${clanId}`,
       async () => {
@@ -240,6 +244,32 @@ export function useSocialWorld() {
         targetUserId,
         role,
       }),
+    ),
+    removeClanMember: (targetUserId: string) => run(
+      `clan-member-${targetUserId}`,
+      () => callFirebase('removeClanMember', {
+        clanId: currentClan?.id,
+        targetUserId,
+      }),
+    ),
+    transferClanOwnership: (targetUserId: string) => run(
+      `clan-owner-${targetUserId}`,
+      async () => {
+        const response = await callFirebase('transferClanOwnership', {
+          clanId: currentClan?.id,
+          targetUserId,
+        });
+        await refreshProfile();
+        return response;
+      },
+    ),
+    inviteConvoy: (convoyId: string, targetUserId: string) => run(
+      `convoy-${convoyId}-${targetUserId}`,
+      () => callFirebase('inviteConvoyMember', { convoyId, targetUserId }),
+    ),
+    deleteClanEvent: (convoyId: string) => run(
+      `clan-event-${convoyId}`,
+      () => callFirebase('deleteConvoy', { convoyId }),
     ),
     leaveClan: () => run('leave-clan', async () => {
       const response = await callFirebase('leaveClan', { clanId: currentClan?.id });

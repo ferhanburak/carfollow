@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -12,32 +13,71 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ScreenShell, Surface } from '@/components/screen-shell';
+import { useMapWorld } from '@/hooks/use-map-world';
 import { useSocialWorld } from '@/hooks/use-social-world';
 import { useAppData } from '@/providers/app-data-provider';
 import { colors, fonts } from '@/theme/colors';
-import type { DirectMessageThread, DriverSummary } from '@/types/cruiser';
+import type {
+  DirectMessageThread,
+  DriverSummary,
+  MapPin,
+} from '@/types/cruiser';
 
-type Section = 'connections' | 'clan' | 'messages';
+type Action = {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void | Promise<unknown>;
+  primary?: boolean;
+  danger?: boolean;
+  disabled?: boolean;
+};
+
+type FriendshipState = 'none' | 'incoming' | 'outgoing' | 'accepted';
 
 export default function SocialScreen() {
   const params = useLocalSearchParams<{ section?: string }>();
+  const router = useRouter();
   const social = useSocialWorld();
+  const mapWorld = useMapWorld();
   const appData = useAppData();
-  const [section, setSection] = useState<Section>(
-    params.section === 'messages' ? 'messages' : 'connections',
-  );
+  const showMessages = params.section === 'messages';
   const [plate, setPlate] = useState('');
   const [searchResult, setSearchResult] = useState<DriverSummary | null>(null);
   const [searchComplete, setSearchComplete] = useState(false);
   const [notice, setNotice] = useState('');
   const [activeThread, setActiveThread] = useState<DirectMessageThread | null>(null);
   const [message, setMessage] = useState('');
+  const [clanCenterOpen, setClanCenterOpen] = useState(false);
+  const [convoyTarget, setConvoyTarget] = useState<DriverSummary | null>(null);
 
   const currentThread = activeThread
     ? appData.threads.find((item) => item.id === activeThread.id) ?? activeThread
     : null;
+
+  const hostableConvoys = useMemo(
+    () => mapWorld.pins.filter((pin) =>
+      pin.type === 'meet' &&
+      pin.eventMode === 'convoy' &&
+      pin.lifecycleStatus === 'planning' &&
+      ['host', 'manager'].includes(pin.viewerManagementRole ?? ''),
+    ),
+    [mapWorld.pins],
+  );
+
+  const clanEvents = useMemo(
+    () => mapWorld.pins.filter((pin) =>
+      pin.type === 'meet' &&
+      Boolean(social.currentClan) &&
+      (
+        pin.clanId === social.currentClan?.id ||
+        pin.createdByClan === social.currentClan?.name
+      ),
+    ),
+    [mapWorld.pins, social.currentClan],
+  );
 
   const announce = (text: string) => {
     setNotice(text);
@@ -79,37 +119,207 @@ export default function SocialScreen() {
     }
   };
 
+  const friendshipState = (driver: DriverSummary): FriendshipState => {
+    if (social.friends.some((item) => item.userId === driver.userId)) return 'accepted';
+    if (social.incoming.some((item) => item.userId === driver.userId)) return 'incoming';
+    if (social.outgoing.some((item) => item.userId === driver.userId)) return 'outgoing';
+    return driver.friendshipStatus ?? 'none';
+  };
+
+  const canInviteClan = ['owner', 'captain'].includes(social.membership?.role ?? '');
+
+  const clanInviteSent = (driver: DriverSummary) =>
+    social.outgoingClanInvites.some((invite) =>
+      invite.targetUserId === driver.userId && (invite.status ?? 'pending') === 'pending',
+    );
+
+  const openConvoyPicker = (driver: DriverSummary) => {
+    setConvoyTarget(driver);
+  };
+
+  const buildSearchActions = (driver: DriverSummary): Action[] => {
+    const state = friendshipState(driver);
+    const actions: Action[] = [];
+    if (state === 'none') {
+      actions.push({
+        icon: 'person-add',
+        label: 'Arkadaşlık isteği gönder',
+        primary: true,
+        onPress: async () => {
+          await social.requestFriend(driver.userId);
+          announce('Arkadaşlık isteği gönderildi.');
+        },
+      });
+    } else if (state === 'incoming') {
+      actions.push(
+        {
+          icon: 'checkmark',
+          label: 'Arkadaşlık isteğini kabul et',
+          primary: true,
+          onPress: async () => {
+            await social.respondFriend(driver.userId, 'accepted');
+            announce(`${driver.fullName || 'Sürücü'} ile artık arkadaşsınız.`);
+          },
+        },
+        {
+          icon: 'close',
+          label: 'Arkadaşlık isteğini reddet',
+          onPress: () => social.respondFriend(driver.userId, 'declined'),
+        },
+      );
+    } else if (state === 'outgoing') {
+      actions.push({
+        icon: 'checkmark-done',
+        label: 'Arkadaşlık isteği gönderildi',
+        disabled: true,
+        onPress: () => undefined,
+      });
+    } else {
+      actions.push({
+        icon: 'chatbubble',
+        label: 'Sohbet aç',
+        primary: true,
+        onPress: () => openChat(driver),
+      });
+    }
+    if (canInviteClan) {
+      actions.push({
+        icon: clanInviteSent(driver) ? 'checkmark-done' : 'shield',
+        label: clanInviteSent(driver) ? 'Klan daveti gönderildi' : 'Klana davet et',
+        disabled: clanInviteSent(driver),
+        onPress: async () => {
+          await social.inviteClan(driver.userId);
+          announce('Klan daveti gönderildi.');
+        },
+      });
+    }
+    if (hostableConvoys.length) {
+      actions.push({
+        icon: 'navigate',
+        label: 'Konvoya davet et',
+        onPress: () => openConvoyPicker(driver),
+      });
+    }
+    return actions;
+  };
+
+  if (showMessages) {
+    return (
+      <>
+        <ScreenShell scrollProps={{ keyboardShouldPersistTaps: 'handled' }}>
+          <View style={styles.pageHeading}>
+            <Pressable
+              accessibilityLabel="Social ekranına dön"
+              onPress={() => router.replace('/(tabs)/social')}
+              style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+            >
+              <Ionicons name="chevron-back" size={20} color={colors.text} />
+            </Pressable>
+            <View>
+              <Text style={styles.pageTitle}>Mesajlar</Text>
+              <Text style={styles.pageMeta}>{appData.threads.length} sohbet</Text>
+            </View>
+          </View>
+          <Surface>
+            <View style={styles.listGap}>
+              {appData.threads.length ? appData.threads.map((thread) => {
+                const latest = thread.messages.at(-1);
+                const unread = Boolean(
+                  latest &&
+                  latest.senderUserId !== social.currentUserId &&
+                  latest.senderUid !== social.currentUserId &&
+                  latest.createdAt > thread.lastReadAt,
+                );
+                return (
+                  <Pressable
+                    key={thread.id}
+                    onPress={() => {
+                      setActiveThread(thread);
+                      void appData.markThreadRead(thread.id);
+                    }}
+                    style={({ pressed }) => [
+                      styles.thread,
+                      unread && styles.threadUnread,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <DriverAvatar icon="chatbubble" />
+                    <View style={styles.copy}>
+                      <Text style={styles.driverName}>{thread.participantName}</Text>
+                      <Text numberOfLines={1} style={styles.driverModel}>
+                        {latest?.body || thread.participantModel || 'Sohbeti başlatın'}
+                      </Text>
+                    </View>
+                    {unread ? <View style={styles.unreadDot} /> : null}
+                    <Ionicons name="chevron-forward" size={17} color={colors.textFaint} />
+                  </Pressable>
+                );
+              }) : <EmptyState text="Henüz bir sohbetiniz yok." />}
+            </View>
+          </Surface>
+        </ScreenShell>
+        <ChatModal
+          message={message}
+          onChangeMessage={setMessage}
+          onClose={() => setActiveThread(null)}
+          onSend={async () => {
+            if (!currentThread || !message.trim()) return;
+            const body = message.trim();
+            setMessage('');
+            try {
+              await appData.sendMessage(currentThread.participantUserId, body);
+            } catch {
+              setMessage(body);
+            }
+          }}
+          thread={currentThread}
+        />
+      </>
+    );
+  }
+
   return (
-    <ScreenShell scrollProps={{ keyboardShouldPersistTaps: 'handled' }}>
-      <View style={styles.sections}>
-        <SectionButton
-          active={section === 'connections'}
-          icon="people"
-          label="Bağlantılar"
-          onPress={() => setSection('connections')}
-        />
-        <SectionButton
-          active={section === 'clan'}
-          icon="shield"
-          label="Klan"
-          onPress={() => setSection('clan')}
-        />
-        <SectionButton
-          active={section === 'messages'}
-          badge={appData.unreadConversationCount}
-          icon="chatbubbles"
-          label="Mesajlar"
-          onPress={() => setSection('messages')}
-        />
-      </View>
+    <>
+      <ScreenShell scrollProps={{ keyboardShouldPersistTaps: 'handled' }}>
+        {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+        {social.error ? <Text style={styles.error}>{social.error}</Text> : null}
+        {mapWorld.error ? <Text style={styles.error}>{mapWorld.error}</Text> : null}
 
-      {notice ? <Text style={styles.notice}>{notice}</Text> : null}
-      {social.error ? <Text style={styles.error}>{social.error}</Text> : null}
+        <Surface>
+          <View style={styles.titleRow}>
+            <Text style={styles.sectionTitle}>Klan Merkezi</Text>
+            <View style={styles.countPill}>
+              <Text style={styles.countText}>
+                {social.currentClan?.name || `${social.incomingClanInvites.length} davet`}
+              </Text>
+            </View>
+          </View>
+          {social.currentClan ? (
+            <ClanSummary
+              clanName={social.currentClan.name}
+              clanTag={social.currentClan.tag}
+              eventCount={clanEvents.length}
+              memberCount={social.members.length}
+              monthlyKm={social.currentClan.monthlyKm ?? 0}
+              onPress={() => setClanCenterOpen(true)}
+              role={social.membership?.role ?? 'member'}
+            />
+          ) : (
+            <ClanCreatePanel announce={announce} social={social} />
+          )}
+        </Surface>
 
-      {section === 'connections' ? (
-        <>
-          <Surface accent>
-            <Text style={styles.sectionTitle}>Plakadan Sürücü Bul</Text>
+        <Surface>
+          <View style={styles.titleRow}>
+            <Text style={styles.sectionTitle}>Arkadaş Bul ve Bağlan</Text>
+            <View style={styles.countPill}>
+              <Text style={styles.countText}>{social.friends.length} arkadaş</Text>
+            </View>
+          </View>
+
+          <View style={styles.searchPanel}>
+            <Text style={styles.groupTitle}>Kullanıcı Ara</Text>
+            <Text style={styles.groupMeta}>Tam plaka ile sürücü ara</Text>
             <View style={styles.searchRow}>
               <TextInput
                 autoCapitalize="characters"
@@ -126,6 +336,7 @@ export default function SocialScreen() {
                 value={plate}
               />
               <Pressable
+                accessibilityLabel="Sürücü ara"
                 disabled={social.busy === 'search'}
                 onPress={() => void search()}
                 style={({ pressed }) => [styles.searchButton, pressed && styles.pressed]}
@@ -137,38 +348,19 @@ export default function SocialScreen() {
             </View>
             {searchResult ? (
               <DriverCard
+                actions={buildSearchActions(searchResult)}
                 driver={searchResult}
-                actions={[
-                  {
-                    icon: 'person-add',
-                    label: 'Arkadaş Ekle',
-                    onPress: async () => {
-                      try {
-                        await social.requestFriend(searchResult.userId);
-                        announce('Arkadaşlık isteği gönderildi.');
-                      } catch {}
-                    },
-                  },
-                  ...(social.currentClan ? [{
-                    icon: 'shield' as const,
-                    label: 'Klana Davet Et',
-                    onPress: async () => {
-                      try {
-                        await social.inviteClan(searchResult.userId);
-                        announce('Klan daveti gönderildi.');
-                      } catch {}
-                    },
-                  }] : []),
-                ]}
+                showPlate
               />
             ) : searchComplete ? (
-              <Text style={styles.empty}>Bu plakaya ait erişilebilir bir sürücü bulunamadı.</Text>
+              <EmptyState text="Bu plakaya ait erişilebilir bir sürücü bulunamadı." />
             ) : null}
-          </Surface>
+          </View>
 
           <DriverGroup
-            empty="Yeni arkadaşlık isteğiniz yok."
-            title={`Gelen İstekler · ${social.incoming.length}`}
+            empty="Yeni arkadaşlık isteği yok."
+            title="Gelen İstekler"
+            count={social.incoming.length}
           >
             {social.incoming.map((driver) => (
               <DriverCard
@@ -177,13 +369,11 @@ export default function SocialScreen() {
                 actions={[
                   {
                     icon: 'checkmark',
-                    label: 'Kabul Et',
+                    label: 'Kabul et',
                     primary: true,
                     onPress: async () => {
-                      try {
-                        await social.respondFriend(driver.userId, 'accepted');
-                        announce(`${driver.fullName || 'Sürücü'} ile artık arkadaşsınız.`);
-                      } catch {}
+                      await social.respondFriend(driver.userId, 'accepted');
+                      announce(`${driver.fullName || 'Sürücü'} ile artık arkadaşsınız.`);
                     },
                   },
                   {
@@ -191,26 +381,34 @@ export default function SocialScreen() {
                     label: 'Reddet',
                     onPress: () => social.respondFriend(driver.userId, 'declined'),
                   },
-                ]}
+                ] as Action[]}
               />
             ))}
           </DriverGroup>
 
-          <DriverGroup empty="Gönderilmiş istek yok." title={`Giden İstekler · ${social.outgoing.length}`}>
+          <DriverGroup
+            empty="Bekleyen giden istek yok."
+            title="Giden İstekler"
+            count={social.outgoing.length}
+          >
             {social.outgoing.map((driver) => (
               <DriverCard
                 driver={driver}
                 key={driver.userId}
                 actions={[{
-                  icon: 'close',
-                  label: 'Geri Çek',
+                  icon: 'arrow-undo',
+                  label: 'İsteği geri çek',
                   onPress: () => social.cancelFriend(driver.userId),
                 }]}
               />
             ))}
           </DriverGroup>
 
-          <DriverGroup empty="Henüz arkadaşınız yok." title={`Arkadaşlar · ${social.friends.length}`}>
+          <DriverGroup
+            empty="Henüz arkadaş eklenmedi."
+            title="Arkadaş Listesi"
+            count={social.friends.length}
+          >
             {social.friends.map((driver) => (
               <DriverCard
                 driver={driver}
@@ -218,74 +416,73 @@ export default function SocialScreen() {
                 actions={[
                   {
                     icon: 'chatbubble',
-                    label: 'Mesaj',
+                    label: 'Sohbet aç',
                     primary: true,
                     onPress: () => openChat(driver),
                   },
-                  ...(social.currentClan ? [{
-                    icon: 'shield' as const,
-                    label: 'Klana Davet',
+                  ...(canInviteClan ? [{
+                    icon: (clanInviteSent(driver) ? 'checkmark-done' : 'shield') as keyof typeof Ionicons.glyphMap,
+                    label: clanInviteSent(driver) ? 'Klan daveti gönderildi' : 'Klana davet et',
+                    disabled: clanInviteSent(driver),
                     onPress: async () => {
-                      try {
-                        await social.inviteClan(driver.userId);
-                        announce('Klan daveti gönderildi.');
-                      } catch {}
+                      await social.inviteClan(driver.userId);
+                      announce('Klan daveti gönderildi.');
                     },
+                  }] : []),
+                  ...(hostableConvoys.length ? [{
+                    icon: 'navigate' as keyof typeof Ionicons.glyphMap,
+                    label: 'Konvoya davet et',
+                    onPress: () => openConvoyPicker(driver),
                   }] : []),
                   {
                     icon: 'person-remove',
-                    label: 'Çıkar',
-                    onPress: () => social.removeFriend(driver.userId),
+                    label: 'Arkadaşlıktan çıkar',
+                    onPress: () => confirmAction(
+                      'Arkadaşlıktan çıkar',
+                      `${driver.fullName || 'Bu sürücü'} arkadaş listenizden çıkarılsın mı?`,
+                      () => social.removeFriend(driver.userId),
+                    ),
                   },
-                ]}
+                  {
+                    icon: 'ban',
+                    label: 'Sürücüyü engelle',
+                    danger: true,
+                    onPress: () => confirmAction(
+                      'Sürücüyü engelle',
+                      'Arkadaşlık kaldırılır ve bu kullanıcı sizinle etkileşim kuramaz.',
+                      () => social.blockDriver(driver.userId),
+                    ),
+                  },
+                ] as Action[]}
               />
             ))}
           </DriverGroup>
-        </>
-      ) : null}
-
-      {section === 'clan' ? (
-        <ClanSection social={social} announce={announce} />
-      ) : null}
-
-      {section === 'messages' ? (
-        <Surface>
-          <Text style={styles.sectionTitle}>Sohbetler</Text>
-          <Text style={styles.sectionSubtitle}>Mesajlar cihazlar arasında anlık eşitlenir.</Text>
-          <View style={styles.listGap}>
-            {appData.threads.length ? appData.threads.map((thread) => {
-              const latest = thread.messages.at(-1);
-              const unread = latest && latest.createdAt > thread.lastReadAt;
-              return (
-                <Pressable
-                  key={thread.id}
-                  onPress={() => {
-                    setActiveThread(thread);
-                    void appData.markThreadRead(thread.id);
-                  }}
-                  style={({ pressed }) => [
-                    styles.thread,
-                    unread && styles.threadUnread,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <View style={styles.avatar}>
-                    <Ionicons name="person" size={18} color={colors.black} />
-                  </View>
-                  <View style={styles.threadCopy}>
-                    <Text style={styles.driverName}>{thread.participantName}</Text>
-                    <Text numberOfLines={1} style={styles.threadMessage}>
-                      {latest?.body || 'Sohbeti başlatın'}
-                    </Text>
-                  </View>
-                  {unread ? <View style={styles.unreadDot} /> : null}
-                </Pressable>
-              );
-            }) : <Text style={styles.empty}>Henüz bir sohbetiniz yok.</Text>}
-          </View>
         </Surface>
-      ) : null}
+      </ScreenShell>
 
+      <ClanCenterModal
+        events={clanEvents}
+        onClose={() => setClanCenterOpen(false)}
+        onDeleteEvent={async (event) => {
+          await social.deleteClanEvent(event.id);
+          await mapWorld.refreshConvoys();
+          announce('Etkinlik silindi.');
+        }}
+        open={clanCenterOpen}
+        social={social}
+        announce={announce}
+      />
+      <ConvoyInviteModal
+        convoys={hostableConvoys}
+        driver={convoyTarget}
+        onClose={() => setConvoyTarget(null)}
+        onInvite={async (convoy, driver) => {
+          await social.inviteConvoy(convoy.id, driver.userId);
+          await mapWorld.refreshConvoys();
+          announce('Konvoy daveti gönderildi.');
+          setConvoyTarget(null);
+        }}
+      />
       <ChatModal
         message={message}
         onChangeMessage={setMessage}
@@ -298,96 +495,109 @@ export default function SocialScreen() {
             await appData.sendMessage(currentThread.participantUserId, body);
           } catch {
             setMessage(body);
-            setNotice('Mesaj gönderilemedi.');
           }
         }}
         thread={currentThread}
       />
-    </ScreenShell>
+    </>
   );
 }
 
-function SectionButton({
-  active,
-  badge = 0,
-  icon,
-  label,
-  onPress,
-}: {
-  active: boolean;
-  badge?: number;
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-}) {
+function confirmAction(title: string, message: string, action: () => Promise<unknown>) {
+  Alert.alert(title, message, [
+    { text: 'Vazgeç', style: 'cancel' },
+    { text: 'Onayla', style: 'destructive', onPress: () => runAction(action) },
+  ]);
+}
+
+function runAction(action: () => void | Promise<unknown>) {
+  void Promise.resolve().then(action).catch(() => undefined);
+}
+
+function DriverAvatar({ icon = 'car-sport' }: { icon?: keyof typeof Ionicons.glyphMap }) {
   return (
-    <Pressable onPress={onPress} style={[styles.sectionButton, active && styles.sectionButtonActive]}>
-      <Ionicons name={icon} size={18} color={active ? colors.black : colors.textMuted} />
-      <Text style={[styles.sectionButtonText, active && styles.sectionButtonTextActive]}>{label}</Text>
-      {badge ? <View style={styles.sectionBadge}><Text style={styles.sectionBadgeText}>{badge}</Text></View> : null}
-    </Pressable>
+    <View style={styles.avatar}>
+      <Ionicons name={icon} size={18} color={colors.black} />
+    </View>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <View style={styles.emptyState}>
+      <Text style={styles.empty}>{text}</Text>
+    </View>
   );
 }
 
 function DriverGroup({
   children,
+  count,
   empty,
   title,
 }: {
   children: ReactNode;
+  count: number;
   empty: string;
   title: string;
 }) {
-  const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children);
   return (
-    <Surface>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.listGap}>
-        {hasChildren ? children : <Text style={styles.empty}>{empty}</Text>}
+    <View style={styles.group}>
+      <View style={styles.groupHeading}>
+        <Text style={styles.groupTitle}>{title}</Text>
+        <View style={styles.smallCount}>
+          <Text style={styles.smallCountText}>{count}</Text>
+        </View>
       </View>
-    </Surface>
+      <View style={styles.listGap}>
+        {count ? children : <EmptyState text={empty} />}
+      </View>
+    </View>
   );
 }
 
 function DriverCard({
   actions,
   driver,
+  showPlate = false,
 }: {
-  actions: {
-    icon: keyof typeof Ionicons.glyphMap;
-    label: string;
-    onPress: () => void | Promise<unknown>;
-    primary?: boolean;
-  }[];
+  actions: Action[];
   driver: DriverSummary;
+  showPlate?: boolean;
 }) {
   return (
     <View style={styles.driverCard}>
-      <View style={styles.driverIdentity}>
-        <View style={styles.avatar}>
-          <Ionicons name="car-sport" size={18} color={colors.black} />
-        </View>
-        <View style={styles.driverCopy}>
-          <Text style={styles.driverName}>{driver.fullName || 'CRUISER sürücüsü'}</Text>
-          <Text style={styles.driverModel}>{driver.model || driver.region || 'Araç bilgisi yok'}</Text>
+      <View style={styles.driverRow}>
+        <DriverAvatar />
+        <View style={styles.copy}>
+          {showPlate && driver.plate ? <Text style={styles.plate}>{driver.plate}</Text> : null}
+          <Text numberOfLines={1} style={styles.driverName}>
+            {driver.fullName || 'CRUISER sürücüsü'}
+          </Text>
+          <Text numberOfLines={1} style={styles.driverModel}>
+            {driver.model || driver.region || 'Araç bilgisi yok'}
+          </Text>
         </View>
       </View>
       <View style={styles.actionRow}>
         {actions.map((action) => (
           <Pressable
             accessibilityLabel={action.label}
+            disabled={action.disabled}
             key={action.label}
-            onPress={() => void action.onPress()}
+            onPress={() => runAction(action.onPress)}
             style={({ pressed }) => [
               styles.iconAction,
               action.primary && styles.iconActionPrimary,
+              action.danger && styles.iconActionDanger,
+              action.disabled && styles.disabled,
               pressed && styles.pressed,
             ]}
           >
             <Ionicons
               name={action.icon}
               size={18}
-              color={action.primary ? colors.black : colors.text}
+              color={action.primary ? colors.black : action.danger ? '#fda4af' : colors.text}
             />
           </Pressable>
         ))}
@@ -396,7 +606,64 @@ function DriverCard({
   );
 }
 
-function ClanSection({
+function ClanSummary({
+  clanName,
+  clanTag,
+  eventCount,
+  memberCount,
+  monthlyKm,
+  onPress,
+  role,
+}: {
+  clanName: string;
+  clanTag: string;
+  eventCount: number;
+  memberCount: number;
+  monthlyKm: number;
+  onPress: () => void;
+  role: string;
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={`${clanName} klan detaylarını aç`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.clanSummary, pressed && styles.pressed]}
+    >
+      <View style={styles.titleRow}>
+        <View style={styles.copy}>
+          <Text style={styles.clanName}>{clanName}</Text>
+          <Text style={styles.clanTag}>{clanTag}</Text>
+        </View>
+        <View style={styles.rolePill}>
+          <Text style={styles.roleText}>{roleLabel(role)}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.limeBright} />
+      </View>
+      <View style={styles.metrics}>
+        <Metric label="Aylık KM" value={monthlyKm.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} />
+        <Metric label="Üye" value={memberCount} />
+        <Metric label="Etkinlik" value={eventCount} />
+      </View>
+    </Pressable>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: number | string }) {
+  return (
+    <View style={styles.metric}>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={styles.metricValue}>{value}</Text>
+    </View>
+  );
+}
+
+function roleLabel(role: string) {
+  if (role === 'owner') return 'Kurucu';
+  if (role === 'captain') return 'Kaptan';
+  return 'Üye';
+}
+
+function ClanCreatePanel({
   announce,
   social,
 }: {
@@ -407,159 +674,355 @@ function ClanSection({
   const [tag, setTag] = useState('');
   const [description, setDescription] = useState('');
 
-  if (!social.currentClan) {
-    return (
-      <>
-        {social.incomingClanInvites.length ? (
-          <Surface accent>
-            <Text style={styles.sectionTitle}>Klan Davetleri</Text>
-            <View style={styles.listGap}>
-              {social.incomingClanInvites.map((invite) => (
-                <View key={invite.id} style={styles.invite}>
-                  <View style={styles.driverCopy}>
-                    <Text style={styles.driverName}>{invite.clanName || 'Klan daveti'}</Text>
-                    <Text style={styles.driverModel}>
-                      {invite.invitedByName || 'Klan yönetimi'} tarafından
-                    </Text>
-                  </View>
-                  <Pressable
-                    onPress={async () => {
-                      try {
-                        await social.respondClanInvite(invite.clanId, 'accepted');
-                        announce(`${invite.clanName || 'Klana'} katıldınız.`);
-                      } catch {}
-                    }}
-                    style={styles.iconActionPrimary}
-                  >
-                    <Ionicons name="checkmark" size={18} color={colors.black} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => social.respondClanInvite(invite.clanId, 'declined')}
-                    style={styles.iconAction}
-                  >
-                    <Ionicons name="close" size={18} color={colors.text} />
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-          </Surface>
-        ) : null}
-        <Surface>
-          <Text style={styles.sectionTitle}>Klan Kur</Text>
-          <Text style={styles.sectionSubtitle}>Ekibini oluştur ve ortak sürüş istatistiklerini büyüt.</Text>
-          <TextInput
-            onChangeText={setName}
-            placeholder="Klan adı *"
-            placeholderTextColor={colors.textFaint}
-            style={styles.input}
-            value={name}
-          />
-          <TextInput
-            autoCapitalize="characters"
-            maxLength={6}
-            onChangeText={(value) => setTag(value.toUpperCase())}
-            placeholder="Kısa etiket *"
-            placeholderTextColor={colors.textFaint}
-            style={styles.input}
-            value={tag}
-          />
-          <TextInput
-            multiline
-            onChangeText={setDescription}
-            placeholder="Klan açıklaması"
-            placeholderTextColor={colors.textFaint}
-            style={[styles.input, styles.textArea]}
-            value={description}
-          />
-          <Pressable
-            disabled={!name.trim() || !tag.trim() || social.busy === 'create-clan'}
-            onPress={async () => {
-              try {
-                await social.createClan(name, tag, description);
-                announce('Klan oluşturuldu.');
-              } catch {}
-            }}
-            style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="shield-checkmark" size={19} color={colors.black} />
-            <Text style={styles.primaryButtonText}>Klanı Oluştur</Text>
-          </Pressable>
-        </Surface>
-      </>
-    );
-  }
-
-  const canManage = ['owner', 'captain'].includes(social.membership?.role ?? '');
   return (
-    <>
-      <Surface accent>
-        <View style={styles.clanHeader}>
-          <View style={styles.clanLogo}>
-            <Text style={styles.clanTag}>{social.currentClan.tag}</Text>
-          </View>
-          <View style={styles.driverCopy}>
-            <Text style={styles.clanName}>{social.currentClan.name}</Text>
-            <Text style={styles.driverModel}>
-              {social.membership?.role === 'owner'
-                ? 'Kurucu'
-                : social.membership?.role === 'captain' ? 'Kaptan' : 'Üye'}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.clanStats}>
-          <ClanMetric label="Üye" value={social.members.length} />
-          <ClanMetric label="Aylık KM" value={Math.round(social.currentClan.monthlyKm ?? 0)} />
-          <ClanMetric label="Davet" value={social.outgoingClanInvites.length} />
-        </View>
-      </Surface>
-
-      <Surface>
-        <Text style={styles.sectionTitle}>Üyeler</Text>
-        <View style={styles.listGap}>
-          {social.members.map((member) => (
-            <View key={member.id} style={styles.memberRow}>
-              <View style={styles.driverCopy}>
-                <Text style={styles.driverName}>{member.fullName || member.plate}</Text>
-                <Text style={styles.driverModel}>{member.model || 'Araç bilgisi yok'} · {member.role}</Text>
-              </View>
-              {canManage && member.userId !== social.profile?.id && member.role !== 'owner' ? (
+    <View style={styles.createPanel}>
+      {social.incomingClanInvites.length ? (
+        <View style={styles.inviteBlock}>
+          <Text style={styles.groupTitle}>Gelen Klan Davetleri</Text>
+          <View style={styles.listGap}>
+            {social.incomingClanInvites.map((invite) => (
+              <View key={invite.id} style={styles.inviteRow}>
+                <View style={styles.copy}>
+                  <Text style={styles.driverName}>{invite.clanName || 'Klan daveti'}</Text>
+                  <Text style={styles.driverModel}>
+                    {invite.invitedByName || 'Klan yönetimi'} tarafından
+                  </Text>
+                </View>
                 <Pressable
-                  onPress={async () => {
-                    const nextRole = member.role === 'captain' ? 'member' : 'captain';
-                    try {
-                      await social.updateClanRole(member.userId, nextRole);
-                      announce(`Rol ${nextRole === 'captain' ? 'kaptan' : 'üye'} olarak değiştirildi.`);
-                    } catch {}
-                  }}
+                  accessibilityLabel="Klan davetini kabul et"
+                  onPress={() => runAction(async () => {
+                    await social.respondClanInvite(invite.clanId, 'accepted');
+                    announce(`${invite.clanName || 'Klana'} katıldınız.`);
+                  })}
+                  style={styles.iconActionPrimary}
+                >
+                  <Ionicons name="checkmark" size={18} color={colors.black} />
+                </Pressable>
+                <Pressable
+                  accessibilityLabel="Klan davetini reddet"
+                  onPress={() => runAction(
+                    () => social.respondClanInvite(invite.clanId, 'declined'),
+                  )}
                   style={styles.iconAction}
                 >
-                  <Ionicons name="swap-horizontal" size={18} color={colors.text} />
+                  <Ionicons name="close" size={18} color={colors.text} />
                 </Pressable>
-              ) : null}
-            </View>
-          ))}
+              </View>
+            ))}
+          </View>
         </View>
-      </Surface>
-
-      {social.membership?.role !== 'owner' ? (
-        <Pressable
-          onPress={() => void social.leaveClan()}
-          style={({ pressed }) => [styles.dangerButton, pressed && styles.pressed]}
-        >
-          <Ionicons name="exit-outline" size={19} color="#fda4af" />
-          <Text style={styles.dangerText}>Klandan Ayrıl</Text>
-        </Pressable>
       ) : null}
-    </>
+
+      <Text style={styles.groupTitle}>Klan Kur</Text>
+      <Text style={styles.groupMeta}>Ekibini oluştur ve ortak sürüşlerini büyüt.</Text>
+      <TextInput
+        onChangeText={setName}
+        placeholder="Klan adı *"
+        placeholderTextColor={colors.textFaint}
+        style={styles.input}
+        value={name}
+      />
+      <TextInput
+        autoCapitalize="characters"
+        maxLength={6}
+        onChangeText={(value) => setTag(value.toUpperCase())}
+        placeholder="Kısa etiket *"
+        placeholderTextColor={colors.textFaint}
+        style={styles.input}
+        value={tag}
+      />
+      <TextInput
+        multiline
+        onChangeText={setDescription}
+        placeholder="Klan açıklaması"
+        placeholderTextColor={colors.textFaint}
+        style={[styles.input, styles.textArea]}
+        value={description}
+      />
+      <Pressable
+        disabled={!name.trim() || !tag.trim() || social.busy === 'create-clan'}
+        onPress={() => runAction(async () => {
+          await social.createClan(name, tag, description);
+          announce('Klan oluşturuldu.');
+        })}
+        style={({ pressed }) => [
+          styles.primaryButton,
+          (!name.trim() || !tag.trim()) && styles.disabled,
+          pressed && styles.pressed,
+        ]}
+      >
+        <Ionicons name="shield-checkmark" size={19} color={colors.black} />
+        <Text style={styles.primaryButtonText}>Klanı Oluştur</Text>
+      </Pressable>
+    </View>
   );
 }
 
-function ClanMetric({ label, value }: { label: string; value: number }) {
+function ClanCenterModal({
+  announce,
+  events,
+  onClose,
+  onDeleteEvent,
+  open,
+  social,
+}: {
+  announce: (text: string) => void;
+  events: MapPin[];
+  onClose: () => void;
+  onDeleteEvent: (event: MapPin) => Promise<void>;
+  open: boolean;
+  social: ReturnType<typeof useSocialWorld>;
+}) {
+  const insets = useSafeAreaInsets();
+  if (!social.currentClan) return null;
+  const role = social.membership?.role ?? 'member';
+  const canManage = ['owner', 'captain'].includes(role);
+
   return (
-    <View style={styles.clanMetric}>
-      <Text style={styles.metricValue}>{value.toLocaleString('tr-TR')}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
-    </View>
+    <Modal animationType="slide" onRequestClose={onClose} visible={open}>
+      <View style={styles.modalRoot}>
+        <View style={[styles.modalHeader, { paddingTop: Math.max(insets.top, 14) }]}>
+          <View style={styles.copy}>
+            <Text style={styles.pageTitle}>{social.currentClan.name}</Text>
+            <Text style={styles.clanTag}>{social.currentClan.tag} · {roleLabel(role)}</Text>
+          </View>
+          <Pressable accessibilityLabel="Klan merkezini kapat" onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={21} color={colors.text} />
+          </Pressable>
+        </View>
+        <ScrollView
+          contentContainerStyle={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 18) }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.metrics}>
+            <Metric
+              label="Aylık KM"
+              value={(social.currentClan.monthlyKm ?? 0).toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
+            />
+            <Metric label="Üye" value={social.members.length} />
+            <Metric label="Etkinlik" value={events.length} />
+          </View>
+          {social.error ? <Text style={styles.error}>{social.error}</Text> : null}
+          {social.currentClan.description ? (
+            <View style={styles.detailBlock}>
+              <Text style={styles.detailCopy}>{social.currentClan.description}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.detailBlock}>
+            <Text style={styles.groupTitle}>Klan Kadrosu</Text>
+            <View style={styles.listGap}>
+              {social.members.map((member) => {
+                const isSelf = member.userId === social.currentUserId;
+                const canRemove = !isSelf && (
+                  role === 'owner' && member.role !== 'owner' ||
+                  role === 'captain' && member.role === 'member'
+                );
+                return (
+                  <View key={member.id} style={styles.memberCard}>
+                    <DriverAvatar />
+                    <View style={styles.copy}>
+                      <Text style={styles.driverName}>
+                        {member.fullName || member.plate || 'CRUISER sürücüsü'}
+                        {isSelf ? ' (Sen)' : ''}
+                      </Text>
+                      <Text style={styles.driverModel}>{member.model || 'Araç bilgisi yok'}</Text>
+                    </View>
+                    <View style={styles.rolePill}>
+                      <Text style={styles.roleText}>{roleLabel(member.role)}</Text>
+                    </View>
+                    {role === 'owner' && !isSelf && member.role !== 'owner' ? (
+                      <Pressable
+                        accessibilityLabel="Klan rolünü değiştir"
+                        onPress={() => runAction(async () => {
+                          const nextRole = member.role === 'captain' ? 'member' : 'captain';
+                          await social.updateClanRole(member.userId, nextRole);
+                          announce(`Rol ${roleLabel(nextRole)} olarak değiştirildi.`);
+                        })}
+                        style={styles.smallAction}
+                      >
+                        <Ionicons name="swap-horizontal" size={17} color={colors.text} />
+                      </Pressable>
+                    ) : null}
+                    {role === 'owner' && !isSelf && member.role !== 'owner' ? (
+                      <Pressable
+                        accessibilityLabel="Klan sahipliğini devret"
+                        onPress={() => confirmAction(
+                          'Sahipliği devret',
+                          `${member.fullName || 'Bu üye'} klanın yeni kurucusu olsun mu?`,
+                          async () => {
+                            await social.transferClanOwnership(member.userId);
+                            announce('Klan sahipliği devredildi.');
+                          },
+                        )}
+                        style={styles.smallAction}
+                      >
+                        <Ionicons name="key" size={16} color="#fde68a" />
+                      </Pressable>
+                    ) : null}
+                    {canRemove ? (
+                      <Pressable
+                        accessibilityLabel="Üyeyi klandan çıkar"
+                        onPress={() => confirmAction(
+                          'Üyeyi çıkar',
+                          `${member.fullName || 'Bu üye'} klandan çıkarılsın mı?`,
+                          () => social.removeClanMember(member.userId),
+                        )}
+                        style={[styles.smallAction, styles.smallDanger]}
+                      >
+                        <Ionicons name="person-remove" size={16} color="#fda4af" />
+                      </Pressable>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.detailBlock}>
+            <Text style={styles.groupTitle}>Klan Etkinlikleri</Text>
+            <View style={styles.listGap}>
+              {events.length ? events.map((event) => (
+                <View key={event.id} style={styles.eventRow}>
+                  <View style={styles.eventIcon}>
+                    <Ionicons
+                      name={event.eventMode === 'convoy' ? 'navigate' : 'location'}
+                      size={17}
+                      color={colors.limeBright}
+                    />
+                  </View>
+                  <View style={styles.copy}>
+                    <Text style={styles.driverName}>{event.name}</Text>
+                    <Text style={styles.driverModel}>
+                      {event.lifecycleStatus === 'planning' ? 'Planlandı' : 'Geçmiş etkinlik'}
+                    </Text>
+                  </View>
+                  {canManage ? (
+                    <Pressable
+                      accessibilityLabel="Etkinliği sil"
+                      onPress={() => confirmAction(
+                        'Etkinliği sil',
+                        `${event.name} kalıcı olarak silinsin mi?`,
+                        () => onDeleteEvent(event),
+                      )}
+                      style={[styles.smallAction, styles.smallDanger]}
+                    >
+                      <Ionicons name="trash" size={16} color="#fda4af" />
+                    </Pressable>
+                  ) : null}
+                </View>
+              )) : <EmptyState text="Klan etkinliği bulunmuyor." />}
+            </View>
+          </View>
+
+          {canManage ? (
+            <View style={styles.detailBlock}>
+              <Text style={styles.groupTitle}>Giden Davetler</Text>
+              <View style={styles.listGap}>
+                {social.outgoingClanInvites.length ? social.outgoingClanInvites.map((invite) => (
+                  <View key={invite.id} style={styles.inviteRow}>
+                    <View style={styles.copy}>
+                      <Text style={styles.driverName}>
+                        {invite.targetName || invite.targetPlate || 'Davet edilen sürücü'}
+                      </Text>
+                      <Text style={styles.driverModel}>Yanıt bekleniyor</Text>
+                    </View>
+                    <Pressable
+                      accessibilityLabel="Klan davetini geri çek"
+                      onPress={() => runAction(
+                        () => social.cancelClanInvite(invite.targetUserId),
+                      )}
+                      style={styles.smallAction}
+                    >
+                      <Ionicons name="close" size={17} color={colors.text} />
+                    </Pressable>
+                  </View>
+                )) : <EmptyState text="Bekleyen giden davet yok." />}
+              </View>
+            </View>
+          ) : null}
+
+          <Pressable
+            onPress={() => confirmAction(
+              'Klandan ayrıl',
+              'Klan üyeliğinizi sonlandırmak istediğinizden emin misiniz?',
+              async () => {
+                await social.leaveClan();
+                onClose();
+              },
+            )}
+            style={({ pressed }) => [styles.dangerButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="exit-outline" size={19} color="#fda4af" />
+            <Text style={styles.dangerText}>Klandan Ayrıl</Text>
+          </Pressable>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+function ConvoyInviteModal({
+  convoys,
+  driver,
+  onClose,
+  onInvite,
+}: {
+  convoys: MapPin[];
+  driver: DriverSummary | null;
+  onClose: () => void;
+  onInvite: (convoy: MapPin, driver: DriverSummary) => Promise<void>;
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal animationType="slide" onRequestClose={onClose} visible={Boolean(driver)}>
+      <View style={styles.modalRoot}>
+        <View style={[styles.modalHeader, { paddingTop: Math.max(insets.top, 14) }]}>
+          <View style={styles.copy}>
+            <Text style={styles.pageTitle}>Konvoy Seç</Text>
+            <Text style={styles.pageMeta}>{driver?.fullName || driver?.model}</Text>
+          </View>
+          <Pressable accessibilityLabel="Konvoy seçimini kapat" onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={21} color={colors.text} />
+          </Pressable>
+        </View>
+        <ScrollView contentContainerStyle={styles.modalContent}>
+          {convoys.length ? convoys.map((convoy) => {
+            const invited = convoy.invitedGuests?.some((item) => item.userId === driver?.userId);
+            return (
+              <Pressable
+                accessibilityLabel={`${convoy.name} konvoyuna davet et`}
+                disabled={invited || !driver}
+                key={convoy.id}
+                onPress={() => {
+                  if (driver) runAction(() => onInvite(convoy, driver));
+                }}
+                style={({ pressed }) => [
+                  styles.convoyCard,
+                  invited && styles.disabled,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.eventIcon}>
+                  <Ionicons name="navigate" size={18} color={colors.limeBright} />
+                </View>
+                <View style={styles.copy}>
+                  <Text style={styles.driverName}>{convoy.name}</Text>
+                  <Text style={styles.driverModel}>
+                    {convoy.approvedCount ?? 1}/{convoy.capacity ?? 0} sürücü
+                  </Text>
+                </View>
+                <Ionicons
+                  name={invited ? 'checkmark-done' : 'send'}
+                  size={18}
+                  color={invited ? colors.textFaint : colors.limeBright}
+                />
+              </Pressable>
+            );
+          }) : <EmptyState text="Davet gönderebileceğiniz planlı bir konvoy yok." />}
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 
@@ -576,14 +1039,15 @@ function ChatModal({
   onSend: () => void;
   thread: DirectMessageThread | null;
 }) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal animationType="slide" onRequestClose={onClose} visible={Boolean(thread)}>
-      <View style={styles.chatRoot}>
-        <View style={styles.chatHeader}>
+      <View style={styles.modalRoot}>
+        <View style={[styles.modalHeader, { paddingTop: Math.max(insets.top, 14) }]}>
           <Pressable onPress={onClose} style={styles.closeButton}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </Pressable>
-          <View style={styles.driverCopy}>
+          <View style={styles.copy}>
             <Text style={styles.driverName}>{thread?.participantName}</Text>
             <Text style={styles.driverModel}>{thread?.participantModel}</Text>
           </View>
@@ -603,7 +1067,7 @@ function ChatModal({
             );
           })}
         </ScrollView>
-        <View style={styles.composer}>
+        <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <TextInput
             maxLength={1000}
             multiline
@@ -623,112 +1087,149 @@ function ChatModal({
 }
 
 const styles = StyleSheet.create({
-  sections: {
-    padding: 4,
-    borderRadius: 19,
-    backgroundColor: colors.black,
+  pageHeading: {
+    minHeight: 58,
     flexDirection: 'row',
-    gap: 4,
-  },
-  sectionButton: {
-    flex: 1,
-    minHeight: 52,
-    borderRadius: 16,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
+    gap: 11,
   },
-  sectionButtonActive: { backgroundColor: colors.lime },
-  sectionButtonText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 9 },
-  sectionButtonTextActive: { color: colors.black },
-  sectionBadge: {
-    position: 'absolute',
-    right: 9,
-    top: 7,
-    minWidth: 17,
-    height: 17,
-    borderRadius: 9,
-    backgroundColor: colors.rose,
+  pageTitle: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 18 },
+  pageMeta: { marginTop: 2, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 10 },
+  backButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionBadgeText: { color: colors.white, fontFamily: fonts.extraBold, fontSize: 8 },
-  sectionTitle: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 16 },
-  sectionSubtitle: {
-    marginTop: 4,
-    marginBottom: 13,
-    color: colors.textMuted,
-    fontFamily: fonts.regular,
-    fontSize: 11,
-    lineHeight: 17,
-  },
-  searchRow: { marginTop: 12, flexDirection: 'row', gap: 8 },
-  searchInput: {
-    flex: 1,
-    minHeight: 52,
-    paddingHorizontal: 14,
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  sectionTitle: { flex: 1, color: colors.text, fontFamily: fonts.extraBold, fontSize: 16 },
+  countPill: {
+    maxWidth: 140,
+    minHeight: 32,
+    paddingHorizontal: 11,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countText: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 9 },
+  searchPanel: {
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: colors.black,
+  },
+  searchRow: { marginTop: 11, flexDirection: 'row', gap: 8 },
+  searchInput: {
+    flex: 1,
+    minHeight: 50,
+    paddingHorizontal: 14,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     color: colors.text,
     fontFamily: fonts.bold,
-    fontSize: 14,
-    letterSpacing: 1.4,
+    fontSize: 13,
+    letterSpacing: 1.3,
   },
   searchButton: {
-    width: 54,
-    borderRadius: 16,
+    width: 52,
+    borderRadius: 15,
     backgroundColor: colors.lime,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  listGap: { marginTop: 12, gap: 9 },
+  group: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+  },
+  groupHeading: { flexDirection: 'row', alignItems: 'center' },
+  groupTitle: { flex: 1, color: colors.text, fontFamily: fonts.bold, fontSize: 13 },
+  groupMeta: { marginTop: 3, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 10 },
+  smallCount: {
+    minWidth: 28,
+    height: 28,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallCountText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 9 },
+  listGap: { marginTop: 10, gap: 8 },
+  emptyState: {
+    minHeight: 58,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   empty: {
-    paddingVertical: 18,
     color: colors.textMuted,
     fontFamily: fonts.regular,
-    fontSize: 11,
+    fontSize: 10,
     textAlign: 'center',
   },
   notice: {
-    padding: 12,
+    padding: 11,
     borderRadius: 14,
     backgroundColor: colors.limeMuted,
     color: colors.limeBright,
     fontFamily: fonts.semibold,
-    fontSize: 11,
+    fontSize: 10,
     textAlign: 'center',
   },
   error: {
-    padding: 12,
+    padding: 11,
     borderRadius: 14,
     backgroundColor: 'rgba(244,63,94,0.1)',
     color: '#fda4af',
     fontFamily: fonts.semibold,
-    fontSize: 11,
+    fontSize: 10,
     textAlign: 'center',
   },
   driverCard: {
-    padding: 12,
-    borderRadius: 17,
+    marginTop: 10,
+    padding: 11,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.surface,
   },
-  driverIdentity: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  driverRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar: {
-    width: 39,
-    height: 39,
+    width: 40,
+    height: 40,
     borderRadius: 14,
     backgroundColor: colors.lime,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  driverCopy: { flex: 1, minWidth: 0 },
-  driverName: { color: colors.text, fontFamily: fonts.bold, fontSize: 13 },
-  driverModel: { marginTop: 2, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 10 },
-  actionRow: { marginTop: 10, flexDirection: 'row', justifyContent: 'flex-end', gap: 7 },
+  copy: { flex: 1, minWidth: 0 },
+  plate: {
+    marginBottom: 2,
+    color: colors.limeBright,
+    fontFamily: fonts.bold,
+    fontSize: 9,
+    letterSpacing: 1.5,
+  },
+  driverName: { color: colors.text, fontFamily: fonts.bold, fontSize: 12 },
+  driverModel: { marginTop: 2, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9 },
+  actionRow: { marginTop: 9, flexDirection: 'row', justifyContent: 'flex-end', gap: 7 },
   iconAction: {
     width: 43,
     height: 43,
@@ -746,81 +1247,95 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  invite: {
-    minHeight: 62,
-    padding: 10,
-    borderRadius: 16,
+  iconActionDanger: {
+    borderColor: 'rgba(244,63,94,0.3)',
+    backgroundColor: 'rgba(244,63,94,0.08)',
+  },
+  disabled: { opacity: 0.42 },
+  clanSummary: {
+    marginTop: 13,
+    padding: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.limeMuted,
+  },
+  clanName: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 17 },
+  clanTag: {
+    marginTop: 3,
+    color: colors.limeBright,
+    fontFamily: fonts.bold,
+    fontSize: 9,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+  },
+  rolePill: {
+    minHeight: 30,
+    paddingHorizontal: 10,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roleText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 8 },
+  metrics: { marginTop: 13, flexDirection: 'row', gap: 7 },
+  metric: {
+    flex: 1,
+    minHeight: 58,
+    paddingHorizontal: 6,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.black,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metricLabel: {
+    color: colors.textFaint,
+    fontFamily: fonts.semibold,
+    fontSize: 7,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  metricValue: { marginTop: 4, color: colors.limeBright, fontFamily: fonts.extraBold, fontSize: 13 },
+  createPanel: { marginTop: 13 },
+  inviteBlock: { marginBottom: 16 },
+  inviteRow: {
+    minHeight: 60,
+    padding: 9,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: colors.black,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
   },
   input: {
-    minHeight: 52,
-    marginTop: 10,
+    minHeight: 50,
+    marginTop: 9,
     paddingHorizontal: 14,
-    borderRadius: 16,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.black,
     color: colors.text,
     fontFamily: fonts.regular,
-    fontSize: 13,
+    fontSize: 12,
   },
-  textArea: { minHeight: 86, paddingTop: 13, textAlignVertical: 'top' },
+  textArea: { minHeight: 78, paddingTop: 13, textAlignVertical: 'top' },
   primaryButton: {
-    minHeight: 52,
-    marginTop: 12,
-    borderRadius: 17,
+    minHeight: 50,
+    marginTop: 11,
+    borderRadius: 16,
     backgroundColor: colors.lime,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  primaryButtonText: { color: colors.black, fontFamily: fonts.bold, fontSize: 13 },
-  clanHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  clanLogo: {
-    width: 58,
-    height: 58,
-    borderRadius: 19,
-    backgroundColor: colors.lime,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  clanTag: { color: colors.black, fontFamily: fonts.extraBold, fontSize: 14 },
-  clanName: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 20 },
-  clanStats: { marginTop: 16, flexDirection: 'row', gap: 8 },
-  clanMetric: {
-    flex: 1,
-    minHeight: 66,
-    borderRadius: 16,
-    backgroundColor: colors.black,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  metricValue: { color: colors.limeBright, fontFamily: fonts.extraBold, fontSize: 15 },
-  metricLabel: { marginTop: 3, color: colors.textMuted, fontFamily: fonts.bold, fontSize: 8 },
-  memberRow: {
-    minHeight: 58,
-    padding: 11,
-    borderRadius: 16,
-    backgroundColor: colors.black,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dangerButton: {
-    minHeight: 52,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: 'rgba(244,63,94,0.3)',
-    backgroundColor: 'rgba(244,63,94,0.08)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  dangerText: { color: '#fda4af', fontFamily: fonts.bold, fontSize: 12 },
+  primaryButtonText: { color: colors.black, fontFamily: fonts.bold, fontSize: 12 },
   thread: {
     minHeight: 64,
     padding: 10,
@@ -833,27 +1348,100 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   threadUnread: { borderColor: colors.borderStrong, backgroundColor: colors.limeMuted },
-  threadCopy: { flex: 1, minWidth: 0 },
-  threadMessage: { marginTop: 3, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 10 },
-  unreadDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.lime },
-  chatRoot: { flex: 1, paddingTop: 44, backgroundColor: colors.background },
-  chatHeader: {
-    minHeight: 66,
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.lime },
+  modalRoot: { flex: 1, backgroundColor: colors.background },
+  modalHeader: {
+    minHeight: 74,
     paddingHorizontal: 14,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
+  modalContent: { padding: 14, gap: 12 },
   closeButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  detailBlock: {
+    padding: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  detailCopy: { color: colors.textMuted, fontFamily: fonts.regular, fontSize: 11, lineHeight: 17 },
+  memberCard: {
+    minHeight: 62,
+    padding: 9,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.black,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  smallAction: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallDanger: {
+    borderColor: 'rgba(244,63,94,0.25)',
+    backgroundColor: 'rgba(244,63,94,0.08)',
+  },
+  eventRow: {
+    minHeight: 58,
+    padding: 9,
+    borderRadius: 15,
+    backgroundColor: colors.black,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  eventIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: colors.limeMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dangerButton: {
+    minHeight: 50,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(244,63,94,0.3)',
+    backgroundColor: 'rgba(244,63,94,0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  dangerText: { color: '#fda4af', fontFamily: fonts.bold, fontSize: 12 },
+  convoyCard: {
+    minHeight: 68,
+    padding: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   messages: { flexGrow: 1, padding: 14, justifyContent: 'flex-end', gap: 8 },
   bubble: { maxWidth: '82%', paddingHorizontal: 13, paddingVertical: 10, borderRadius: 16 },
@@ -863,7 +1451,6 @@ const styles = StyleSheet.create({
   bubbleTextOwn: { color: colors.black },
   composer: {
     padding: 12,
-    paddingBottom: 26,
     borderTopWidth: 1,
     borderColor: colors.border,
     flexDirection: 'row',

@@ -7,6 +7,7 @@ export type DriverSummary = {
   region?: string;
   driverScore?: number;
   friendshipId?: string;
+  friendshipStatus?: 'none' | 'incoming' | 'outgoing' | 'accepted';
   status?: string;
 };
 
@@ -47,6 +48,8 @@ export type ClanInvite = {
   clanName?: string;
   clanTag?: string;
   targetUserId: string;
+  targetName?: string;
+  targetPlate?: string;
   invitedByUserId: string;
   invitedByName?: string;
   status?: string;
@@ -77,12 +80,23 @@ export type MapPin = {
   routePath?: { lat: number; lng: number }[];
   time?: string;
   eventMode?: 'meetup' | 'convoy';
+  visibility?: 'public' | 'friends' | 'clan';
+  accessPolicy?: 'open' | 'request';
+  detailVisibility?: string;
+  clanId?: string;
+  createdByClan?: string;
+  hostUserId?: string;
+  createdByUid?: string;
   capacity?: number;
   approvedCount?: number;
+  scheduledStartAtMs?: number;
   lifecycleStatus?: string;
   backendCanJoin?: boolean;
   backendCanViewDetails?: boolean;
   backendAccessReason?: string;
+  viewerManagementRole?: 'host' | 'manager' | 'member' | '';
+  invitedGuests?: DriverSummary[];
+  pendingRequests?: DriverSummary[];
   attendees?: DriverSummary[];
 };
 
