@@ -27,6 +27,12 @@ export type ForumThread = {
   category: 'places' | 'builds' | 'technical' | 'roadlife';
   body: string;
   imageUrl?: string;
+  location?: {
+    lat: number;
+    lng: number;
+    accuracy?: number;
+    label?: string;
+  } | null;
   authorName: string;
   authorModel: string;
   likeCount: number;
@@ -79,12 +85,13 @@ export async function createForumThread(
     fileSize?: number;
     mimeType?: string | null;
   } | null,
+  location?: ForumThread['location'],
 ) {
   let uploadedImage = { imageUrl: '', storagePath: '' };
   try {
     uploadedImage = await uploadForumImage(image);
     const result = await httpsCallable(firebaseFunctions, 'createForumThread')({
-      thread: { category, body: body.trim(), ...uploadedImage },
+      thread: { category, body: body.trim(), location: location ?? null, ...uploadedImage },
     });
     return result.data;
   } catch (error) {

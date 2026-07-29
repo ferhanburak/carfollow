@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 
 import { AuthProvider } from '@/providers/auth-provider';
+import { AppDataProvider } from '@/providers/app-data-provider';
 import { colors } from '@/theme/colors';
 
 void SplashScreen.preventAutoHideAsync();
@@ -45,12 +46,14 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={cruiserTheme}>
       <AuthProvider>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-        </Stack>
+        <AppDataProvider>
+          <StatusBar style="light" />
+          <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+        </AppDataProvider>
       </AuthProvider>
     </ThemeProvider>
   );

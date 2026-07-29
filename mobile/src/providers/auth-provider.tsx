@@ -25,6 +25,9 @@ import {
 import { privateProfilePath } from '@/lib/firebase-paths';
 
 export type CruiserProfile = {
+  id?: string;
+  firebaseUid?: string;
+  primaryVehicleId?: string;
   fullName: string;
   plate: string;
   model: string;
@@ -37,6 +40,21 @@ export type CruiserProfile = {
   avatar?: string;
   region?: string;
   garage?: string;
+  clan?: string;
+  clanId?: string;
+  clanRole?: string;
+  totalKm?: number;
+  totalDriveSeconds?: number;
+  maxSpeedKmh?: number;
+  achievementBadges?: string[];
+  privacy?: {
+    plateSearchEnabled?: boolean;
+    showPlateOnLiveMap?: boolean;
+    showModelInSearch?: boolean;
+    showRegionInSearch?: boolean;
+    locationPrecision?: 'hidden' | 'approximate' | 'exact';
+    safeZoneEnabled?: boolean;
+  };
 };
 
 export type RegisterInput = {

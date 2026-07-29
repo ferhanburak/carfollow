@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -47,6 +48,7 @@ export default function ForumScreen() {
   const [category, setCategory] = useState<ForumThread['category']>('roadlife');
   const [body, setBody] = useState('');
   const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<ForumThread['location']>(null);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState('');
 
@@ -63,10 +65,11 @@ export default function ForumScreen() {
     setSubmitting(true);
     setFeedback('');
     try {
-      await createForumThread(category, body, selectedImage);
+      await createForumThread(category, body, selectedImage, selectedLocation);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setBody('');
       setSelectedImage(null);
+      setSelectedLocation(null);
       setComposerOpen(false);
       setFeedback('Paylaşım yayınlandı.');
     } catch (error) {
@@ -100,6 +103,33 @@ export default function ForumScreen() {
       return;
     }
     setSelectedImage(asset);
+    void Haptics.selectionAsync();
+  };
+
+  const chooseLocation = async () => {
+    setFeedback('');
+    const permission = await Location.requestForegroundPermissionsAsync();
+    if (!permission.granted) {
+      setFeedback('Konum eklemek için konum erişimine izin vermelisiniz.');
+      return;
+    }
+    const current = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
+    const addresses = await Location.reverseGeocodeAsync({
+      latitude: current.coords.latitude,
+      longitude: current.coords.longitude,
+    }).catch(() => []);
+    const address = addresses[0];
+    const label = [address?.district || address?.subregion, address?.city || address?.region]
+      .filter(Boolean)
+      .join(' / ');
+    setSelectedLocation({
+      lat: current.coords.latitude,
+      lng: current.coords.longitude,
+      accuracy: current.coords.accuracy ?? undefined,
+      label: label || 'Paylaşılan konum',
+    });
     void Haptics.selectionAsync();
   };
 
@@ -183,6 +213,7 @@ export default function ForumScreen() {
                   setComposerOpen(false);
                   setBody('');
                   setSelectedImage(null);
+                  setSelectedLocation(null);
                   setFeedback('');
                 }}
                 style={styles.closeButton}
@@ -220,6 +251,17 @@ export default function ForumScreen() {
                 </View>
               </View>
             ) : null}
+            {selectedLocation ? (
+              <View style={styles.locationChip}>
+                <Ionicons color={colors.lime} name="location" size={16} />
+                <Text numberOfLines={1} style={styles.locationChipText}>
+                  {selectedLocation.label}
+                </Text>
+                <Pressable onPress={() => setSelectedLocation(null)}>
+                  <Ionicons color={colors.textMuted} name="close" size={17} />
+                </Pressable>
+              </View>
+            ) : null}
             <View style={styles.composerActions}>
               <View style={styles.futureActions}>
                 <Pressable
@@ -233,7 +275,17 @@ export default function ForumScreen() {
                     size={21}
                   />
                 </Pressable>
-                <Ionicons color={colors.textFaint} name="location-outline" size={20} />
+                <Pressable
+                  accessibilityLabel="Konum ekle"
+                  onPress={() => void chooseLocation()}
+                  style={({ pressed }) => [styles.mediaAction, pressed && styles.pressed]}
+                >
+                  <Ionicons
+                    color={selectedLocation ? colors.lime : colors.textFaint}
+                    name="location-outline"
+                    size={20}
+                  />
+                </Pressable>
               </View>
               <Pressable
                 accessibilityLabel="Paylaş"
@@ -307,14 +359,20 @@ function ThreadCard({ thread }: { thread: ForumThread }) {
         <Text style={styles.threadCategory}>{categoryLabels[thread.category]}</Text>
       </View>
       <Text style={styles.threadBody}>{thread.body}</Text>
-      {thread.imageUrl ? (
+          {thread.imageUrl ? (
         <Image
           contentFit="cover"
           source={{ uri: thread.imageUrl }}
           style={styles.threadImage}
           transition={180}
         />
-      ) : null}
+          ) : null}
+          {thread.location?.label ? (
+            <View style={styles.threadLocation}>
+              <Ionicons color={colors.lime} name="location-outline" size={14} />
+              <Text style={styles.threadLocationText}>{thread.location.label}</Text>
+            </View>
+          ) : null}
       <View style={styles.threadActions}>
         <View style={styles.threadAction}>
           <Ionicons color={colors.textMuted} name="heart-outline" size={19} />
@@ -445,6 +503,23 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: 10,
   },
+  locationChip: {
+    minHeight: 42,
+    paddingHorizontal: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.limeMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  locationChipText: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 10,
+  },
   futureActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   mediaAction: {
     width: 42,
@@ -531,6 +606,22 @@ const styles = StyleSheet.create({
     marginTop: 14,
     borderRadius: 18,
     backgroundColor: colors.backgroundRaised,
+  },
+  threadLocation: {
+    alignSelf: 'flex-start',
+    minHeight: 34,
+    marginTop: 10,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: colors.limeMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  threadLocationText: {
+    color: colors.limeBright,
+    fontFamily: fonts.semibold,
+    fontSize: 10,
   },
   threadActions: {
     minHeight: 42,
