@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useLiveTelemetry, type LiveDriver } from '@/hooks/use-live-telemetry';
@@ -15,6 +15,11 @@ const DEFAULT_REGION = {
   latitudeDelta: 0.1,
   longitudeDelta: 0.08,
 };
+
+const mapProvider =
+  Platform.OS === 'android' || process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY
+    ? PROVIDER_GOOGLE
+    : undefined;
 
 export default function LiveMapScreen() {
   const mapRef = useRef<MapView>(null);
@@ -76,6 +81,7 @@ export default function LiveMapScreen() {
             mapType="standard"
             onPanDrag={() => setFollow(false)}
             onPress={() => setSelected(null)}
+            provider={mapProvider}
             ref={mapRef}
             rotateEnabled
             showsCompass={false}

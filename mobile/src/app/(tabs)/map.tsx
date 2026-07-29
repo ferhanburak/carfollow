@@ -7,13 +7,20 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import MapView, { Marker, Polyline, type MapPressEvent, type Region } from 'react-native-maps';
+import MapView, {
+  Marker,
+  Polyline,
+  PROVIDER_GOOGLE,
+  type MapPressEvent,
+  type Region,
+} from 'react-native-maps';
 
 import { ScreenShell, Surface } from '@/components/screen-shell';
 import { useMapWorld } from '@/hooks/use-map-world';
@@ -26,6 +33,11 @@ const ANKARA: Region = {
   latitudeDelta: 0.24,
   longitudeDelta: 0.18,
 };
+
+const mapProvider =
+  Platform.OS === 'android' || process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY
+    ? PROVIDER_GOOGLE
+    : undefined;
 
 type EditorType = 'spot' | 'wash' | 'meetup' | 'convoy';
 type Point = { latitude: number; longitude: number };
@@ -165,6 +177,7 @@ export default function MapScreen() {
           initialRegion={ANKARA}
           mapType="standard"
           onPress={selectMapPoint}
+          provider={mapProvider}
           ref={mapRef}
           showsCompass
           showsMyLocationButton={false}
@@ -323,6 +336,7 @@ export default function MapScreen() {
               <MapView
                 initialRegion={ANKARA}
                 onPress={selectMapPoint}
+                provider={mapProvider}
                 showsUserLocation
                 style={styles.editorMap}
                 userInterfaceStyle="dark"
