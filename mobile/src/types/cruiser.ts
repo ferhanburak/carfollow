@@ -99,6 +99,9 @@ export type MapPin = {
   createdByUid?: string;
   capacity?: number;
   approvedCount?: number;
+  minDriverScore?: number;
+  minHarmonyVotes?: number;
+  maxAlertVotes?: number;
   scheduledStartAtMs?: number;
   lifecycleStatus?: string;
   backendCanJoin?: boolean;

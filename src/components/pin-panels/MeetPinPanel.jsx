@@ -218,8 +218,6 @@ function createConvoyEditForm(pin) {
     accessPolicy: pin.accessPolicy ?? "request",
     detailVisibility: pin.detailVisibility ?? "trusted",
     minDriverScore: String(pin.minDriverScore ?? 0),
-    minHarmonyVotes: String(pin.minHarmonyVotes ?? 0),
-    maxAlertVotes: String(pin.maxAlertVotes ?? 999),
   };
 }
 
@@ -249,8 +247,6 @@ function ConvoyEditPanel({ onUpdate, pin }) {
         accessPolicy: form.accessPolicy,
         detailVisibility: form.detailVisibility,
         minDriverScore: Number(form.minDriverScore),
-        minHarmonyVotes: Number(form.minHarmonyVotes),
-        maxAlertVotes: Number(form.maxAlertVotes),
       });
       if (completed !== false) setOpen(false);
     } finally {
@@ -299,11 +295,10 @@ function ConvoyEditPanel({ onUpdate, pin }) {
               <option value="public">Herkese Açık</option><option value="trusted">Güvenilir Sürücüler</option>
             </select>
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            <label className="block text-[10px] text-neutral-500">Min Skor<input type="number" min="0" max="100" value={form.minDriverScore} onChange={(event) => updateField("minDriverScore", event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-[#171717] px-2 text-xs text-white" /></label>
-            <label className="block text-[10px] text-neutral-500">Min Uyum<input type="number" min="0" value={form.minHarmonyVotes} onChange={(event) => updateField("minHarmonyVotes", event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-[#171717] px-2 text-xs text-white" /></label>
-            <label className="block text-[10px] text-neutral-500">Max Uyari<input type="number" min="0" value={form.maxAlertVotes} onChange={(event) => updateField("maxAlertVotes", event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-[#171717] px-2 text-xs text-white" /></label>
-          </div>
+          <label className="block text-[10px] text-neutral-500">
+            Minimum Güven Puanı
+            <input type="number" min="0" max="100" value={form.minDriverScore} onChange={(event) => updateField("minDriverScore", event.target.value)} className="mt-2 h-11 w-full rounded-xl border border-white/10 bg-[#171717] px-3 text-xs text-white" />
+          </label>
           <button type="submit" disabled={pending} className="min-h-12 w-full rounded-2xl bg-lime-400 font-bold text-black disabled:cursor-wait disabled:opacity-50">{pending ? "Kaydediliyor..." : "Degisiklikleri Kaydet"}</button>
         </form>
       ) : null}
@@ -399,10 +394,8 @@ export function MeetPinPanel({
         <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-4 text-sm text-rose-100">
           <p className="font-semibold">Restricted Convoy</p>
           <p className="mt-2">{accessState.reason}</p>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-rose-100/90">
-            <InsightCard label="Min Score" value={`${pin.minDriverScore ?? 0}`} />
-            <InsightCard label="Min Uyum" value={`${pin.minHarmonyVotes ?? 0}`} />
-            <InsightCard label="Max Alert" value={`${pin.maxAlertVotes ?? 999}`} />
+          <div className="mt-3 text-xs text-rose-100/90">
+            <InsightCard label="Minimum Güven Puanı" value={`${pin.minDriverScore ?? 0}/100`} />
           </div>
         </div>
       ) : null}

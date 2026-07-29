@@ -157,9 +157,7 @@ function buildConvoyDocument({ convoyId, pin, host, invitedProfiles = [], timest
   if (eventMode === "convoy" && routePath.length < 2) throw new Error("A convoy route needs at least two points.");
   const scheduledStartAtMs = safeScheduledStartAtMs(pin?.scheduledStartAtMs);
   const minDriverScore = Number(pin?.minDriverScore ?? 0);
-  const minHarmonyVotes = Number(pin?.minHarmonyVotes ?? 0);
-  const maxAlertVotes = Number(pin?.maxAlertVotes ?? 999);
-  if (![minDriverScore, minHarmonyVotes, maxAlertVotes].every(Number.isFinite)) throw new Error("Convoy trust limits must be valid numbers.");
+  if (!Number.isFinite(minDriverScore)) throw new Error("Convoy trust limit must be a valid number.");
   return {
     id: convoyId,
     type: "meet",
@@ -178,8 +176,9 @@ function buildConvoyDocument({ convoyId, pin, host, invitedProfiles = [], timest
     accessPolicy,
     detailVisibility,
     minDriverScore: Math.min(100, Math.max(0, minDriverScore)),
-    minHarmonyVotes: Math.max(0, minHarmonyVotes),
-    maxAlertVotes: Math.max(0, maxAlertVotes),
+    // Legacy fields stay neutral so older clients remain compatible.
+    minHarmonyVotes: 0,
+    maxAlertVotes: 999,
     hostUserId: hostProfile.userId,
     createdByUid: hostProfile.userId,
     createdByPlate: hostProfile.plate,
@@ -238,14 +237,12 @@ function buildConvoyEditablePatch(convoy, input = {}) {
   const detailVisibility = DETAIL_VISIBILITIES.includes(input.detailVisibility) ? input.detailVisibility : convoy.detailVisibility;
   const scheduledStartAtMs = Number(input.scheduledStartAtMs ?? convoy.scheduledStartAtMs ?? 0);
   const minDriverScore = Number(input.minDriverScore ?? convoy.minDriverScore ?? 0);
-  const minHarmonyVotes = Number(input.minHarmonyVotes ?? convoy.minHarmonyVotes ?? 0);
-  const maxAlertVotes = Number(input.maxAlertVotes ?? convoy.maxAlertVotes ?? 999);
 
   if (!name || !route || !time) throw new Error("Convoy name, route, and launch time are required.");
   if (!Number.isInteger(capacity) || capacity < 2 || capacity > 50) throw new Error("Convoy capacity must be between 2 and 50.");
   if (capacity < Number(convoy.approvedCount ?? 1)) throw new Error("Convoy capacity cannot be lower than the approved member count.");
   if (!Number.isFinite(scheduledStartAtMs) || scheduledStartAtMs < 0) throw new Error("Convoy launch date is invalid.");
-  if (![minDriverScore, minHarmonyVotes, maxAlertVotes].every(Number.isFinite)) throw new Error("Convoy trust limits must be valid numbers.");
+  if (!Number.isFinite(minDriverScore)) throw new Error("Convoy trust limit must be a valid number.");
   if (visibility === "clan" && !convoy.clanId) throw new Error("Clan-only convoys require clan membership.");
 
   return {
@@ -258,15 +255,13 @@ function buildConvoyEditablePatch(convoy, input = {}) {
     detailVisibility,
     scheduledStartAtMs,
     minDriverScore: Math.min(100, Math.max(0, minDriverScore)),
-    minHarmonyVotes: Math.max(0, minHarmonyVotes),
-    maxAlertVotes: Math.max(0, maxAlertVotes),
+    minHarmonyVotes: 0,
+    maxAlertVotes: 999,
   };
 }
 
 function meetsTrust(convoy, profile) {
-  return Number(profile?.driverScore ?? profile?.score ?? 0) >= Number(convoy?.minDriverScore ?? 0) &&
-    Number(profile?.harmonyVotes ?? 0) >= Number(convoy?.minHarmonyVotes ?? 0) &&
-    Number(profile?.alertVotes ?? 0) <= Number(convoy?.maxAlertVotes ?? 999);
+  return Number(profile?.driverScore ?? profile?.score ?? 0) >= Number(convoy?.minDriverScore ?? 0);
 }
 
 function canSeeConvoy(convoy, profile, friendUserIds = new Set(), membership = null) {
@@ -348,7 +343,7 @@ function presentConvoy(convoy, profile, membership, members) {
     ...base,
     backendCanViewDetails: detailsAllowed,
     backendCanJoin: canJoin,
-    backendAccessReason: !trusted ? "Driver score or behavior requirements are not met." : full ? "Convoy capacity is full." : pendingSelf ? "Join request is awaiting host approval." : "",
+    backendAccessReason: !trusted ? "Driver score requirement is not met." : full ? "Convoy capacity is full." : pendingSelf ? "Join request is awaiting host approval." : "",
     attendees: detailsAllowed ? approved : [],
     pendingRequests: canManageConvoy(convoy, membership, viewerUserId) ? pending : [],
     invitedGuests: detailsAllowed ? (convoy.invitedGuests ?? []) : [],

@@ -52,8 +52,8 @@ export const createMapPinForm = (seedPin) => ({
   accessPolicy: seedPin?.accessPolicy ?? "request",
   detailVisibility: seedPin?.detailVisibility ?? "trusted",
   minDriverScore: seedPin?.minDriverScore ?? 75,
-  minHarmonyVotes: seedPin?.minHarmonyVotes ?? 5,
-  maxAlertVotes: seedPin?.maxAlertVotes ?? 3,
+  minHarmonyVotes: 0,
+  maxAlertVotes: 999,
 });
 
 export const createSpotPhotoForm = () => ({

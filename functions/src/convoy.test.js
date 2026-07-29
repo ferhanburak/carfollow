@@ -51,6 +51,21 @@ test("trusted visible driver receives exact details while low-score driver recei
   assert.equal(locked.backendCanJoin, false);
 });
 
+test("convoy eligibility depends only on driver score", () => {
+  const convoy = createConvoy({ minDriverScore: 75, minHarmonyVotes: 99, maxAlertVotes: 0 });
+  const eligible = presentConvoy(
+    convoy,
+    { ...guest, driverScore: 80, harmonyVotes: 0, alertVotes: 50 },
+    null,
+    [],
+  );
+
+  assert.equal(convoy.minHarmonyVotes, 0);
+  assert.equal(convoy.maxAlertVotes, 999);
+  assert.equal(eligible.backendCanJoin, true);
+  assert.equal(eligible.backendCanViewDetails, true);
+});
+
 test("friends and clan visibility are evaluated from server-owned relationships", () => {
   const publicConvoy = createConvoy();
   const friendsConvoy = createConvoy({ visibility: "friends" });

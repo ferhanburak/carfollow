@@ -9,6 +9,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -22,8 +23,14 @@ import MapView, {
   type Region,
 } from 'react-native-maps';
 
+import {
+  MapNodeMarker,
+  mapNodeIcon,
+  mapNodeLabel,
+} from '@/components/map-node-ui';
 import { ScreenShell, Surface } from '@/components/screen-shell';
 import { useMapWorld } from '@/hooks/use-map-world';
+import { useAuth } from '@/providers/auth-provider';
 import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { colors, fonts } from '@/theme/colors';
 import type { DriverSummary, MapPin } from '@/types/cruiser';
@@ -52,6 +59,7 @@ const nodeOptions: { value: EditorType; label: string; icon: keyof typeof Ionico
 
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
+  const { profile } = useAuth();
   const { mapWorld: world, openDriverProfile } = useDriverProfile();
   const [selected, setSelected] = useState<MapPin | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -59,6 +67,7 @@ export default function MapScreen() {
   const [points, setPoints] = useState<Point[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [minDriverScore, setMinDriverScore] = useState('70');
   const [formError, setFormError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -95,16 +104,25 @@ export default function MapScreen() {
     setPoints([]);
     setName('');
     setDescription('');
+    setMinDriverScore('70');
     setFormError('');
     setEditorOpen(true);
   };
 
   const saveNode = async () => {
     const minimumPoints = editorType === 'convoy' ? 2 : 1;
+    const trustScore = Number(minDriverScore);
     if (!name.trim() || points.length < minimumPoints) {
       setFormError(editorType === 'convoy'
         ? 'Adı doldurun ve haritadan en az iki rota noktası seçin.'
         : 'Adı doldurun ve haritadan bir konum seçin.');
+      return;
+    }
+    if (
+      (editorType === 'meetup' || editorType === 'convoy') &&
+      (!Number.isFinite(trustScore) || trustScore < 0 || trustScore > 100)
+    ) {
+      setFormError('Güven puanı 0 ile 100 arasında olmalıdır.');
       return;
     }
     const first = points[0];
@@ -139,6 +157,9 @@ export default function MapScreen() {
           visibility: 'public',
           accessPolicy: 'request',
           detailVisibility: 'trusted',
+          minDriverScore: trustScore,
+          minHarmonyVotes: 0,
+          maxAlertVotes: 999,
         });
       }
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -191,18 +212,27 @@ export default function MapScreen() {
             <Marker
               coordinate={{ latitude: Number(pin.lat), longitude: Number(pin.lng) }}
               key={pin.id}
-              onPress={() => setSelected(pin)}
+              onPress={(event) => {
+                event.stopPropagation();
+                setSelected(pin);
+              }}
               tracksViewChanges={false}
             >
-              <View style={[styles.marker, markerStyle(pin.type)]}>
-                <Ionicons
-                  color={pin.type === 'meet' ? colors.white : colors.black}
-                  name={markerIcon(pin)}
-                  size={17}
-                />
-              </View>
+              <MapNodeMarker pin={pin} selected={selected?.id === pin.id} />
             </Marker>
           ))}
+          {selected?.type === 'meet' &&
+          selected.backendCanViewDetails !== false &&
+          (selected.routePath?.length ?? 0) > 1 ? (
+            <Polyline
+              coordinates={(selected.routePath ?? []).map((point) => ({
+                latitude: point.lat,
+                longitude: point.lng,
+              }))}
+              strokeColor={colors.rose}
+              strokeWidth={4}
+            />
+          ) : null}
           {points.map((point, index) => (
             <Marker coordinate={point} key={`draft-${index}`}>
               <View style={styles.draftMarker}>
@@ -288,6 +318,11 @@ export default function MapScreen() {
               </Pressable>
             </View>
 
+            <ScrollView
+              contentContainerStyle={styles.editorContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
             <View style={styles.optionGrid}>
               {nodeOptions.map((option) => (
                 <Pressable
@@ -334,6 +369,29 @@ export default function MapScreen() {
               value={description}
             />
 
+            {editorType === 'meetup' || editorType === 'convoy' ? (
+              <View style={styles.trustField}>
+                <View style={styles.trustCopy}>
+                  <Text style={styles.trustLabel}>Minimum güven puanı</Text>
+                  <Text style={styles.trustHint}>
+                    Sizin puanınız {Math.round(Number(profile?.driverScore ?? 0))}/100
+                  </Text>
+                </View>
+                <TextInput
+                  accessibilityLabel="Minimum güven puanı"
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  onChangeText={(value) => {
+                    setMinDriverScore(value.replace(/\D/g, '').slice(0, 3));
+                    setFormError('');
+                  }}
+                  selectTextOnFocus
+                  style={styles.trustInput}
+                  value={minDriverScore}
+                />
+              </View>
+            ) : null}
+
             <View style={styles.editorMapWrap}>
               <MapView
                 initialRegion={ANKARA}
@@ -363,6 +421,36 @@ export default function MapScreen() {
               </View>
             </View>
 
+            {editorType === 'convoy' ? (
+              <View style={styles.routeActions}>
+                <Pressable
+                  disabled={!points.length}
+                  onPress={() => setPoints((current) => current.slice(0, -1))}
+                  style={({ pressed }) => [
+                    styles.routeAction,
+                    !points.length && styles.routeActionDisabled,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons name="arrow-undo" size={17} color={colors.text} />
+                  <Text style={styles.routeActionText}>Son Noktayı Geri Al</Text>
+                </Pressable>
+                <Pressable
+                  disabled={!points.length}
+                  onPress={() => setPoints([])}
+                  style={({ pressed }) => [
+                    styles.routeAction,
+                    styles.routeClear,
+                    !points.length && styles.routeActionDisabled,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <Ionicons name="trash-outline" size={17} color="#fda4af" />
+                  <Text style={styles.routeClearText}>Rotayı Temizle</Text>
+                </Pressable>
+              </View>
+            ) : null}
+
             {formError || world.error ? (
               <Text style={styles.error}>{formError || world.error}</Text>
             ) : null}
@@ -378,6 +466,7 @@ export default function MapScreen() {
                 </>
               )}
             </Pressable>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -436,11 +525,11 @@ function SelectedNode({
     <Surface accent>
       <View style={styles.selectedHeader}>
         <View style={styles.selectedIcon}>
-          <Ionicons name={markerIcon(pin)} size={20} color={colors.black} />
+          <Ionicons name={mapNodeIcon(pin)} size={20} color={colors.black} />
         </View>
         <View style={styles.selectedCopy}>
           <Text style={styles.selectedName}>{pin.name}</Text>
-          <Text style={styles.selectedType}>{typeLabel(pin)}</Text>
+          <Text style={styles.selectedType}>{mapNodeLabel(pin)}</Text>
         </View>
         <Pressable onPress={onClose} style={styles.closeButton}>
           <Ionicons name="close" size={20} color={colors.textMuted} />
@@ -496,6 +585,12 @@ function SelectedNode({
             <Text style={styles.detailText}>{pin.time || 'Saat belirtilmedi'}</Text>
             <Text style={styles.detailText}>
               {pin.approvedCount ?? 1}/{pin.capacity ?? 12} sürücü
+            </Text>
+          </View>
+          <View style={styles.trustRequirement}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={colors.lime} />
+            <Text style={styles.trustRequirementText}>
+              Minimum güven puanı: {Number(pin.minDriverScore ?? 0)}/100
             </Text>
           </View>
           {pin.attendees?.length ? (
@@ -670,24 +765,6 @@ function FlagButton({
   );
 }
 
-function markerIcon(pin: MapPin): keyof typeof Ionicons.glyphMap {
-  if (pin.type === 'spot') return 'camera';
-  if (pin.type === 'wash') return 'water';
-  return pin.eventMode === 'meetup' ? 'people' : 'navigate';
-}
-
-function markerStyle(type: MapPin['type']) {
-  if (type === 'wash') return styles.markerBlue;
-  if (type === 'meet') return styles.markerRose;
-  return styles.markerLime;
-}
-
-function typeLabel(pin: MapPin) {
-  if (pin.type === 'spot') return 'Fotoğraf noktası';
-  if (pin.type === 'wash') return 'Yıkama istasyonu';
-  return pin.eventMode === 'meetup' ? 'Buluşma' : 'Konvoy';
-}
-
 const styles = StyleSheet.create({
   screenContent: { paddingTop: 14, paddingBottom: 116, gap: 12 },
   mapCard: {
@@ -724,18 +801,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  marker: {
-    width: 40,
-    height: 40,
-    borderRadius: 15,
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.86)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markerLime: { backgroundColor: colors.lime },
-  markerBlue: { backgroundColor: '#38bdf8' },
-  markerRose: { backgroundColor: colors.rose },
   draftMarker: {
     width: 34,
     height: 34,
@@ -841,6 +906,23 @@ const styles = StyleSheet.create({
   spotPhoto: { flex: 1, height: 92, borderRadius: 14, backgroundColor: colors.black },
   detailRow: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   detailText: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 10 },
+  trustRequirement: {
+    minHeight: 42,
+    marginTop: 9,
+    paddingHorizontal: 11,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.black,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  trustRequirementText: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 10,
+  },
   attendeeList: { marginTop: 12 },
   attendeeTitle: {
     marginBottom: 2,
@@ -928,6 +1010,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     backgroundColor: colors.backgroundRaised,
   },
+  editorContent: { paddingBottom: 6 },
   editorHeader: {
     marginBottom: 15,
     flexDirection: 'row',
@@ -972,6 +1055,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   textArea: { minHeight: 72, paddingTop: 13, textAlignVertical: 'top' },
+  trustField: {
+    minHeight: 58,
+    marginBottom: 10,
+    paddingLeft: 13,
+    paddingRight: 7,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  trustCopy: { flex: 1 },
+  trustLabel: { color: colors.text, fontFamily: fonts.bold, fontSize: 11 },
+  trustHint: { marginTop: 2, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9 },
+  trustInput: {
+    width: 62,
+    height: 44,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: colors.lime,
+    backgroundColor: colors.black,
+    color: colors.limeBright,
+    fontFamily: fonts.extraBold,
+    fontSize: 16,
+    textAlign: 'center',
+  },
   editorMapWrap: { height: 230, overflow: 'hidden', borderRadius: 19 },
   editorMap: { flex: 1 },
   selectionHint: {
@@ -984,6 +1095,37 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(5,6,5,0.86)',
   },
   selectionHintText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 10, textAlign: 'center' },
+  routeActions: { marginTop: 9, flexDirection: 'row', gap: 8 },
+  routeAction: {
+    flex: 1,
+    minHeight: 46,
+    paddingHorizontal: 9,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  routeClear: {
+    borderColor: 'rgba(244,63,94,0.3)',
+    backgroundColor: 'rgba(244,63,94,0.06)',
+  },
+  routeActionDisabled: { opacity: 0.35 },
+  routeActionText: {
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 9,
+    textAlign: 'center',
+  },
+  routeClearText: {
+    color: '#fda4af',
+    fontFamily: fonts.semibold,
+    fontSize: 9,
+    textAlign: 'center',
+  },
   error: { marginTop: 9, color: '#fda4af', fontFamily: fonts.semibold, fontSize: 11 },
   saveButton: {
     minHeight: 52,

@@ -567,17 +567,9 @@ function writeDriverAggregate(transaction, {
 
 function assertConvoyTrust(convoy, requester) {
   const score = Number(requester.driverScore ?? 0);
-  const harmonyVotes = Number(requester.harmonyVotes ?? 0);
-  const alertVotes = Number(requester.alertVotes ?? 0);
 
   if (score < Number(convoy.minDriverScore ?? 0)) {
     throw new HttpsError("permission-denied", "Driver score is below the convoy requirement.");
-  }
-  if (harmonyVotes < Number(convoy.minHarmonyVotes ?? 0)) {
-    throw new HttpsError("permission-denied", "Harmony vote requirement is not met.");
-  }
-  if (alertVotes > Number(convoy.maxAlertVotes ?? Number.MAX_SAFE_INTEGER)) {
-    throw new HttpsError("permission-denied", "Alert vote limit is exceeded.");
   }
 }
 

@@ -1,15 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { MapNodeDetailModal, MapNodeMarker } from '@/components/map-node-ui';
 import { AppHeader } from '@/components/screen-shell';
 import { useLiveTelemetry, type LiveDriver } from '@/hooks/use-live-telemetry';
 import { useAuth } from '@/providers/auth-provider';
 import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { colors, fonts } from '@/theme/colors';
+import type { MapPin } from '@/types/cruiser';
 
 const DEFAULT_REGION = {
   latitude: 39.9334,
@@ -26,10 +28,11 @@ const mapProvider =
 export default function LiveMapScreen() {
   const mapRef = useRef<MapView>(null);
   const { profile } = useAuth();
-  const { openDriverProfile } = useDriverProfile();
+  const { mapWorld, openDriverProfile } = useDriverProfile();
   const { drivers, location } = useLiveTelemetry();
   const [follow, setFollow] = useState(true);
-  const [selected, setSelected] = useState<LiveDriver | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<LiveDriver | null>(null);
+  const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
 
   useEffect(() => {
     if (!follow || !location) return;
@@ -72,7 +75,10 @@ export default function LiveMapScreen() {
             initialRegion={DEFAULT_REGION}
             mapType="standard"
             onPanDrag={() => setFollow(false)}
-            onPress={() => setSelected(null)}
+            onPress={() => {
+              setSelectedDriver(null);
+              setSelectedPin(null);
+            }}
             provider={mapProvider}
             ref={mapRef}
             rotateEnabled
@@ -88,7 +94,11 @@ export default function LiveMapScreen() {
                   longitude: driver.longitude,
                 }}
                 key={driver.userId}
-                onPress={() => setSelected(driver)}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  setSelectedPin(null);
+                  setSelectedDriver(driver);
+                }}
                 rotation={driver.relation === 'self' ? Number(location?.coords.heading ?? 0) : 0}
                 tracksViewChanges={false}
               >
@@ -105,6 +115,37 @@ export default function LiveMapScreen() {
                 </View>
               </Marker>
             ))}
+            {mapWorld.pins.map((pin) => (
+              <Marker
+                coordinate={{
+                  latitude: Number(pin.lat),
+                  longitude: Number(pin.lng),
+                }}
+                key={`node-${pin.id}`}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  setSelectedDriver(null);
+                  setSelectedPin(pin);
+                }}
+                tracksViewChanges={false}
+                zIndex={selectedPin?.id === pin.id ? 10 : 2}
+              >
+                <MapNodeMarker pin={pin} selected={selectedPin?.id === pin.id} />
+              </Marker>
+            ))}
+            {selectedPin?.type === 'meet' &&
+            selectedPin.backendCanViewDetails !== false &&
+            (selectedPin.routePath?.length ?? 0) > 1 ? (
+              <Polyline
+                coordinates={(selectedPin.routePath ?? []).map((point) => ({
+                  latitude: point.lat,
+                  longitude: point.lng,
+                }))}
+                strokeColor={colors.rose}
+                strokeWidth={5}
+                zIndex={4}
+              />
+            ) : null}
           </MapView>
 
           <View style={styles.legend}>
@@ -128,32 +169,39 @@ export default function LiveMapScreen() {
             />
           </Pressable>
 
-          {selected ? (
+          {selectedDriver ? (
             <Pressable
-              accessibilityLabel={`${selected.plate || 'Sürücü'} profilini aç`}
+              accessibilityLabel={`${selectedDriver.plate || 'Sürücü'} profilini aç`}
               onPress={() => void openDriverProfile({
-                userId: selected.userId,
-                fullName: selected.relation === 'self' ? profile?.fullName : undefined,
-                plate: selected.plate,
-                model: selected.model,
-                relation: selected.relation === 'other' ? 'stranger' : selected.relation,
+                userId: selectedDriver.userId,
+                fullName: selectedDriver.relation === 'self' ? profile?.fullName : undefined,
+                plate: selectedDriver.plate,
+                model: selectedDriver.model,
+                relation: selectedDriver.relation === 'other' ? 'stranger' : selectedDriver.relation,
               })}
               style={({ pressed }) => [styles.driverCard, pressed && styles.driverCardPressed]}
             >
-              <View style={[styles.relationStripe, { backgroundColor: relationColor(selected.relation) }]} />
+              <View
+                style={[
+                  styles.relationStripe,
+                  { backgroundColor: relationColor(selectedDriver.relation) },
+                ]}
+              />
               <View style={styles.driverCopy}>
                 <Text style={styles.driverPlate}>
-                  {selected.relation === 'self' ? profile?.fullName : selected.plate || 'CRUISER sürücüsü'}
+                  {selectedDriver.relation === 'self'
+                    ? profile?.fullName
+                    : selectedDriver.plate || 'CRUISER sürücüsü'}
                 </Text>
                 <Text style={styles.driverMeta}>
-                  {relationLabel(selected.relation)} · {Math.round(selected.speed)} KM/H
+                  {relationLabel(selectedDriver.relation)} · {Math.round(selectedDriver.speed)} KM/H
                 </Text>
               </View>
               <Pressable
                 accessibilityLabel="Sürücü kartını kapat"
                 onPress={(event) => {
                   event.stopPropagation();
-                  setSelected(null);
+                  setSelectedDriver(null);
                 }}
                 style={styles.dismiss}
               >
@@ -162,6 +210,24 @@ export default function LiveMapScreen() {
             </Pressable>
           ) : null}
         </View>
+
+        <MapNodeDetailModal
+          busy={Boolean(mapWorld.busy)}
+          onClose={() => setSelectedPin(null)}
+          onJoin={selectedPin?.backendCanJoin ? async () => {
+            try {
+              await mapWorld.joinConvoy(selectedPin.id);
+              setSelectedPin(null);
+              Alert.alert('İstek gönderildi', 'Etkinlik katılım isteğiniz iletildi.');
+            } catch {
+              Alert.alert('Katılım başarısız', mapWorld.error || 'İstek gönderilemedi.');
+            }
+          } : undefined}
+          onOpenDriver={(driver) => void openDriverProfile(driver, {
+            convoyId: selectedPin?.type === 'meet' ? selectedPin.id : undefined,
+          })}
+          pin={selectedPin}
+        />
       </SafeAreaView>
     </LinearGradient>
   );

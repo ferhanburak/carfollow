@@ -323,8 +323,8 @@ export function MapComposerPanel({
                   </CompactField>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <CompactField label="Min Score" required>
+                <div>
+                  <CompactField label="Minimum Güven Puanı" required>
                     <input
                       type="number"
                       min="0"
@@ -334,26 +334,6 @@ export function MapComposerPanel({
                       className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
                     />
                     {errors.minDriverScore ? <p className="text-xs text-rose-300">{errors.minDriverScore}</p> : null}
-                  </CompactField>
-                  <CompactField label="Min Uyum" required>
-                    <input
-                      type="number"
-                      min="0"
-                      value={form.minHarmonyVotes}
-                      onChange={(event) => onFormChange((current) => ({ ...current, minHarmonyVotes: event.target.value }))}
-                      className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
-                    />
-                    {errors.minHarmonyVotes ? <p className="text-xs text-rose-300">{errors.minHarmonyVotes}</p> : null}
-                  </CompactField>
-                  <CompactField label="Max Alert" required>
-                    <input
-                      type="number"
-                      min="0"
-                      value={form.maxAlertVotes}
-                      onChange={(event) => onFormChange((current) => ({ ...current, maxAlertVotes: event.target.value }))}
-                      className="h-12 w-full rounded-2xl border border-white/10 bg-[#171717] px-4 outline-none focus:border-lime-400"
-                    />
-                    {errors.maxAlertVotes ? <p className="text-xs text-rose-300">{errors.maxAlertVotes}</p> : null}
                   </CompactField>
                 </div>
 

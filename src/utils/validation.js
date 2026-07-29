@@ -102,12 +102,6 @@ export function validateMapPinForm(form) {
     if (!Number.isFinite(Number(form.minDriverScore)) || Number(form.minDriverScore) < 0 || Number(form.minDriverScore) > 100) {
       errors.minDriverScore = "Minimum driver score must be between 0 and 100.";
     }
-    if (!Number.isFinite(Number(form.minHarmonyVotes)) || Number(form.minHarmonyVotes) < 0) {
-      errors.minHarmonyVotes = "Minimum harmony votes must be 0 or greater.";
-    }
-    if (!Number.isFinite(Number(form.maxAlertVotes)) || Number(form.maxAlertVotes) < 0) {
-      errors.maxAlertVotes = "Maximum alert votes must be 0 or greater.";
-    }
     if (!["meetup", "convoy"].includes(form.eventMode)) {
       errors.eventMode = "Event mode must be meetup or convoy.";
     }

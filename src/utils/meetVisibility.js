@@ -81,13 +81,9 @@ function hasBaseVisibilityAccess(pin, user) {
 
 function isTrustedForConvoy(pin, user) {
   const score = Number(user?.driverScore ?? 0);
-  const harmonyVotes = Number(user?.harmonyVotes ?? 0);
-  const alertVotes = Number(user?.alertVotes ?? 0);
   const minDriverScore = Number(pin?.minDriverScore ?? 0);
-  const minHarmonyVotes = Number(pin?.minHarmonyVotes ?? 0);
-  const maxAlertVotes = Number(pin?.maxAlertVotes ?? 999);
 
-  return score >= minDriverScore && harmonyVotes >= minHarmonyVotes && alertVotes <= maxAlertVotes;
+  return score >= minDriverScore;
 }
 
 export function getConvoyAccessState(pin, user) {
@@ -179,7 +175,7 @@ export function getConvoyAccessState(pin, user) {
       canViewDetails: false,
       canJoin: false,
       isLocked: true,
-      reason: "Driver score veya uyum metriklerin bu konvoyun minimum güven kurallarini saglamiyor.",
+      reason: "Sürücü puanın bu etkinliğin minimum güven puanını karşılamıyor.",
       isTrusted,
     };
   }
