@@ -21,7 +21,9 @@ import {
   useForumFeed,
 } from '@/hooks/use-forum-feed';
 import { useAuth } from '@/providers/auth-provider';
+import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { colors, fonts } from '@/theme/colors';
+import type { DriverSummary } from '@/types/cruiser';
 
 type Filter = 'all' | ForumThread['category'];
 
@@ -42,6 +44,7 @@ const categoryLabels = Object.fromEntries(
 
 export default function ForumScreen() {
   const { profile } = useAuth();
+  const { openDriverProfile } = useDriverProfile();
   const { error, loading, threads } = useForumFeed();
   const [filter, setFilter] = useState<Filter>('all');
   const [composerOpen, setComposerOpen] = useState(false);
@@ -337,16 +340,36 @@ export default function ForumScreen() {
       ) : null}
 
       {visibleThreads.map((thread) => (
-        <ThreadCard key={thread.id} thread={thread} />
+        <ThreadCard
+          key={thread.id}
+          onOpenDriver={(driver) => void openDriverProfile(driver)}
+          thread={thread}
+        />
       ))}
     </ScreenShell>
   );
 }
 
-function ThreadCard({ thread }: { thread: ForumThread }) {
+function ThreadCard({
+  onOpenDriver,
+  thread,
+}: {
+  onOpenDriver: (driver: DriverSummary) => void;
+  thread: ForumThread;
+}) {
   return (
     <View style={styles.thread}>
-      <View style={styles.threadHeader}>
+      <Pressable
+        accessibilityLabel={`${thread.authorName} sürücü profilini aç`}
+        disabled={!thread.authorUserId}
+        onPress={() => onOpenDriver({
+          userId: thread.authorUserId,
+          fullName: thread.authorName,
+          plate: thread.authorPlate,
+          model: thread.authorModel,
+        })}
+        style={({ pressed }) => [styles.threadHeader, pressed && styles.authorPressed]}
+      >
         <View style={styles.threadAvatar}>
           <Text style={styles.threadInitial}>
             {(thread.authorName || 'C').trim().charAt(0).toUpperCase()}
@@ -357,7 +380,8 @@ function ThreadCard({ thread }: { thread: ForumThread }) {
           <Text numberOfLines={1} style={styles.threadModel}>{thread.authorModel}</Text>
         </View>
         <Text style={styles.threadCategory}>{categoryLabels[thread.category]}</Text>
-      </View>
+        <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+      </Pressable>
       <Text style={styles.threadBody}>{thread.body}</Text>
           {thread.imageUrl ? (
         <Image
@@ -575,6 +599,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   threadHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  authorPressed: { opacity: 0.72, transform: [{ scale: 0.988 }] },
   threadAvatar: {
     width: 40,
     height: 40,

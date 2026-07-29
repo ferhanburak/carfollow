@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '@/components/screen-shell';
 import { useLiveTelemetry, type LiveDriver } from '@/hooks/use-live-telemetry';
 import { useAuth } from '@/providers/auth-provider';
+import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { colors, fonts } from '@/theme/colors';
 
 const DEFAULT_REGION = {
@@ -25,6 +26,7 @@ const mapProvider =
 export default function LiveMapScreen() {
   const mapRef = useRef<MapView>(null);
   const { profile } = useAuth();
+  const { openDriverProfile } = useDriverProfile();
   const { drivers, location } = useLiveTelemetry();
   const [follow, setFollow] = useState(true);
   const [selected, setSelected] = useState<LiveDriver | null>(null);
@@ -127,7 +129,17 @@ export default function LiveMapScreen() {
           </Pressable>
 
           {selected ? (
-            <View style={styles.driverCard}>
+            <Pressable
+              accessibilityLabel={`${selected.plate || 'Sürücü'} profilini aç`}
+              onPress={() => void openDriverProfile({
+                userId: selected.userId,
+                fullName: selected.relation === 'self' ? profile?.fullName : undefined,
+                plate: selected.plate,
+                model: selected.model,
+                relation: selected.relation === 'other' ? 'stranger' : selected.relation,
+              })}
+              style={({ pressed }) => [styles.driverCard, pressed && styles.driverCardPressed]}
+            >
               <View style={[styles.relationStripe, { backgroundColor: relationColor(selected.relation) }]} />
               <View style={styles.driverCopy}>
                 <Text style={styles.driverPlate}>
@@ -137,10 +149,17 @@ export default function LiveMapScreen() {
                   {relationLabel(selected.relation)} · {Math.round(selected.speed)} KM/H
                 </Text>
               </View>
-              <Pressable onPress={() => setSelected(null)} style={styles.dismiss}>
+              <Pressable
+                accessibilityLabel="Sürücü kartını kapat"
+                onPress={(event) => {
+                  event.stopPropagation();
+                  setSelected(null);
+                }}
+                style={styles.dismiss}
+              >
                 <Ionicons name="close" size={18} color={colors.textMuted} />
               </Pressable>
-            </View>
+            </Pressable>
           ) : null}
         </View>
       </SafeAreaView>
@@ -248,6 +267,10 @@ const styles = StyleSheet.create({
   driverCopy: { flex: 1 },
   driverPlate: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 14 },
   driverMeta: { marginTop: 3, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 10 },
+  driverCardPressed: {
+    borderColor: colors.lime,
+    transform: [{ scale: 0.988 }],
+  },
   dismiss: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.72, transform: [{ scale: 0.96 }] },
 });

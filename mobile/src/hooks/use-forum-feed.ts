@@ -33,7 +33,9 @@ export type ForumThread = {
     accuracy?: number;
     label?: string;
   } | null;
+  authorUserId: string;
   authorName: string;
+  authorPlate?: string;
   authorModel: string;
   likeCount: number;
   replyCount: number;

@@ -4,6 +4,7 @@ import { Redirect, Tabs } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/providers/auth-provider';
+import { DriverProfileProvider } from '@/providers/driver-profile-provider';
 import { colors } from '@/theme/colors';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -30,51 +31,53 @@ export default function TabLayout() {
   if (!user) return <Redirect href="/(auth)/login" />;
 
   return (
-    <Tabs
-      initialRouteName="forum"
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarHideOnKeyboard: true,
-        tabBarActiveTintColor: colors.lime,
-        tabBarInactiveTintColor: colors.textFaint,
-        tabBarStyle: styles.tabBar,
-        tabBarItemStyle: styles.tabItem,
-        sceneStyle: styles.scene,
-        tabBarIcon: ({ color, focused }) => {
-          if (route.name === 'forum') {
+    <DriverProfileProvider>
+      <Tabs
+        initialRouteName="forum"
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          tabBarShowLabel: false,
+          tabBarHideOnKeyboard: true,
+          tabBarActiveTintColor: colors.lime,
+          tabBarInactiveTintColor: colors.textFaint,
+          tabBarStyle: styles.tabBar,
+          tabBarItemStyle: styles.tabItem,
+          sceneStyle: styles.scene,
+          tabBarIcon: ({ color, focused }) => {
+            if (route.name === 'forum') {
+              return (
+                <View style={[styles.forumButton, focused && styles.forumButtonActive]}>
+                  <Image
+                    contentFit="contain"
+                    source={require('../../../assets/images/cruiser-road-mark.png')}
+                    style={styles.forumLogo}
+                  />
+                </View>
+              );
+            }
+            const icon = icons[route.name] ?? icons.profile;
             return (
-              <View style={[styles.forumButton, focused && styles.forumButtonActive]}>
-                <Image
-                  contentFit="contain"
-                  source={require('../../../assets/images/cruiser-road-mark.png')}
-                  style={styles.forumLogo}
+              <View style={[styles.iconButton, focused && styles.iconButtonActive]}>
+                <Ionicons
+                  color={focused ? colors.black : color}
+                  name={focused ? icon.active : icon.idle}
+                  size={21}
                 />
+                {focused ? <View style={styles.activeIndicator} /> : null}
               </View>
             );
-          }
-          const icon = icons[route.name] ?? icons.profile;
-          return (
-            <View style={[styles.iconButton, focused && styles.iconButtonActive]}>
-              <Ionicons
-                color={focused ? colors.black : color}
-                name={focused ? icon.active : icon.idle}
-                size={21}
-              />
-              {focused ? <View style={styles.activeIndicator} /> : null}
-            </View>
-          );
-        },
-      })}
-    >
-      <Tabs.Screen name="map" options={{ title: 'Harita' }} />
-      <Tabs.Screen name="live-map" options={{ title: 'Canlı Harita' }} />
-      <Tabs.Screen name="drive" options={{ title: 'Sürüş' }} />
-      <Tabs.Screen name="forum" options={{ title: 'Akış' }} />
-      <Tabs.Screen name="social" options={{ title: 'Sosyal' }} />
-      <Tabs.Screen name="leaderboard" options={{ title: 'Sıralama' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profil' }} />
-    </Tabs>
+          },
+        })}
+      >
+        <Tabs.Screen name="map" options={{ title: 'Harita' }} />
+        <Tabs.Screen name="live-map" options={{ title: 'Canlı Harita' }} />
+        <Tabs.Screen name="drive" options={{ title: 'Sürüş' }} />
+        <Tabs.Screen name="forum" options={{ title: 'Akış' }} />
+        <Tabs.Screen name="social" options={{ title: 'Sosyal' }} />
+        <Tabs.Screen name="leaderboard" options={{ title: 'Sıralama' }} />
+        <Tabs.Screen name="profile" options={{ title: 'Profil' }} />
+      </Tabs>
+    </DriverProfileProvider>
   );
 }
 

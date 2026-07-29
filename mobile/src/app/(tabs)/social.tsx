@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,14 +15,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import {
-  PublicDriverProfileModal,
-  type ProfileFriendshipState,
-} from '@/components/public-driver-profile-modal';
 import { ScreenShell, Surface } from '@/components/screen-shell';
-import { useMapWorld } from '@/hooks/use-map-world';
 import { useSocialWorld } from '@/hooks/use-social-world';
 import { useAppData } from '@/providers/app-data-provider';
+import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { colors, fonts } from '@/theme/colors';
 import type {
   DirectMessageThread,
@@ -42,10 +38,9 @@ type Action = {
 type FriendshipState = 'none' | 'incoming' | 'outgoing' | 'accepted';
 
 export default function SocialScreen() {
-  const params = useLocalSearchParams<{ section?: string }>();
+  const params = useLocalSearchParams<{ section?: string; threadId?: string }>();
   const router = useRouter();
-  const social = useSocialWorld();
-  const mapWorld = useMapWorld();
+  const { mapWorld, openDriverProfile, social } = useDriverProfile();
   const appData = useAppData();
   const showMessages = params.section === 'messages';
   const [plate, setPlate] = useState('');
@@ -56,9 +51,6 @@ export default function SocialScreen() {
   const [message, setMessage] = useState('');
   const [clanCenterOpen, setClanCenterOpen] = useState(false);
   const [convoyTarget, setConvoyTarget] = useState<DriverSummary | null>(null);
-  const [profileTarget, setProfileTarget] = useState<DriverSummary | null>(null);
-  const [publicProfile, setPublicProfile] = useState<DriverSummary | null>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
 
   const currentThread = activeThread
     ? appData.threads.find((item) => item.id === activeThread.id) ?? activeThread
@@ -126,6 +118,17 @@ export default function SocialScreen() {
     }
   };
 
+  useEffect(() => {
+    if (!showMessages || !params.threadId || activeThread?.id === params.threadId) return;
+    const thread = appData.threads.find((item) => item.id === params.threadId);
+    if (!thread) return;
+    const openTimer = setTimeout(() => {
+      setActiveThread(thread);
+      void appData.markThreadRead(thread.id);
+    }, 0);
+    return () => clearTimeout(openTimer);
+  }, [activeThread?.id, appData, params.threadId, showMessages]);
+
   const friendshipState = (driver: DriverSummary): FriendshipState => {
     if (social.friends.some((item) => item.userId === driver.userId)) return 'accepted';
     if (social.incoming.some((item) => item.userId === driver.userId)) return 'incoming';
@@ -144,34 +147,7 @@ export default function SocialScreen() {
     setConvoyTarget(driver);
   };
 
-  const openPublicProfile = async (driver: DriverSummary) => {
-    setProfileTarget(driver);
-    setPublicProfile(null);
-    setProfileLoading(true);
-    try {
-      const result = await social.getPublicProfile(driver.userId);
-      setPublicProfile(result ? { ...driver, ...result } : driver);
-    } finally {
-      setProfileLoading(false);
-    }
-  };
-
-  const closePublicProfile = () => {
-    setProfileTarget(null);
-    setPublicProfile(null);
-    setProfileLoading(false);
-  };
-
-  const activeProfile = publicProfile ?? profileTarget;
-  const activeFriendshipState = (() => {
-    if (!activeProfile) return 'none';
-    if (activeProfile.userId === social.currentUserId) return 'self';
-    if (social.blocked.some((driver) => driver.userId === activeProfile.userId)) return 'blocked';
-    return friendshipState(activeProfile);
-  })() as ProfileFriendshipState;
-  const activeIsClanMember = Boolean(
-    activeProfile && social.members.some((member) => member.userId === activeProfile.userId),
-  );
+  const openPublicProfile = openDriverProfile;
 
   const buildSearchActions = (driver: DriverSummary): Action[] => {
     const state = friendshipState(driver);
@@ -512,72 +488,6 @@ export default function SocialScreen() {
         onOpenDriver={(driver) => runAction(() => openPublicProfile(driver))}
         social={social}
         announce={announce}
-      />
-      <PublicDriverProfileModal
-        busy={Boolean(social.busy)}
-        canInviteClan={canInviteClan && !activeIsClanMember}
-        canInviteConvoy={Boolean(hostableConvoys.length)}
-        clanInviteSent={Boolean(activeProfile && clanInviteSent(activeProfile))}
-        error={social.error}
-        friendshipState={activeFriendshipState}
-        loading={profileLoading}
-        onAcceptFriend={activeProfile ? async () => {
-          await social.respondFriend(activeProfile.userId, 'accepted');
-          announce(`${activeProfile.fullName || 'Sürücü'} ile artık arkadaşsınız.`);
-        } : undefined}
-        onBlock={activeProfile ? () => confirmAction(
-          'Sürücüyü engelle',
-          'Arkadaşlık kaldırılır ve bu kullanıcı sizinle etkileşim kuramaz.',
-          async () => {
-            await social.blockDriver(activeProfile.userId);
-            announce('Sürücü engellendi.');
-          },
-        ) : undefined}
-        onCancelFriend={activeProfile ? async () => {
-          await social.cancelFriend(activeProfile.userId);
-          announce('Arkadaşlık isteği geri çekildi.');
-        } : undefined}
-        onClose={closePublicProfile}
-        onInviteClan={activeProfile ? async () => {
-          await social.inviteClan(activeProfile.userId);
-          announce('Klan daveti gönderildi.');
-        } : undefined}
-        onInviteConvoy={activeProfile ? () => {
-          const driver = activeProfile;
-          closePublicProfile();
-          openConvoyPicker(driver);
-        } : undefined}
-        onMessage={activeProfile ? async () => {
-          const driver = activeProfile;
-          closePublicProfile();
-          await openChat(driver);
-        } : undefined}
-        onRejectFriend={activeProfile ? async () => {
-          await social.respondFriend(activeProfile.userId, 'declined');
-          announce('Arkadaşlık isteği reddedildi.');
-        } : undefined}
-        onRemoveFriend={activeProfile ? () => confirmAction(
-          'Arkadaşlıktan çıkar',
-          `${activeProfile.fullName || 'Bu sürücü'} arkadaş listenizden çıkarılsın mı?`,
-          async () => {
-            await social.removeFriend(activeProfile.userId);
-            announce('Arkadaşlık kaldırıldı.');
-          },
-        ) : undefined}
-        onReport={activeProfile ? async (reason, details) => {
-          await social.reportDriver(activeProfile.userId, reason, details);
-          announce('Raporunuz incelemeye gönderildi.');
-        } : undefined}
-        onRequestFriend={activeProfile ? async () => {
-          await social.requestFriend(activeProfile.userId);
-          announce('Arkadaşlık isteği gönderildi.');
-        } : undefined}
-        onUnblock={activeProfile ? async () => {
-          await social.unblockDriver(activeProfile.userId);
-          announce('Sürücünün engeli kaldırıldı.');
-        } : undefined}
-        profile={activeProfile}
-        visible={Boolean(profileTarget)}
       />
       <ConvoyInviteModal
         convoys={hostableConvoys}

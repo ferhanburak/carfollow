@@ -24,8 +24,9 @@ import MapView, {
 
 import { ScreenShell, Surface } from '@/components/screen-shell';
 import { useMapWorld } from '@/hooks/use-map-world';
+import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { colors, fonts } from '@/theme/colors';
-import type { MapPin } from '@/types/cruiser';
+import type { DriverSummary, MapPin } from '@/types/cruiser';
 
 const ANKARA: Region = {
   latitude: 39.9334,
@@ -51,7 +52,7 @@ const nodeOptions: { value: EditorType; label: string; icon: keyof typeof Ionico
 
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
-  const world = useMapWorld();
+  const { mapWorld: world, openDriverProfile } = useDriverProfile();
   const [selected, setSelected] = useState<MapPin | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorType, setEditorType] = useState<EditorType>('meetup');
@@ -241,6 +242,7 @@ export default function MapScreen() {
               setNotice(world.error || 'Beğeni güncellenemedi.');
             }
           }}
+          onOpenDriver={(driver) => void openDriverProfile(driver, { convoyId: selected.id })}
           onPhoto={async (asset) => {
             try {
               await world.addSpotPhoto(selected.id, asset);
@@ -388,6 +390,7 @@ function SelectedNode({
   onClose,
   onJoin,
   onLike,
+  onOpenDriver,
   onPhoto,
   onReview,
   photos,
@@ -398,6 +401,7 @@ function SelectedNode({
   onClose: () => void;
   onJoin: () => void;
   onLike: () => void;
+  onOpenDriver: (driver: DriverSummary) => void;
   onPhoto: (asset: ImagePicker.ImagePickerAsset) => Promise<void>;
   onReview: (review: {
     foam: number;
@@ -445,6 +449,17 @@ function SelectedNode({
       {pin.description || pin.route ? (
         <Text style={styles.selectedDescription}>{pin.description || pin.route}</Text>
       ) : null}
+      {pin.hostUserId || pin.createdByUid ? (
+        <DriverIdentity
+          driver={{
+            userId: pin.hostUserId || pin.createdByUid || '',
+            fullName: pin.createdByName,
+            plate: pin.createdByPlate,
+          }}
+          label="Etkinlik sahibi"
+          onOpen={onOpenDriver}
+        />
+      ) : null}
       {pin.type === 'wash' ? (
         <>
           <View style={styles.ratingRow}>
@@ -476,12 +491,27 @@ function SelectedNode({
         </View>
       ) : null}
       {pin.type === 'meet' ? (
-        <View style={styles.detailRow}>
-          <Text style={styles.detailText}>{pin.time || 'Saat belirtilmedi'}</Text>
-          <Text style={styles.detailText}>
-            {pin.approvedCount ?? 1}/{pin.capacity ?? 12} sürücü
-          </Text>
-        </View>
+        <>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailText}>{pin.time || 'Saat belirtilmedi'}</Text>
+            <Text style={styles.detailText}>
+              {pin.approvedCount ?? 1}/{pin.capacity ?? 12} sürücü
+            </Text>
+          </View>
+          {pin.attendees?.length ? (
+            <View style={styles.attendeeList}>
+              <Text style={styles.attendeeTitle}>Katılımcılar</Text>
+              {pin.attendees.map((driver) => (
+                <DriverIdentity
+                  driver={driver}
+                  key={driver.userId}
+                  label={driver.relation === 'self' ? 'Siz' : 'Katılımcı'}
+                  onOpen={onOpenDriver}
+                />
+              ))}
+            </View>
+          ) : null}
+        </>
       ) : null}
       <View style={styles.nodeActions}>
         {pin.type === 'meet' && pin.backendCanJoin ? (
@@ -557,6 +587,38 @@ function SelectedNode({
         </View>
       ) : null}
     </Surface>
+  );
+}
+
+function DriverIdentity({
+  driver,
+  label,
+  onOpen,
+}: {
+  driver: DriverSummary;
+  label: string;
+  onOpen: (driver: DriverSummary) => void;
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={`${driver.fullName || driver.plate || 'Sürücü'} profilini aç`}
+      disabled={!driver.userId}
+      onPress={() => onOpen(driver)}
+      style={({ pressed }) => [styles.driverIdentity, pressed && styles.driverIdentityPressed]}
+    >
+      <View style={styles.driverIdentityIcon}>
+        <Ionicons name="person" size={16} color={colors.limeBright} />
+      </View>
+      <View style={styles.selectedCopy}>
+        <Text numberOfLines={1} style={styles.driverIdentityName}>
+          {driver.fullName || driver.plate || 'CRUISER sürücüsü'}
+        </Text>
+        <Text numberOfLines={1} style={styles.driverIdentityMeta}>
+          {driver.model || label}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+    </Pressable>
   );
 }
 
@@ -723,6 +785,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
+  driverIdentity: {
+    minHeight: 58,
+    marginTop: 11,
+    paddingHorizontal: 11,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.black,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  driverIdentityPressed: {
+    borderColor: colors.lime,
+    backgroundColor: colors.limeMuted,
+    transform: [{ scale: 0.988 }],
+  },
+  driverIdentityIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: colors.limeMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  driverIdentityName: { color: colors.text, fontFamily: fonts.bold, fontSize: 11 },
+  driverIdentityMeta: {
+    marginTop: 2,
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 9,
+  },
   ratingRow: { marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   rating: {
     paddingHorizontal: 10,
@@ -747,6 +841,15 @@ const styles = StyleSheet.create({
   spotPhoto: { flex: 1, height: 92, borderRadius: 14, backgroundColor: colors.black },
   detailRow: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   detailText: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 10 },
+  attendeeList: { marginTop: 12 },
+  attendeeTitle: {
+    marginBottom: 2,
+    color: colors.textFaint,
+    fontFamily: fonts.bold,
+    fontSize: 8,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
   nodeActions: { marginTop: 13, flexDirection: 'row', gap: 8 },
   primarySmall: {
     minHeight: 44,

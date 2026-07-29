@@ -11,8 +11,9 @@ import {
 import { ScreenShell, Surface } from '@/components/screen-shell';
 import { useLeaderboards } from '@/hooks/use-leaderboards';
 import { useAuth } from '@/providers/auth-provider';
+import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { colors, fonts } from '@/theme/colors';
-import type { LeaderboardEntry } from '@/types/cruiser';
+import type { DriverSummary, LeaderboardEntry } from '@/types/cruiser';
 
 type Period = 'monthly' | 'weekly' | 'daily';
 type Metric = 'Km' | 'DriveSeconds' | 'MaxSpeedKmh';
@@ -31,6 +32,7 @@ const metricOptions: { value: Metric; label: string }[] = [
 
 export default function LeaderboardScreen() {
   const { user } = useAuth();
+  const { openDriverProfile } = useDriverProfile();
   const { clans, drivers, error, loading } = useLeaderboards();
   const [period, setPeriod] = useState<Period>('monthly');
   const [metric, setMetric] = useState<Metric>('Km');
@@ -56,6 +58,7 @@ export default function LeaderboardScreen() {
         field={field}
         kind="driver"
         metric={metric}
+        onOpenDriver={(driver) => void openDriverProfile(driver)}
         onToggle={() => setShowAllDrivers((current) => !current)}
         period={period}
         setMetric={setMetric}
@@ -98,6 +101,7 @@ function LeaderboardCard({
   field,
   kind,
   metric,
+  onOpenDriver,
   onToggle,
   period,
   setMetric,
@@ -109,6 +113,7 @@ function LeaderboardCard({
   field: keyof LeaderboardEntry;
   kind: 'driver' | 'clan';
   metric: Metric;
+  onOpenDriver?: (driver: DriverSummary) => void;
   onToggle: () => void;
   period: Period;
   setMetric: (value: Metric) => void;
@@ -166,8 +171,9 @@ function LeaderboardCard({
         </View>
 
         <View style={styles.rows}>
-          {entries.length ? entries.map((entry, index) => (
-            <View key={`${kind}-${entry.id}`} style={styles.row}>
+          {entries.length ? entries.map((entry, index) => {
+            const row = (
+              <>
               <View style={[styles.rank, rankStyle(index)]}>
                 <Text style={[styles.rankText, index < 3 && styles.rankTextTop]}>#{index + 1}</Text>
               </View>
@@ -184,8 +190,36 @@ function LeaderboardCard({
                 </Text>
               </View>
               <Text style={styles.value}>{formatValue(Number(entry[field] ?? 0), metric)}</Text>
-            </View>
-          )) : (
+              </>
+            );
+            if (kind === 'driver') {
+              const driver = {
+                userId: entry.userId ?? entry.id,
+                fullName: entry.fullName,
+                model: entry.model,
+                driverScore: entry.driverScore,
+                monthlyKm: entry.monthlyKm,
+              };
+              return (
+                <Pressable
+                  accessibilityLabel={`${entry.fullName || 'Sürücü'} profilini aç`}
+                  key={`${kind}-${entry.id}`}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    onOpenDriver?.(driver);
+                  }}
+                  style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                >
+                  {row}
+                </Pressable>
+              );
+            }
+            return (
+              <View key={`${kind}-${entry.id}`} style={styles.row}>
+                {row}
+              </View>
+            );
+          }) : (
             <View style={styles.empty}>
               <Ionicons name="stats-chart-outline" size={22} color={colors.textFaint} />
               <Text style={styles.emptyText}>Bu dönem için veri yok.</Text>
@@ -296,6 +330,11 @@ const styles = StyleSheet.create({
   name: { color: colors.text, fontFamily: fonts.bold, fontSize: 12 },
   model: { marginTop: 2, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9 },
   value: { color: colors.limeBright, fontFamily: fonts.extraBold, fontSize: 11 },
+  rowPressed: {
+    borderColor: colors.lime,
+    backgroundColor: colors.limeMuted,
+    transform: [{ scale: 0.988 }],
+  },
   selfStats: { flexDirection: 'row', gap: 8 },
   stat: {
     flex: 1,

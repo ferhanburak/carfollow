@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { realtimeDb } from '@/lib/firebase';
 import { realtimeTelemetryPath } from '@/lib/firebase-paths';
 import { useAuth } from '@/providers/auth-provider';
-import { useSocialWorld } from '@/hooks/use-social-world';
+import { useDriverProfile } from '@/providers/driver-profile-provider';
 
 export type LiveDriver = {
   userId: string;
@@ -20,7 +20,7 @@ export type LiveDriver = {
 
 export function useLiveTelemetry() {
   const { profile, user } = useAuth();
-  const social = useSocialWorld();
+  const { social } = useDriverProfile();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [telemetry, setTelemetry] = useState<Record<string, Record<string, unknown>>>({});
   const [permission, setPermission] = useState<'loading' | 'granted' | 'denied'>('loading');
