@@ -16,6 +16,7 @@ export const PUBLIC_COLLECTIONS = {
 export const PRIVATE_COLLECTIONS = {
   blockedUsers: 'blockedUsers',
   driverStats: 'driverStats',
+  fuelLogs: 'fuelLogs',
   notifications: 'notifications',
   parts: 'parts',
   profile: 'profile',

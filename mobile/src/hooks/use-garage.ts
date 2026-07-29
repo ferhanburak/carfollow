@@ -45,10 +45,18 @@ export type ServiceLog = {
   createdAt: number;
 };
 
+export type FuelLog = {
+  id: string;
+  vehicleId: string;
+  currentKm: number;
+  createdAt: number;
+};
+
 export function useGarage() {
   const { profile, refreshProfile, user } = useAuth();
   const [parts, setParts] = useState<VehiclePart[]>([]);
   const [serviceLogs, setServiceLogs] = useState<ServiceLog[]>([]);
+  const [fuelLogs, setFuelLogs] = useState<FuelLog[]>([]);
   const [vehicle, setVehicle] = useState<Record<string, unknown> | null>(null);
   const [driverStats, setDriverStats] = useState<Record<string, unknown> | null>(null);
   const [busy, setBusy] = useState('');
@@ -71,6 +79,14 @@ export function useGarage() {
           id: item.id,
           createdAt: toMillis(item.data().createdAt),
         })) as ServiceLog[]),
+      ),
+      onSnapshot(
+        collection(firestoreDb, privateCollectionPath(user.uid, PRIVATE_COLLECTIONS.fuelLogs)),
+        (snapshot) => setFuelLogs(snapshot.docs.map((item) => ({
+          ...item.data(),
+          id: item.id,
+          createdAt: toMillis(item.data().createdAt),
+        })) as FuelLog[]),
       ),
       onSnapshot(
         collection(firestoreDb, privateCollectionPath(user.uid, PRIVATE_COLLECTIONS.vehicles)),
@@ -99,6 +115,10 @@ export function useGarage() {
       .filter((log) => !activeVehicleId || log.vehicleId === activeVehicleId)
       .sort((left, right) => right.serviceDate.localeCompare(left.serviceDate)),
     [activeVehicleId, serviceLogs],
+  );
+  const activeFuelLogs = useMemo(
+    () => fuelLogs.filter((log) => !activeVehicleId || log.vehicleId === activeVehicleId),
+    [activeVehicleId, fuelLogs],
   );
 
   async function addServiceLog(input: {
@@ -235,6 +255,7 @@ export function useGarage() {
   return {
     parts: activeParts,
     serviceLogs: activeLogs,
+    fuelLogs: activeFuelLogs,
     vehicle,
     driverStats,
     busy,

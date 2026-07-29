@@ -25,6 +25,7 @@ import { firebaseAuth, firebaseStorage } from '@/lib/firebase';
 import { callFirebase, getFirebaseErrorMessage } from '@/lib/firebase-callable';
 import { APP_ID } from '@/lib/firebase-paths';
 import { useAuth } from '@/providers/auth-provider';
+import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { colors, fonts } from '@/theme/colors';
 
 type Panel = 'settings' | 'service' | 'achievements' | null;
@@ -45,6 +46,7 @@ export default function ProfileScreen() {
     section?: string;
   }>();
   const { logout, profile, refreshProfile, user } = useAuth();
+  const { social } = useDriverProfile();
   const garage = useGarage();
   const [panel, setPanel] = useState<Panel>(null);
   const [notice, setNotice] = useState('');
@@ -55,6 +57,35 @@ export default function ProfileScreen() {
     : [];
   const unlockedCount = achievements.filter((item) => item.unlocked).length;
   const topAchievement = [...achievements].sort((left, right) => right.percent - left.percent)[0];
+  const profileCompletion = calculateProfileCompletion(profile);
+  const badges = Array.from(new Set([
+    ...(profile?.achievementBadges ?? []),
+    ...(Array.isArray(stats.achievementBadges) ? stats.achievementBadges as string[] : []),
+  ]));
+  const harmonyVotes = Number(profile?.harmonyVotes ?? stats.harmonyVotesSnapshot ?? 0);
+  const alertVotes = Number(profile?.alertVotes ?? 0);
+  const harmonyRatio = harmonyVotes + alertVotes
+    ? Math.round((harmonyVotes / (harmonyVotes + alertVotes)) * 100)
+    : 100;
+  const currentClan = social.currentClan?.name || profile?.clan || 'Klan yok';
+  const personalStats = [
+    { key: 'monthly-km', label: 'Bireysel Aylık KM', value: `${formatNumber(stats.monthlyKm ?? profile?.monthlyKm)} KM` },
+    { key: 'night-km', label: 'Aylık Gece KM', value: `${formatNumber(stats.monthlyNightKm)} KM` },
+    { key: 'verified-km', label: 'Onaylı Toplam', value: `${formatNumber(stats.lifetimeVerifiedKm ?? profile?.totalKm)} KM` },
+    { key: 'drive-time', label: 'Aylık Sürüş', value: formatDuration(stats.monthlyDriveSeconds) },
+    { key: 'max-speed', label: 'Aylık Maksimum Hız', value: `${formatNumber(stats.monthlyMaxSpeedKmh)} KM/H` },
+    { key: 'average-speed', label: 'Ortalama Hız', value: `${formatNumber(stats.monthlyAverageSpeedKmh)} KM/H` },
+    { key: 'driver-score', label: 'Sürücü Skoru', value: `${profile?.driverScore || 0}/100` },
+    { key: 'service-logs', label: 'Servis Kaydı', value: `${garage.serviceLogs.length}` },
+    { key: 'fuel-logs', label: 'Yakıt Fişi', value: `${garage.fuelLogs.length}` },
+    { key: 'harmony', label: 'Uyum Oranı', value: `%${harmonyRatio}` },
+  ];
+  const socialSummary = [
+    { key: 'friends', label: 'Arkadaş', value: `${social.friends.length}` },
+    { key: 'incoming', label: 'Gelen İstek', value: `${social.incoming.length}` },
+    { key: 'outgoing', label: 'Giden İstek', value: `${social.outgoing.length}` },
+    { key: 'clan-invites', label: 'Klan Daveti', value: `${social.incomingClanInvites.length}` },
+  ];
 
   const signOut = async () => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -87,16 +118,53 @@ export default function ProfileScreen() {
             <Ionicons name="settings-outline" size={21} color={colors.text} />
           </Pressable>
         </View>
+
+        <View style={styles.profileHealth}>
+          <CompactMetric label="Profil" value={`%${profileCompletion}`} />
+          <CompactMetric label="Unvan" value={`${badges.length}`} />
+        </View>
+
+        <View style={styles.overviewGrid}>
+          <CompactMetric label="Profil Hazır" value={`%${profileCompletion}`} />
+          <CompactMetric label="Sürücü Skoru" value={`${profile?.driverScore || 0}/100`} />
+          <CompactMetric
+            label="Aylık KM"
+            value={`${formatNumber(stats.monthlyKm ?? profile?.monthlyKm)} KM`}
+          />
+          <CompactMetric label="Klan" value={currentClan} neutral />
+        </View>
+
+        <View style={styles.badgeList}>
+          {badges.length ? badges.map((badge) => (
+            <View key={badge} style={styles.badge}>
+              <Ionicons name="ribbon" size={13} color={colors.limeBright} />
+              <Text style={styles.badgeText}>{badge}</Text>
+            </View>
+          )) : (
+            <Text style={styles.badgeEmpty}>
+              Henüz aktif unvan yok. Sürüş ve sosyal ilerlemeyle ilk unvanını açabilirsin.
+            </Text>
+          )}
+        </View>
       </Surface>
 
       {notice ? <Text style={styles.notice}>{notice}</Text> : null}
 
-      <View style={styles.metrics}>
-        <ProfileMetric label="Aylık KM" value={formatNumber(stats.monthlyKm ?? profile?.monthlyKm)} />
-        <ProfileMetric label="Sürüş Süresi" value={formatDuration(stats.lifetimeDriveSeconds)} />
-        <ProfileMetric label="En Yüksek Hız" value={`${formatNumber(stats.lifetimeMaxSpeedKmh)} KM/H`} />
-        <ProfileMetric label="Sürücü Skoru" value={`${profile?.driverScore || 0}/100`} />
-      </View>
+      <Surface>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.cardTitle}>Sürücü İstatistikleri</Text>
+          <Text style={styles.sectionTag}>CANLI</Text>
+        </View>
+        <View style={styles.compactGrid}>
+          {personalStats.map((item) => (
+            <CompactMetric key={item.key} label={item.label} value={item.value} />
+          ))}
+        </View>
+        <View style={styles.garageLine}>
+          <Text style={styles.garageLabel}>Aktif Garaj</Text>
+          <Text numberOfLines={1} style={styles.garageValue}>{profile?.garage || '--'}</Text>
+        </View>
+      </Surface>
 
       <Pressable onPress={() => setPanel('achievements')} style={({ pressed }) => [pressed && styles.pressed]}>
         <Surface>
@@ -122,6 +190,30 @@ export default function ProfileScreen() {
           )}
         </Surface>
       </Pressable>
+
+      <Surface>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.cardTitle}>Sosyal Özet</Text>
+          <Text style={styles.sectionTag}>EKİP</Text>
+        </View>
+        <View style={styles.compactGrid}>
+          {socialSummary.map((item) => (
+            <CompactMetric key={item.key} label={item.label} value={item.value} />
+          ))}
+        </View>
+        <View style={styles.clanSummary}>
+          <View style={styles.clanSummaryCopy}>
+            <Text style={styles.garageLabel}>Mevcut Klan</Text>
+            <Text numberOfLines={1} style={styles.clanName}>{currentClan}</Text>
+            <Text style={styles.clanMeta}>
+              Rol: {roleLabel(social.membership?.role || profile?.clanRole)}
+              {' · '}Uyum: {harmonyVotes}
+              {' · '}Uyarı: {alertVotes}
+            </Text>
+          </View>
+          <Ionicons name="shield-half" size={23} color={colors.lime} />
+        </View>
+      </Surface>
 
       <Pressable onPress={() => setPanel('service')} style={({ pressed }) => [pressed && styles.pressed]}>
         <Surface>
@@ -188,11 +280,24 @@ export default function ProfileScreen() {
   );
 }
 
-function ProfileMetric({ label, value }: { label: string; value: string }) {
+function CompactMetric({
+  label,
+  neutral = false,
+  value,
+}: {
+  label: string;
+  neutral?: boolean;
+  value: string;
+}) {
   return (
-    <View style={styles.metric}>
-      <Text numberOfLines={1} style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
+    <View style={styles.compactMetric}>
+      <Text style={styles.compactMetricLabel}>{label}</Text>
+      <Text
+        numberOfLines={1}
+        style={[styles.compactMetricValue, neutral && styles.compactMetricValueNeutral]}
+      >
+        {value}
+      </Text>
     </View>
   );
 }
@@ -637,6 +742,32 @@ function SettingAction({
   );
 }
 
+function calculateProfileCompletion(profile: ReturnType<typeof useAuth>['profile']) {
+  if (!profile) return 0;
+  const fields = [
+    profile.fullName,
+    profile.plate,
+    profile.model,
+    profile.tuningStage,
+    profile.horsepower,
+    profile.garage,
+    profile.region,
+    profile.avatar,
+    profile.odometer,
+  ];
+  const completed = fields.filter((value) => (
+    typeof value === 'number' ? value > 0 : Boolean(String(value ?? '').trim())
+  )).length;
+  return Math.round((completed / fields.length) * 100);
+}
+
+function roleLabel(role?: string) {
+  if (role === 'owner') return 'Kurucu';
+  if (role === 'captain') return 'Kaptan';
+  if (role === 'member') return 'Üye';
+  return 'Yok';
+}
+
 function partPercent(part: VehiclePart, odometer: number) {
   const persisted = Number(part.lifePercent ?? part.remainingPercent);
   if (Number.isFinite(persisted)) return Math.max(0, Math.min(100, Math.round(persisted)));
@@ -688,19 +819,133 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  metrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  metric: {
-    width: '48.8%',
-    minHeight: 78,
-    padding: 13,
-    borderRadius: 19,
+  profileHealth: {
+    marginTop: 15,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  overviewGrid: {
+    marginTop: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  compactGrid: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  compactMetric: {
+    flexGrow: 1,
+    flexBasis: '46%',
+    minWidth: 0,
+    minHeight: 58,
+    paddingHorizontal: 11,
+    paddingVertical: 10,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(4,6,4,0.42)',
     justifyContent: 'center',
   },
-  metricValue: { color: colors.limeBright, fontFamily: fonts.extraBold, fontSize: 16 },
-  metricLabel: { marginTop: 4, color: colors.textFaint, fontFamily: fonts.bold, fontSize: 8, letterSpacing: 0.8 },
+  compactMetricLabel: {
+    color: colors.textFaint,
+    fontFamily: fonts.bold,
+    fontSize: 8,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  compactMetricValue: {
+    marginTop: 5,
+    color: colors.limeBright,
+    fontFamily: fonts.extraBold,
+    fontSize: 13,
+  },
+  compactMetricValueNeutral: { color: colors.text },
+  badgeList: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  badge: {
+    minHeight: 34,
+    paddingHorizontal: 11,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.limeMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  badgeText: { color: colors.limeBright, fontFamily: fonts.semibold, fontSize: 9 },
+  badgeEmpty: {
+    width: '100%',
+    padding: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 9,
+    lineHeight: 14,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  sectionTag: {
+    color: colors.textFaint,
+    fontFamily: fonts.bold,
+    fontSize: 8,
+    letterSpacing: 1.8,
+  },
+  garageLine: {
+    minHeight: 42,
+    marginTop: 8,
+    paddingHorizontal: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(4,6,4,0.42)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  garageLabel: {
+    color: colors.textFaint,
+    fontFamily: fonts.bold,
+    fontSize: 8,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  garageValue: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 10,
+    textAlign: 'right',
+  },
+  clanSummary: {
+    minHeight: 72,
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(4,6,4,0.42)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  clanSummaryCopy: { flex: 1, minWidth: 0 },
+  clanName: { marginTop: 5, color: colors.text, fontFamily: fonts.extraBold, fontSize: 12 },
+  clanMeta: { marginTop: 4, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 8 },
   notice: {
     padding: 12,
     borderRadius: 14,

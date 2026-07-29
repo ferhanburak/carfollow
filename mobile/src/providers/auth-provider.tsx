@@ -46,6 +46,8 @@ export type CruiserProfile = {
   totalKm?: number;
   totalDriveSeconds?: number;
   maxSpeedKmh?: number;
+  harmonyVotes?: number;
+  alertVotes?: number;
   achievementBadges?: string[];
   privacy?: {
     plateSearchEnabled?: boolean;
