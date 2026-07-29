@@ -193,6 +193,13 @@ export function useSocialWorld() {
         { plate },
       )).driver,
     ),
+    getPublicProfile: (targetUserId: string, context: { convoyId?: string } = {}) => run(
+      `profile-${targetUserId}`,
+      async () => (await callFirebase<{ driver: DriverSummary | null }>(
+        'getPublicDriverProfile',
+        { targetUserId, context },
+      )).driver,
+    ),
     requestFriend: (targetUserId: string) => run(
       `friend-${targetUserId}`,
       () => callFirebase('requestFriendship', { targetUserId }),
@@ -212,6 +219,19 @@ export function useSocialWorld() {
     blockDriver: (targetUserId: string) => run(
       `block-${targetUserId}`,
       () => callFirebase('blockDriver', { targetUserId }),
+    ),
+    unblockDriver: (targetUserId: string) => run(
+      `block-${targetUserId}`,
+      () => callFirebase('unblockDriver', { targetUserId }),
+    ),
+    reportDriver: (targetUserId: string, reason: string, details: string) => run(
+      `report-${targetUserId}`,
+      () => callFirebase('submitModerationReport', {
+        targetType: 'driver',
+        targetId: targetUserId,
+        reason,
+        details,
+      }),
     ),
     createClan: (name: string, tag: string, description: string) => run(
       'create-clan',

@@ -1,11 +1,21 @@
 export type DriverSummary = {
   userId: string;
+  id?: string;
   fullName?: string;
   plate?: string;
   plateMasked?: string;
   model?: string;
   region?: string;
   driverScore?: number;
+  score?: number;
+  monthlyKm?: number;
+  harmonyVotes?: number;
+  alertVotes?: number;
+  avatar?: string;
+  clan?: string;
+  clanId?: string;
+  vehicleType?: string;
+  relation?: 'self' | 'friend' | 'clan' | 'convoy' | 'stranger';
   friendshipId?: string;
   friendshipStatus?: 'none' | 'incoming' | 'outgoing' | 'accepted';
   status?: string;

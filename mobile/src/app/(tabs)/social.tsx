@@ -15,6 +15,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import {
+  PublicDriverProfileModal,
+  type ProfileFriendshipState,
+} from '@/components/public-driver-profile-modal';
 import { ScreenShell, Surface } from '@/components/screen-shell';
 import { useMapWorld } from '@/hooks/use-map-world';
 import { useSocialWorld } from '@/hooks/use-social-world';
@@ -52,6 +56,9 @@ export default function SocialScreen() {
   const [message, setMessage] = useState('');
   const [clanCenterOpen, setClanCenterOpen] = useState(false);
   const [convoyTarget, setConvoyTarget] = useState<DriverSummary | null>(null);
+  const [profileTarget, setProfileTarget] = useState<DriverSummary | null>(null);
+  const [publicProfile, setPublicProfile] = useState<DriverSummary | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   const currentThread = activeThread
     ? appData.threads.find((item) => item.id === activeThread.id) ?? activeThread
@@ -136,6 +143,35 @@ export default function SocialScreen() {
   const openConvoyPicker = (driver: DriverSummary) => {
     setConvoyTarget(driver);
   };
+
+  const openPublicProfile = async (driver: DriverSummary) => {
+    setProfileTarget(driver);
+    setPublicProfile(null);
+    setProfileLoading(true);
+    try {
+      const result = await social.getPublicProfile(driver.userId);
+      setPublicProfile(result ? { ...driver, ...result } : driver);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const closePublicProfile = () => {
+    setProfileTarget(null);
+    setPublicProfile(null);
+    setProfileLoading(false);
+  };
+
+  const activeProfile = publicProfile ?? profileTarget;
+  const activeFriendshipState = (() => {
+    if (!activeProfile) return 'none';
+    if (activeProfile.userId === social.currentUserId) return 'self';
+    if (social.blocked.some((driver) => driver.userId === activeProfile.userId)) return 'blocked';
+    return friendshipState(activeProfile);
+  })() as ProfileFriendshipState;
+  const activeIsClanMember = Boolean(
+    activeProfile && social.members.some((member) => member.userId === activeProfile.userId),
+  );
 
   const buildSearchActions = (driver: DriverSummary): Action[] => {
     const state = friendshipState(driver);
@@ -350,6 +386,7 @@ export default function SocialScreen() {
               <DriverCard
                 actions={buildSearchActions(searchResult)}
                 driver={searchResult}
+                onOpen={() => runAction(() => openPublicProfile(searchResult))}
                 showPlate
               />
             ) : searchComplete ? (
@@ -366,6 +403,7 @@ export default function SocialScreen() {
               <DriverCard
                 driver={driver}
                 key={driver.userId}
+                onOpen={() => runAction(() => openPublicProfile(driver))}
                 actions={[
                   {
                     icon: 'checkmark',
@@ -395,6 +433,7 @@ export default function SocialScreen() {
               <DriverCard
                 driver={driver}
                 key={driver.userId}
+                onOpen={() => runAction(() => openPublicProfile(driver))}
                 actions={[{
                   icon: 'arrow-undo',
                   label: 'İsteği geri çek',
@@ -413,6 +452,7 @@ export default function SocialScreen() {
               <DriverCard
                 driver={driver}
                 key={driver.userId}
+                onOpen={() => runAction(() => openPublicProfile(driver))}
                 actions={[
                   {
                     icon: 'chatbubble',
@@ -469,8 +509,75 @@ export default function SocialScreen() {
           announce('Etkinlik silindi.');
         }}
         open={clanCenterOpen}
+        onOpenDriver={(driver) => runAction(() => openPublicProfile(driver))}
         social={social}
         announce={announce}
+      />
+      <PublicDriverProfileModal
+        busy={Boolean(social.busy)}
+        canInviteClan={canInviteClan && !activeIsClanMember}
+        canInviteConvoy={Boolean(hostableConvoys.length)}
+        clanInviteSent={Boolean(activeProfile && clanInviteSent(activeProfile))}
+        error={social.error}
+        friendshipState={activeFriendshipState}
+        loading={profileLoading}
+        onAcceptFriend={activeProfile ? async () => {
+          await social.respondFriend(activeProfile.userId, 'accepted');
+          announce(`${activeProfile.fullName || 'Sürücü'} ile artık arkadaşsınız.`);
+        } : undefined}
+        onBlock={activeProfile ? () => confirmAction(
+          'Sürücüyü engelle',
+          'Arkadaşlık kaldırılır ve bu kullanıcı sizinle etkileşim kuramaz.',
+          async () => {
+            await social.blockDriver(activeProfile.userId);
+            announce('Sürücü engellendi.');
+          },
+        ) : undefined}
+        onCancelFriend={activeProfile ? async () => {
+          await social.cancelFriend(activeProfile.userId);
+          announce('Arkadaşlık isteği geri çekildi.');
+        } : undefined}
+        onClose={closePublicProfile}
+        onInviteClan={activeProfile ? async () => {
+          await social.inviteClan(activeProfile.userId);
+          announce('Klan daveti gönderildi.');
+        } : undefined}
+        onInviteConvoy={activeProfile ? () => {
+          const driver = activeProfile;
+          closePublicProfile();
+          openConvoyPicker(driver);
+        } : undefined}
+        onMessage={activeProfile ? async () => {
+          const driver = activeProfile;
+          closePublicProfile();
+          await openChat(driver);
+        } : undefined}
+        onRejectFriend={activeProfile ? async () => {
+          await social.respondFriend(activeProfile.userId, 'declined');
+          announce('Arkadaşlık isteği reddedildi.');
+        } : undefined}
+        onRemoveFriend={activeProfile ? () => confirmAction(
+          'Arkadaşlıktan çıkar',
+          `${activeProfile.fullName || 'Bu sürücü'} arkadaş listenizden çıkarılsın mı?`,
+          async () => {
+            await social.removeFriend(activeProfile.userId);
+            announce('Arkadaşlık kaldırıldı.');
+          },
+        ) : undefined}
+        onReport={activeProfile ? async (reason, details) => {
+          await social.reportDriver(activeProfile.userId, reason, details);
+          announce('Raporunuz incelemeye gönderildi.');
+        } : undefined}
+        onRequestFriend={activeProfile ? async () => {
+          await social.requestFriend(activeProfile.userId);
+          announce('Arkadaşlık isteği gönderildi.');
+        } : undefined}
+        onUnblock={activeProfile ? async () => {
+          await social.unblockDriver(activeProfile.userId);
+          announce('Sürücünün engeli kaldırıldı.');
+        } : undefined}
+        profile={activeProfile}
+        visible={Boolean(profileTarget)}
       />
       <ConvoyInviteModal
         convoys={hostableConvoys}
@@ -559,15 +666,21 @@ function DriverGroup({
 function DriverCard({
   actions,
   driver,
+  onOpen,
   showPlate = false,
 }: {
   actions: Action[];
   driver: DriverSummary;
+  onOpen: () => void;
   showPlate?: boolean;
 }) {
   return (
     <View style={styles.driverCard}>
-      <View style={styles.driverRow}>
+      <Pressable
+        accessibilityLabel={`${driver.fullName || driver.model || 'Sürücü'} profilini aç`}
+        onPress={onOpen}
+        style={({ pressed }) => [styles.driverRow, pressed && styles.pressed]}
+      >
         <DriverAvatar />
         <View style={styles.copy}>
           {showPlate && driver.plate ? <Text style={styles.plate}>{driver.plate}</Text> : null}
@@ -578,7 +691,8 @@ function DriverCard({
             {driver.model || driver.region || 'Araç bilgisi yok'}
           </Text>
         </View>
-      </View>
+        <Ionicons name="chevron-forward" size={17} color={colors.textFaint} />
+      </Pressable>
       <View style={styles.actionRow}>
         {actions.map((action) => (
           <Pressable
@@ -763,6 +877,7 @@ function ClanCenterModal({
   events,
   onClose,
   onDeleteEvent,
+  onOpenDriver,
   open,
   social,
 }: {
@@ -770,6 +885,7 @@ function ClanCenterModal({
   events: MapPin[];
   onClose: () => void;
   onDeleteEvent: (event: MapPin) => Promise<void>;
+  onOpenDriver: (driver: DriverSummary) => void;
   open: boolean;
   social: ReturnType<typeof useSocialWorld>;
 }) {
@@ -820,14 +936,24 @@ function ClanCenterModal({
                 );
                 return (
                   <View key={member.id} style={styles.memberCard}>
-                    <DriverAvatar />
-                    <View style={styles.copy}>
-                      <Text style={styles.driverName}>
-                        {member.fullName || member.plate || 'CRUISER sürücüsü'}
-                        {isSelf ? ' (Sen)' : ''}
-                      </Text>
-                      <Text style={styles.driverModel}>{member.model || 'Araç bilgisi yok'}</Text>
-                    </View>
+                    <Pressable
+                      accessibilityLabel={`${member.fullName || member.model || 'Sürücü'} profilini aç`}
+                      disabled={isSelf}
+                      onPress={() => onOpenDriver(member)}
+                      style={({ pressed }) => [
+                        styles.memberIdentity,
+                        pressed && !isSelf && styles.pressed,
+                      ]}
+                    >
+                      <DriverAvatar />
+                      <View style={styles.copy}>
+                        <Text style={styles.driverName}>
+                          {member.fullName || member.plate || 'CRUISER sürücüsü'}
+                          {isSelf ? ' (Sen)' : ''}
+                        </Text>
+                        <Text style={styles.driverModel}>{member.model || 'Araç bilgisi yok'}</Text>
+                      </View>
+                    </Pressable>
                     <View style={styles.rolePill}>
                       <Text style={styles.roleText}>{roleLabel(member.role)}</Text>
                     </View>
@@ -1389,6 +1515,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
+  },
+  memberIdentity: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
   },
   smallAction: {
     width: 38,
