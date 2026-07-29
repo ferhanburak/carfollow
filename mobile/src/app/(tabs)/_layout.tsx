@@ -59,8 +59,9 @@ export default function TabLayout() {
               <Ionicons
                 color={focused ? colors.black : color}
                 name={focused ? icon.active : icon.idle}
-                size={20}
+                size={21}
               />
+              {focused ? <View style={styles.activeIndicator} /> : null}
             </View>
           );
         },
@@ -69,8 +70,8 @@ export default function TabLayout() {
       <Tabs.Screen name="map" options={{ title: 'Harita' }} />
       <Tabs.Screen name="live-map" options={{ title: 'Canlı Harita' }} />
       <Tabs.Screen name="drive" options={{ title: 'Sürüş' }} />
-      <Tabs.Screen name="social" options={{ title: 'Sosyal' }} />
       <Tabs.Screen name="forum" options={{ title: 'Akış' }} />
+      <Tabs.Screen name="social" options={{ title: 'Sosyal' }} />
       <Tabs.Screen name="leaderboard" options={{ title: 'Sıralama' }} />
       <Tabs.Screen name="profile" options={{ title: 'Profil' }} />
     </Tabs>
@@ -87,27 +88,30 @@ const styles = StyleSheet.create({
   scene: { backgroundColor: colors.background },
   tabBar: {
     position: 'absolute',
-    left: 12,
-    right: 12,
-    bottom: 12,
-    height: 72,
-    paddingTop: 6,
-    paddingBottom: 6,
+    left: 14,
+    right: 14,
+    bottom: 10,
+    height: 68,
+    paddingTop: 5,
+    paddingBottom: 5,
     borderTopWidth: 0,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 26,
+    borderRadius: 24,
     backgroundColor: 'rgba(11,13,10,0.98)',
-    shadowColor: colors.black,
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 16,
+    shadowColor: colors.lime,
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 18,
+    overflow: 'visible',
   },
-  tabItem: { minHeight: 58 },
+  tabItem: {
+    minHeight: 56,
+  },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
+    width: 46,
+    height: 46,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -116,12 +120,21 @@ const styles = StyleSheet.create({
     shadowColor: colors.lime,
     shadowOpacity: 0.35,
     shadowRadius: 12,
+    elevation: 7,
+  },
+  activeIndicator: {
+    position: 'absolute',
+    bottom: 4,
+    width: 13,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.black,
   },
   forumButton: {
-    width: 62,
-    height: 62,
-    marginTop: -20,
-    borderRadius: 31,
+    width: 66,
+    height: 66,
+    marginTop: -24,
+    borderRadius: 33,
     borderWidth: 2,
     borderColor: colors.borderStrong,
     backgroundColor: '#080a07',
@@ -130,11 +143,12 @@ const styles = StyleSheet.create({
     shadowColor: colors.lime,
     shadowOpacity: 0.28,
     shadowRadius: 14,
+    elevation: 12,
   },
   forumButtonActive: {
     borderColor: colors.lime,
     shadowOpacity: 0.65,
     shadowRadius: 18,
   },
-  forumLogo: { width: 48, height: 48 },
+  forumLogo: { width: 52, height: 52 },
 });

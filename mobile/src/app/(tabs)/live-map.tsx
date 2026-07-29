@@ -5,6 +5,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppHeader } from '@/components/screen-shell';
 import { useLiveTelemetry, type LiveDriver } from '@/hooks/use-live-telemetry';
 import { useAuth } from '@/providers/auth-provider';
 import { colors, fonts } from '@/theme/colors';
@@ -24,7 +25,7 @@ const mapProvider =
 export default function LiveMapScreen() {
   const mapRef = useRef<MapView>(null);
   const { profile } = useAuth();
-  const { drivers, location, permission } = useLiveTelemetry();
+  const { drivers, location } = useLiveTelemetry();
   const [follow, setFollow] = useState(true);
   const [selected, setSelected] = useState<LiveDriver | null>(null);
 
@@ -62,18 +63,7 @@ export default function LiveMapScreen() {
   return (
     <LinearGradient colors={[colors.background, '#0b0f08']} style={styles.root}>
       <SafeAreaView edges={['top']} style={styles.safe}>
-        <View style={styles.header}>
-          <View style={styles.identity}>
-            <Text numberOfLines={1} style={styles.name}>{profile?.fullName || 'CRUISER'}</Text>
-            <Text numberOfLines={1} style={styles.model}>{profile?.model || 'Araç bilgisi yok'}</Text>
-          </View>
-          <View style={styles.liveStatus}>
-            <View style={[styles.statusDot, permission !== 'granted' && styles.statusDotOff]} />
-            <Text style={styles.liveText}>
-              {permission === 'granted' ? 'CANLI' : permission === 'denied' ? 'İZİN YOK' : 'GPS'}
-            </Text>
-          </View>
-        </View>
+        <AppHeader />
 
         <View style={styles.mapFrame}>
           <MapView
@@ -184,38 +174,10 @@ function relationLabel(relation: LiveDriver['relation']) {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1 },
-  header: {
-    minHeight: 62,
-    marginHorizontal: 14,
-    marginTop: 6,
-    marginBottom: 10,
-    paddingHorizontal: 15,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 20,
-    backgroundColor: 'rgba(15,17,14,0.96)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  identity: { flex: 1, minWidth: 0 },
-  name: { color: colors.text, fontFamily: fonts.bold, fontSize: 14 },
-  model: { marginTop: 2, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 11 },
-  liveStatus: {
-    minHeight: 36,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-    backgroundColor: colors.limeMuted,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.lime },
-  statusDotOff: { backgroundColor: colors.rose },
-  liveText: { color: colors.limeBright, fontFamily: fonts.bold, fontSize: 9, letterSpacing: 1.5 },
   mapFrame: {
     flex: 1,
     marginHorizontal: 8,
+    marginTop: 10,
     marginBottom: 86,
     overflow: 'hidden',
     borderRadius: 27,

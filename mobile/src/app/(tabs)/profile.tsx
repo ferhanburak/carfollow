@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useState, type ReactNode } from 'react';
@@ -41,6 +41,9 @@ type Achievement = {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { section } = useLocalSearchParams<{
+    section?: string;
+  }>();
   const { logout, profile, refreshProfile, user } = useAuth();
   const garage = useGarage();
   const [panel, setPanel] = useState<Panel>(null);
@@ -170,13 +173,16 @@ export default function ProfileScreen() {
       />
 
       <SettingsPanel
-        onClose={() => setPanel(null)}
+        onClose={() => {
+          setPanel(null);
+          if (section === 'settings') router.replace('/(tabs)/profile');
+        }}
         onLogout={() => void signOut()}
         profile={profile}
         refreshProfile={refreshProfile}
         showNotice={showNotice}
         userId={user?.uid ?? ''}
-        visible={panel === 'settings'}
+        visible={panel === 'settings' || section === 'settings'}
       />
     </ScreenShell>
   );

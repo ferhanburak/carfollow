@@ -1,5 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { usePathname, useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -10,8 +12,6 @@ import {
   type ScrollViewProps,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import type { PropsWithChildren, ReactNode } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
@@ -32,59 +32,13 @@ export function ScreenShell({
   action,
   scrollProps,
 }: ScreenShellProps) {
-  const { profile } = useAuth();
-  const router = useRouter();
-  const {
-    markAllNotificationsRead,
-    markNotificationRead,
-    notifications,
-    unreadConversationCount,
-    unreadNotificationCount,
-  } = useAppData();
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-
   return (
     <LinearGradient
       colors={[colors.background, '#0b0f08', colors.background]}
       style={styles.root}
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.header}>
-          <View style={styles.identity}>
-            <Text numberOfLines={1} style={styles.identityName}>
-              {profile?.fullName || 'CRUISER'}
-            </Text>
-            <Text numberOfLines={1} style={styles.identityVehicle}>
-              {profile?.model || 'Sürücü ağı'}
-            </Text>
-          </View>
-          <View style={styles.headerActions}>
-            <Pressable
-              accessibilityLabel="Mesajlar"
-              onPress={() => router.push({ pathname: '/(tabs)/social', params: { section: 'messages' } })}
-              style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
-            >
-              <Ionicons name="chatbubble-ellipses-outline" size={19} color={colors.text} />
-              {unreadConversationCount ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{Math.min(99, unreadConversationCount)}</Text>
-                </View>
-              ) : null}
-            </Pressable>
-            <Pressable
-              accessibilityLabel="Bildirimler"
-              onPress={() => setNotificationsOpen(true)}
-              style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
-            >
-              <Ionicons name="notifications-outline" size={20} color={colors.text} />
-              {unreadNotificationCount ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{Math.min(99, unreadNotificationCount)}</Text>
-                </View>
-              ) : null}
-            </Pressable>
-          </View>
-        </View>
+        <AppHeader />
         <ScrollView
           {...scrollProps}
           contentContainerStyle={[styles.content, scrollProps?.contentContainerStyle]}
@@ -101,44 +55,138 @@ export function ScreenShell({
           ) : null}
           {children}
         </ScrollView>
-        <Modal
-          animationType="slide"
-          onRequestClose={() => setNotificationsOpen(false)}
-          transparent
-          visible={notificationsOpen}
-        >
-          <Pressable style={styles.modalBackdrop} onPress={() => setNotificationsOpen(false)}>
-            <Pressable style={styles.notificationSheet} onPress={(event) => event.stopPropagation()}>
-              <View style={styles.sheetHandle} />
-              <View style={styles.sheetHeader}>
-                <Text style={styles.sheetTitle}>Bildirimler</Text>
-                {unreadNotificationCount ? (
-                  <Pressable onPress={() => void markAllNotificationsRead()}>
-                    <Text style={styles.readAll}>Tümünü okundu işaretle</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {notifications.length ? notifications.map((notification) => (
-                  <Pressable
-                    key={notification.id}
-                    onPress={() => {
-                      if (!notification.readAt) void markNotificationRead(notification.id);
-                    }}
-                    style={[styles.notification, !notification.readAt && styles.notificationUnread]}
-                  >
-                    <Text style={styles.notificationTitle}>{notification.title}</Text>
-                    <Text style={styles.notificationBody}>{notification.body}</Text>
-                  </Pressable>
-                )) : (
-                  <Text style={styles.emptyText}>Yeni bildiriminiz yok.</Text>
-                )}
-              </ScrollView>
-            </Pressable>
-          </Pressable>
-        </Modal>
       </SafeAreaView>
     </LinearGradient>
+  );
+}
+
+export function AppHeader() {
+  const { profile } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+  const {
+    markAllNotificationsRead,
+    markNotificationRead,
+    notifications,
+    unreadConversationCount,
+    unreadNotificationCount,
+  } = useAppData();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  return (
+    <>
+      <LinearGradient
+        colors={['rgba(58,18,26,0.88)', 'rgba(15,17,14,0.96)', 'rgba(30,48,16,0.90)']}
+        end={{ x: 1, y: 0.5 }}
+        start={{ x: 0, y: 0.5 }}
+        style={styles.header}
+      >
+        <Pressable
+          accessibilityLabel="Profil"
+          onPress={() => router.push('/(tabs)/profile')}
+          style={({ pressed }) => [styles.identity, pressed && styles.pressed]}
+        >
+          <Text numberOfLines={1} style={styles.identityName}>
+            {profile?.fullName || 'CRUISER'}
+          </Text>
+          <Text numberOfLines={1} style={styles.identityVehicle}>
+            {profile?.model || 'Sürücü ağı'}
+          </Text>
+        </Pressable>
+
+        <View style={styles.headerActions}>
+          <Pressable
+            accessibilityLabel="Mesajlar"
+            onPress={() => router.push({
+              pathname: '/(tabs)/social',
+              params: { section: 'messages' },
+            })}
+            style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={19} color={colors.text} />
+            {unreadConversationCount ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{Math.min(99, unreadConversationCount)}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+
+          <Pressable
+            accessibilityLabel="Bildirimler"
+            onPress={() => setNotificationsOpen(true)}
+            style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="notifications-outline" size={20} color={colors.text} />
+            {unreadNotificationCount ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{Math.min(99, unreadNotificationCount)}</Text>
+              </View>
+            ) : null}
+          </Pressable>
+
+          <Pressable
+            accessibilityLabel="Sürüş modu"
+            onPress={() => router.push('/(tabs)/drive')}
+            style={({ pressed }) => [
+              styles.headerButton,
+              styles.driveButton,
+              pathname.endsWith('/drive') && styles.driveButtonCurrent,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons name="car-sport" size={20} color={colors.black} />
+          </Pressable>
+
+          <Pressable
+            accessibilityLabel="Ayarlar"
+            onPress={() => router.push({
+              pathname: '/(tabs)/profile',
+              params: { section: 'settings', request: String(Date.now()) },
+            })}
+            style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="settings-outline" size={20} color={colors.text} />
+          </Pressable>
+        </View>
+      </LinearGradient>
+
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setNotificationsOpen(false)}
+        transparent
+        visible={notificationsOpen}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setNotificationsOpen(false)}>
+          <Pressable style={styles.notificationSheet} onPress={(event) => event.stopPropagation()}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Bildirimler</Text>
+              {unreadNotificationCount ? (
+                <Pressable onPress={() => void markAllNotificationsRead()}>
+                  <Text style={styles.readAll}>Tümünü okundu işaretle</Text>
+                </Pressable>
+              ) : null}
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {notifications.length ? notifications.map((notification) => (
+                <Pressable
+                  key={notification.id}
+                  onPress={() => {
+                    if (!notification.readAt) void markNotificationRead(notification.id);
+                  }}
+                  style={[styles.notification, !notification.readAt && styles.notificationUnread]}
+                >
+                  <Text style={styles.notificationTitle}>{notification.title}</Text>
+                  <Text style={styles.notificationBody}>{notification.body}</Text>
+                </Pressable>
+              )) : (
+                <Text style={styles.emptyText}>Yeni bildiriminiz yok.</Text>
+              )}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -165,47 +213,65 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    minHeight: 62,
+    height: 64,
     marginHorizontal: 14,
     marginTop: 6,
-    paddingHorizontal: 15,
+    paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 20,
-    backgroundColor: 'rgba(15,17,14,0.94)',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 7,
   },
   identity: {
     flex: 1,
     minWidth: 0,
+    height: 46,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 15,
+    backgroundColor: 'rgba(5,6,5,0.74)',
+    justifyContent: 'center',
   },
   identityName: {
     color: colors.text,
     fontFamily: fonts.bold,
-    fontSize: 14,
+    fontSize: 12,
   },
   identityVehicle: {
     marginTop: 2,
     color: colors.textMuted,
     fontFamily: fonts.regular,
-    fontSize: 11,
+    fontSize: 10,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   headerButton: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 46,
     borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.black,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  driveButton: {
+    borderColor: colors.lime,
+    backgroundColor: colors.lime,
+    shadowColor: colors.lime,
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 7,
+  },
+  driveButtonCurrent: {
+    shadowOpacity: 0.72,
+    shadowRadius: 16,
   },
   badge: {
     position: 'absolute',
@@ -299,8 +365,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  sheetTitle: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 21 },
-  readAll: { color: colors.lime, fontFamily: fonts.bold, fontSize: 11 },
+  sheetTitle: {
+    color: colors.text,
+    fontFamily: fonts.extraBold,
+    fontSize: 21,
+  },
+  readAll: {
+    color: colors.lime,
+    fontFamily: fonts.bold,
+    fontSize: 11,
+  },
   notification: {
     marginBottom: 10,
     padding: 14,
@@ -313,7 +387,11 @@ const styles = StyleSheet.create({
     borderColor: colors.borderStrong,
     backgroundColor: colors.limeMuted,
   },
-  notificationTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 13 },
+  notificationTitle: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 13,
+  },
   notificationBody: {
     marginTop: 4,
     color: colors.textMuted,
@@ -328,5 +406,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
   },
-  pressed: { opacity: 0.68, transform: [{ scale: 0.96 }] },
+  pressed: {
+    opacity: 0.68,
+    transform: [{ scale: 0.96 }],
+  },
 });
