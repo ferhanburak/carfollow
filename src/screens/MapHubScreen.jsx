@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { MapCard } from "../components/MapCard";
 import { MapComposerPanel } from "../components/MapComposerPanel";
 import { PinPanel } from "../components/PinPanel";
@@ -51,6 +52,8 @@ export function MapHubScreen({
   washErrors,
   washFeedback,
 }) {
+  const [composerOpen, setComposerOpen] = useState(false);
+
   return (
     <section className="space-y-4">
       <MapCard
@@ -61,6 +64,7 @@ export function MapHubScreen({
         liveLocation={liveLocation}
         draftLocation={draftLocation}
         draftRoutePath={mapPinForm.routePoints}
+        showDraftRoute={composerOpen && mapPinForm.eventMode === "convoy"}
         mapPickMode={mapPickMode}
         onPickLocation={onPickLocation}
         mapHeight="clamp(24rem, 58vh, 34rem)"
@@ -104,6 +108,7 @@ export function MapHubScreen({
         errors={mapPinErrors}
         mapPickMode={mapPickMode}
         onClearRouteDraft={clearDraftRoute}
+        onOpenChange={setComposerOpen}
         onFormChange={onSetMapPinForm}
         onRemoveLastRoutePoint={pickRouteBack}
         onSetMapPickMode={onSetMapPickMode}

@@ -109,6 +109,12 @@ export default function MapScreen() {
     setEditorOpen(true);
   };
 
+  const closeEditor = () => {
+    setEditorOpen(false);
+    setPoints([]);
+    setFormError('');
+  };
+
   const saveNode = async () => {
     const minimumPoints = editorType === 'convoy' ? 2 : 1;
     const trustScore = Number(minDriverScore);
@@ -163,7 +169,7 @@ export default function MapScreen() {
         });
       }
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setEditorOpen(false);
+      closeEditor();
       setNotice('Nokta haritaya eklendi.');
       setTimeout(() => setNotice(''), 2500);
     } catch {
@@ -233,16 +239,6 @@ export default function MapScreen() {
               strokeWidth={4}
             />
           ) : null}
-          {points.map((point, index) => (
-            <Marker coordinate={point} key={`draft-${index}`}>
-              <View style={styles.draftMarker}>
-                <Text style={styles.draftMarkerText}>{index + 1}</Text>
-              </View>
-            </Marker>
-          ))}
-          {points.length > 1 ? (
-            <Polyline coordinates={points} strokeColor={colors.lime} strokeWidth={4} />
-          ) : null}
         </MapView>
         <Pressable
           onPress={() => void goToLocation()}
@@ -305,7 +301,7 @@ export default function MapScreen() {
         <Text style={styles.addButtonText}>Etkinlik Ekle</Text>
       </Pressable>
 
-      <Modal animationType="slide" transparent visible={editorOpen} onRequestClose={() => setEditorOpen(false)}>
+      <Modal animationType="slide" transparent visible={editorOpen} onRequestClose={closeEditor}>
         <View style={styles.modalBackdrop}>
           <View style={styles.editor}>
             <View style={styles.editorHeader}>
@@ -313,7 +309,7 @@ export default function MapScreen() {
                 <Text style={styles.editorTitle}>Haritaya Ekle</Text>
                 <Text style={styles.editorSubtitle}>Türü seçin, ardından haritaya dokunun.</Text>
               </View>
-              <Pressable onPress={() => setEditorOpen(false)} style={styles.closeButton}>
+              <Pressable onPress={closeEditor} style={styles.closeButton}>
                 <Ionicons name="close" size={22} color={colors.text} />
               </Pressable>
             </View>

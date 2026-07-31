@@ -28,6 +28,7 @@ export function MapComposerPanel({
   mapPickMode,
   onClearRouteDraft,
   onFormChange,
+  onOpenChange,
   onRemoveLastRoutePoint,
   onSetMapPickMode,
   onSubmit,
@@ -65,6 +66,7 @@ export function MapComposerPanel({
             onClick={() => {
               setIsOpen((current) => {
                 const next = !current;
+                onOpenChange?.(next);
                 if (!next) {
                   onSetMapPickMode("node");
                 }

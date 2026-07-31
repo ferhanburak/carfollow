@@ -590,6 +590,7 @@ export function MapCard({
   liveLocation,
   draftLocation,
   draftRoutePath,
+  showDraftRoute,
   isDriving = false,
   mapPickMode,
   onPickLocation,
@@ -648,6 +649,7 @@ export function MapCard({
       liveLocation={liveLocation}
       draftLocation={draftLocation}
       draftRoutePath={draftRoutePath}
+      showDraftRoute={showDraftRoute}
       isDriving={isDriving}
       mapPickMode={mapPickMode}
       onPickLocation={onPickLocation}
@@ -674,6 +676,7 @@ export function GoogleMapCard({
   liveLocation,
   draftLocation,
   draftRoutePath,
+  showDraftRoute,
   isDriving,
   mapPickMode,
   onPickLocation,
@@ -685,6 +688,7 @@ export function GoogleMapCard({
   const shouldAutoFrameRouteRef = useRef(true);
   const previousSelectedPinIdRef = useRef(selectedPinId);
   const [routeState, setRouteState] = useState({
+    pinId: null,
     path: [],
     distanceMeters: null,
     duration: null,
@@ -710,8 +714,15 @@ export function GoogleMapCard({
     [selectedPin, user],
   );
   const hasMockRoute = activeRoutePath.length > 1;
-  const displayedRoutePath = routeState.path.length > 1 ? routeState.path : activeRoutePath;
+  const selectedRouteActive = selectedPin?.id === selectedPinId && selectedPin?.type === "meet" && hasMockRoute;
+  const liveRoutePath = routeState.pinId === selectedPinId ? routeState.path : [];
+  const displayedRoutePath = selectedRouteActive
+    ? (liveRoutePath.length > 1 ? liveRoutePath : activeRoutePath)
+    : [];
   const hasDisplayedRoute = displayedRoutePath.length > 1;
+  const visibleDraftRoutePath = (showDraftRoute ?? mapPickMode === "route")
+    ? (draftRoutePath ?? [])
+    : [];
   const convoyGhostMarkers = getConvoyGhostMarkers(selectedPin, user, driveHud, isDriving);
   const selectedGhostMarker = convoyGhostMarkers.find((marker) => marker.id === selectedGhostMarkerId) ?? null;
   const selectedGhostFriendship = selectedGhostMarker ? getFriendshipStatus(user, selectedGhostMarker.plate) : "none";
@@ -736,6 +747,7 @@ export function GoogleMapCard({
   useEffect(() => {
     if (!isLoaded || !hasMockRoute || selectedPin?.type !== "meet") {
       setRouteState({
+        pinId: null,
         path: [],
         distanceMeters: null,
         duration: null,
@@ -750,6 +762,7 @@ export function GoogleMapCard({
     async function syncLiveRoute() {
       setRouteState((current) => ({
         ...current,
+        pinId: selectedPin.id,
         path: [],
         distanceMeters: null,
         duration: null,
@@ -778,6 +791,7 @@ export function GoogleMapCard({
 
         if (!cancelled) {
           setRouteState({
+            pinId: selectedPin.id,
             path: firstRoute.path,
             distanceMeters: firstRoute.distanceMeters ?? null,
             duration: firstRoute.duration ?? null,
@@ -788,6 +802,7 @@ export function GoogleMapCard({
       } catch (error) {
         if (!cancelled) {
           setRouteState({
+            pinId: selectedPin.id,
             path: activeRoutePath,
             distanceMeters: null,
             duration: null,
@@ -928,7 +943,7 @@ export function GoogleMapCard({
             }}
           >
             {hasDisplayedRoute ? <PolylineF path={displayedRoutePath} options={routeLineOptions} /> : null}
-            {draftRoutePath?.length > 1 ? <PolylineF path={draftRoutePath} options={draftRouteLineOptions} /> : null}
+            {visibleDraftRoutePath.length > 1 ? <PolylineF path={visibleDraftRoutePath} options={draftRouteLineOptions} /> : null}
             {currentLocation ? (
               <MarkerF
                 clickable={false}
@@ -950,8 +965,8 @@ export function GoogleMapCard({
                   icon={getActiveDriverIcon(driver.mapRelation, driver.locationVisibility)}
                 />
               ))}
-            {draftRoutePath?.map((point, index) => {
-              const waypoint = getDraftWaypointMeta(index, draftRoutePath.length);
+            {visibleDraftRoutePath.map((point, index) => {
+              const waypoint = getDraftWaypointMeta(index, visibleDraftRoutePath.length);
 
               return (
                 <MarkerF

@@ -109,6 +109,70 @@ describe("GoogleMapCard convoy overlays", () => {
     expect(onSelect).toHaveBeenLastCalledWith(null);
   });
 
+  it("removes the convoy route as soon as the convoy is no longer selected", async () => {
+    const convoy = {
+      id: "convoy-route-clear-test",
+      type: "meet",
+      name: "Route clear convoy",
+      lat: routePath[0].lat,
+      lng: routePath[0].lng,
+      routePath,
+      attendees: [],
+      backendCanViewDetails: true,
+    };
+    const baseProps = {
+      mapsApiKey: "test-key",
+      drivers: [],
+      pins: [convoy],
+      onSelect: vi.fn(),
+      user: { firebaseUid: "member-1" },
+      driveHud: {},
+      draftRoutePath: [],
+      isDriving: false,
+      mapPickMode: "node",
+      fullScreen: false,
+      navigationMode: false,
+      mapHeight: "18rem",
+    };
+    const { rerender } = render(
+      <GoogleMapCard {...baseProps} selectedPin={convoy} selectedPinId={convoy.id} />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("map-polyline")).toBeInTheDocument());
+
+    rerender(<GoogleMapCard {...baseProps} selectedPin={null} selectedPinId={null} />);
+
+    expect(screen.queryByTestId("map-polyline")).not.toBeInTheDocument();
+  });
+
+  it("keeps a draft route hidden while the creation editor is closed", () => {
+    render(
+      <GoogleMapCard
+        mapsApiKey="test-key"
+        drivers={[]}
+        pins={[]}
+        selectedPin={null}
+        selectedPinId={null}
+        onSelect={vi.fn()}
+        user={{ firebaseUid: "member-1" }}
+        driveHud={{}}
+        draftRoutePath={routePath}
+        showDraftRoute={false}
+        isDriving={false}
+        mapPickMode="route"
+        fullScreen={false}
+        navigationMode={false}
+        mapHeight="18rem"
+      />,
+    );
+
+    expect(screen.queryByTestId("map-polyline")).not.toBeInTheDocument();
+    expect(
+      screen.queryAllByTestId("map-marker")
+        .filter((marker) => marker.dataset.title.includes("Waypoint")),
+    ).toHaveLength(0);
+  });
+
   it("keeps the full-screen Google map shell stretched to its parent", () => {
     render(
       <GoogleMapCard
