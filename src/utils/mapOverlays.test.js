@@ -82,4 +82,22 @@ describe("map overlay model", () => {
     expect(result.selectedPin).toBeNull();
     expect(result.routePath).toEqual([]);
   });
+
+  it("hides completed and cancelled events while keeping active events on maps", () => {
+    const result = buildMapOverlayModel({
+      pins: [
+        { id: "planned", type: "meet", lifecycleStatus: "planning", lat: 39.9, lng: 32.8 },
+        { id: "rolling", type: "meet", lifecycleStatus: "rolling", lat: 39.8, lng: 32.7 },
+        { id: "completed", type: "meet", lifecycleStatus: "completed", lat: 39.7, lng: 32.6 },
+        { id: "cancelled", type: "meet", lifecycleStatus: "cancelled", lat: 39.6, lng: 32.5 },
+        { id: "spot", type: "spot", lat: 39.5, lng: 32.4 },
+      ],
+      selectedPinId: "completed",
+      user: null,
+    });
+
+    expect(result.markers.map((pin) => pin.id)).toEqual(["planned", "rolling", "spot"]);
+    expect(result.selectedPin).toBeNull();
+    expect(result.routePath).toEqual([]);
+  });
 });

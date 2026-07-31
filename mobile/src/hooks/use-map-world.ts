@@ -6,6 +6,7 @@ import { firebaseAuth, firebaseStorage, firestoreDb } from '@/lib/firebase';
 import { callFirebase, getFirebaseErrorMessage, toMillis } from '@/lib/firebase-callable';
 import { APP_ID, PUBLIC_COLLECTIONS, publicCollectionPath } from '@/lib/firebase-paths';
 import type { MapPin } from '@/types/cruiser';
+import { isVisibleMapPin } from '@/utils/map-pin-visibility';
 
 export type SpotPhoto = {
   id: string;
@@ -82,6 +83,7 @@ export function useMapWorld() {
     ...basePins.filter((pin) => pin.type !== 'meet' || !convoyIds.has(pin.id)),
     ...convoys,
   ];
+  const activePins = pins.filter(isVisibleMapPin);
 
   async function run<T>(key: string, operation: () => Promise<T>) {
     setBusy(key);
@@ -98,6 +100,7 @@ export function useMapWorld() {
 
   return {
     pins,
+    activePins,
     photos,
     reviews,
     loading,

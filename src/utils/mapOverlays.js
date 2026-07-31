@@ -14,6 +14,11 @@ export function normalizeMapPinCoordinates(pin) {
   };
 }
 
+export function isVisibleMapPin(pin) {
+  if (pin?.type !== "meet") return true;
+  return !["completed", "cancelled"].includes(String(pin?.lifecycleStatus ?? "planning").toLowerCase());
+}
+
 export function getActiveConvoyRoute(selectedPin, user) {
   if (
     selectedPin?.type === "meet" &&
@@ -28,7 +33,10 @@ export function getActiveConvoyRoute(selectedPin, user) {
 }
 
 export function buildMapOverlayModel({ pins = [], selectedPinId, user }) {
-  const markers = pins.filter(hasValidMapCoordinates).map(normalizeMapPinCoordinates);
+  const markers = pins
+    .filter(isVisibleMapPin)
+    .filter(hasValidMapCoordinates)
+    .map(normalizeMapPinCoordinates);
   const selectedPin = selectedPinId
     ? markers.find((pin) => pin.id === selectedPinId) ?? null
     : null;

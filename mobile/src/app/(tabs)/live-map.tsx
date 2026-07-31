@@ -115,7 +115,7 @@ export default function LiveMapScreen() {
                 </View>
               </Marker>
             ))}
-            {mapWorld.pins.map((pin) => (
+            {mapWorld.activePins.map((pin) => (
               <Marker
                 coordinate={{
                   latitude: Number(pin.lat),

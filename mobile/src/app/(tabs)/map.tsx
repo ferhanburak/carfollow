@@ -199,7 +199,7 @@ export default function MapScreen() {
       <View style={styles.mapCard}>
         <View style={styles.mapLabel}>
           <Text style={styles.mapTitle}>Etkinlik Haritası</Text>
-          <Text style={styles.mapCount}>{world.pins.length} nokta</Text>
+          <Text style={styles.mapCount}>{world.activePins.length} nokta</Text>
         </View>
         <MapView
           initialRegion={ANKARA}
@@ -214,7 +214,7 @@ export default function MapScreen() {
           toolbarEnabled={false}
           userInterfaceStyle="dark"
         >
-          {world.pins.map((pin) => (
+          {world.activePins.map((pin) => (
             <Marker
               coordinate={{ latitude: Number(pin.lat), longitude: Number(pin.lng) }}
               key={pin.id}
