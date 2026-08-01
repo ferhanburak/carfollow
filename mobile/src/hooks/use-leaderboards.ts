@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { firestoreDb } from '@/lib/firebase';
 import { callFirebase, getFirebaseErrorMessage } from '@/lib/firebase-callable';
 import { PUBLIC_COLLECTIONS, publicCollectionPath } from '@/lib/firebase-paths';
+import { normalizeLeaderboardEntries } from '@/lib/leaderboard';
 import type { LeaderboardEntry } from '@/types/cruiser';
 
 export function useLeaderboards() {
@@ -17,20 +18,24 @@ export function useLeaderboards() {
     const driverUnsubscribe = onSnapshot(
       collection(firestoreDb, publicCollectionPath(PUBLIC_COLLECTIONS.individualLeaderboard)),
       (snapshot) => {
-        setDrivers(snapshot.docs.map((item) => ({
+        const entries = snapshot.docs.map((item) => ({
           ...item.data(),
           id: String(item.data().id ?? item.id),
-        })) as LeaderboardEntry[]);
+        })) as LeaderboardEntry[];
+        setDrivers(normalizeLeaderboardEntries(entries, 'driver'));
         setLoading(false);
       },
       (snapshotError) => setError(getFirebaseErrorMessage(snapshotError)),
     );
     const clanUnsubscribe = onSnapshot(
       collection(firestoreDb, publicCollectionPath(PUBLIC_COLLECTIONS.clanLeaderboard)),
-      (snapshot) => setClans(snapshot.docs.map((item) => ({
-        ...item.data(),
-        id: String(item.data().id ?? item.id),
-      })) as LeaderboardEntry[]),
+      (snapshot) => {
+        const entries = snapshot.docs.map((item) => ({
+          ...item.data(),
+          id: String(item.data().id ?? item.id),
+        })) as LeaderboardEntry[];
+        setClans(normalizeLeaderboardEntries(entries, 'clan'));
+      },
       (snapshotError) => setError(getFirebaseErrorMessage(snapshotError)),
     );
     void callFirebase<{ stats?: Record<string, unknown> }>('refreshDriverStats')
