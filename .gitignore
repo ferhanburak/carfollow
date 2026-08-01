@@ -16,3 +16,9 @@ artifacts/
 .vercel
 .env*
 !mobile/.env.example
+
+# Native Firebase client configs contain project-specific API keys. Keep local
+# copies for builds, but provision production files through CI/EAS secrets.
+mobile/google-services.json
+mobile/google-services.local.json
+mobile/GoogleService-Info.plist
