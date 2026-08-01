@@ -52,19 +52,17 @@ const AppDataContext = createContext<AppDataValue | null>(null);
 
 const notificationTypes = new Set([
   'friend-request',
-  'friend-response',
   'clan-invite',
-  'clan-response',
-  'clan-role',
   'convoy-invite',
   'convoy-invite-response',
   'convoy-join',
   'convoy-response',
   'convoy-role',
   'convoy-cancelled',
-  'convoy-completed',
+  'convoy-started',
   'forum-like',
   'forum-reply',
+  'moderation',
 ]);
 
 function normalizeMessages(payload: Record<string, DirectMessage> | undefined) {

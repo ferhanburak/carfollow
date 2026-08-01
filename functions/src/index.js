@@ -82,6 +82,7 @@ const {
   buildNotificationDocument,
   getCommunityRoleLabel,
   hasModeratorClaim,
+  isPhonePushNotificationType,
   isUserNotificationType,
   sanitizeOperationalText,
 } = require("./operations");
@@ -269,17 +270,19 @@ function writeNotification(transaction, userId, notificationId, payload, timesta
     timestamp,
   });
   transaction.set(privateUserDocument(userId, "notifications", notification.id), notification, { merge: true });
-  const pushOutbox = buildPushOutboxDocument({
-    id: notification.id,
-    userId,
-    title: notification.title,
-    body: notification.body,
-    type: notification.type,
-    targetId: notification.action.targetId,
-    data: { actionType: notification.action.type },
-    timestamp,
-  });
-  transaction.set(publicDocument("pushOutbox", pushOutbox.id), pushOutbox);
+  if (isPhonePushNotificationType(notification.type)) {
+    const pushOutbox = buildPushOutboxDocument({
+      id: notification.id,
+      userId,
+      title: notification.title,
+      body: notification.body,
+      type: notification.type,
+      targetId: notification.action.targetId,
+      data: { actionType: notification.action.type },
+      timestamp,
+    });
+    transaction.set(publicDocument("pushOutbox", pushOutbox.id), pushOutbox);
+  }
   return notification;
 }
 

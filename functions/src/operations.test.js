@@ -6,6 +6,7 @@ const {
   buildNotificationDocument,
   getCommunityRoleLabel,
   hasModeratorClaim,
+  isPhonePushNotificationType,
   isUserNotificationType,
 } = require("./operations");
 
@@ -30,15 +31,32 @@ test("notification documents expose a bounded action projection", () => {
 test("user inbox accepts the approved social and convoy activity matrix", () => {
   assert.equal(isUserNotificationType("friend-request"), true);
   assert.equal(isUserNotificationType("convoy-invite"), true);
-  assert.equal(isUserNotificationType("clan-role"), true);
   assert.equal(isUserNotificationType("convoy-response"), true);
   assert.equal(isUserNotificationType("convoy-cancelled"), true);
-  assert.equal(isUserNotificationType("convoy-completed"), true);
+  assert.equal(isUserNotificationType("convoy-started"), true);
   assert.equal(isUserNotificationType("forum-like"), true);
   assert.equal(isUserNotificationType("forum-reply"), true);
+  assert.equal(isUserNotificationType("moderation"), true);
   assert.equal(isUserNotificationType("direct-message"), false);
-  assert.equal(isUserNotificationType("convoy-started"), false);
+  assert.equal(isUserNotificationType("friend-response"), false);
+  assert.equal(isUserNotificationType("clan-response"), false);
+  assert.equal(isUserNotificationType("clan-role"), false);
+  assert.equal(isUserNotificationType("convoy-completed"), false);
   assert.equal(isUserNotificationType("maintenance-critical"), false);
+});
+
+test("phone panel only receives actionable or time-sensitive notifications", () => {
+  assert.equal(isPhonePushNotificationType("friend-request"), true);
+  assert.equal(isPhonePushNotificationType("clan-invite"), true);
+  assert.equal(isPhonePushNotificationType("convoy-invite"), true);
+  assert.equal(isPhonePushNotificationType("convoy-response"), true);
+  assert.equal(isPhonePushNotificationType("convoy-cancelled"), true);
+  assert.equal(isPhonePushNotificationType("convoy-started"), true);
+  assert.equal(isPhonePushNotificationType("forum-reply"), true);
+  assert.equal(isPhonePushNotificationType("moderation"), true);
+  assert.equal(isPhonePushNotificationType("forum-like"), false);
+  assert.equal(isPhonePushNotificationType("convoy-role"), false);
+  assert.equal(isPhonePushNotificationType("convoy-invite-response"), false);
 });
 
 test("community role labels are explicit for role-change notifications", () => {
