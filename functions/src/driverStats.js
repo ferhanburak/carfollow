@@ -541,9 +541,29 @@ function buildLeaderboardEntry({ userId, profile, stats }) {
     monthlyMaxSpeedKmh: roundSpeed(stats.monthlyMaxSpeedKmh),
     monthlyAverageSpeedKmh: roundSpeed(stats.monthlyAverageSpeedKmh),
     lifetimeVerifiedKm: roundKm(stats.lifetimeVerifiedKm),
+    lifetimeDriveSeconds: Math.max(0, Math.floor(Number(stats.lifetimeDriveSeconds) || 0)),
+    lifetimeMaxSpeedKmh: roundSpeed(stats.lifetimeMaxSpeedKmh),
     completedSessions: Math.max(0, Number(stats.completedSessions ?? 0)),
     driverScore: Math.max(0, Number(profile.driverScore ?? 0)),
     achievementBadges: [...(stats.achievementBadges ?? [])],
+    schemaVersion: STATS_SCHEMA_VERSION,
+  };
+}
+
+function buildAllTimeLeaderboardEntry({ userId, profile, stats }) {
+  return {
+    id: String(userId),
+    userId: String(userId),
+    plate: String(profile.plate ?? ""),
+    fullName: String(profile.fullName ?? ""),
+    model: String(profile.model ?? ""),
+    region: String(profile.region ?? ""),
+    clan: String(profile.clan ?? "Independent"),
+    lifetimeVerifiedKm: roundKm(stats.lifetimeVerifiedKm),
+    lifetimeDriveSeconds: Math.max(0, Math.floor(Number(stats.lifetimeDriveSeconds) || 0)),
+    lifetimeMaxSpeedKmh: roundSpeed(stats.lifetimeMaxSpeedKmh),
+    completedSessions: Math.max(0, Number(stats.completedSessions ?? 0)),
+    driverScore: Math.max(0, Number(profile.driverScore ?? 0)),
     schemaVersion: STATS_SCHEMA_VERSION,
   };
 }
@@ -558,6 +578,7 @@ module.exports = {
   STATS_SCHEMA_VERSION,
   applyCompletedDriveToStats,
   applyCompletedDriveToClan,
+  buildAllTimeLeaderboardEntry,
   buildAchievementProgress,
   buildDriverStatsDocument,
   buildLeaderboardEntry,

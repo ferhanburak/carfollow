@@ -433,6 +433,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /artifacts/{appId}/public/data/individualAllTimeLeaderboard/{userId} {
+      allow read: if isKnownApp(appId) && isSignedIn();
+      allow write: if false;
+    }
+
     match /artifacts/{appId}/public/data/clanLeaderboard/{documentId} {
       allow read: if isKnownApp(appId) && isSignedIn();
       allow write: if false;

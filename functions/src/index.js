@@ -11,6 +11,7 @@ const {
   DRIVE_KM_PER_SECOND,
   applyCompletedDriveToClan,
   applyCompletedDriveToStats,
+  buildAllTimeLeaderboardEntry,
   buildDriverStatsDocument,
   buildLeaderboardEntry,
   buildPartLifeSnapshot,
@@ -538,6 +539,7 @@ function writeDriverAggregate(transaction, {
 }) {
   const refs = driverAggregateRefs(userId, profile.primaryVehicleId);
   const leaderboardEntry = buildLeaderboardEntry({ userId, profile, stats });
+  const allTimeLeaderboardEntry = buildAllTimeLeaderboardEntry({ userId, profile, stats });
   const profileStats = {
     monthlyKm: stats.monthlyKm,
     monthlyKmPeriod: stats.periodKey,
@@ -563,6 +565,10 @@ function writeDriverAggregate(transaction, {
   }, { merge: true });
   transaction.set(publicDocument("individualLeaderboard", leaderboardEntry.id), {
     ...leaderboardEntry,
+    updatedAt: timestamp,
+  }, { merge: true });
+  transaction.set(publicDocument("individualAllTimeLeaderboard", userId), {
+    ...allTimeLeaderboardEntry,
     updatedAt: timestamp,
   }, { merge: true });
 

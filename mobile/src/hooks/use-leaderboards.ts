@@ -1,18 +1,27 @@
 import { collection, onSnapshot } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { firestoreDb } from '@/lib/firebase';
 import { callFirebase, getFirebaseErrorMessage } from '@/lib/firebase-callable';
 import { PUBLIC_COLLECTIONS, publicCollectionPath } from '@/lib/firebase-paths';
-import { normalizeLeaderboardEntries } from '@/lib/leaderboard';
+import { normalizeAllTimeLeaderboardEntries, normalizeLeaderboardEntries } from '@/lib/leaderboard';
 import type { LeaderboardEntry } from '@/types/cruiser';
 
 export function useLeaderboards() {
-  const [drivers, setDrivers] = useState<LeaderboardEntry[]>([]);
+  const [driverEntries, setDriverEntries] = useState<LeaderboardEntry[]>([]);
+  const [allTimeEntries, setAllTimeEntries] = useState<LeaderboardEntry[]>([]);
   const [clans, setClans] = useState<LeaderboardEntry[]>([]);
   const [stats, setStats] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const drivers = useMemo(
+    () => normalizeLeaderboardEntries(driverEntries, 'driver'),
+    [driverEntries],
+  );
+  const allTimeDrivers = useMemo(
+    () => normalizeAllTimeLeaderboardEntries([...driverEntries, ...allTimeEntries]),
+    [allTimeEntries, driverEntries],
+  );
 
   useEffect(() => {
     const driverUnsubscribe = onSnapshot(
@@ -22,8 +31,18 @@ export function useLeaderboards() {
           ...item.data(),
           id: String(item.data().id ?? item.id),
         })) as LeaderboardEntry[];
-        setDrivers(normalizeLeaderboardEntries(entries, 'driver'));
+        setDriverEntries(entries);
         setLoading(false);
+      },
+      (snapshotError) => setError(getFirebaseErrorMessage(snapshotError)),
+    );
+    const allTimeUnsubscribe = onSnapshot(
+      collection(firestoreDb, publicCollectionPath(PUBLIC_COLLECTIONS.individualAllTimeLeaderboard)),
+      (snapshot) => {
+        setAllTimeEntries(snapshot.docs.map((item) => ({
+          ...item.data(),
+          id: String(item.data().id ?? item.id),
+        })) as LeaderboardEntry[]);
       },
       (snapshotError) => setError(getFirebaseErrorMessage(snapshotError)),
     );
@@ -43,9 +62,10 @@ export function useLeaderboards() {
       .catch((refreshError) => setError(getFirebaseErrorMessage(refreshError)));
     return () => {
       driverUnsubscribe();
+      allTimeUnsubscribe();
       clanUnsubscribe();
     };
   }, []);
 
-  return { drivers, clans, stats, loading, error };
+  return { allTimeDrivers, drivers, clans, stats, loading, error };
 }

@@ -6,6 +6,7 @@ export const PUBLIC_COLLECTIONS = {
   clanInvites: 'clanInvites',
   clanLeaderboard: 'clanLeaderboard',
   friendships: 'friendships',
+  individualAllTimeLeaderboard: 'individualAllTimeLeaderboard',
   individualLeaderboard: 'individualLeaderboard',
   mapPins: 'mapPins',
   mapLikes: 'mapLikes',

@@ -2,6 +2,29 @@ import type { LeaderboardEntry } from '@/types/cruiser';
 
 type LeaderboardKind = 'driver' | 'clan';
 
+export type AllTimeMetric =
+  | 'lifetimeVerifiedKm'
+  | 'lifetimeDriveSeconds'
+  | 'lifetimeMaxSpeedKmh';
+
+export type AllTimeHonor = {
+  metric: AllTimeMetric;
+  rank: 1 | 2 | 3;
+  title: string;
+  shortTitle: string;
+  value: number;
+};
+
+export const allTimeMetricOptions: {
+  value: AllTimeMetric;
+  label: string;
+  title: string;
+}[] = [
+  { value: 'lifetimeVerifiedKm', label: 'KM', title: 'Onaylı KM' },
+  { value: 'lifetimeDriveSeconds', label: 'Süre', title: 'Sürüş Süresi' },
+  { value: 'lifetimeMaxSpeedKmh', label: 'GPS Hızı', title: 'Onaylı GPS Hızı' },
+];
+
 function getIstanbulDateParts(dateValue: Date) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Istanbul',
@@ -87,4 +110,73 @@ export function normalizeLeaderboardEntries(
       ? Number(entry.weeklyMaxSpeedKmh ?? 0)
       : 0,
   }));
+}
+
+export function normalizeAllTimeLeaderboardEntries(entries: LeaderboardEntry[]) {
+  const entriesByUser = new Map<string, LeaderboardEntry>();
+
+  entries.forEach((entry) => {
+    const userId = getEntryIdentity(entry, 'driver');
+    if (!userId) return;
+
+    const existing = entriesByUser.get(userId);
+    const latest = !existing || getUpdatedAtMillis(entry) >= getUpdatedAtMillis(existing)
+      ? entry
+      : existing;
+    entriesByUser.set(userId, {
+      ...existing,
+      ...latest,
+      id: userId,
+      userId,
+      lifetimeVerifiedKm: Math.max(
+        Number(existing?.lifetimeVerifiedKm ?? 0),
+        Number(entry.lifetimeVerifiedKm ?? 0),
+      ),
+      lifetimeDriveSeconds: Math.max(
+        Number(existing?.lifetimeDriveSeconds ?? 0),
+        Number(entry.lifetimeDriveSeconds ?? 0),
+      ),
+      lifetimeMaxSpeedKmh: Math.max(
+        Number(existing?.lifetimeMaxSpeedKmh ?? 0),
+        Number(entry.lifetimeMaxSpeedKmh ?? 0),
+      ),
+    });
+  });
+
+  return [...entriesByUser.values()];
+}
+
+export function sortAllTimeLeaderboard(
+  entries: LeaderboardEntry[],
+  metric: AllTimeMetric,
+) {
+  return [...entries].sort((left, right) => {
+    const metricDifference = Number(right[metric] ?? 0) - Number(left[metric] ?? 0);
+    if (metricDifference) return metricDifference;
+    return String(left.fullName ?? left.userId ?? '').localeCompare(
+      String(right.fullName ?? right.userId ?? ''),
+      'tr',
+    );
+  });
+}
+
+export function getAllTimeHonors(entries: LeaderboardEntry[], userId?: string) {
+  if (!userId) return [];
+
+  return allTimeMetricOptions.flatMap<AllTimeHonor>((option) => {
+    const rankIndex = sortAllTimeLeaderboard(entries, option.value)
+      .findIndex((entry) => entry.userId === userId);
+    if (rankIndex < 0 || rankIndex > 2) return [];
+
+    const entry = sortAllTimeLeaderboard(entries, option.value)[rankIndex];
+    if (Number(entry[option.value] ?? 0) <= 0) return [];
+    const rank = (rankIndex + 1) as 1 | 2 | 3;
+    return [{
+      metric: option.value,
+      rank,
+      title: `Tüm Zamanlar ${option.title} #${rank}`,
+      shortTitle: `${option.title} #${rank}`,
+      value: Number(entry[option.value] ?? 0),
+    }];
+  });
 }

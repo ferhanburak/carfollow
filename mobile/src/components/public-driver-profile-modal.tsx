@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAllTimeLeaderboard } from '@/hooks/use-all-time-leaderboard';
+import { getAllTimeHonors } from '@/lib/leaderboard';
 import { colors, fonts } from '@/theme/colors';
 import type { DriverSummary } from '@/types/cruiser';
 
@@ -79,6 +81,7 @@ export function PublicDriverProfileModal({
   const [reportDetails, setReportDetails] = useState('');
   const [localPending, setLocalPending] = useState('');
   const [reportSent, setReportSent] = useState(false);
+  const { entries: allTimeEntries } = useAllTimeLeaderboard();
 
   const harmonyVotes = Number(profile?.harmonyVotes ?? 0);
   const alertVotes = Number(profile?.alertVotes ?? 0);
@@ -90,6 +93,7 @@ export function PublicDriverProfileModal({
     [alertVotes, harmonyVotes, score],
   );
   const pending = busy || Boolean(localPending);
+  const allTimeHonors = getAllTimeHonors(allTimeEntries, profile?.userId);
 
   const closeModal = () => {
     setReportOpen(false);
@@ -170,6 +174,24 @@ export function PublicDriverProfileModal({
                 <Text style={styles.reputationCopy}>{reputation.description}</Text>
               </View>
             </View>
+
+            {allTimeHonors.length ? (
+              <View style={styles.honorsCard}>
+                <View style={styles.honorsHeader}>
+                  <Ionicons name="trophy" size={17} color="#facc15" />
+                  <Text style={styles.blockTitle}>Tüm Zamanlar Unvanları</Text>
+                </View>
+                <View style={styles.honorList}>
+                  {allTimeHonors.map((honor) => (
+                    <View key={honor.metric} style={[styles.honorBadge, publicHonorStyle(honor.rank)]}>
+                      <Text style={[styles.honorText, { color: honorTextColor(honor.rank) }]}>
+                        {honor.shortTitle}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
 
             <View style={styles.metrics}>
               <Metric label="Sürücü Skoru" value={`${score}/100`} />
@@ -479,6 +501,18 @@ function statusDotStyle(state: ProfileFriendshipState) {
   return styles.statusNeutral;
 }
 
+function honorTextColor(rank: 1 | 2 | 3) {
+  if (rank === 1) return '#facc15';
+  if (rank === 2) return '#e5e7eb';
+  return '#fb923c';
+}
+
+function publicHonorStyle(rank: 1 | 2 | 3) {
+  if (rank === 1) return styles.honorGold;
+  if (rank === 2) return styles.honorSilver;
+  return styles.honorBronze;
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   header: {
@@ -574,6 +608,20 @@ const styles = StyleSheet.create({
   reputationRelation: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 9 },
   reputationCopy: { marginTop: 7, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9 },
   metrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  honorsCard: {
+    padding: 15,
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: 'rgba(250,204,21,0.22)',
+    backgroundColor: 'rgba(250,204,21,0.045)',
+  },
+  honorsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  honorList: { marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  honorBadge: { minHeight: 34, paddingHorizontal: 11, borderRadius: 13, borderWidth: 1, justifyContent: 'center' },
+  honorText: { fontFamily: fonts.bold, fontSize: 9 },
+  honorGold: { borderColor: 'rgba(250,204,21,0.45)', backgroundColor: 'rgba(250,204,21,0.10)' },
+  honorSilver: { borderColor: 'rgba(229,231,235,0.34)', backgroundColor: 'rgba(229,231,235,0.08)' },
+  honorBronze: { borderColor: 'rgba(249,115,22,0.40)', backgroundColor: 'rgba(249,115,22,0.10)' },
   metric: {
     width: '48.5%',
     minHeight: 77,

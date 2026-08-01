@@ -172,6 +172,10 @@ export type LeaderboardEntry = {
   monthlyKm?: number;
   monthlyDriveSeconds?: number;
   monthlyMaxSpeedKmh?: number;
+  lifetimeVerifiedKm?: number;
+  lifetimeDriveSeconds?: number;
+  lifetimeMaxSpeedKmh?: number;
+  completedSessions?: number;
   dailyPeriodKey?: string;
   weeklyPeriodKey?: string;
   periodKey?: string;

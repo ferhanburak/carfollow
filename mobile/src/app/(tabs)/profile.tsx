@@ -20,10 +20,12 @@ import {
 } from 'react-native';
 
 import { ScreenShell, Surface } from '@/components/screen-shell';
+import { useAllTimeLeaderboard } from '@/hooks/use-all-time-leaderboard';
 import { useGarage, type VehiclePart } from '@/hooks/use-garage';
 import { firebaseAuth, firebaseStorage } from '@/lib/firebase';
 import { callFirebase, getFirebaseErrorMessage } from '@/lib/firebase-callable';
 import { APP_ID } from '@/lib/firebase-paths';
+import { getAllTimeHonors } from '@/lib/leaderboard';
 import { useAuth } from '@/providers/auth-provider';
 import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { colors, fonts } from '@/theme/colors';
@@ -49,6 +51,7 @@ export default function ProfileScreen() {
   const { logout, profile, refreshProfile, user } = useAuth();
   const { social } = useDriverProfile();
   const garage = useGarage();
+  const { entries: allTimeEntries } = useAllTimeLeaderboard();
   const [panel, setPanel] = useState<Panel>(null);
   const [notice, setNotice] = useState('');
 
@@ -63,6 +66,7 @@ export default function ProfileScreen() {
     ...(profile?.achievementBadges ?? []),
     ...(Array.isArray(stats.achievementBadges) ? stats.achievementBadges as string[] : []),
   ]));
+  const allTimeHonors = getAllTimeHonors(allTimeEntries, user?.uid);
   const harmonyVotes = Number(profile?.harmonyVotes ?? stats.harmonyVotesSnapshot ?? 0);
   const alertVotes = Number(profile?.alertVotes ?? 0);
   const harmonyRatio = harmonyVotes + alertVotes
@@ -125,7 +129,7 @@ export default function ProfileScreen() {
 
         <View style={styles.profileHealth}>
           <CompactMetric label="Profil" value={`%${profileCompletion}`} />
-          <CompactMetric label="Unvan" value={`${badges.length}`} />
+          <CompactMetric label="Unvan" value={`${badges.length + allTimeHonors.length}`} />
         </View>
 
         <View style={styles.overviewGrid}>
@@ -139,16 +143,24 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.badgeList}>
+          {allTimeHonors.map((honor) => (
+            <View key={honor.metric} style={[styles.badge, honorBadgeStyle(honor.rank)]}>
+              <Ionicons name="trophy" size={13} color={honorTextColor(honor.rank)} />
+              <Text style={[styles.badgeText, { color: honorTextColor(honor.rank) }]}>
+                {honor.shortTitle}
+              </Text>
+            </View>
+          ))}
           {badges.length ? badges.map((badge) => (
             <View key={badge} style={styles.badge}>
               <Ionicons name="ribbon" size={13} color={colors.limeBright} />
               <Text style={styles.badgeText}>{badge}</Text>
             </View>
-          )) : (
+          )) : !allTimeHonors.length ? (
             <Text style={styles.badgeEmpty}>
               Henüz aktif unvan yok. Sürüş ve sosyal ilerlemeyle ilk unvanını açabilirsin.
             </Text>
-          )}
+          ) : null}
         </View>
       </Surface>
 
@@ -1062,6 +1074,18 @@ function roleLabel(role?: string) {
   return 'Yok';
 }
 
+function honorTextColor(rank: 1 | 2 | 3) {
+  if (rank === 1) return '#facc15';
+  if (rank === 2) return '#e5e7eb';
+  return '#fb923c';
+}
+
+function honorBadgeStyle(rank: 1 | 2 | 3) {
+  if (rank === 1) return styles.honorGold;
+  if (rank === 2) return styles.honorSilver;
+  return styles.honorBronze;
+}
+
 function partPercent(part: VehiclePart, odometer: number) {
   const persisted = Number(part.lifePercent ?? part.remainingPercent);
   if (Number.isFinite(persisted)) return Math.max(0, Math.min(100, Math.round(persisted)));
@@ -1175,6 +1199,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   badgeText: { color: colors.limeBright, fontFamily: fonts.semibold, fontSize: 9 },
+  honorGold: { borderColor: 'rgba(250,204,21,0.45)', backgroundColor: 'rgba(250,204,21,0.10)' },
+  honorSilver: { borderColor: 'rgba(229,231,235,0.34)', backgroundColor: 'rgba(229,231,235,0.08)' },
+  honorBronze: { borderColor: 'rgba(249,115,22,0.40)', backgroundColor: 'rgba(249,115,22,0.10)' },
   badgeEmpty: {
     width: '100%',
     padding: 11,

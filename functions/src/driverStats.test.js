@@ -5,6 +5,7 @@ const {
   applyCompletedDriveToClan,
   applyCompletedDriveToStats,
   buildAchievementProgress,
+  buildAllTimeLeaderboardEntry,
   buildDriverStatsDocument,
   buildPartLifeSnapshot,
   calculateAcceptedDriveKm,
@@ -311,4 +312,40 @@ test("keeps previously unlocked monthly achievements after a period reset", () =
   assert.equal(stats.monthlyNightKm, 0);
   assert.equal(nightWarrior.unlocked, true);
   assert.equal(nightWarrior.percent, 100);
+});
+
+test("builds a stable server-owned all-time leaderboard entry", () => {
+  const entry = buildAllTimeLeaderboardEntry({
+    userId: "driver-1",
+    profile: {
+      plate: "06 TEST 01",
+      fullName: "Test Driver",
+      model: "Test Car",
+      region: "Ankara",
+      clan: "Apex",
+      driverScore: 88,
+    },
+    stats: {
+      lifetimeVerifiedKm: 1240.26,
+      lifetimeDriveSeconds: 9876.8,
+      lifetimeMaxSpeedKmh: 142.48,
+      completedSessions: 31,
+    },
+  });
+
+  assert.deepEqual(entry, {
+    id: "driver-1",
+    userId: "driver-1",
+    plate: "06 TEST 01",
+    fullName: "Test Driver",
+    model: "Test Car",
+    region: "Ankara",
+    clan: "Apex",
+    lifetimeVerifiedKm: 1240.3,
+    lifetimeDriveSeconds: 9876,
+    lifetimeMaxSpeedKmh: 142.5,
+    completedSessions: 31,
+    driverScore: 88,
+    schemaVersion: 3,
+  });
 });
