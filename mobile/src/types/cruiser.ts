@@ -11,6 +11,10 @@ export type DriverSummary = {
   monthlyKm?: number;
   harmonyVotes?: number;
   alertVotes?: number;
+  communityEventLikesReceived?: number;
+  communityPhotoLikesReceived?: number;
+  communityHelpfulVotesReceived?: number;
+  communityKudos?: number;
   avatar?: string;
   clan?: string;
   clanId?: string;

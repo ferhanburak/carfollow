@@ -39,6 +39,7 @@ test("restricted public summary removes exact route and rounds coordinates", () 
   assert.equal(summary.time, "Restricted");
   assert.equal(summary.lat, 40);
   assert.equal(summary.backendCanViewDetails, false);
+  assert.equal(summary.likes, 0);
 });
 
 test("trusted visible driver receives exact details while low-score driver receives a locked projection", () => {

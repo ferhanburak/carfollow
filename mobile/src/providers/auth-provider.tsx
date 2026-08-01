@@ -48,6 +48,10 @@ export type CruiserProfile = {
   maxSpeedKmh?: number;
   harmonyVotes?: number;
   alertVotes?: number;
+  communityEventLikesReceived?: number;
+  communityPhotoLikesReceived?: number;
+  communityHelpfulVotesReceived?: number;
+  communityKudos?: number;
   achievementBadges?: string[];
   privacy?: {
     plateSearchEnabled?: boolean;

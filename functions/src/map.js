@@ -60,7 +60,26 @@ function buildMapPinDocument({ pinId, pin, profile, userId, timestamp }) {
   };
 }
 
-function buildWashReviewDocument({ pinId, userId, profile, review, timestamp }) {
+const COMMUNITY_CONTRIBUTION_WEIGHTS = Object.freeze({
+  communityEventLikesReceived: 1,
+  communityPhotoLikesReceived: 1,
+  communityHelpfulVotesReceived: 2,
+});
+
+function buildCommunityContributionPatch(profile = {}, metric, delta) {
+  if (!Object.prototype.hasOwnProperty.call(COMMUNITY_CONTRIBUTION_WEIGHTS, metric)) {
+    throw new Error("Unsupported community contribution metric.");
+  }
+  const next = {};
+  for (const key of Object.keys(COMMUNITY_CONTRIBUTION_WEIGHTS)) {
+    next[key] = Math.max(0, Number(profile?.[key] ?? 0) + (key === metric ? Number(delta) : 0));
+  }
+  next.communityKudos = Object.entries(COMMUNITY_CONTRIBUTION_WEIGHTS)
+    .reduce((total, [key, weight]) => total + next[key] * weight, 0);
+  return next;
+}
+
+function buildWashReviewDocument({ pinId, userId, profile, review, helpfulCount = 0, timestamp }) {
   const foam = Number(review?.foam);
   const water = Number(review?.water);
   if (![foam, water].every((score) => Number.isInteger(score) && score >= 1 && score <= 5)) {
@@ -76,6 +95,7 @@ function buildWashReviewDocument({ pinId, userId, profile, review, timestamp }) 
     allowsBuckets: Boolean(review?.allowsBuckets),
     shadowDrying: Boolean(review?.shadowDrying),
     note: safeText(review?.note, 280),
+    helpfulCount: Math.max(0, Number(helpfulCount ?? 0)),
     schemaVersion: MAP_SCHEMA_VERSION,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -105,4 +125,13 @@ function buildSpotPhotoDocument({ photoId, pinId, userId, profile, title, imageU
   };
 }
 
-module.exports = { buildMapPinDocument, buildSpotPhotoDocument, buildWashRating, buildWashReviewDocument, safeTags, safeText };
+module.exports = {
+  COMMUNITY_CONTRIBUTION_WEIGHTS,
+  buildCommunityContributionPatch,
+  buildMapPinDocument,
+  buildSpotPhotoDocument,
+  buildWashRating,
+  buildWashReviewDocument,
+  safeTags,
+  safeText,
+};

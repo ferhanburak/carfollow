@@ -51,6 +51,10 @@ test("public profile projection follows the relationship access matrix", () => {
     monthlyKm: 1240,
     harmonyVotes: 7,
     alertVotes: 1,
+    communityEventLikesReceived: 5,
+    communityPhotoLikesReceived: 3,
+    communityHelpfulVotesReceived: 4,
+    communityKudos: 16,
     privacy: { showModelInSearch: false, showRegionInSearch: false },
   };
 
@@ -63,6 +67,8 @@ test("public profile projection follows the relationship access matrix", () => {
   assert.equal(stranger.avatar, "");
   assert.equal(stranger.clanId, "");
   assert.equal(stranger.driverScore, 88);
+  assert.equal(stranger.communityKudos, 16);
+  assert.equal(stranger.communityHelpfulVotesReceived, 4);
 
   const friend = projectPublicProfileForViewer(privateTarget, PROFILE_RELATIONS.FRIEND);
   assert.equal(friend.plate, "34 TEST 01");

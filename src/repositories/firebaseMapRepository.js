@@ -69,6 +69,7 @@ async function callMapFunction(name, data) {
 export const createFirebaseMapNode = (pin) => callMapFunction("createMapNode", { pin });
 export const submitFirebaseWashReview = (review) => callMapFunction("submitWashReview", review);
 export const toggleFirebaseMapLike = (data) => callMapFunction("toggleMapLike", data);
+export const toggleFirebaseWashReviewHelpful = (reviewId) => callMapFunction("toggleWashReviewHelpful", { reviewId });
 export const deleteFirebaseMapSpotPhoto = (photoId) => callMapFunction("deleteMapSpotPhoto", { photoId });
 export const createFirebaseConvoy = (pin) => callMapFunction("createConvoy", { pin });
 export const deleteFirebaseConvoy = (convoyId) => callMapFunction("deleteConvoy", { convoyId });

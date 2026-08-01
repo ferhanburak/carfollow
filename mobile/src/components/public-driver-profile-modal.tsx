@@ -181,6 +181,8 @@ export function PublicDriverProfileModal({
               />
               <Metric label="Uyum Oranı" value={`%${harmonyRatio}`} />
               <Metric label="Bölge" value={profile.region || '--'} />
+              <Metric label="Topluluk Katkısı" value={Number(profile.communityKudos ?? 0)} />
+              <Metric label="Faydalı Yorum" value={Number(profile.communityHelpfulVotesReceived ?? 0)} />
             </View>
 
             <View style={styles.harmonyCard}>

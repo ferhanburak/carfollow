@@ -178,6 +178,7 @@ function App() {
     likeGalleryImage,
     likePin,
     loadSpotPhotoFile,
+    markWashReviewHelpful,
     liveLocation,
     mapDraftLocation,
     mapPickMode,
@@ -422,6 +423,7 @@ function App() {
                 joinCruise={joinCruise}
                 likeGalleryImage={likeGalleryImage}
                 likePin={likePin}
+                onHelpfulReview={markWashReviewHelpful}
                 loadSpotPhotoFile={loadSpotPhotoFile}
                 liveLocation={liveLocation}
                 mapPickMode={mapPickMode}
@@ -503,6 +505,7 @@ function App() {
                 joinCruise={joinCruise}
                 likeGalleryImage={likeGalleryImage}
                 likePin={likePin}
+                markWashReviewHelpful={markWashReviewHelpful}
                 loadSpotPhotoFile={loadSpotPhotoFile}
                 liveLocation={liveLocation}
                 mapPins={mapPins}

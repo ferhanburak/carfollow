@@ -67,6 +67,7 @@ describe("GoogleMapCard convoy overlays", () => {
     const convoy = {
       id: "convoy-route-test",
       type: "meet",
+      eventMode: "convoy",
       name: "Ankara test convoy",
       lat: routePath[0].lat,
       lng: routePath[0].lng,
@@ -113,6 +114,7 @@ describe("GoogleMapCard convoy overlays", () => {
     const convoy = {
       id: "convoy-route-clear-test",
       type: "meet",
+      eventMode: "convoy",
       name: "Route clear convoy",
       lat: routePath[0].lat,
       lng: routePath[0].lng,
@@ -171,6 +173,42 @@ describe("GoogleMapCard convoy overlays", () => {
       screen.queryAllByTestId("map-marker")
         .filter((marker) => marker.dataset.title.includes("Waypoint")),
     ).toHaveLength(0);
+  });
+
+  it("does not draw a route for a selected single-point meetup", async () => {
+    const meetup = {
+      id: "meetup-route-test",
+      type: "meet",
+      eventMode: "meetup",
+      name: "Ankara buluşması",
+      lat: routePath[0].lat,
+      lng: routePath[0].lng,
+      routePath,
+      attendees: [],
+      backendCanViewDetails: true,
+    };
+
+    render(
+      <GoogleMapCard
+        mapsApiKey="test-key"
+        drivers={[]}
+        pins={[meetup]}
+        selectedPin={meetup}
+        selectedPinId={meetup.id}
+        onSelect={vi.fn()}
+        user={{ firebaseUid: "member-1" }}
+        driveHud={{}}
+        draftRoutePath={[]}
+        isDriving={false}
+        mapPickMode="node"
+        fullScreen={false}
+        navigationMode={false}
+        mapHeight="18rem"
+      />,
+    );
+
+    await waitFor(() => expect(screen.queryByTestId("map-polyline")).not.toBeInTheDocument());
+    expect(window.google.maps.importLibrary).not.toHaveBeenCalled();
   });
 
   it("keeps the full-screen Google map shell stretched to its parent", () => {

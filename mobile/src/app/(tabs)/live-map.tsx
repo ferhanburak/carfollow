@@ -134,6 +134,7 @@ export default function LiveMapScreen() {
               </Marker>
             ))}
             {selectedPin?.type === 'meet' &&
+            selectedPin.eventMode === 'convoy' &&
             selectedPin.backendCanViewDetails !== false &&
             (selectedPin.routePath?.length ?? 0) > 1 ? (
               <Polyline
@@ -221,6 +222,13 @@ export default function LiveMapScreen() {
               Alert.alert('İstek gönderildi', 'Etkinlik katılım isteğiniz iletildi.');
             } catch {
               Alert.alert('Katılım başarısız', mapWorld.error || 'İstek gönderilemedi.');
+            }
+          } : undefined}
+          onLike={selectedPin && (selectedPin.type === 'meet' || selectedPin.type === 'spot') ? async () => {
+            try {
+              await mapWorld.likePin(selectedPin.id);
+            } catch {
+              Alert.alert('Beğeni başarısız', mapWorld.error || 'Beğeni güncellenemedi.');
             }
           } : undefined}
           onOpenDriver={(driver) => void openDriverProfile(driver, {

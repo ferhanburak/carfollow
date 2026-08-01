@@ -7,6 +7,7 @@ export function WashPinPanel({
   washFeedback,
   onWashFormChange,
   onSubmitWashReview,
+  onHelpfulReview,
 }) {
   return (
     <div className="rounded-[1.75rem] border border-white/10 bg-[#111111] p-4">
@@ -89,6 +90,13 @@ export function WashPinPanel({
               </p>
             </div>
             <p className="mt-2 text-sm text-neutral-300">{review.note}</p>
+            <button
+              type="button"
+              onClick={() => onHelpfulReview?.(review.id)}
+              className="mt-3 inline-flex min-h-12 items-center rounded-2xl border border-white/10 bg-white/5 px-4 text-xs font-semibold text-neutral-200 transition hover:border-lime-400/35 hover:text-lime-300 active:scale-[0.98]"
+            >
+              Faydalı {Number(review.helpfulCount ?? 0)}
+            </button>
           </div>
         ))}
       </div>

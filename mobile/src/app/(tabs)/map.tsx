@@ -228,6 +228,7 @@ export default function MapScreen() {
             </Marker>
           ))}
           {selected?.type === 'meet' &&
+          selected.eventMode === 'convoy' &&
           selected.backendCanViewDetails !== false &&
           (selected.routePath?.length ?? 0) > 1 ? (
             <Polyline
@@ -266,6 +267,14 @@ export default function MapScreen() {
               setNotice('Beğeni güncellendi.');
             } catch {
               setNotice(world.error || 'Beğeni güncellenemedi.');
+            }
+          }}
+          onHelpfulReview={async (reviewId) => {
+            try {
+              await world.helpfulReview(reviewId);
+              setNotice('Faydalı oyu güncellendi.');
+            } catch {
+              setNotice(world.error || 'Faydalı oyu güncellenemedi.');
             }
           }}
           onOpenDriver={(driver) => void openDriverProfile(driver, { convoyId: selected.id })}
@@ -475,6 +484,7 @@ function SelectedNode({
   onClose,
   onJoin,
   onLike,
+  onHelpfulReview,
   onOpenDriver,
   onPhoto,
   onReview,
@@ -486,6 +496,7 @@ function SelectedNode({
   onClose: () => void;
   onJoin: () => void;
   onLike: () => void;
+  onHelpfulReview: (reviewId: string) => Promise<void>;
   onOpenDriver: (driver: DriverSummary) => void;
   onPhoto: (asset: ImagePicker.ImagePickerAsset) => Promise<void>;
   onReview: (review: {
@@ -559,6 +570,14 @@ function SelectedNode({
                 Köpük {review.foam}/5 · Su {review.water}/5
                 {review.note ? ` · ${review.note}` : ''}
               </Text>
+              <Pressable
+                disabled={Boolean(busy)}
+                onPress={() => void onHelpfulReview(review.id)}
+                style={({ pressed }) => [styles.helpfulButton, pressed && styles.pressed]}
+              >
+                <Ionicons name="thumbs-up-outline" size={14} color={colors.lime} />
+                <Text style={styles.helpfulText}>Faydalı {Number(review.helpfulCount ?? 0)}</Text>
+              </Pressable>
             </View>
           ))}
         </>
@@ -611,7 +630,7 @@ function SelectedNode({
             <Text style={styles.primarySmallText}>Katıl</Text>
           </Pressable>
         ) : null}
-        {pin.type !== 'meet' ? (
+        {pin.type === 'meet' || pin.type === 'spot' ? (
           <Pressable disabled={Boolean(busy)} onPress={onLike} style={styles.secondarySmall}>
             <Ionicons name="heart-outline" size={17} color={colors.lime} />
             <Text style={styles.secondarySmallText}>{pin.likes ?? 0}</Text>
@@ -898,6 +917,19 @@ const styles = StyleSheet.create({
   },
   reviewAuthor: { color: colors.lime, fontFamily: fonts.bold, fontSize: 9 },
   reviewText: { marginTop: 3, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 10 },
+  helpfulButton: {
+    alignSelf: 'flex-start',
+    minHeight: 36,
+    marginTop: 8,
+    paddingHorizontal: 11,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  helpfulText: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 9 },
   photoGrid: { marginTop: 12, flexDirection: 'row', gap: 7 },
   spotPhoto: { flex: 1, height: 92, borderRadius: 14, backgroundColor: colors.black },
   detailRow: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', gap: 10 },

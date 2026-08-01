@@ -125,6 +125,7 @@ export {
   submitFirebaseWashReview,
   subscribeFirebaseMapState,
   toggleFirebaseMapLike,
+  toggleFirebaseWashReviewHelpful,
   updateFirebaseConvoyDetails,
   updateFirebaseConvoyLifecycle,
   updateFirebaseConvoyTripStatus,

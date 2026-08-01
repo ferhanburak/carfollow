@@ -314,6 +314,7 @@ export function MeetPinPanel({
   onApproveCruiseJoinRequest,
   onDeclineCruiseJoinRequest,
   onJoinCruise,
+  onLikePin,
   onInviteDriver,
   onRateAttendee,
   onRemoveConvoyMember,
@@ -344,6 +345,14 @@ export function MeetPinPanel({
         </div>
         <InsightCard label="Convoy Size" value={`${attendees.length}/${pin.capacity ?? attendees.length}`} />
       </div>
+
+      <button
+        type="button"
+        onClick={onLikePin}
+        className="mt-3 inline-flex min-h-12 items-center rounded-2xl border border-lime-400/25 bg-lime-400/10 px-4 text-sm font-semibold text-lime-200 transition hover:bg-lime-400/15 active:scale-[0.98]"
+      >
+        Beğen {Number(pin.likes ?? 0)}
+      </button>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <InsightCard label="Launch Time" value={accessState.canViewDetails ? formatLaunchTime(pin) : "Restricted"} />

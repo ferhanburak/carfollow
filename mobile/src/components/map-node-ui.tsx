@@ -15,6 +15,7 @@ type MapNodeDetailModalProps = {
   busy?: boolean;
   onClose: () => void;
   onJoin?: () => void;
+  onLike?: () => void;
   onOpenDriver?: (driver: DriverSummary) => void;
   pin: MapPin | null;
 };
@@ -47,6 +48,7 @@ export function MapNodeDetailModal({
   busy = false,
   onClose,
   onJoin,
+  onLike,
   onOpenDriver,
   pin,
 }: MapNodeDetailModalProps) {
@@ -108,6 +110,11 @@ export function MapNodeDetailModal({
                     value={pin.eventMode === 'meetup'
                       ? 'Tek nokta'
                       : `${pin.routePath?.length ?? 0} durak`}
+                  />
+                  <Metric
+                    icon="heart-outline"
+                    label="Beğeni"
+                    value={`${Number(pin.likes ?? 0)}`}
                   />
                 </View>
 
@@ -185,6 +192,21 @@ export function MapNodeDetailModal({
                   </Text>
                 </View>
                 <Ionicons color={colors.textFaint} name="chevron-forward" size={15} />
+              </Pressable>
+            ) : null}
+
+            {(pin.type === 'meet' || pin.type === 'spot') && onLike ? (
+              <Pressable
+                disabled={busy}
+                onPress={onLike}
+                style={({ pressed }) => [
+                  styles.like,
+                  pressed && styles.pressed,
+                  busy && styles.disabled,
+                ]}
+              >
+                <Ionicons color={colors.limeBright} name="heart-outline" size={18} />
+                <Text style={styles.likeText}>Beğen {Number(pin.likes ?? 0)}</Text>
               </Pressable>
             ) : null}
 
@@ -437,6 +459,19 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   hostName: { marginTop: 3, color: colors.text, fontFamily: fonts.bold, fontSize: 11 },
+  like: {
+    minHeight: 48,
+    marginTop: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: 'rgba(163,230,53,0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  likeText: { color: colors.limeBright, fontFamily: fonts.bold, fontSize: 12 },
   join: {
     minHeight: 52,
     marginTop: 14,

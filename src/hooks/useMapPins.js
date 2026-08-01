@@ -32,6 +32,7 @@ import {
   submitFirebaseModerationReport,
   subscribeFirebaseMapState,
   toggleFirebaseMapLike,
+  toggleFirebaseWashReviewHelpful,
   updateFirebaseConvoyDetails,
   updateFirebaseConvoyLifecycle,
   updateFirebaseConvoyTripStatus,
@@ -161,6 +162,26 @@ export function useMapPins({ initialWorld, user }) {
       return;
     }
     setMapPins((current) => incrementGalleryLike(current, selectedPin.id, galleryId));
+  };
+
+  const markWashReviewHelpful = async (reviewId) => {
+    if (!selectedPin || selectedPin.type !== "wash" || !reviewId) return false;
+    if (!firebaseMapEnabled) {
+      setMapPins((current) => current.map((pin) => pin.id === selectedPin.id ? {
+        ...pin,
+        reviews: (pin.reviews ?? []).map((review) => review.id === reviewId
+          ? { ...review, helpfulCount: Number(review.helpfulCount ?? 0) + 1 }
+          : review),
+      } : pin));
+      return true;
+    }
+    try {
+      await toggleFirebaseWashReviewHelpful(reviewId);
+      return true;
+    } catch (error) {
+      setWashFeedback(error instanceof Error ? error.message : "Faydalı oyu kaydedilemedi.");
+      return false;
+    }
   };
 
   const deleteSpotPhoto = async (photoId) => {
@@ -876,6 +897,7 @@ export function useMapPins({ initialWorld, user }) {
     mapPinErrors,
     mapPinFeedback,
     mapPinForm,
+    markWashReviewHelpful,
     mapPins: visibleMapPins,
     pickMapLocation,
     rateAttendee,

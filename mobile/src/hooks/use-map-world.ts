@@ -20,10 +20,12 @@ export type SpotPhoto = {
 export type WashReview = {
   id: string;
   pinId: string;
+  userId?: string;
   author?: string;
   foam: number;
   water: number;
   note?: string;
+  helpfulCount?: number;
   createdAt: number;
 };
 
@@ -131,6 +133,10 @@ export function useMapWorld() {
     likePin: (pinId: string) => run(
       `like-${pinId}`,
       () => callFirebase('toggleMapLike', { pinId, targetType: 'pin' }),
+    ),
+    helpfulReview: (reviewId: string) => run(
+      `helpful-${reviewId}`,
+      () => callFirebase('toggleWashReviewHelpful', { reviewId }),
     ),
     addSpotPhoto: (
       pinId: string,

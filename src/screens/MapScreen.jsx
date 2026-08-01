@@ -214,6 +214,7 @@ export function MapScreen({
   joinCruise,
   likeGalleryImage,
   likePin,
+  markWashReviewHelpful,
   loadSpotPhotoFile,
   liveLocation,
   mapPins,
@@ -438,6 +439,7 @@ export function MapScreen({
             onJoinCruise={joinCruise}
             onLikeGallery={likeGalleryImage}
             onLikePin={likePin}
+            onHelpfulReview={markWashReviewHelpful}
             onRateAttendee={rateAttendee}
             onSetAttendeeTripStatus={onSetAttendeeTripStatus}
             onSetConvoyMemberRole={onSetConvoyMemberRole}

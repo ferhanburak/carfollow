@@ -11,6 +11,7 @@ export function MapHubScreen({
   joinCruise,
   likeGalleryImage,
   likePin,
+  onHelpfulReview,
   loadSpotPhotoFile,
   liveLocation,
   mapPickMode,
@@ -90,6 +91,7 @@ export function MapHubScreen({
         onJoinCruise={joinCruise}
         onLikeGallery={likeGalleryImage}
         onLikePin={likePin}
+        onHelpfulReview={onHelpfulReview}
         onRateAttendee={rateAttendee}
         onSetAttendeeTripStatus={onSetAttendeeTripStatus}
         onSetConvoyMemberRole={onSetConvoyMemberRole}

@@ -50,6 +50,8 @@ function buildStats(profile, fallbackUser) {
     { key: "km", label: "Aylık KM", value: `${formatNumber(Number(profile?.monthlyKm ?? 0))} KM` },
     { key: "harmony", label: "Uyum Orani", value: `%${harmonyRatio}` },
     { key: "region", label: "Bölge", value: profile?.region ?? fallbackUser?.region ?? "--" },
+    { key: "community", label: "Topluluk Katkısı", value: formatNumber(Number(profile?.communityKudos ?? 0)) },
+    { key: "helpful", label: "Faydalı Yorum", value: formatNumber(Number(profile?.communityHelpfulVotesReceived ?? 0)) },
   ];
 }
 

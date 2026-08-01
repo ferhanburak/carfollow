@@ -121,6 +121,10 @@ service cloud.firestore {
         data.get('monthlyKmPeriod', '') == previousData.get('monthlyKmPeriod', '') &&
         data.get('achievementBadges', []) == previousData.get('achievementBadges', []) &&
         data.get('driverStatsUpdatedAt', null) == previousData.get('driverStatsUpdatedAt', null) &&
+        data.get('communityEventLikesReceived', 0) == previousData.get('communityEventLikesReceived', 0) &&
+        data.get('communityPhotoLikesReceived', 0) == previousData.get('communityPhotoLikesReceived', 0) &&
+        data.get('communityHelpfulVotesReceived', 0) == previousData.get('communityHelpfulVotesReceived', 0) &&
+        data.get('communityKudos', 0) == previousData.get('communityKudos', 0) &&
         data.get('moderationStatus', null) == previousData.get('moderationStatus', null) &&
         data.get('restrictedUntil', null) == previousData.get('restrictedUntil', null) &&
         data.get('clan', null) == previousData.get('clan', null) &&
@@ -460,6 +464,11 @@ service cloud.firestore {
     match /artifacts/{appId}/public/data/mapLikes/{documentId} {
       allow read: if isKnownApp(appId) && isSignedIn();
       allow write: if false;
+    }
+
+    match /artifacts/{appId}/public/data/washReviewHelpfulVotes/{documentId} {
+      // Raw voter identities stay server-only; clients consume the aggregate count.
+      allow read, write: if false;
     }
 
     match /artifacts/{appId}/public/data/forumThreads/{documentId} {

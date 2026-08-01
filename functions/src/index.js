@@ -46,6 +46,7 @@ const {
   sanitizeClanText,
 } = require("./clan");
 const {
+  buildCommunityContributionPatch,
   buildMapPinDocument,
   buildSpotPhotoDocument,
   buildWashRating,
@@ -2737,7 +2738,14 @@ exports.submitWashReview = secureCall("submitWashReview", { rateLimit: { limit: 
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
     let review;
     try {
-      review = buildWashReviewDocument({ pinId, userId, profile, review: request.data, timestamp });
+      review = buildWashReviewDocument({
+        pinId,
+        userId,
+        profile,
+        review: request.data,
+        helpfulCount: previousReviewSnapshot.exists ? previousReviewSnapshot.data().helpfulCount : 0,
+        timestamp,
+      });
     } catch (error) {
       throw new HttpsError("invalid-argument", error.message);
     }
@@ -2757,17 +2765,29 @@ exports.toggleMapLike = secureCall("toggleMapLike", { rateLimit: { limit: 120, w
     throw new HttpsError("invalid-argument", "A valid like target is required.");
   }
   const pinRef = publicDocument("mapPins", pinId);
+  const convoyRef = publicDocument("convoys", pinId);
   const photoRef = targetType === "photo" ? publicDocument("mapSpotPhotos", photoId) : null;
   const likeId = `${pinId}__${photoId || "pin"}__${userId}`;
   const likeRef = publicDocument("mapLikes", likeId);
   let liked = false;
+  let likes = 0;
   await db.runTransaction(async (transaction) => {
-    const reads = [transaction.get(pinRef), transaction.get(likeRef)];
+    const reads = [transaction.get(pinRef), transaction.get(convoyRef), transaction.get(likeRef)];
     if (photoRef) reads.push(transaction.get(photoRef));
-    const [pinSnapshot, likeSnapshot, photoSnapshot] = await Promise.all(reads);
-    if (!pinSnapshot.exists || (photoRef && (!photoSnapshot.exists || photoSnapshot.data().pinId !== pinId))) throw new HttpsError("not-found", "Map target not found.");
+    const [pinSnapshot, convoySnapshot, likeSnapshot, photoSnapshot] = await Promise.all(reads);
+    const targetSnapshot = targetType === "pin" && convoySnapshot.exists ? convoySnapshot : pinSnapshot;
+    if (!targetSnapshot.exists || (photoRef && (!photoSnapshot.exists || photoSnapshot.data().pinId !== pinId))) {
+      throw new HttpsError("not-found", "Map target not found.");
+    }
+    const ownerUserId = targetType === "photo"
+      ? String(photoSnapshot.data().userId ?? "")
+      : String(targetSnapshot.data().hostUserId ?? targetSnapshot.data().createdByUid ?? "");
+    const ownerProfileRef = ownerUserId && ownerUserId !== userId
+      ? privateUserDocument(ownerUserId, "profile", "current")
+      : null;
+    const ownerProfileSnapshot = ownerProfileRef ? await transaction.get(ownerProfileRef) : null;
     const field = targetType === "photo" ? "galleryLikes" : "likes";
-    const current = Number(pinSnapshot.data()[field] ?? 0);
+    const current = Number(targetSnapshot.data()[field] ?? 0);
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
     liked = !likeSnapshot.exists;
     if (liked) {
@@ -2775,10 +2795,63 @@ exports.toggleMapLike = secureCall("toggleMapLike", { rateLimit: { limit: 120, w
     } else {
       transaction.delete(likeRef);
     }
-    transaction.update(pinRef, { [field]: Math.max(0, current + (liked ? 1 : -1)), updatedAt: timestamp });
+    likes = Math.max(0, current + (liked ? 1 : -1));
+    transaction.update(targetSnapshot.ref, { [field]: likes, updatedAt: timestamp });
+    if (targetType === "pin" && convoySnapshot.exists && pinSnapshot.exists) {
+      transaction.update(pinRef, { likes, updatedAt: timestamp });
+    }
     if (photoRef) transaction.update(photoRef, { likes: Math.max(0, Number(photoSnapshot.data().likes ?? 0) + (liked ? 1 : -1)), updatedAt: timestamp });
+    if (ownerProfileSnapshot?.exists) {
+      const metric = targetType === "photo" ? "communityPhotoLikesReceived" : "communityEventLikesReceived";
+      const contribution = buildCommunityContributionPatch(ownerProfileSnapshot.data(), metric, liked ? 1 : -1);
+      transaction.set(ownerProfileRef, { ...contribution, updatedAt: timestamp }, { merge: true });
+      transaction.set(publicDocument("publicProfiles", ownerUserId), { ...contribution, updatedAt: timestamp }, { merge: true });
+    }
   });
-  return { ok: true, liked };
+  return { ok: true, liked, likes };
+});
+
+exports.toggleWashReviewHelpful = secureCall("toggleWashReviewHelpful", { rateLimit: { limit: 120, windowSeconds: 60 } }, async (request) => {
+  const userId = requireAuth(request);
+  const reviewId = String(request.data?.reviewId ?? "");
+  if (!reviewId || reviewId.includes("/")) {
+    throw new HttpsError("invalid-argument", "A valid wash review is required.");
+  }
+  const reviewRef = publicDocument("washReviews", reviewId);
+  const voteRef = publicDocument("washReviewHelpfulVotes", `${reviewId}__${userId}`);
+  let helpful = false;
+  let helpfulCount = 0;
+  await db.runTransaction(async (transaction) => {
+    const [reviewSnapshot, voteSnapshot] = await Promise.all([
+      transaction.get(reviewRef),
+      transaction.get(voteRef),
+    ]);
+    const review = requireSnapshot(reviewSnapshot, "not-found", "Wash review not found.");
+    const ownerUserId = String(review.userId ?? "");
+    if (!ownerUserId || ownerUserId === userId) {
+      throw new HttpsError("failed-precondition", "You cannot mark your own review as helpful.");
+    }
+    const ownerProfileRef = privateUserDocument(ownerUserId, "profile", "current");
+    const ownerProfileSnapshot = await transaction.get(ownerProfileRef);
+    requireSnapshot(ownerProfileSnapshot, "not-found", "Review author profile not found.");
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    helpful = !voteSnapshot.exists;
+    if (helpful) {
+      transaction.set(voteRef, { id: voteRef.id, reviewId, userId, createdAt: timestamp });
+    } else {
+      transaction.delete(voteRef);
+    }
+    helpfulCount = Math.max(0, Number(review.helpfulCount ?? 0) + (helpful ? 1 : -1));
+    transaction.update(reviewRef, { helpfulCount, updatedAt: timestamp });
+    const contribution = buildCommunityContributionPatch(
+      ownerProfileSnapshot.data(),
+      "communityHelpfulVotesReceived",
+      helpful ? 1 : -1,
+    );
+    transaction.set(ownerProfileRef, { ...contribution, updatedAt: timestamp }, { merge: true });
+    transaction.set(publicDocument("publicProfiles", ownerUserId), { ...contribution, updatedAt: timestamp }, { merge: true });
+  });
+  return { ok: true, helpful, helpfulCount };
 });
 
 exports.addMapSpotPhoto = secureCall("addMapSpotPhoto", { rateLimit: { limit: 20, windowSeconds: 3600 } }, async (request) => {

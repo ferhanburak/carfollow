@@ -101,6 +101,10 @@ function projectPublicProfileForViewer(profile, relation = PROFILE_RELATIONS.STR
     monthlyKm: Number(profile?.monthlyKm ?? 0),
     harmonyVotes: Number(profile?.harmonyVotes ?? 0),
     alertVotes: Number(profile?.alertVotes ?? 0),
+    communityEventLikesReceived: Number(profile?.communityEventLikesReceived ?? 0),
+    communityPhotoLikesReceived: Number(profile?.communityPhotoLikesReceived ?? 0),
+    communityHelpfulVotesReceived: Number(profile?.communityHelpfulVotesReceived ?? 0),
+    communityKudos: Number(profile?.communityKudos ?? 0),
   };
 }
 

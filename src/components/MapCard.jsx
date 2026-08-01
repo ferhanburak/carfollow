@@ -151,6 +151,7 @@ function getAttendeeProgressOffset(attendee, index, convoyRatio) {
 function getConvoyGhostMarkers(selectedPin, user, driveHud, isDriving) {
   if (
     selectedPin?.type !== "meet" ||
+    selectedPin?.eventMode !== "convoy" ||
     !getConvoyAccessState(selectedPin, user).canViewDetails ||
     !Array.isArray(selectedPin.routePath) ||
     selectedPin.routePath.length < 2
@@ -714,7 +715,10 @@ export function GoogleMapCard({
     [selectedPin, user],
   );
   const hasMockRoute = activeRoutePath.length > 1;
-  const selectedRouteActive = selectedPin?.id === selectedPinId && selectedPin?.type === "meet" && hasMockRoute;
+  const selectedRouteActive = selectedPin?.id === selectedPinId &&
+    selectedPin?.type === "meet" &&
+    selectedPin?.eventMode === "convoy" &&
+    hasMockRoute;
   const liveRoutePath = routeState.pinId === selectedPinId ? routeState.path : [];
   const displayedRoutePath = selectedRouteActive
     ? (liveRoutePath.length > 1 ? liveRoutePath : activeRoutePath)
@@ -745,7 +749,7 @@ export function GoogleMapCard({
   }, [selectedPinId]);
 
   useEffect(() => {
-    if (!isLoaded || !hasMockRoute || selectedPin?.type !== "meet") {
+    if (!isLoaded || !selectedRouteActive) {
       setRouteState({
         pinId: null,
         path: [],
@@ -818,7 +822,7 @@ export function GoogleMapCard({
     return () => {
       cancelled = true;
     };
-  }, [activeRoutePath, hasMockRoute, isLoaded, selectedPin]);
+  }, [activeRoutePath, hasMockRoute, isLoaded, selectedPin, selectedRouteActive]);
 
   useEffect(() => {
     if (!isLoaded || !mapRef.current) return undefined;
