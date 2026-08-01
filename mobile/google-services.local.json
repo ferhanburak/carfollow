@@ -1,0 +1,49 @@
+﻿{
+  "project_info": {
+    "project_number": "726459644477",
+    "firebase_url": "https://carfollow-75750-default-rtdb.firebaseio.com",
+    "project_id": "carfollow-75750",
+    "storage_bucket": "carfollow-75750.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726459644477:android:5eaa166c09625864440854",
+        "android_client_info": {
+          "package_name": "com.ferhanburak.cruiser"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2KnXGaHz5DNikdlN9az4uETRbr6Ptdns"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726459644477:android:8a4927ebf2ee1f20440854",
+        "android_client_info": {
+          "package_name": "com.ferhanburak.cruiser.local"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2KnXGaHz5DNikdlN9az4uETRbr6Ptdns"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

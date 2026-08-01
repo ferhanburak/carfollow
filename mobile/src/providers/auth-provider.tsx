@@ -24,6 +24,7 @@ import {
 } from '@/lib/firebase';
 import { privateProfilePath } from '@/lib/firebase-paths';
 import { clearBackgroundDrive } from '@/lib/background-drive';
+import { unregisterDevicePushToken } from '@/lib/push-notifications';
 
 export type CruiserProfile = {
   id?: string;
@@ -235,6 +236,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const logout = async () => {
     await clearBackgroundDrive();
+    await unregisterDevicePushToken().catch(() => undefined);
     await signOut(firebaseAuth);
     setUser(null);
     setProfile(null);

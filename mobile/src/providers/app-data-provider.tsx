@@ -24,6 +24,7 @@ import {
   realtimePresencePath,
 } from '@/lib/firebase-paths';
 import { firestoreDb, realtimeDb } from '@/lib/firebase';
+import { registerDevicePushToken } from '@/lib/push-notifications';
 import { useAuth } from '@/providers/auth-provider';
 import type {
   CruiserNotification,
@@ -61,6 +62,9 @@ const notificationTypes = new Set([
   'convoy-response',
   'convoy-role',
   'convoy-cancelled',
+  'convoy-completed',
+  'forum-like',
+  'forum-reply',
 ]);
 
 function normalizeMessages(payload: Record<string, DirectMessage> | undefined) {
@@ -98,6 +102,13 @@ export function AppDataProvider({ children }: PropsWithChildren) {
   const { profile, user } = useAuth();
   const [notifications, setNotifications] = useState<CruiserNotification[]>([]);
   const [threadMap, setThreadMap] = useState<Record<string, DirectMessageThread>>({});
+
+  useEffect(() => {
+    if (!user) return;
+    void registerDevicePushToken().catch(() => {
+      // Push setup must never block the signed-in application experience.
+    });
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;

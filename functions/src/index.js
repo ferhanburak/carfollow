@@ -6,6 +6,7 @@ const logger = require("firebase-functions/logger");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { onInit } = require("firebase-functions/v2/core");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const {
   DRIVE_KM_PER_SECOND,
@@ -109,6 +110,13 @@ const {
   requireDeletionConfirmation,
 } = require("./accountLifecycle");
 const { evaluateRateLimit } = require("./rateLimit");
+const {
+  buildDirectMessagePush,
+  buildPushOutboxDocument,
+  hashPushToken,
+  normalizeExpoPushToken,
+  sendExpoPushMessages,
+} = require("./pushNotifications");
 
 const FUNCTIONS_REGION = process.env.CRUISER_FUNCTIONS_REGION || "europe-west1";
 const FIRESTORE_DATABASE_ID = process.env.CRUISER_FIRESTORE_DATABASE_ID || "carfollow-eu";
@@ -261,6 +269,17 @@ function writeNotification(transaction, userId, notificationId, payload, timesta
     timestamp,
   });
   transaction.set(privateUserDocument(userId, "notifications", notification.id), notification, { merge: true });
+  const pushOutbox = buildPushOutboxDocument({
+    id: notification.id,
+    userId,
+    title: notification.title,
+    body: notification.body,
+    type: notification.type,
+    targetId: notification.action.targetId,
+    data: { actionType: notification.action.type },
+    timestamp,
+  });
+  transaction.set(publicDocument("pushOutbox", pushOutbox.id), pushOutbox);
   return notification;
 }
 
@@ -1040,6 +1059,15 @@ exports.sendDirectMessage = secureCall("sendDirectMessage", {
     [`userThreads/${actorUserId}/${state.threadId}/updatedAt`]: timestamp,
     [`userThreads/${targetUserId}/${state.threadId}/updatedAt`]: timestamp,
   });
+  const pushOutbox = buildDirectMessagePush({
+    messageId: message.id,
+    recipientUserId: targetUserId,
+    senderName: state.actor.fullName || state.actor.plate,
+    senderUserId: actorUserId,
+    threadId: state.threadId,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  await publicDocument("pushOutbox", pushOutbox.id).set(pushOutbox);
   return { ok: true, threadId: state.threadId, messageId: message.id, createdAt: timestamp };
 });
 
@@ -2975,6 +3003,60 @@ exports.markAllNotificationsRead = secureCall("markAllNotificationsRead", { rate
   return { ok: true, updatedCount: unread.length, hasMore: snapshot.size === 100 };
 });
 
+exports.registerPushToken = secureCall("registerPushToken", {
+  rateLimit: { limit: 20, windowSeconds: 3600 },
+}, async (request) => {
+  const userId = requireAuth(request);
+  let token;
+  try {
+    token = normalizeExpoPushToken(request.data?.token);
+  } catch (error) {
+    throw new HttpsError("invalid-argument", error.message);
+  }
+  const platform = ["android", "ios"].includes(request.data?.platform)
+    ? request.data.platform
+    : "unknown";
+  const tokenId = hashPushToken(token);
+  const tokenRef = privateUserDocument(userId, "pushTokens", tokenId);
+  const duplicateTokens = await db.collectionGroup("pushTokens")
+    .where("token", "==", token)
+    .limit(20)
+    .get();
+  const timestamp = admin.firestore.FieldValue.serverTimestamp();
+  const batch = db.batch();
+  duplicateTokens.docs
+    .filter((document) => document.ref.path !== tokenRef.path)
+    .forEach((document) => batch.delete(document.ref));
+  batch.set(tokenRef, {
+    id: tokenId,
+    userId,
+    token,
+    platform,
+    deviceName: sanitizeOperationalText(request.data?.deviceName, 120),
+    enabled: true,
+    schemaVersion: 1,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }, { merge: true });
+  await batch.commit();
+  return { ok: true, tokenId };
+});
+
+exports.unregisterPushToken = secureCall("unregisterPushToken", {
+  rateLimit: { limit: 20, windowSeconds: 3600 },
+}, async (request) => {
+  const userId = requireAuth(request);
+  let token;
+  try {
+    token = normalizeExpoPushToken(request.data?.token);
+  } catch (error) {
+    throw new HttpsError("invalid-argument", error.message);
+  }
+  const tokenId = hashPushToken(token);
+  await privateUserDocument(userId, "pushTokens", tokenId).delete();
+  return { ok: true, tokenId };
+});
+
 exports.submitModerationReport = secureCall("submitModerationReport", { rateLimit: { limit: 10, windowSeconds: 86400 } }, async (request) => {
   const reporterUserId = requireAuth(request);
   const reporter = await getUserProfile(reporterUserId);
@@ -3177,16 +3259,18 @@ exports.toggleForumLike = secureCall("toggleForumLike", {
   const threadRef = publicDocument("forumThreads", threadId);
   if (replyId.includes("/")) throw new HttpsError("invalid-argument", "Geçerli bir forum yanıtı gerekli.");
   const targetRef = replyId ? publicDocument("forumReplies", replyId) : threadRef;
+  const actorProfileRef = privateUserDocument(userId, "profile", "current");
   // Preserve existing thread-like IDs so deployed clients remain compatible.
   const likeRef = publicDocument("forumLikes", replyId
     ? `${threadId}_${replyId}_${userId}`
     : `${threadId}_${userId}`);
   let liked = false;
   await db.runTransaction(async (transaction) => {
-    const [threadSnapshot, targetSnapshot, likeSnapshot] = await Promise.all([
+    const [threadSnapshot, targetSnapshot, likeSnapshot, actorProfileSnapshot] = await Promise.all([
       transaction.get(threadRef),
       replyId ? transaction.get(targetRef) : transaction.get(threadRef),
       transaction.get(likeRef),
+      transaction.get(actorProfileRef),
     ]);
     if (!threadSnapshot.exists || threadSnapshot.data().status !== "active") throw new HttpsError("not-found", "Forum konusu bulunamadı.");
     if (!targetSnapshot.exists || targetSnapshot.data().status !== "active") throw new HttpsError("not-found", "Forum yanıtı bulunamadı.");
@@ -3197,15 +3281,27 @@ exports.toggleForumLike = secureCall("toggleForumLike", {
       transaction.update(targetRef, { likeCount: Math.max(0, currentCount - 1), updatedAt: admin.firestore.FieldValue.serverTimestamp() });
     } else {
       liked = true;
+      const timestamp = admin.firestore.FieldValue.serverTimestamp();
       transaction.set(likeRef, {
         id: likeRef.id,
         threadId,
         replyId: replyId || null,
         targetType: replyId ? "reply" : "thread",
         userId,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: timestamp,
       });
-      transaction.update(targetRef, { likeCount: currentCount + 1, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      transaction.update(targetRef, { likeCount: currentCount + 1, updatedAt: timestamp });
+      const targetOwnerUserId = String(targetSnapshot.data().authorUserId ?? "");
+      if (targetOwnerUserId && targetOwnerUserId !== userId) {
+        const actor = actorProfileSnapshot.exists ? actorProfileSnapshot.data() : { userId };
+        writeNotification(transaction, targetOwnerUserId, `forum-like-${likeRef.id}`, {
+          type: "forum-like",
+          title: "Yeni beğeni",
+          body: `${sanitizeOperationalText(actor.fullName || actor.plate || "Bir sürücü", 80)} ${replyId ? "yanıtını" : "gönderini"} beğendi.`,
+          actor: { ...actor, userId },
+          action: { type: "forum-thread", targetId: threadId },
+        }, timestamp);
+      }
     }
   });
   return { ok: true, liked };
@@ -3241,6 +3337,17 @@ exports.addForumReply = secureCall("addForumReply", {
       replyCount: Number(threadSnapshot.data().replyCount ?? 0) + 1,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+    const threadOwnerUserId = String(threadSnapshot.data().authorUserId ?? "");
+    if (threadOwnerUserId && threadOwnerUserId !== userId) {
+      const timestamp = admin.firestore.FieldValue.serverTimestamp();
+      writeNotification(transaction, threadOwnerUserId, `forum-reply-${replyRef.id}`, {
+        type: "forum-reply",
+        title: "Yeni yanıt",
+        body: `${sanitizeOperationalText(profile.fullName || profile.plate || "Bir sürücü", 80)} gönderine yanıt verdi.`,
+        actor: { ...profile, userId },
+        action: { type: "forum-thread", targetId: threadId },
+      }, timestamp);
+    }
   });
   return { ok: true, replyId: replyRef.id };
 });
@@ -3285,4 +3392,48 @@ exports.pinForumSolution = secureCall("pinForumSolution", {
     });
   });
   return { ok: true, pinned, replyId };
+});
+
+exports.deliverPushNotification = onDocumentCreated({
+  document: `artifacts/${APP_ID}/public/data/pushOutbox/{pushId}`,
+  database: FIRESTORE_DATABASE_ID,
+  region: FUNCTIONS_REGION,
+  memory: "256MiB",
+  timeoutSeconds: 60,
+}, async (event) => {
+  const snapshot = event.data;
+  if (!snapshot) return;
+  const push = snapshot.data();
+  const userId = sanitizeOperationalText(push.userId, 128);
+  if (!userId) {
+    await snapshot.ref.delete();
+    return;
+  }
+
+  const tokenSnapshot = await privateUserCollection(userId, "pushTokens")
+    .where("enabled", "==", true)
+    .limit(20)
+    .get();
+  if (tokenSnapshot.empty) {
+    await snapshot.ref.delete();
+    logger.info("push.skipped.no-token", { pushId: snapshot.id, userId, type: push.type });
+    return;
+  }
+
+  const tokens = tokenSnapshot.docs.map((document) => document.data().token).filter(Boolean);
+  const result = await sendExpoPushMessages(tokens, push);
+  const invalidTokenSet = new Set(result.invalidTokens);
+  const batch = db.batch();
+  tokenSnapshot.docs
+    .filter((document) => invalidTokenSet.has(document.data().token))
+    .forEach((document) => batch.delete(document.ref));
+  batch.delete(snapshot.ref);
+  await batch.commit();
+  logger.info("push.delivered", {
+    pushId: snapshot.id,
+    userId,
+    type: push.type,
+    sent: result.sent,
+    invalidTokens: result.invalidTokens.length,
+  });
 });

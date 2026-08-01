@@ -12,6 +12,9 @@ module.exports = ({ config }) => {
       package: isLocalAndroidBuild
         ? `${config.android?.package}.local`
         : config.android?.package,
+      googleServicesFile: isLocalAndroidBuild
+        ? "./google-services.local.json"
+        : "./google-services.json",
       ...(androidMapsApiKey
         ? {
             config: {
