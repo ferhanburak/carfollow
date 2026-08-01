@@ -1,6 +1,15 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render as testingRender, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../App";
+import { LanguageProvider } from "../providers/LanguageProvider";
+
+function render(ui) {
+  return testingRender(
+    <LanguageProvider>
+      {ui}
+    </LanguageProvider>,
+  );
+}
 
 describe("App", () => {
   beforeEach(() => {
@@ -10,23 +19,23 @@ describe("App", () => {
   it("renders the auth landing view by default", () => {
     render(<App />);
 
-    expect(screen.getByText("CRUISER // ACCESS")).toBeInTheDocument();
-    expect(screen.getByText("Quick Test Profiles")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Enter CRUISER" })).toBeInTheDocument();
+    expect(screen.getByText("TRACKSNAP // ERİŞİM")).toBeInTheDocument();
+    expect(screen.getByText("Hızlı Test Profilleri")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "TRACKSNAP'e Gir" })).toBeInTheDocument();
   });
 
   it("shows an error for invalid login attempts", async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const plateInput = screen.getByRole("textbox", { name: "Vehicle Plate" });
-    const passwordInput = screen.getByLabelText("Password");
+    const plateInput = screen.getByRole("textbox", { name: "Plaka" });
+    const passwordInput = screen.getByLabelText("Şifre");
 
     await user.clear(plateInput);
     await user.type(plateInput, "00 XXX 000");
     await user.clear(passwordInput);
     await user.type(passwordInput, "wrongpass");
-    await user.click(screen.getByRole("button", { name: "Enter CRUISER" }));
+    await user.click(screen.getByRole("button", { name: "TRACKSNAP'e Gir" }));
 
     expect(screen.getAllByText(/Profil bulunamadı/i)).toHaveLength(1);
   });
@@ -93,12 +102,12 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(screen.getByRole("button", { name: /Live Map/i }));
+    await user.click(screen.getByRole("button", { name: /Canlı Harita/i }));
 
     expect(await screen.findAllByRole("button", { name: "Bildirim merkezi" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "DM merkezi" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Sürüşe Başla" })).toHaveLength(1);
-    expect(screen.getAllByRole("button", { name: "Ayarlar merkezi" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Ayarlar Merkezi" })).toHaveLength(1);
 
     const liveMap = screen.getByTestId("live-map-screen");
     expect(within(liveMap).getByText("Poyraz Alkan")).toBeInTheDocument();
@@ -138,9 +147,9 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(screen.getByRole("button", { name: "Ayarlar merkezi" }));
+    await user.click(screen.getByRole("button", { name: "Ayarlar Merkezi" }));
 
-    expect(screen.getByRole("dialog", { name: "Ayarlar merkezi paneli" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Ayarlar Merkezi" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Gizlilik ve Konum/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Engellenen Kullanıcılar/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Araç ve Profil/i })).toBeInTheDocument();
@@ -157,8 +166,23 @@ describe("App", () => {
     expect(screen.getByText("Oturumu kapat?")).toBeInTheDocument();
 
     await user.click(screen.getAllByRole("button", { name: "Oturumu Kapat" }).at(-1));
-    expect(await screen.findByText("CRUISER // ACCESS")).toBeInTheDocument();
+    expect(await screen.findByText("TRACKSNAP // ERİŞİM")).toBeInTheDocument();
     expect(screen.queryByText("Oturumu kapat?")).not.toBeInTheDocument();
+  });
+
+  it("changes and persists the app language from settings", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
+    await user.click(screen.getByRole("button", { name: "Ayarlar Merkezi" }));
+    await user.click(screen.getByRole("button", { name: /Uygulamanın görüntüleneceği dili seç/i }));
+    await user.click(screen.getByRole("radio", { name: /İngilizce/i }));
+
+    expect(screen.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Language" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Events" })).toBeInTheDocument();
+    expect(window.localStorage.getItem("tracksnap.language.preference.v1")).toBe("en");
   });
 
   it("keeps the Social screen focused on friendships instead of embedding DM", async () => {
@@ -166,7 +190,7 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(screen.getByRole("button", { name: /Social/i }));
+    await user.click(screen.getByRole("button", { name: /Sosyal/i }));
 
     expect(await screen.findByText("Arkadaş Bul ve Bağlan")).toBeInTheDocument();
     expect(screen.queryByText("DM Panel")).not.toBeInTheDocument();
@@ -200,8 +224,8 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Sign Up" }));
-    await user.click(screen.getByRole("button", { name: "Build My Garage" }));
+    await user.click(screen.getByRole("button", { name: "Kayıt Ol" }));
+    await user.click(screen.getByRole("button", { name: "Garajımı Oluştur" }));
 
     expect(screen.getAllByText("Zorunlu alanları doldurunuz.").length).toBeGreaterThan(0);
     expect(screen.getByText("Görünen ad zorunludur.")).toBeInTheDocument();
@@ -214,20 +238,20 @@ describe("App", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: "Sign Up" }));
+    await user.click(screen.getByRole("button", { name: "Kayıt Ol" }));
     await user.type(screen.getByLabelText(/Görünen Ad/), "Yeni Sürücü");
-    await user.type(screen.getByLabelText(/Plate/), "06 NEW 606");
-    await user.type(screen.getByLabelText(/Password/), "secure123");
-    await user.type(screen.getByLabelText(/Car\/Bike Model/), "Honda Civic");
-    await user.type(screen.getByLabelText(/Horsepower/), "182");
+    await user.type(screen.getByLabelText(/Plaka/), "06 NEW 606");
+    await user.type(screen.getByLabelText(/Şifre/), "secure123");
+    await user.type(screen.getByLabelText(/Araç Modeli/), "Honda Civic");
+    await user.type(screen.getByLabelText(/Beygir Gücü/), "182");
     await user.type(screen.getByLabelText(/Mevcut KM/), "54321");
-    await user.type(screen.getByLabelText(/Primary Garage\/Tuning Shop/), "Ankara Garage");
+    await user.type(screen.getByLabelText(/Garaj \/ Tuning Servisi/), "Ankara Garage");
     await user.upload(screen.getByLabelText("Profil Fotoğrafı"), new File(["avatar"], "avatar.png", { type: "image/png" }));
     await user.click(screen.getByRole("checkbox", { name: /Kullanım Koşullarını kabul ediyorum/i }));
     expect(await screen.findByAltText("Profil fotoğrafı önizleme")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Build My Garage" }));
-    await user.click(await screen.findByRole("button", { name: "Ayarlar merkezi" }));
+    await user.click(screen.getByRole("button", { name: "Garajımı Oluştur" }));
+    await user.click(await screen.findByRole("button", { name: "Ayarlar Merkezi" }));
     await user.click(screen.getByRole("button", { name: /Araç ve Profil/i }));
     expect(screen.getByRole("spinbutton", { name: "Mevcut KM" })).toHaveValue(54321);
   });
@@ -251,7 +275,7 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(screen.getByRole("button", { name: "Ayarlar merkezi" }));
+    await user.click(screen.getByRole("button", { name: "Ayarlar Merkezi" }));
     await user.click(screen.getByRole("button", { name: /Araç ve Profil/i }));
 
     expect(screen.getByRole("spinbutton", { name: "Mevcut KM" })).toHaveValue(68420);
@@ -361,7 +385,7 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(screen.getByRole("button", { name: /Leaders/i }));
+    await user.click(screen.getByRole("button", { name: /Sıralama/i }));
 
     expect(await screen.findByText("Aylık Sürücü Sıralaması")).toBeInTheDocument();
     expect(screen.getByText("Aylık Klan Sıralaması")).toBeInTheDocument();
@@ -404,7 +428,7 @@ describe("App", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: /06 PWA 101/i }));
-    await user.click(screen.getByRole("button", { name: /Social/i }));
+    await user.click(screen.getByRole("button", { name: /Sosyal/i }));
     await user.click((await screen.findAllByRole("button", { name: /35 SRT 908/i }))[0]);
 
     expect(screen.getByText("Konvoy Uyumu")).toBeInTheDocument();

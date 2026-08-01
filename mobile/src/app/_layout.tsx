@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { AuthProvider } from '@/providers/auth-provider';
 import { AppDataProvider } from '@/providers/app-data-provider';
+import { AppLanguageProvider, useAppLanguage } from '@/providers/language-provider';
 import { AppThemeProvider, useAppTheme } from '@/providers/theme-provider';
 import { colors } from '@/theme/colors';
 import { readPushNavigationData } from '@/lib/push-notifications';
@@ -23,14 +24,17 @@ void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   return (
-    <AppThemeProvider>
-      <RootNavigator />
-    </AppThemeProvider>
+    <AppLanguageProvider>
+      <AppThemeProvider>
+        <RootNavigator />
+      </AppThemeProvider>
+    </AppLanguageProvider>
   );
 }
 
 function RootNavigator() {
   const router = useRouter();
+  const { hydrated: languageHydrated, language } = useAppLanguage();
   const { hydrated, resolvedTheme } = useAppTheme();
   const [fontsLoaded] = useFonts({
     Manrope_400Regular,
@@ -40,8 +44,8 @@ function RootNavigator() {
   });
 
   useEffect(() => {
-    if (fontsLoaded && hydrated) void SplashScreen.hideAsync();
-  }, [fontsLoaded, hydrated]);
+    if (fontsLoaded && hydrated && languageHydrated) void SplashScreen.hideAsync();
+  }, [fontsLoaded, hydrated, languageHydrated]);
 
   useEffect(() => {
     const openNotification = (response: Notifications.NotificationResponse) => {
@@ -79,7 +83,7 @@ function RootNavigator() {
     return () => subscription.remove();
   }, [router]);
 
-  if (!fontsLoaded || !hydrated) return null;
+  if (!fontsLoaded || !hydrated || !languageHydrated) return null;
 
   const navigationBaseTheme = resolvedTheme === 'dark' ? DarkTheme : DefaultTheme;
   const cruiserTheme = {
@@ -101,7 +105,7 @@ function RootNavigator() {
       <AuthProvider>
         <AppDataProvider>
           <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />
-          <Stack key={resolvedTheme} screenOptions={{ headerShown: false, animation: 'fade' }}>
+          <Stack key={`${resolvedTheme}-${language}`} screenOptions={{ headerShown: false, animation: 'fade' }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />

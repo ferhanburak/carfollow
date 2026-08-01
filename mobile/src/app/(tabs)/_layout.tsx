@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/providers/auth-provider';
 import { DriverProfileProvider } from '@/providers/driver-profile-provider';
+import { useAppLanguage } from '@/providers/language-provider';
 import { colors, createThemedStyles } from '@/theme/colors';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -21,6 +22,7 @@ const icons: Record<string, { active: IconName; idle: IconName }> = {
 
 export default function TabLayout() {
   const { status, user } = useAuth();
+  const { t } = useAppLanguage();
   const insets = useSafeAreaInsets();
 
   if (status === 'loading') {
@@ -74,13 +76,13 @@ export default function TabLayout() {
           },
         })}
       >
-        <Tabs.Screen name="live-map" options={{ title: 'Canlı Harita' }} />
-        <Tabs.Screen name="map" options={{ title: 'Etkinlikler' }} />
-        <Tabs.Screen name="drive" options={{ title: 'Sürüş' }} />
-        <Tabs.Screen name="forum" options={{ title: 'Akış' }} />
-        <Tabs.Screen name="social" options={{ title: 'Sosyal' }} />
-        <Tabs.Screen name="leaderboard" options={{ title: 'Sıralama' }} />
-        <Tabs.Screen name="profile" options={{ title: 'Profil' }} />
+        <Tabs.Screen name="live-map" options={{ title: t('tabs.liveMap') }} />
+        <Tabs.Screen name="map" options={{ title: t('tabs.events') }} />
+        <Tabs.Screen name="drive" options={{ title: t('tabs.drive') }} />
+        <Tabs.Screen name="forum" options={{ title: t('tabs.feed') }} />
+        <Tabs.Screen name="social" options={{ title: t('tabs.social') }} />
+        <Tabs.Screen name="leaderboard" options={{ title: t('tabs.leaderboard') }} />
+        <Tabs.Screen name="profile" options={{ title: t('tabs.profile') }} />
       </Tabs>
     </DriverProfileProvider>
   );

@@ -1,23 +1,26 @@
 import { useEffect, useState } from "react";
 import { CompactField } from "./ui";
 import { normalizePrivacySettings } from "../utils/privacy";
+import { useLanguage } from "../providers/LanguageProvider";
 
-const sections = [
-  { key: "appearance", code: "01", title: "Görünüm", description: "Sistem temasını kullan veya açık ve koyu görünüm arasında seçim yap." },
-  { key: "privacy", code: "02", title: "Gizlilik ve Konum", description: "Live Map gorunurlugu, konum hassasiyeti ve Safe Zone." },
-  { key: "blocked", code: "03", title: "Engellenen Kullanıcılar", description: "Engellediğin sürücüleri gör ve engelleri yönet." },
-  { key: "vehicle", code: "04", title: "Araç ve Profil", description: "Araç setup'i, bölge, garaj ve profil görünümü." },
-  { key: "account", code: "05", title: "Hesap ve Veri Kontrolleri", description: "Doğrulama, veri aktarimi, KVKK ve hesap silme." },
-  { key: "security", code: "06", title: "Şifre ve Güvenlik", description: "Hesap e-postasi ve güvenli şifre değiştirme akışı." },
+const getSections = (t) => [
+  { key: "appearance", code: "01", title: t('settings.appearance'), description: t('settings.appearanceDescription') },
+  { key: "language", code: "02", title: t('settings.language'), description: t('settings.languageDescription') },
+  { key: "privacy", code: "03", title: t('settings.privacy'), description: t('settings.privacyDescription') },
+  { key: "blocked", code: "04", title: t('settings.blocked'), description: t('settings.blockedDescription') },
+  { key: "vehicle", code: "05", title: t('settings.vehicle'), description: t('settings.vehicleDescription') },
+  { key: "account", code: "06", title: t('settings.account'), description: t('settings.accountDescription') },
+  { key: "security", code: "07", title: t('settings.security'), description: t('settings.securityDescription') },
 ];
 
 export function SettingsButton({ onClick, tone = "default" }) {
+  const { t } = useLanguage();
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label="Ayarlar merkezi"
-      title="Ayarlar"
+      aria-label={t('settings.title')}
+      title={t('settings.title')}
       className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-neutral-200 transition hover:border-lime-400/40 hover:text-lime-300 ${
         tone === "map" ? "border-white/10 bg-black/75 backdrop-blur" : "border-white/10 bg-black/30"
       }`}
@@ -31,8 +34,11 @@ export function SettingsButton({ onClick, tone = "default" }) {
 }
 
 function SettingsHome({ isFirebaseAuth, onRequestLogout, onSelect, themeMode, user }) {
+  const { language, t } = useLanguage();
+  const sections = getSections(t);
   const values = {
-    appearance: themeMode === "system" ? "Sistem teması" : themeMode === "dark" ? "Koyu tema" : "Açık tema",
+    appearance: themeMode === "system" ? t('settings.systemTheme') : themeMode === "dark" ? t('settings.darkTheme') : t('settings.lightTheme'),
+    language: language === 'tr' ? t('language.turkish') : t('language.english'),
     privacy: user.privacy?.safeZoneEnabled ? "Safe Zone açık" : "Standart",
     blocked: `${user.blockedDrivers?.length ?? 0} sürücü`,
     vehicle: user.model,
@@ -68,26 +74,27 @@ function SettingsHome({ isFirebaseAuth, onRequestLogout, onSelect, themeMode, us
           onClick={onRequestLogout}
           className="min-h-12 w-full rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 font-bold text-rose-200 transition hover:bg-rose-500/20"
         >
-          Oturumu Kapat
+          {t('settings.logout')}
         </button>
-        <p className="mt-2 text-center text-[11px] leading-4 text-neutral-600">Hesap verilerin silinmez; yalnızca bu cihazdaki oturum kapanir.</p>
+        <p className="mt-2 text-center text-[11px] leading-4 text-neutral-600">{t('settings.logoutHint')}</p>
       </div>
     </div>
   );
 }
 
 function AppearanceSettings({ onThemeModeChange, themeMode }) {
+  const { t } = useLanguage();
   const options = [
-    { value: "system", title: "Sistem", description: "Cihazının açık veya koyu temasını otomatik takip eder.", icon: "◐" },
-    { value: "light", title: "Açık", description: "Gündüz kullanımı için aydınlık ve yüksek okunabilirlik.", icon: "☀" },
-    { value: "dark", title: "Koyu", description: "Gece sürüşleri için düşük parlaklıklı görünüm.", icon: "☾" },
+    { value: "system", title: t('settings.system'), description: t('settings.systemDescription'), icon: "◐" },
+    { value: "light", title: t('settings.light'), description: t('settings.lightDescription'), icon: "☀" },
+    { value: "dark", title: t('settings.dark'), description: t('settings.darkDescription'), icon: "☾" },
   ];
 
   return (
     <div className="space-y-3">
       <div className="rounded-[1.4rem] border border-lime-400/20 bg-lime-400/[0.07] p-4">
-        <p className="text-sm font-bold">Uygulama Teması</p>
-        <p className="mt-1 text-xs leading-5 text-neutral-500">Seçimin bu cihazda saklanır ve tüm ekranlara uygulanır.</p>
+        <p className="text-sm font-bold">{t('settings.appTheme')}</p>
+        <p className="mt-1 text-xs leading-5 text-neutral-500">{t('settings.themeDescription')}</p>
       </div>
       {options.map((option) => {
         const selected = themeMode === option.value;
@@ -101,6 +108,43 @@ function AppearanceSettings({ onThemeModeChange, themeMode }) {
             type="button"
           >
             <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xl ${selected ? "bg-lime-400 text-black" : "bg-white/5 text-neutral-400"}`}>{option.icon}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold">{option.title}</span>
+              <span className="mt-1 block text-xs leading-4 text-neutral-500">{option.description}</span>
+            </span>
+            <span className={`h-5 w-5 rounded-full border-2 ${selected ? "border-lime-400 bg-lime-400 shadow-[inset_0_0_0_4px_#111]" : "border-neutral-600"}`} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function LanguageSettings() {
+  const { language, setLanguage, t } = useLanguage();
+  const options = [
+    { value: 'tr', code: 'TR', title: t('language.turkish'), description: t('language.turkishDescription') },
+    { value: 'en', code: 'EN', title: t('language.english'), description: t('language.englishDescription') },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-[1.4rem] border border-lime-400/20 bg-lime-400/[0.07] p-4">
+        <p className="text-sm font-bold">{t('language.title')}</p>
+        <p className="mt-1 text-xs leading-5 text-neutral-500">{t('language.description')}</p>
+      </div>
+      {options.map((option) => {
+        const selected = language === option.value;
+        return (
+          <button
+            aria-checked={selected}
+            className={`flex min-h-[4.75rem] w-full items-center gap-3 rounded-[1.25rem] border px-3 py-3 text-left transition ${selected ? "border-lime-400/45 bg-lime-400/10" : "border-white/10 bg-white/[0.03]"}`}
+            key={option.value}
+            onClick={() => setLanguage(option.value)}
+            role="radio"
+            type="button"
+          >
+            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl font-mono text-xs font-black tracking-[0.12em] ${selected ? "bg-lime-400 text-black" : "bg-white/5 text-neutral-400"}`}>{option.code}</span>
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-bold">{option.title}</span>
               <span className="mt-1 block text-xs leading-4 text-neutral-500">{option.description}</span>
@@ -357,31 +401,33 @@ export function SettingsCenter({
   tuningOptions,
   user,
 }) {
+  const { t } = useLanguage();
   if (!isOpen) return null;
-  const activeSection = sections.find((entry) => entry.key === section) ?? null;
+  const activeSection = getSections(t).find((entry) => entry.key === section) ?? null;
 
   return (
-    <div className="fixed inset-0 z-[75] bg-black/80 backdrop-blur-md md:p-4" role="dialog" aria-modal="true" aria-label="Ayarlar merkezi paneli">
+    <div className="fixed inset-0 z-[75] bg-black/80 backdrop-blur-md md:p-4" role="dialog" aria-modal="true" aria-label={t('settings.title')}>
       <section className="mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden border-white/10 bg-[#090909] shadow-[0_24px_90px_rgba(0,0,0,0.85)] md:h-[calc(100dvh-2rem)] md:rounded-[2rem] md:border">
         <header className="app-safe-top shrink-0 border-b border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(163,230,53,0.14),transparent_42%),#111111] px-4 pb-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               {activeSection ? (
-                <button type="button" onClick={() => onSelectSection(null)} aria-label="Ayarlar listesine dön" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-lg">&larr;</button>
+                <button type="button" onClick={() => onSelectSection(null)} aria-label={t('settings.back')} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-lg">&larr;</button>
               ) : (
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-lime-400/20 bg-lime-400/10 font-mono text-xs text-lime-300">SYS</span>
               )}
               <div className="min-w-0">
-                <h2 className="truncate text-lg font-black">{activeSection?.title ?? "Ayarlar Merkezi"}</h2>
-                <p className="truncate text-xs text-neutral-500">{activeSection?.description ?? "Hesap, araç, konum ve güvenlik kontrolleri"}</p>
+                <h2 className="truncate text-lg font-black">{activeSection?.title ?? t('settings.title')}</h2>
+                <p className="truncate text-xs text-neutral-500">{activeSection?.description ?? t('settings.subtitle')}</p>
               </div>
             </div>
-            <button type="button" onClick={onClose} aria-label="Ayarlar merkezini kapat" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-xl text-neutral-300">&times;</button>
+            <button type="button" onClick={onClose} aria-label={t('settings.close')} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/30 text-xl text-neutral-300">&times;</button>
           </div>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {!activeSection ? <SettingsHome isFirebaseAuth={isFirebaseAuth} onRequestLogout={onRequestLogout} onSelect={onSelectSection} themeMode={themeMode} user={user} /> : null}
           {section === "appearance" ? <AppearanceSettings onThemeModeChange={onThemeModeChange} themeMode={themeMode} /> : null}
+          {section === "language" ? <LanguageSettings /> : null}
           {section === "privacy" ? <PrivacySettings onSavePrivacySettings={onSavePrivacySettings} socialFeedback={socialFeedback} user={user} /> : null}
           {section === "blocked" ? <BlockedSettings onUnblockDriver={onUnblockDriver} socialFeedback={socialFeedback} socialPendingKey={socialPendingKey} user={user} /> : null}
           {section === "vehicle" ? <VehicleSettings onProfileAvatarFileChange={onProfileAvatarFileChange} onProfileFormChange={onProfileFormChange} onSubmitProfile={onSubmitProfile} profileErrors={profileErrors} profileFeedback={profileFeedback} profileForm={profileForm} profilePending={profilePending} tuningOptions={tuningOptions} /> : null}

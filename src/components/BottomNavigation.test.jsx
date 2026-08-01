@@ -19,12 +19,12 @@ describe("BottomNavigation", () => {
     render(<BottomNavigation activeTab="map" items={items} onSelect={onSelect} />);
 
     expect(screen.getByRole("navigation", { name: "Ana navigasyon" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Harita" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("button", { name: "Harita" })).toHaveTextContent("");
-    expect(screen.getByRole("button", { name: "Forum" })).toHaveAttribute("data-primary-navigation", "true");
+    expect(screen.getByRole("button", { name: "Etkinlikler" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Etkinlikler" })).toHaveTextContent("");
+    expect(screen.getByRole("button", { name: "Akış" })).toHaveAttribute("data-primary-navigation", "true");
     expect(screen.queryByRole("button", { name: "Servis" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Social" }));
+    await user.click(screen.getByRole("button", { name: "Sosyal" }));
     expect(onSelect).toHaveBeenCalledWith("social");
   });
 });

@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/providers/auth-provider';
+import { useAppLanguage } from '@/providers/language-provider';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
 
 type AuthTab = 'login' | 'register';
@@ -35,6 +36,7 @@ const initialRegisterForm = {
 export default function LoginScreen() {
   const router = useRouter();
   const { clearError, error, login, register } = useAuth();
+  const { language, setLanguage, t } = useAppLanguage();
   const [tab, setTab] = useState<AuthTab>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,7 +53,7 @@ export default function LoginScreen() {
 
   const submitLogin = async () => {
     if (!email.trim() || !password) {
-      setLocalError('Zorunlu alanları doldurun.');
+      setLocalError(t('auth.errorRequired'));
       return;
     }
     setSubmitting(true);
@@ -71,19 +73,19 @@ export default function LoginScreen() {
       !registerForm.model.trim() ||
       registerForm.odometer.trim() === ''
     ) {
-      setLocalError('Zorunlu alanları doldurun.');
+      setLocalError(t('auth.errorRequired'));
       return;
     }
     if (registerForm.password.length < 8) {
-      setLocalError('Şifre en az 8 karakter olmalıdır.');
+      setLocalError(t('auth.errorPassword'));
       return;
     }
     if (!Number.isFinite(odometer) || odometer < 0) {
-      setLocalError('Geçerli bir kilometre bilgisi girin.');
+      setLocalError(t('auth.errorOdometer'));
       return;
     }
     if (!registerForm.termsAccepted) {
-      setLocalError('KVKK metni ve kullanım koşulları onaylanmalıdır.');
+      setLocalError(t('auth.errorConsent'));
       return;
     }
 
@@ -110,6 +112,28 @@ export default function LoginScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.hero}>
+              <View style={styles.languageSwitcher}>
+                {(['tr', 'en'] as const).map((option) => (
+                  <Pressable
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: language === option }}
+                    key={option}
+                    onPress={() => setLanguage(option)}
+                    style={({ pressed }) => [
+                      styles.languageOption,
+                      language === option && styles.languageOptionActive,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={[
+                      styles.languageOptionText,
+                      language === option && styles.languageOptionTextActive,
+                    ]}>
+                      {option.toUpperCase()}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
               <View style={styles.logoFrame}>
                 <Image
                   contentFit="contain"
@@ -117,17 +141,15 @@ export default function LoginScreen() {
                   style={styles.logo}
                 />
               </View>
-              <Text style={styles.eyebrow}>CRUISER // ACCESS</Text>
-              <Text style={styles.heroTitle}>Yolun sosyal ağı.</Text>
-              <Text style={styles.heroCopy}>
-                Sürüşünü takip et, topluluğunu bul ve rotanı paylaş.
-              </Text>
+              <Text style={styles.eyebrow}>{t('auth.eyebrow')}</Text>
+              <Text style={styles.heroTitle}>{t('auth.heroTitle')}</Text>
+              <Text style={styles.heroCopy}>{t('auth.heroCopy')}</Text>
             </View>
 
             <View style={styles.panel}>
               <View style={styles.tabs}>
-                <TabButton active={tab === 'login'} label="Giriş" onPress={() => changeTab('login')} />
-                <TabButton active={tab === 'register'} label="Kayıt Ol" onPress={() => changeTab('register')} />
+                <TabButton active={tab === 'login'} label={t('auth.login')} onPress={() => changeTab('login')} />
+                <TabButton active={tab === 'register'} label={t('auth.register')} onPress={() => changeTab('register')} />
               </View>
 
               {tab === 'login' ? (
@@ -135,21 +157,21 @@ export default function LoginScreen() {
                   <Field
                     autoCapitalize="none"
                     keyboardType="email-address"
-                    label="E-posta *"
+                    label={t('auth.email')}
                     onChangeText={setEmail}
                     placeholder="surucu@ornek.com"
                     value={email}
                   />
                   <Field
-                    label="Şifre *"
+                    label={t('auth.password')}
                     onChangeText={setPassword}
-                    placeholder="En az 8 karakter"
+                    placeholder={t('auth.passwordPlaceholder')}
                     secureTextEntry
                     value={password}
                   />
                   <SubmitButton
                     icon="arrow-forward"
-                    label="CRUISER'a Gir"
+                    label={t('auth.enter')}
                     loading={submitting}
                     onPress={submitLogin}
                   />
@@ -157,34 +179,34 @@ export default function LoginScreen() {
               ) : (
                 <View style={styles.form}>
                   <Text style={styles.requiredHint}>
-                    <Text style={styles.requiredMark}>*</Text> Zorunlu alan
+                    <Text style={styles.requiredMark}>*</Text> {t('auth.required')}
                   </Text>
                   <Field
                     autoCapitalize="none"
                     keyboardType="email-address"
-                    label="E-posta *"
+                    label={t('auth.email')}
                     onChangeText={(value) => setRegisterForm((current) => ({ ...current, email: value }))}
                     value={registerForm.email}
                   />
                   <Field
-                    label="Görünen Ad *"
+                    label={t('auth.fullName')}
                     onChangeText={(value) => setRegisterForm((current) => ({ ...current, fullName: value }))}
                     value={registerForm.fullName}
                   />
                   <Field
                     autoCapitalize="characters"
-                    label="Plaka *"
+                    label={t('auth.plate')}
                     onChangeText={(value) => setRegisterForm((current) => ({ ...current, plate: value.toUpperCase() }))}
                     placeholder="06 ABC 123"
                     value={registerForm.plate}
                   />
                   <View style={styles.field}>
-                    <Text style={styles.label}>Araç Türü *</Text>
+                    <Text style={styles.label}>{t('auth.vehicleType')}</Text>
                     <View style={styles.vehicleTypeRow}>
                       <VehicleTypeButton
                         active={registerForm.vehicleType === 'car'}
                         icon="car-sport"
-                        label="Otomobil"
+                        label={t('auth.car')}
                         onPress={() => setRegisterForm((current) => ({
                           ...current,
                           vehicleType: 'car',
@@ -193,7 +215,7 @@ export default function LoginScreen() {
                       <VehicleTypeButton
                         active={registerForm.vehicleType === 'motorcycle'}
                         icon="bicycle"
-                        label="Motosiklet"
+                        label={t('auth.motorcycle')}
                         onPress={() => setRegisterForm((current) => ({
                           ...current,
                           vehicleType: 'motorcycle',
@@ -202,20 +224,20 @@ export default function LoginScreen() {
                     </View>
                   </View>
                   <Field
-                    label="Araç Modeli *"
+                    label={t('auth.vehicleModel')}
                     onChangeText={(value) => setRegisterForm((current) => ({ ...current, model: value }))}
                     placeholder="Seat Ibiza"
                     value={registerForm.model}
                   />
                   <Field
                     keyboardType="number-pad"
-                    label="Güncel Kilometre *"
+                    label={t('auth.odometer')}
                     onChangeText={(value) => setRegisterForm((current) => ({ ...current, odometer: value.replace(/\D/g, '') }))}
                     placeholder="12000"
                     value={registerForm.odometer}
                   />
                   <Field
-                    label="Şifre *"
+                    label={t('auth.password')}
                     onChangeText={(value) => setRegisterForm((current) => ({ ...current, password: value }))}
                     secureTextEntry
                     value={registerForm.password}
@@ -241,12 +263,12 @@ export default function LoginScreen() {
                       ) : null}
                     </View>
                     <Text style={styles.consentText}>
-                      KVKK aydınlatma metnini ve kullanım koşullarını okudum, onaylıyorum.
+                      {t('auth.consent')}
                     </Text>
                   </Pressable>
                   <SubmitButton
                     icon="sparkles"
-                    label="Hesabımı Oluştur"
+                    label={t('auth.createAccount')}
                     loading={submitting}
                     onPress={submitRegister}
                   />
@@ -392,6 +414,33 @@ const styles = createThemedStyles(() => ({
     alignItems: 'center',
     paddingBottom: 24,
   },
+  languageSwitcher: {
+    alignSelf: 'flex-end',
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: 8,
+    padding: 3,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  languageOption: {
+    minWidth: 42,
+    minHeight: 36,
+    paddingHorizontal: 10,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  languageOptionActive: { backgroundColor: colors.lime },
+  languageOptionText: {
+    color: colors.textMuted,
+    fontFamily: fonts.bold,
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+  languageOptionTextActive: { color: colors.black },
   logoFrame: {
     width: 94,
     height: 94,

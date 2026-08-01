@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { requestFreshDeploymentReload } from "./utils/runtimeRecovery";
+import { LanguageProvider } from "./providers/LanguageProvider";
 import "./index.css";
 
 window.addEventListener("vite:preloadError", (event) => {
@@ -14,7 +15,9 @@ window.addEventListener("vite:preloadError", (event) => {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AppErrorBoundary>
-      <App />
+      <LanguageProvider>
+        <App />
+      </LanguageProvider>
     </AppErrorBoundary>
   </React.StrictMode>,
 );

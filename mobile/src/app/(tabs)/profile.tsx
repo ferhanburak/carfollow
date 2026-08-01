@@ -28,11 +28,12 @@ import { APP_ID } from '@/lib/firebase-paths';
 import { getAllTimeHonors } from '@/lib/leaderboard';
 import { useAuth } from '@/providers/auth-provider';
 import { useDriverProfile } from '@/providers/driver-profile-provider';
+import { useAppLanguage } from '@/providers/language-provider';
 import { useAppTheme } from '@/providers/theme-provider';
 import { colors, createThemedStyles, fonts, type AppThemeMode } from '@/theme/colors';
 
 type Panel = 'settings' | 'service' | 'achievements' | null;
-type SettingsSection = 'appearance' | 'privacy' | 'blocked' | 'vehicle' | 'account' | 'security';
+type SettingsSection = 'appearance' | 'language' | 'privacy' | 'blocked' | 'vehicle' | 'account' | 'security';
 type Achievement = {
   key: string;
   title: string;
@@ -566,6 +567,7 @@ function SettingsPanel({
   userId: string;
   visible: boolean;
 }) {
+  const { language, setLanguage, t } = useAppLanguage();
   const { mode: themeMode, resolvedTheme, setMode: setThemeMode } = useAppTheme();
   const [fullName, setFullName] = useState(profile?.fullName ?? '');
   const [model, setModel] = useState(profile?.model ?? '');
@@ -682,50 +684,58 @@ function SettingsPanel({
       key: 'appearance',
       code: '01',
       icon: 'contrast-outline',
-      title: 'Görünüm',
-      description: 'Sistem temasını kullan veya açık ve koyu görünüm arasında seçim yap.',
+      title: t('settings.appearance'),
+      description: t('settings.appearanceDescription'),
       value: themeMode === 'system'
-        ? `Sistem · ${resolvedTheme === 'dark' ? 'Koyu' : 'Açık'}`
-        : themeMode === 'dark' ? 'Koyu tema' : 'Açık tema',
+        ? `${t('settings.themeSystem')} · ${resolvedTheme === 'dark' ? t('settings.themeDark') : t('settings.themeLight')}`
+        : themeMode === 'dark' ? t('settings.darkTheme') : t('settings.lightTheme'),
+    },
+    {
+      key: 'language',
+      code: '02',
+      icon: 'language-outline',
+      title: t('language.title'),
+      description: t('language.description'),
+      value: t('language.current'),
     },
     {
       key: 'privacy',
-      code: '02',
+      code: '03',
       icon: 'location-outline',
-      title: 'Gizlilik ve Konum',
-      description: 'Canlı harita görünürlüğü, konum hassasiyeti ve güvenli bölge.',
+      title: t('settings.privacy'),
+      description: t('settings.privacyDescription'),
       value: safeZoneEnabled ? 'Güvenli bölge açık' : 'Standart',
     },
     {
       key: 'blocked',
-      code: '03',
+      code: '04',
       icon: 'ban-outline',
-      title: 'Engellenen Kullanıcılar',
-      description: 'Engellediğin sürücüleri görüntüle ve engelleri yönet.',
+      title: t('settings.blocked'),
+      description: t('settings.blockedDescription'),
       value: `${blockedDrivers.length} sürücü`,
     },
     {
       key: 'vehicle',
-      code: '04',
+      code: '05',
       icon: 'car-sport-outline',
-      title: 'Araç ve Profil',
-      description: 'Araç bilgileri, kilometre, bölge ve profil fotoğrafı.',
+      title: t('settings.vehicle'),
+      description: t('settings.vehicleDescription'),
       value: profile?.model || 'Araç bilgisi',
     },
     {
       key: 'account',
-      code: '05',
+      code: '06',
       icon: 'folder-open-outline',
-      title: 'Hesap ve Veri Kontrolleri',
-      description: 'E-posta doğrulama, veri aktarımı ve hesap silme.',
+      title: t('settings.account'),
+      description: t('settings.accountDescription'),
       value: firebaseAuth.currentUser?.emailVerified ? 'Doğrulandı' : 'Doğrulama gerekli',
     },
     {
       key: 'security',
-      code: '06',
+      code: '07',
       icon: 'shield-checkmark-outline',
-      title: 'Şifre ve Güvenlik',
-      description: 'Hesap e-postası ve güvenli şifre yenileme akışı.',
+      title: t('settings.security'),
+      description: t('settings.securityDescription'),
       value: firebaseAuth.currentUser?.email || 'Hesap güvenliği',
     },
   ];
@@ -743,8 +753,8 @@ function SettingsPanel({
         setError('');
       } : undefined}
       onClose={closePanel}
-      subtitle={currentSection?.description || 'Hesap, araç, konum ve güvenlik kontrolleri'}
-      title={currentSection?.title || 'Ayarlar Merkezi'}
+      subtitle={currentSection?.description || t('settings.subtitle')}
+      title={currentSection?.title || t('settings.title')}
       visible={visible}
     >
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -756,7 +766,7 @@ function SettingsPanel({
             </View>
             <View style={styles.settingsIdentityCopy}>
               <Text numberOfLines={1} style={styles.settingsIdentityName}>
-                {profile?.fullName || 'Sürücü'}
+                {profile?.fullName || t('settings.driver')}
               </Text>
               <Text numberOfLines={1} style={styles.settingsIdentityPlate}>
                 {profile?.plate || profile?.model}
@@ -789,11 +799,11 @@ function SettingsPanel({
             <SettingAction
               danger
               icon="log-out-outline"
-              label="Oturumu Kapat"
+              label={t('settings.logout')}
               onPress={onLogout}
             />
             <Text style={styles.logoutHint}>
-              Hesap verilerin silinmez; yalnızca bu cihazdaki oturum kapanır.
+              {t('settings.logoutHint')}
             </Text>
           </View>
         </>
@@ -809,16 +819,14 @@ function SettingsPanel({
               />
             </View>
             <View style={styles.settingCopy}>
-              <Text style={styles.settingTitle}>Uygulama Teması</Text>
-              <Text style={styles.settingDescription}>
-                Seçimin bu cihazda saklanır ve uygulamanın tüm ekranlarına uygulanır.
-              </Text>
+              <Text style={styles.settingTitle}>{t('settings.appTheme')}</Text>
+              <Text style={styles.settingDescription}>{t('settings.themeDescription')}</Text>
             </View>
           </View>
           {([
-            { value: 'system', label: 'Sistem', description: 'Telefonunun açık veya koyu temasını takip eder.', icon: 'phone-portrait-outline' },
-            { value: 'light', label: 'Açık', description: 'Gündüz kullanımı için aydınlık ve yüksek okunabilirlik.', icon: 'sunny-outline' },
-            { value: 'dark', label: 'Koyu', description: 'Gece sürüşleri için düşük parlaklıklı CRUISER görünümü.', icon: 'moon-outline' },
+            { value: 'system', label: t('settings.themeSystem'), description: t('settings.themeSystemDescription'), icon: 'phone-portrait-outline' },
+            { value: 'light', label: t('settings.themeLight'), description: t('settings.themeLightDescription'), icon: 'sunny-outline' },
+            { value: 'dark', label: t('settings.themeDark'), description: t('settings.themeDarkDescription'), icon: 'moon-outline' },
           ] as const).map((option) => {
             const selected = themeMode === option.value;
             return (
@@ -839,6 +847,58 @@ function SettingsPanel({
                     size={20}
                     color={selected ? colors.black : colors.textMuted}
                   />
+                </View>
+                <View style={styles.settingCopy}>
+                  <Text style={styles.appearanceOptionTitle}>{option.label}</Text>
+                  <Text style={styles.settingDescription}>{option.description}</Text>
+                </View>
+                <Ionicons
+                  name={selected ? 'radio-button-on' : 'radio-button-off'}
+                  size={21}
+                  color={selected ? colors.lime : colors.textFaint}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+      {activeSection === 'language' ? (
+        <View style={styles.settingsSection}>
+          <View style={styles.appearanceIntro}>
+            <View style={styles.appearancePreview}>
+              <Ionicons name="language" size={24} color={colors.lime} />
+            </View>
+            <View style={styles.settingCopy}>
+              <Text style={styles.settingTitle}>{t('language.title')}</Text>
+              <Text style={styles.settingDescription}>{t('language.description')}</Text>
+            </View>
+          </View>
+          {([{
+            value: 'tr',
+            label: t('language.turkish'),
+            description: t('language.turkishDescription'),
+            code: 'TR',
+          }, {
+            value: 'en',
+            label: t('language.english'),
+            description: t('language.englishDescription'),
+            code: 'EN',
+          }] as const).map((option) => {
+            const selected = language === option.value;
+            return (
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                key={option.value}
+                onPress={() => setLanguage(option.value)}
+                style={({ pressed }) => [
+                  styles.appearanceOption,
+                  selected && styles.appearanceOptionActive,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={[styles.appearanceOptionIcon, selected && styles.appearanceOptionIconActive]}>
+                  <Text style={[styles.languageCode, selected && styles.languageCodeActive]}>{option.code}</Text>
                 </View>
                 <View style={styles.settingCopy}>
                   <Text style={styles.appearanceOptionTitle}>{option.label}</Text>
@@ -1674,6 +1734,13 @@ const styles = createThemedStyles(() => ({
     justifyContent: 'center',
   },
   appearanceOptionIconActive: { backgroundColor: colors.lime },
+  languageCode: {
+    color: colors.textMuted,
+    fontFamily: fonts.extraBold,
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+  languageCodeActive: { color: colors.black },
   appearanceOptionTitle: {
     color: colors.text,
     fontFamily: fonts.extraBold,

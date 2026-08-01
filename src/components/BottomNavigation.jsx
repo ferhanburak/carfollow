@@ -65,8 +65,18 @@ function CruiserRoadMark() {
 }
 
 export function BottomNavigation({ activeTab, items, onSelect }) {
+  const { t } = useLanguage();
+  const labels = {
+    map: t('nav.map'),
+    liveMap: t('nav.liveMap'),
+    drive: t('nav.drive'),
+    forum: t('nav.forum'),
+    social: t('nav.social'),
+    leaderboard: t('nav.leaderboard'),
+    profile: t('nav.profile'),
+  };
   return (
-    <nav aria-label="Ana navigasyon" className="app-bottom-nav absolute left-1/2 z-20 w-[calc(100%-0.75rem)] max-w-[27rem] -translate-x-1/2 px-1.5 sm:w-[calc(100%-1.5rem)] sm:px-3">
+    <nav aria-label={t('nav.label')} className="app-bottom-nav absolute left-1/2 z-20 w-[calc(100%-0.75rem)] max-w-[27rem] -translate-x-1/2 px-1.5 sm:w-[calc(100%-1.5rem)] sm:px-3">
       <div
         className="relative grid gap-1 overflow-visible rounded-[1.4rem] border border-white/10 bg-[radial-gradient(circle_at_50%_-35%,rgba(163,230,53,0.13),transparent_34%),rgba(17,17,17,0.96)] p-1.5 shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur-xl"
         style={{ gridTemplateColumns: items.map((item) => item.key === "forum" ? "1.35fr" : "1fr").join(" ") }}
@@ -74,14 +84,15 @@ export function BottomNavigation({ activeTab, items, onSelect }) {
         {items.map((item) => {
           const isActive = activeTab === item.key;
           const isPrimary = item.key === "forum";
+          const label = labels[item.key] ?? item.label;
           return (
             <button
               key={item.key}
               type="button"
-              aria-label={item.label}
+              aria-label={label}
               aria-current={isActive ? "page" : undefined}
               data-primary-navigation={isPrimary ? "true" : undefined}
-              title={item.label}
+              title={label}
               onClick={() => onSelect(item.key)}
               className={`group relative mx-auto flex items-center justify-center transition duration-200 active:scale-90 ${
                 isPrimary
@@ -108,3 +119,4 @@ export function BottomNavigation({ activeTab, items, onSelect }) {
     </nav>
   );
 }
+import { useLanguage } from "../providers/LanguageProvider";
