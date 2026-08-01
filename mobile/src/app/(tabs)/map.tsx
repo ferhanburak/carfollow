@@ -2,8 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
-import { useEffect, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -25,7 +24,6 @@ import MapView, {
 } from 'react-native-maps';
 
 import {
-  MapNodeMarker,
   mapNodeIcon,
   mapNodeLabel,
 } from '@/components/map-node-ui';
@@ -49,6 +47,7 @@ const mapProvider =
     : undefined;
 
 type EditorType = 'spot' | 'wash' | 'meetup' | 'convoy';
+type EventFilter = 'all' | EditorType;
 type Point = { latitude: number; longitude: number };
 
 const nodeOptions: { value: EditorType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -58,11 +57,16 @@ const nodeOptions: { value: EditorType; label: string; icon: keyof typeof Ionico
   { value: 'wash', label: 'Yıkama', icon: 'water' },
 ];
 
+const eventFilters: { value: EventFilter; label: string }[] = [
+  { value: 'all', label: 'Tümü' },
+  ...nodeOptions.map(({ value, label }) => ({ value, label })),
+];
+
 export default function MapScreen() {
-  const mapRef = useRef<MapView>(null);
   const { profile } = useAuth();
   const { mapWorld: world, openDriverProfile } = useDriverProfile();
   const [selected, setSelected] = useState<MapPin | null>(null);
+  const [filter, setFilter] = useState<EventFilter>('all');
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorType, setEditorType] = useState<EditorType>('meetup');
   const [points, setPoints] = useState<Point[]>([]);
@@ -72,26 +76,8 @@ export default function MapScreen() {
   const [formError, setFormError] = useState('');
   const [notice, setNotice] = useState('');
 
-  useEffect(() => {
-    void Location.requestForegroundPermissionsAsync().then(async ({ status }) => {
-      if (status !== 'granted') return;
-      const current = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      mapRef.current?.animateToRegion({
-        latitude: current.coords.latitude,
-        longitude: current.coords.longitude,
-        latitudeDelta: 0.12,
-        longitudeDelta: 0.09,
-      }, 500);
-    });
-  }, []);
-
   const selectMapPoint = (event: MapPressEvent) => {
-    if (!editorOpen) {
-      setSelected(null);
-      return;
-    }
+    if (!editorOpen) return;
     const next = event.nativeEvent.coordinate;
     setPoints((current) => {
       if (editorType === 'convoy') return [...current, next].slice(-8);
@@ -171,172 +157,193 @@ export default function MapScreen() {
       }
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       closeEditor();
-      setNotice('Nokta haritaya eklendi.');
+      setNotice('Yeni kayıt oluşturuldu.');
       setTimeout(() => setNotice(''), 2500);
     } catch {
       setFormError(world.error || 'Nokta eklenemedi.');
     }
   };
 
-  const goToLocation = async () => {
-    const permission = await Location.requestForegroundPermissionsAsync();
-    if (permission.status !== 'granted') {
-      setNotice('Konum izni verilmedi.');
-      return;
-    }
-    const current = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
-    mapRef.current?.animateToRegion({
-      latitude: current.coords.latitude,
-      longitude: current.coords.longitude,
-      latitudeDelta: 0.04,
-      longitudeDelta: 0.03,
-    }, 500);
-  };
+  const filteredPins = useMemo(() => world.activePins
+    .filter((pin) => filter === 'all' || eventFilterForPin(pin) === filter)
+    .sort(sortEventPins), [filter, world.activePins]);
+  const popularPins = useMemo(() => [...world.activePins]
+    .sort((left, right) => eventPopularity(right) - eventPopularity(left))
+    .slice(0, 4), [world.activePins]);
 
   return (
     <ScreenShell scrollProps={{ contentContainerStyle: styles.screenContent }}>
-      <View style={styles.mapCard}>
-        <View style={styles.mapLabel}>
-          <Text style={styles.mapTitle}>Etkinlik Haritası</Text>
-          <Text style={styles.mapCount}>{world.activePins.length} nokta</Text>
+      <View style={styles.eventHero}>
+        <View style={styles.eventHeroCopy}>
+          <Text style={styles.eventEyebrow}>YOL TOPLULUĞU</Text>
+          <Text style={styles.eventTitle}>Etkinlikler</Text>
+          <Text style={styles.eventSubtitle}>Buluşmaları keşfet, rotalara katıl ve yeni bir nokta oluştur.</Text>
         </View>
-        <MapView
-          initialRegion={ANKARA}
-          mapType="standard"
-          onPress={selectMapPoint}
-          provider={mapProvider}
-          ref={mapRef}
-          showsCompass
-          showsMyLocationButton={false}
-          showsUserLocation
-          style={styles.map}
-          toolbarEnabled={false}
-          userInterfaceStyle="dark"
-        >
-          {world.activePins.map((pin) => (
-            <Marker
-              coordinate={{ latitude: Number(pin.lat), longitude: Number(pin.lng) }}
-              key={pin.id}
-              onPress={(event) => {
-                event.stopPropagation();
-                setSelected(pin);
-              }}
-              tracksViewChanges={false}
-            >
-              <MapNodeMarker pin={pin} selected={selected?.id === pin.id} />
-            </Marker>
-          ))}
-          {selected?.type === 'meet' &&
-          selected.eventMode === 'convoy' &&
-          selected.backendCanViewDetails !== false &&
-          (selected.routePath?.length ?? 0) > 1 ? (
-            <Polyline
-              coordinates={(selected.routePath ?? []).map((point) => ({
-                latitude: point.lat,
-                longitude: point.lng,
-              }))}
-              strokeColor={colors.rose}
-              strokeWidth={4}
-            />
-          ) : null}
-        </MapView>
         <Pressable
-          onPress={() => void goToLocation()}
-          style={({ pressed }) => [styles.locationButton, pressed && styles.pressed]}
+          accessibilityLabel="Yeni etkinlik veya nokta oluştur"
+          onPress={openEditor}
+          style={({ pressed }) => [styles.heroAddButton, pressed && styles.pressed]}
         >
-          <Ionicons name="locate" size={19} color={colors.text} />
+          <Ionicons name="add" color={colors.black} size={24} />
         </Pressable>
       </View>
 
-      {selected ? (
-        <SelectedNode
-          busy={world.busy}
-          onClose={() => setSelected(null)}
-          onJoin={async () => {
-            try {
-              await world.joinConvoy(selected.id);
-              setNotice('Katılım isteğiniz gönderildi.');
-            } catch {
-              setNotice(world.error || 'Katılım isteği gönderilemedi.');
-            }
-          }}
-          onLike={async () => {
-            try {
-              await world.likePin(selected.id);
-              setNotice('Beğeni güncellendi.');
-            } catch {
-              setNotice(world.error || 'Beğeni güncellenemedi.');
-            }
-          }}
-          onHelpfulReview={async (reviewId) => {
-            try {
-              await world.helpfulReview(reviewId);
-              setNotice('Faydalı oyu güncellendi.');
-            } catch {
-              setNotice(world.error || 'Faydalı oyu güncellenemedi.');
-            }
-          }}
-          onDelete={async () => {
-            try {
-              await world.deleteConvoy(selected.id);
-              setSelected(null);
-              setNotice('Etkinlik kaldırıldı.');
-            } catch {
-              setNotice(world.error || 'Etkinlik kaldırılamadı.');
-            }
-          }}
-          onOpenDriver={(driver) => void openDriverProfile(driver, { convoyId: selected.id })}
-          onPhoto={async (asset) => {
-            try {
-              await world.addSpotPhoto(selected.id, asset);
-              setNotice('Fotoğraf noktaya eklendi.');
-            } catch (photoError) {
-              setNotice(photoError instanceof Error ? photoError.message : 'Fotoğraf eklenemedi.');
-            }
-          }}
-          onReview={async (review) => {
-            try {
-              await world.reviewWash(selected.id, review);
-              setNotice('Yıkama değerlendirmeniz kaydedildi.');
-            } catch {
-              setNotice(world.error || 'Değerlendirme kaydedilemedi.');
-            }
-          }}
-          onUpdate={async (details) => {
-            try {
-              await world.updateConvoy(selected.id, details);
-              setSelected(null);
-              setNotice('Etkinlik bilgileri güncellendi.');
-            } catch {
-              setNotice(world.error || 'Etkinlik güncellenemedi.');
-              throw new Error(world.error || 'Etkinlik güncellenemedi.');
-            }
-          }}
-          photos={world.photos.filter((photo) => photo.pinId === selected.id)}
-          pin={selected}
-          reviews={world.reviews.filter((review) => review.pinId === selected.id)}
-        />
-      ) : null}
-
       {notice ? <Text style={styles.notice}>{notice}</Text> : null}
 
-      <Pressable
-        onPress={openEditor}
-        style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
+      <ScrollView
+        contentContainerStyle={styles.filterContent}
+        horizontal
+        showsHorizontalScrollIndicator={false}
       >
-        <Ionicons name="add" color={colors.black} size={22} />
-        <Text style={styles.addButtonText}>Etkinlik Ekle</Text>
-      </Pressable>
+        {eventFilters.map((item) => (
+          <Pressable
+            key={item.value}
+            onPress={() => setFilter(item.value)}
+            style={[styles.filterChip, filter === item.value && styles.filterChipActive]}
+          >
+            <Text style={[styles.filterText, filter === item.value && styles.filterTextActive]}>
+              {item.label}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      {world.loading ? (
+        <View style={styles.loadingState}>
+          <ActivityIndicator color={colors.lime} />
+          <Text style={styles.loadingText}>Etkinlikler yükleniyor</Text>
+        </View>
+      ) : null}
+
+      {!world.loading && popularPins.length ? (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Öne Çıkanlar</Text>
+              <Text style={styles.sectionSubtitle}>Topluluğun en çok etkileşim alan noktaları</Text>
+            </View>
+            <Ionicons name="sparkles" size={18} color={colors.lime} />
+          </View>
+          <ScrollView
+            contentContainerStyle={styles.popularContent}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            {popularPins.map((pin) => (
+              <EventCard compact key={`popular-${pin.id}`} onPress={() => setSelected(pin)} pin={pin} />
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Tüm Etkinlikler</Text>
+            <Text style={styles.sectionSubtitle}>{filteredPins.length} sonuç</Text>
+          </View>
+          <View style={styles.liveBadge}>
+            <View style={styles.liveDot} />
+            <Text style={styles.liveBadgeText}>CANLI</Text>
+          </View>
+        </View>
+        {filteredPins.length ? filteredPins.map((pin) => (
+          <EventCard key={pin.id} onPress={() => setSelected(pin)} pin={pin} />
+        )) : !world.loading ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={25} color={colors.textFaint} />
+            <Text style={styles.emptyTitle}>Bu kategoride etkinlik yok</Text>
+            <Text style={styles.emptyText}>İlk etkinliği oluşturmak için üstteki + düğmesini kullanın.</Text>
+          </View>
+        ) : null}
+      </View>
+
+      <Modal animationType="slide" transparent visible={Boolean(selected)} onRequestClose={() => setSelected(null)}>
+        <View style={styles.detailBackdrop}>
+          <Pressable onPress={() => setSelected(null)} style={StyleSheet.absoluteFill} />
+          <View style={styles.detailSheet}>
+            <ScrollView contentContainerStyle={styles.detailContent} showsVerticalScrollIndicator={false}>
+              {selected ? (
+                <SelectedNode
+                  busy={world.busy}
+                  onClose={() => setSelected(null)}
+                  onJoin={async () => {
+                    try {
+                      await world.joinConvoy(selected.id);
+                      setNotice('Katılım isteğiniz gönderildi.');
+                    } catch {
+                      setNotice(world.error || 'Katılım isteği gönderilemedi.');
+                    }
+                  }}
+                  onLike={async () => {
+                    try {
+                      await world.likePin(selected.id);
+                      setNotice('Beğeni güncellendi.');
+                    } catch {
+                      setNotice(world.error || 'Beğeni güncellenemedi.');
+                    }
+                  }}
+                  onHelpfulReview={async (reviewId) => {
+                    try {
+                      await world.helpfulReview(reviewId);
+                      setNotice('Faydalı oyu güncellendi.');
+                    } catch {
+                      setNotice(world.error || 'Faydalı oyu güncellenemedi.');
+                    }
+                  }}
+                  onDelete={async () => {
+                    try {
+                      await world.deleteConvoy(selected.id);
+                      setSelected(null);
+                      setNotice('Etkinlik kaldırıldı.');
+                    } catch {
+                      setNotice(world.error || 'Etkinlik kaldırılamadı.');
+                    }
+                  }}
+                  onOpenDriver={(driver) => void openDriverProfile(driver, { convoyId: selected.id })}
+                  onPhoto={async (asset) => {
+                    try {
+                      await world.addSpotPhoto(selected.id, asset);
+                      setNotice('Fotoğraf noktaya eklendi.');
+                    } catch (photoError) {
+                      setNotice(photoError instanceof Error ? photoError.message : 'Fotoğraf eklenemedi.');
+                    }
+                  }}
+                  onReview={async (review) => {
+                    try {
+                      await world.reviewWash(selected.id, review);
+                      setNotice('Yıkama değerlendirmeniz kaydedildi.');
+                    } catch {
+                      setNotice(world.error || 'Değerlendirme kaydedilemedi.');
+                    }
+                  }}
+                  onUpdate={async (details) => {
+                    try {
+                      await world.updateConvoy(selected.id, details);
+                      setSelected(null);
+                      setNotice('Etkinlik bilgileri güncellendi.');
+                    } catch {
+                      setNotice(world.error || 'Etkinlik güncellenemedi.');
+                      throw new Error(world.error || 'Etkinlik güncellenemedi.');
+                    }
+                  }}
+                  photos={world.photos.filter((photo) => photo.pinId === selected.id)}
+                  pin={selected}
+                  reviews={world.reviews.filter((review) => review.pinId === selected.id)}
+                />
+              ) : null}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <Modal animationType="slide" transparent visible={editorOpen} onRequestClose={closeEditor}>
         <View style={styles.modalBackdrop}>
           <View style={styles.editor}>
             <View style={styles.editorHeader}>
               <View>
-                <Text style={styles.editorTitle}>Haritaya Ekle</Text>
-                <Text style={styles.editorSubtitle}>Türü seçin, ardından haritaya dokunun.</Text>
+                <Text style={styles.editorTitle}>Yeni Etkinlik</Text>
+                <Text style={styles.editorSubtitle}>Türü seçin ve konumu mini haritadan belirleyin.</Text>
               </View>
               <Pressable onPress={closeEditor} style={styles.closeButton}>
                 <Ionicons name="close" size={22} color={colors.text} />
@@ -487,7 +494,7 @@ export default function MapScreen() {
               {world.busy ? <ActivityIndicator color={colors.black} /> : (
                 <>
                   <Ionicons name="checkmark" size={20} color={colors.black} />
-                  <Text style={styles.saveButtonText}>Haritaya Ekle</Text>
+                  <Text style={styles.saveButtonText}>Oluştur</Text>
                 </>
               )}
             </Pressable>
@@ -497,6 +504,88 @@ export default function MapScreen() {
       </Modal>
     </ScreenShell>
   );
+}
+
+function EventCard({
+  compact = false,
+  onPress,
+  pin,
+}: {
+  compact?: boolean;
+  onPress: () => void;
+  pin: MapPin;
+}) {
+  const joined = pin.type === 'meet' && Boolean(pin.attendees?.some((driver) => driver.relation === 'self'));
+  const meta = pin.type === 'meet'
+    ? pin.time || (pin.eventMode === 'convoy' ? 'Konvoy rotası' : 'Buluşma noktası')
+    : pin.type === 'wash'
+      ? `${Number(pin.rating?.reviews ?? 0)} değerlendirme`
+      : `${Number(pin.photoCount ?? 0)} fotoğraf`;
+
+  return (
+    <Pressable
+      accessibilityLabel={`${pin.name} detaylarını aç`}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.eventCard,
+        compact && styles.eventCardCompact,
+        pressed && styles.eventCardPressed,
+      ]}
+    >
+      <View style={styles.eventCardTop}>
+        <View style={[styles.eventIcon, pin.type === 'meet' && styles.eventIconMeet]}>
+          <Ionicons name={mapNodeIcon(pin)} size={20} color={pin.type === 'meet' ? colors.black : colors.limeBright} />
+        </View>
+        <View style={styles.eventCardCopy}>
+          <Text numberOfLines={1} style={styles.eventCardName}>{pin.name}</Text>
+          <Text numberOfLines={1} style={styles.eventCardType}>{mapNodeLabel(pin)}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      </View>
+      <Text numberOfLines={compact ? 2 : 1} style={styles.eventCardMeta}>{meta}</Text>
+      <View style={styles.eventCardFooter}>
+        <View style={styles.eventStat}>
+          <Ionicons name="heart-outline" size={14} color={colors.rose} />
+          <Text style={styles.eventStatText}>{Number(pin.likes ?? 0)}</Text>
+        </View>
+        {pin.type === 'meet' ? (
+          <View style={styles.eventStat}>
+            <Ionicons name="people-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.eventStatText}>{Number(pin.approvedCount ?? 1)}/{Number(pin.capacity ?? 12)}</Text>
+          </View>
+        ) : null}
+        {joined ? (
+          <View style={styles.joinedBadge}>
+            <Ionicons name="checkmark" size={12} color={colors.black} />
+            <Text style={styles.joinedBadgeText}>KATILDIN</Text>
+          </View>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
+function eventFilterForPin(pin: MapPin): EditorType {
+  if (pin.type === 'spot' || pin.type === 'wash') return pin.type;
+  return pin.eventMode === 'convoy' ? 'convoy' : 'meetup';
+}
+
+function eventPopularity(pin: MapPin) {
+  const likes = Number(pin.likes ?? 0);
+  const participation = pin.type === 'meet' ? Number(pin.approvedCount ?? 0) * 2 : 0;
+  const contribution = pin.type === 'spot'
+    ? Number(pin.photoCount ?? 0)
+    : pin.type === 'wash'
+      ? Number(pin.rating?.reviews ?? 0)
+      : 0;
+  return likes + participation + contribution;
+}
+
+function sortEventPins(left: MapPin, right: MapPin) {
+  const leftDate = Number(left.scheduledStartAtMs ?? Number.MAX_SAFE_INTEGER);
+  const rightDate = Number(right.scheduledStartAtMs ?? Number.MAX_SAFE_INTEGER);
+  if (leftDate !== rightDate) return leftDate - rightDate;
+  return eventPopularity(right) - eventPopularity(left);
 }
 
 function SelectedNode({
@@ -908,40 +997,163 @@ function FlagButton({
 
 const styles = StyleSheet.create({
   screenContent: { paddingTop: 14, paddingBottom: 116, gap: 12 },
-  mapCard: {
-    height: 570,
-    overflow: 'hidden',
+  eventHero: {
+    minHeight: 132,
+    padding: 18,
     borderRadius: 26,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  eventHeroCopy: { flex: 1 },
+  eventEyebrow: {
+    color: colors.lime,
+    fontFamily: fonts.bold,
+    fontSize: 9,
+    letterSpacing: 2.2,
+  },
+  eventTitle: { marginTop: 5, color: colors.text, fontFamily: fonts.extraBold, fontSize: 25 },
+  eventSubtitle: {
+    marginTop: 5,
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  heroAddButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
+    backgroundColor: colors.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.lime,
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    elevation: 7,
+  },
+  filterContent: { gap: 7, paddingRight: 18 },
+  filterChip: {
+    minHeight: 42,
+    paddingHorizontal: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  map: { flex: 1 },
-  mapLabel: {
-    position: 'absolute',
-    zIndex: 3,
-    left: 12,
-    top: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: 15,
-    backgroundColor: 'rgba(5,6,5,0.88)',
-  },
-  mapTitle: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 13 },
-  mapCount: { marginTop: 1, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9 },
-  locationButton: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
-    width: 46,
-    height: 46,
-    borderRadius: 16,
-    backgroundColor: 'rgba(5,6,5,0.9)',
+  filterChipActive: { borderColor: colors.lime, backgroundColor: colors.lime },
+  filterText: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 11 },
+  filterTextActive: { color: colors.black, fontFamily: fonts.bold },
+  loadingState: {
+    minHeight: 110,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 9,
   },
+  loadingText: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 10 },
+  section: {
+    padding: 14,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    gap: 10,
+  },
+  sectionHeader: {
+    minHeight: 43,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  sectionTitle: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 16 },
+  sectionSubtitle: { marginTop: 2, color: colors.textFaint, fontFamily: fonts.regular, fontSize: 9 },
+  popularContent: { gap: 9, paddingRight: 12 },
+  eventCard: {
+    minHeight: 132,
+    padding: 13,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.black,
+  },
+  eventCardCompact: { width: 248 },
+  eventCardPressed: {
+    borderColor: colors.lime,
+    backgroundColor: colors.limeMuted,
+    transform: [{ scale: 0.985 }],
+  },
+  eventCardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  eventIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.limeMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eventIconMeet: { borderColor: colors.lime, backgroundColor: colors.lime },
+  eventCardCopy: { flex: 1 },
+  eventCardName: { color: colors.text, fontFamily: fonts.bold, fontSize: 13 },
+  eventCardType: { marginTop: 2, color: colors.lime, fontFamily: fonts.bold, fontSize: 8, letterSpacing: 0.8 },
+  eventCardMeta: { marginTop: 12, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 10, lineHeight: 15 },
+  eventCardFooter: { marginTop: 'auto', paddingTop: 11, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  eventStat: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  eventStatText: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 9 },
+  joinedBadge: {
+    marginLeft: 'auto',
+    minHeight: 24,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: colors.lime,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  joinedBadgeText: { color: colors.black, fontFamily: fonts.extraBold, fontSize: 7, letterSpacing: 0.7 },
+  liveBadge: {
+    minHeight: 28,
+    paddingHorizontal: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.lime },
+  liveBadgeText: { color: colors.lime, fontFamily: fonts.bold, fontSize: 7, letterSpacing: 1.1 },
+  emptyState: {
+    minHeight: 145,
+    padding: 20,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: { marginTop: 8, color: colors.text, fontFamily: fonts.bold, fontSize: 12 },
+  emptyText: { marginTop: 4, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9, textAlign: 'center' },
+  detailBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.72)' },
+  detailSheet: {
+    maxHeight: '88%',
+    paddingTop: 8,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: colors.backgroundRaised,
+  },
+  detailContent: { padding: 14, paddingBottom: 34 },
   draftMarker: {
     width: 34,
     height: 34,

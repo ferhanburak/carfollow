@@ -11,8 +11,8 @@ import { colors } from '@/theme/colors';
 type IconName = keyof typeof Ionicons.glyphMap;
 
 const icons: Record<string, { active: IconName; idle: IconName }> = {
-  map: { active: 'map', idle: 'map-outline' },
-  'live-map': { active: 'navigate', idle: 'navigate-outline' },
+  map: { active: 'calendar', idle: 'calendar-outline' },
+  'live-map': { active: 'map', idle: 'map-outline' },
   drive: { active: 'speedometer', idle: 'speedometer-outline' },
   social: { active: 'people', idle: 'people-outline' },
   leaderboard: { active: 'stats-chart', idle: 'stats-chart-outline' },
@@ -35,7 +35,7 @@ export default function TabLayout() {
   return (
     <DriverProfileProvider>
       <Tabs
-        initialRouteName="forum"
+        initialRouteName="live-map"
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarShowLabel: false,
@@ -74,8 +74,8 @@ export default function TabLayout() {
           },
         })}
       >
-        <Tabs.Screen name="map" options={{ title: 'Harita' }} />
         <Tabs.Screen name="live-map" options={{ title: 'Canlı Harita' }} />
+        <Tabs.Screen name="map" options={{ title: 'Etkinlikler' }} />
         <Tabs.Screen name="drive" options={{ title: 'Sürüş' }} />
         <Tabs.Screen name="forum" options={{ title: 'Akış' }} />
         <Tabs.Screen name="social" options={{ title: 'Sosyal' }} />
