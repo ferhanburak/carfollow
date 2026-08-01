@@ -11,6 +11,14 @@ import { useForum } from "./hooks/useForum";
 import { AuthScreen } from "./screens/AuthScreen";
 import { getFirebasePublicDriverProfile } from "./repositories/cruiserRepository";
 
+const THEME_STORAGE_KEY = "tracksnap.theme.preference.v1";
+
+function getInitialThemeMode() {
+  if (typeof window === "undefined") return "system";
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  return ["system", "light", "dark"].includes(stored) ? stored : "system";
+}
+
 const DriveScreen = lazy(() => import("./screens/DriveScreen").then((module) => ({ default: module.DriveScreen })));
 const GarageScreen = lazy(() => import("./screens/GarageScreen").then((module) => ({ default: module.GarageScreen })));
 const MapHubScreen = lazy(() => import("./screens/MapHubScreen").then((module) => ({ default: module.MapHubScreen })));
@@ -63,12 +71,28 @@ function DriveActionIcon({ pending = false }) {
 }
 
 function App() {
+  const [themeMode, setThemeMode] = useState(getInitialThemeMode);
   const [publicProfile, setPublicProfile] = useState(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [dmCenterOpen, setDmCenterOpen] = useState(false);
   const [dmCenterView, setDmCenterView] = useState("list");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsSection, setSettingsSection] = useState(null);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyTheme = () => {
+      const resolvedTheme = themeMode === "system"
+        ? media.matches ? "dark" : "light"
+        : themeMode;
+      document.documentElement.dataset.theme = resolvedTheme;
+      document.documentElement.style.colorScheme = resolvedTheme;
+    };
+    applyTheme();
+    window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+    if (themeMode === "system") media.addEventListener("change", applyTheme);
+    return () => media.removeEventListener("change", applyTheme);
+  }, [themeMode]);
   const {
     authError,
     authFeedback,
@@ -683,6 +707,8 @@ function App() {
         section={settingsSection}
         socialFeedback={socialFeedback}
         socialPendingKey={socialPendingKey}
+        themeMode={themeMode}
+        onThemeModeChange={setThemeMode}
         tuningOptions={tuningOptions}
         user={safeUser ?? user}
       />

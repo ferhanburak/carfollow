@@ -10,7 +10,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -18,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/providers/auth-provider';
-import { colors, fonts } from '@/theme/colors';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 
 type AuthTab = 'login' | 'register';
 
@@ -97,7 +96,7 @@ export default function LoginScreen() {
 
   return (
     <LinearGradient
-      colors={['#080a07', '#0b1208', colors.background]}
+      colors={[colors.background, colors.backgroundRaised, colors.background]}
       style={styles.root}
     >
       <SafeAreaView style={styles.safeArea}>
@@ -378,7 +377,7 @@ function VehicleTypeButton({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   root: { flex: 1 },
   flex: { flex: 1 },
   safeArea: { flex: 1 },
@@ -400,7 +399,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0a0c09',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     shadowColor: colors.lime,
@@ -435,14 +434,14 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(16,18,15,0.96)',
+    backgroundColor: colors.surface,
   },
   tabs: {
     flexDirection: 'row',
     gap: 8,
     padding: 4,
     borderRadius: 20,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
   },
   tab: {
     flex: 1,
@@ -583,4 +582,4 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.72, transform: [{ scale: 0.985 }] },
   disabled: { opacity: 0.55 },
-});
+}));

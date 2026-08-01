@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, Text, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,7 +10,8 @@ import { AppHeader } from '@/components/screen-shell';
 import { useLiveTelemetry, type LiveDriver } from '@/hooks/use-live-telemetry';
 import { useAuth } from '@/providers/auth-provider';
 import { useDriverProfile } from '@/providers/driver-profile-provider';
-import { colors, fonts } from '@/theme/colors';
+import { useAppTheme } from '@/providers/theme-provider';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { MapPin } from '@/types/cruiser';
 
 const DEFAULT_REGION = {
@@ -27,6 +28,7 @@ const mapProvider =
 
 export default function LiveMapScreen() {
   const mapRef = useRef<MapView>(null);
+  const { resolvedTheme } = useAppTheme();
   const { profile } = useAuth();
   const { mapWorld, openDriverProfile } = useDriverProfile();
   const { drivers, location } = useLiveTelemetry();
@@ -66,7 +68,7 @@ export default function LiveMapScreen() {
   };
 
   return (
-    <LinearGradient colors={[colors.background, '#0b0f08']} style={styles.root}>
+    <LinearGradient colors={[colors.background, colors.backgroundRaised]} style={styles.root}>
       <SafeAreaView edges={['top']} style={styles.safe}>
         <AppHeader />
 
@@ -85,7 +87,7 @@ export default function LiveMapScreen() {
             showsCompass={false}
             showsMyLocationButton={false}
             style={styles.map}
-            userInterfaceStyle="dark"
+            userInterfaceStyle={resolvedTheme}
           >
             {drivers.map((driver) => (
               <Marker
@@ -264,7 +266,7 @@ function relationLabel(relation: LiveDriver['relation']) {
   return 'Yakındaki sürücü';
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   mapFrame: {
@@ -296,7 +298,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingVertical: 9,
     borderRadius: 14,
-    backgroundColor: 'rgba(5,6,5,0.88)',
+    backgroundColor: colors.backgroundRaised,
     gap: 5,
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -311,7 +313,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(5,6,5,0.9)',
+    backgroundColor: colors.backgroundRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -333,7 +335,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(8,10,7,0.94)',
+    backgroundColor: colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -347,4 +349,4 @@ const styles = StyleSheet.create({
   },
   dismiss: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.72, transform: [{ scale: 0.96 }] },
-});
+}));

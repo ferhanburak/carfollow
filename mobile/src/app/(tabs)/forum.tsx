@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -25,7 +24,7 @@ import {
 } from '@/hooks/use-forum-feed';
 import { useAuth } from '@/providers/auth-provider';
 import { useDriverProfile } from '@/providers/driver-profile-provider';
-import { colors, fonts } from '@/theme/colors';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary } from '@/types/cruiser';
 
 type Filter = 'all' | ForumThread['category'];
@@ -474,7 +473,7 @@ function ThreadCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   categories: { marginHorizontal: -14, marginTop: -8 },
   categoryContent: { paddingHorizontal: 14, gap: 8 },
   category: {
@@ -568,7 +567,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(5,6,5,0.82)',
+    backgroundColor: colors.backgroundRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -579,7 +578,7 @@ const styles = StyleSheet.create({
     minHeight: 32,
     paddingHorizontal: 11,
     borderRadius: 16,
-    backgroundColor: 'rgba(5,6,5,0.84)',
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -723,4 +722,4 @@ const styles = StyleSheet.create({
   actionCount: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 11 },
   pressed: { opacity: 0.7, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.5 },
-});
+}));

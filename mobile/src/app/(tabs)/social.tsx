@@ -8,7 +8,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -19,7 +18,7 @@ import { ScreenShell, Surface } from '@/components/screen-shell';
 import { useSocialWorld } from '@/hooks/use-social-world';
 import { useAppData } from '@/providers/app-data-provider';
 import { useDriverProfile } from '@/providers/driver-profile-provider';
-import { colors, fonts } from '@/theme/colors';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type {
   DirectMessageThread,
   DriverSummary,
@@ -1147,7 +1146,7 @@ function ChatModal({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   pageHeading: {
     minHeight: 58,
     flexDirection: 'row',
@@ -1184,7 +1183,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
   },
   searchRow: { marginTop: 11, flexDirection: 'row', gap: 8 },
   searchInput: {
@@ -1348,7 +1347,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1368,7 +1367,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -1380,7 +1379,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     color: colors.text,
     fontFamily: fonts.regular,
     fontSize: 12,
@@ -1403,7 +1402,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -1446,7 +1445,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -1475,7 +1474,7 @@ const styles = StyleSheet.create({
     minHeight: 58,
     padding: 9,
     borderRadius: 15,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -1525,7 +1524,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.borderStrong,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 9,
@@ -1562,4 +1561,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pressed: { opacity: 0.72, transform: [{ scale: 0.97 }] },
-});
+}));

@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -13,7 +12,7 @@ import {
 import { ScreenShell } from '@/components/screen-shell';
 import { useDriveSession } from '@/hooks/use-drive-session';
 import { useAuth } from '@/providers/auth-provider';
-import { colors, fonts } from '@/theme/colors';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 
 export default function DriveScreen() {
   const { profile } = useAuth();
@@ -230,14 +229,14 @@ function formatDecimal(value: number) {
   });
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   hudCard: {
     overflow: 'hidden',
     padding: 14,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 24,
-    backgroundColor: 'rgba(15,17,14,0.96)',
+    backgroundColor: colors.surface,
     shadowColor: colors.lime,
     shadowOpacity: 0.08,
     shadowRadius: 24,
@@ -336,7 +335,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(4,6,4,0.48)',
+    backgroundColor: colors.backgroundRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -444,4 +443,4 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.78, transform: [{ scale: 0.985 }] },
   disabled: { opacity: 0.55 },
-});
+}));

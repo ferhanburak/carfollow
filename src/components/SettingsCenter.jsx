@@ -3,11 +3,12 @@ import { CompactField } from "./ui";
 import { normalizePrivacySettings } from "../utils/privacy";
 
 const sections = [
-  { key: "privacy", code: "01", title: "Gizlilik ve Konum", description: "Live Map gorunurlugu, konum hassasiyeti ve Safe Zone." },
-  { key: "blocked", code: "02", title: "Engellenen Kullanıcılar", description: "Engellediğin sürücüleri gör ve engelleri yönet." },
-  { key: "vehicle", code: "03", title: "Araç ve Profil", description: "Araç setup'i, bölge, garaj ve profil görünümü." },
-  { key: "account", code: "04", title: "Hesap ve Veri Kontrolleri", description: "Doğrulama, veri aktarimi, KVKK ve hesap silme." },
-  { key: "security", code: "05", title: "Şifre ve Güvenlik", description: "Hesap e-postasi ve güvenli şifre değiştirme akışı." },
+  { key: "appearance", code: "01", title: "Görünüm", description: "Sistem temasını kullan veya açık ve koyu görünüm arasında seçim yap." },
+  { key: "privacy", code: "02", title: "Gizlilik ve Konum", description: "Live Map gorunurlugu, konum hassasiyeti ve Safe Zone." },
+  { key: "blocked", code: "03", title: "Engellenen Kullanıcılar", description: "Engellediğin sürücüleri gör ve engelleri yönet." },
+  { key: "vehicle", code: "04", title: "Araç ve Profil", description: "Araç setup'i, bölge, garaj ve profil görünümü." },
+  { key: "account", code: "05", title: "Hesap ve Veri Kontrolleri", description: "Doğrulama, veri aktarimi, KVKK ve hesap silme." },
+  { key: "security", code: "06", title: "Şifre ve Güvenlik", description: "Hesap e-postasi ve güvenli şifre değiştirme akışı." },
 ];
 
 export function SettingsButton({ onClick, tone = "default" }) {
@@ -29,8 +30,9 @@ export function SettingsButton({ onClick, tone = "default" }) {
   );
 }
 
-function SettingsHome({ isFirebaseAuth, onRequestLogout, onSelect, user }) {
+function SettingsHome({ isFirebaseAuth, onRequestLogout, onSelect, themeMode, user }) {
   const values = {
+    appearance: themeMode === "system" ? "Sistem teması" : themeMode === "dark" ? "Koyu tema" : "Açık tema",
     privacy: user.privacy?.safeZoneEnabled ? "Safe Zone açık" : "Standart",
     blocked: `${user.blockedDrivers?.length ?? 0} sürücü`,
     vehicle: user.model,
@@ -70,6 +72,43 @@ function SettingsHome({ isFirebaseAuth, onRequestLogout, onSelect, user }) {
         </button>
         <p className="mt-2 text-center text-[11px] leading-4 text-neutral-600">Hesap verilerin silinmez; yalnızca bu cihazdaki oturum kapanir.</p>
       </div>
+    </div>
+  );
+}
+
+function AppearanceSettings({ onThemeModeChange, themeMode }) {
+  const options = [
+    { value: "system", title: "Sistem", description: "Cihazının açık veya koyu temasını otomatik takip eder.", icon: "◐" },
+    { value: "light", title: "Açık", description: "Gündüz kullanımı için aydınlık ve yüksek okunabilirlik.", icon: "☀" },
+    { value: "dark", title: "Koyu", description: "Gece sürüşleri için düşük parlaklıklı görünüm.", icon: "☾" },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-[1.4rem] border border-lime-400/20 bg-lime-400/[0.07] p-4">
+        <p className="text-sm font-bold">Uygulama Teması</p>
+        <p className="mt-1 text-xs leading-5 text-neutral-500">Seçimin bu cihazda saklanır ve tüm ekranlara uygulanır.</p>
+      </div>
+      {options.map((option) => {
+        const selected = themeMode === option.value;
+        return (
+          <button
+            aria-checked={selected}
+            className={`flex min-h-[4.75rem] w-full items-center gap-3 rounded-[1.25rem] border px-3 py-3 text-left transition ${selected ? "border-lime-400/45 bg-lime-400/10" : "border-white/10 bg-white/[0.03]"}`}
+            key={option.value}
+            onClick={() => onThemeModeChange(option.value)}
+            role="radio"
+            type="button"
+          >
+            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-xl ${selected ? "bg-lime-400 text-black" : "bg-white/5 text-neutral-400"}`}>{option.icon}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold">{option.title}</span>
+              <span className="mt-1 block text-xs leading-4 text-neutral-500">{option.description}</span>
+            </span>
+            <span className={`h-5 w-5 rounded-full border-2 ${selected ? "border-lime-400 bg-lime-400 shadow-[inset_0_0_0_4px_#111]" : "border-neutral-600"}`} />
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -299,6 +338,7 @@ export function SettingsCenter({
   onProfileAvatarFileChange,
   onProfileFormChange,
   onRequestLogout,
+  onThemeModeChange,
   onSavePrivacySettings,
   onSelectSection,
   onSendEmailVerification,
@@ -313,6 +353,7 @@ export function SettingsCenter({
   section,
   socialFeedback,
   socialPendingKey,
+  themeMode,
   tuningOptions,
   user,
 }) {
@@ -339,7 +380,8 @@ export function SettingsCenter({
           </div>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {!activeSection ? <SettingsHome isFirebaseAuth={isFirebaseAuth} onRequestLogout={onRequestLogout} onSelect={onSelectSection} user={user} /> : null}
+          {!activeSection ? <SettingsHome isFirebaseAuth={isFirebaseAuth} onRequestLogout={onRequestLogout} onSelect={onSelectSection} themeMode={themeMode} user={user} /> : null}
+          {section === "appearance" ? <AppearanceSettings onThemeModeChange={onThemeModeChange} themeMode={themeMode} /> : null}
           {section === "privacy" ? <PrivacySettings onSavePrivacySettings={onSavePrivacySettings} socialFeedback={socialFeedback} user={user} /> : null}
           {section === "blocked" ? <BlockedSettings onUnblockDriver={onUnblockDriver} socialFeedback={socialFeedback} socialPendingKey={socialPendingKey} user={user} /> : null}
           {section === "vehicle" ? <VehicleSettings onProfileAvatarFileChange={onProfileAvatarFileChange} onProfileFormChange={onProfileFormChange} onSubmitProfile={onSubmitProfile} profileErrors={profileErrors} profileFeedback={profileFeedback} profileForm={profileForm} profilePending={profilePending} tuningOptions={tuningOptions} /> : null}

@@ -1,12 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
-import { colors, fonts } from '@/theme/colors';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 
 export function LoadingScreen() {
   return (
     <LinearGradient
-      colors={[colors.background, '#10150b', colors.background]}
+      colors={[colors.background, colors.backgroundRaised, colors.background]}
       style={styles.container}
     >
       <View style={styles.glow} />
@@ -19,7 +19,7 @@ export function LoadingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   container: {
     flex: 1,
     alignItems: 'center',
@@ -43,4 +43,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 7,
   },
-});
+}));

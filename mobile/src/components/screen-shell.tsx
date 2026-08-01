@@ -6,7 +6,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
   type ScrollViewProps,
@@ -16,7 +15,8 @@ import type { PropsWithChildren, ReactNode } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { useAppData } from '@/providers/app-data-provider';
-import { colors, fonts } from '@/theme/colors';
+import { useAppTheme } from '@/providers/theme-provider';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 
 type ScreenShellProps = PropsWithChildren<{
   title?: string;
@@ -33,10 +33,13 @@ export function ScreenShell({
   scrollProps,
 }: ScreenShellProps) {
   const insets = useSafeAreaInsets();
+  const { resolvedTheme } = useAppTheme();
 
   return (
     <LinearGradient
-      colors={[colors.background, '#0b0f08', colors.background]}
+      colors={resolvedTheme === 'dark'
+        ? [colors.background, '#0b0f08', colors.background]
+        : [colors.background, colors.backgroundRaised, colors.background]}
       style={styles.root}
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -68,6 +71,7 @@ export function ScreenShell({
 
 export function AppHeader() {
   const { profile } = useAuth();
+  const { resolvedTheme } = useAppTheme();
   const pathname = usePathname();
   const router = useRouter();
   const {
@@ -82,7 +86,9 @@ export function AppHeader() {
   return (
     <>
       <LinearGradient
-        colors={['rgba(58,18,26,0.88)', 'rgba(15,17,14,0.96)', 'rgba(30,48,16,0.90)']}
+        colors={resolvedTheme === 'dark'
+          ? ['rgba(58,18,26,0.88)', 'rgba(15,17,14,0.96)', 'rgba(30,48,16,0.90)']
+          : ['#f9ecef', '#ffffff', '#edf6df']}
         end={{ x: 1, y: 0.5 }}
         start={{ x: 0, y: 0.5 }}
         style={styles.header}
@@ -211,7 +217,7 @@ export function Eyebrow({ children }: PropsWithChildren) {
   return <Text style={styles.eyebrow}>{children}</Text>;
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   root: {
     flex: 1,
   },
@@ -238,7 +244,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 15,
-    backgroundColor: 'rgba(5,6,5,0.74)',
+    backgroundColor: colors.backgroundRaised,
     justifyContent: 'center',
   },
   identityName: {
@@ -263,7 +269,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -329,11 +335,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 24,
-    backgroundColor: 'rgba(18,20,17,0.92)',
+    backgroundColor: colors.surface,
   },
   surfaceAccent: {
     borderColor: colors.borderStrong,
-    backgroundColor: 'rgba(26,34,17,0.88)',
+    backgroundColor: colors.limeMuted,
   },
   eyebrow: {
     color: colors.lime,
@@ -416,4 +422,4 @@ const styles = StyleSheet.create({
     opacity: 0.68,
     transform: [{ scale: 0.96 }],
   },
-});
+}));

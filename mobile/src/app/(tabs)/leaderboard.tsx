@@ -5,7 +5,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -20,7 +19,7 @@ import {
 } from '@/lib/leaderboard';
 import { useAuth } from '@/providers/auth-provider';
 import { useDriverProfile } from '@/providers/driver-profile-provider';
-import { colors, fonts } from '@/theme/colors';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary, LeaderboardEntry } from '@/types/cruiser';
 
 type Period = 'monthly' | 'weekly' | 'daily';
@@ -456,7 +455,7 @@ function rankStyle(index: number) {
   return styles.rankDefault;
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   legendsHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   legendsEyebrow: { color: colors.lime, fontFamily: fonts.bold, fontSize: 8, letterSpacing: 2 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -467,7 +466,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 3,
     borderRadius: 18,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
   },
   allTimeMetricButton: {
@@ -519,12 +518,12 @@ const styles = StyleSheet.create({
   },
   podiumBlockFirst: { minHeight: 78, borderColor: 'rgba(250,204,21,0.48)' },
   podiumValue: { color: colors.limeBright, fontFamily: fonts.extraBold, fontSize: 9, textAlign: 'center' },
-  periodSwitch: { padding: 3, borderRadius: 18, backgroundColor: colors.black, flexDirection: 'row' },
+  periodSwitch: { padding: 3, borderRadius: 18, backgroundColor: colors.backgroundRaised, flexDirection: 'row' },
   periodButton: { width: 39, height: 39, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   periodButtonActive: { backgroundColor: colors.lime },
   periodText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 12 },
   periodTextActive: { color: colors.black },
-  metricSwitch: { marginTop: 12, padding: 3, borderRadius: 18, backgroundColor: colors.black, flexDirection: 'row' },
+  metricSwitch: { marginTop: 12, padding: 3, borderRadius: 18, backgroundColor: colors.backgroundRaised, flexDirection: 'row' },
   metricButton: { flex: 1, minHeight: 44, paddingHorizontal: 5, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   metricButtonActive: { backgroundColor: colors.lime },
   metricText: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 10, textAlign: 'center' },
@@ -536,7 +535,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -584,4 +583,4 @@ const styles = StyleSheet.create({
   modalTitle: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 20 },
   modalMetricSwitch: { paddingHorizontal: 16, paddingBottom: 12 },
   modalList: { paddingHorizontal: 16, paddingBottom: 40, gap: 8 },
-});
+}));

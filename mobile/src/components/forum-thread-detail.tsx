@@ -9,7 +9,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -25,7 +24,7 @@ import {
 } from '@/hooks/use-forum-feed';
 import { useSocialWorld } from '@/hooks/use-social-world';
 import { useAppData } from '@/providers/app-data-provider';
-import { colors, fonts } from '@/theme/colors';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary } from '@/types/cruiser';
 
 const categoryLabels: Record<ForumThread['category'], string> = {
@@ -390,7 +389,7 @@ function formatLongDate(date?: Date) {
   }).format(date);
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   safeArea: { flex: 1, backgroundColor: colors.background },
   keyboardView: { flex: 1 },
   topBar: {
@@ -459,7 +458,7 @@ const styles = StyleSheet.create({
   friendList: { paddingVertical: 13, gap: 8 },
   friendRow: { minHeight: 62, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', gap: 10 },
   friendRowSelected: { borderColor: colors.lime, backgroundColor: colors.limeMuted },
-  friendAvatar: { width: 38, height: 38, borderRadius: 14, backgroundColor: colors.black, alignItems: 'center', justifyContent: 'center' },
+  friendAvatar: { width: 38, height: 38, borderRadius: 14, backgroundColor: colors.backgroundRaised, alignItems: 'center', justifyContent: 'center' },
   friendInitial: { color: colors.lime, fontFamily: fonts.extraBold, fontSize: 14 },
   friendCopy: { flex: 1 },
   friendName: { color: colors.text, fontFamily: fonts.bold, fontSize: 12 },
@@ -467,4 +466,4 @@ const styles = StyleSheet.create({
   noFriends: { paddingVertical: 30, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 12, textAlign: 'center' },
   shareButton: { minHeight: 52, borderRadius: 18, backgroundColor: colors.lime, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   shareButtonText: { color: colors.black, fontFamily: fonts.extraBold, fontSize: 13 },
-});
+}));

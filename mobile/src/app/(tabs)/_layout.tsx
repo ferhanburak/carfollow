@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Redirect, Tabs } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/providers/auth-provider';
 import { DriverProfileProvider } from '@/providers/driver-profile-provider';
-import { colors } from '@/theme/colors';
+import { colors, createThemedStyles } from '@/theme/colors';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -86,7 +86,7 @@ export default function TabLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   loading: {
     flex: 1,
     alignItems: 'center',
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 24,
-    backgroundColor: 'rgba(11,13,10,0.98)',
+    backgroundColor: colors.surface,
     shadowColor: colors.lime,
     shadowOpacity: 0.12,
     shadowRadius: 18,
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     width: 13,
     height: 2,
     borderRadius: 1,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
   },
   forumButton: {
     width: 66,
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     borderRadius: 33,
     borderWidth: 2,
     borderColor: colors.borderStrong,
-    backgroundColor: '#080a07',
+    backgroundColor: colors.backgroundRaised,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.lime,
@@ -158,4 +158,4 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
   },
   forumLogo: { width: 52, height: 52 },
-});
+}));

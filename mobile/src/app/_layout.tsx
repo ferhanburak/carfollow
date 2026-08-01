@@ -5,7 +5,7 @@ import {
   Manrope_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/manrope';
-import { DarkTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { AuthProvider } from '@/providers/auth-provider';
 import { AppDataProvider } from '@/providers/app-data-provider';
+import { AppThemeProvider, useAppTheme } from '@/providers/theme-provider';
 import { colors } from '@/theme/colors';
 import { readPushNavigationData } from '@/lib/push-notifications';
 
@@ -20,21 +21,17 @@ import '@/lib/background-drive';
 
 void SplashScreen.preventAutoHideAsync();
 
-const cruiserTheme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    primary: colors.lime,
-    background: colors.background,
-    card: colors.surface,
-    text: colors.text,
-    border: colors.border,
-    notification: colors.rose,
-  },
-};
-
 export default function RootLayout() {
+  return (
+    <AppThemeProvider>
+      <RootNavigator />
+    </AppThemeProvider>
+  );
+}
+
+function RootNavigator() {
   const router = useRouter();
+  const { hydrated, resolvedTheme } = useAppTheme();
   const [fontsLoaded] = useFonts({
     Manrope_400Regular,
     Manrope_600SemiBold,
@@ -43,8 +40,8 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded) void SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    if (fontsLoaded && hydrated) void SplashScreen.hideAsync();
+  }, [fontsLoaded, hydrated]);
 
   useEffect(() => {
     const openNotification = (response: Notifications.NotificationResponse) => {
@@ -82,14 +79,29 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, [router]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || !hydrated) return null;
+
+  const navigationBaseTheme = resolvedTheme === 'dark' ? DarkTheme : DefaultTheme;
+  const cruiserTheme = {
+    ...navigationBaseTheme,
+    dark: resolvedTheme === 'dark',
+    colors: {
+      ...navigationBaseTheme.colors,
+      primary: colors.lime,
+      background: colors.background,
+      card: colors.surface,
+      text: colors.text,
+      border: colors.border,
+      notification: colors.rose,
+    },
+  };
 
   return (
     <ThemeProvider value={cruiserTheme}>
       <AuthProvider>
         <AppDataProvider>
-          <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+          <StatusBar style={resolvedTheme === 'dark' ? 'light' : 'dark'} />
+          <Stack key={resolvedTheme} screenOptions={{ headerShown: false, animation: 'fade' }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />

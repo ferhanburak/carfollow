@@ -6,7 +6,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native';
@@ -27,7 +26,7 @@ import {
 import { useMapWorld } from '@/hooks/use-map-world';
 import { useSocialWorld } from '@/hooks/use-social-world';
 import { useAppData } from '@/providers/app-data-provider';
-import { colors, fonts } from '@/theme/colors';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary, MapPin } from '@/types/cruiser';
 
 type DriverProfileContextValue = {
@@ -278,7 +277,7 @@ function GlobalConvoyInviteModal({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   modalRoot: { flex: 1, backgroundColor: colors.background },
   modalHeader: {
     minHeight: 80,
@@ -333,4 +332,4 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.72, transform: [{ scale: 0.985 }] },
-});
+}));

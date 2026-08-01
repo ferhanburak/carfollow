@@ -32,6 +32,43 @@
   color-scheme: dark;
 }
 
+:root[data-theme="light"] {
+  color: #151a12;
+  background: #f3f5ef;
+  color-scheme: light;
+}
+
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(circle at top, rgba(132, 204, 22, 0.16), transparent 30%),
+    radial-gradient(circle at bottom, rgba(225, 29, 72, 0.08), transparent 28%),
+    #f3f5ef;
+}
+
+:root[data-theme="light"] [class*="bg-[#"] {
+  background-color: #fff !important;
+}
+
+:root[data-theme="light"] [class*="bg-white/"] {
+  background-color: rgba(18, 22, 15, 0.035) !important;
+}
+
+:root[data-theme="light"] [class*="border-white/"] {
+  border-color: rgba(18, 22, 15, 0.12) !important;
+}
+
+:root[data-theme="light"] [class*="text-neutral-1"],
+:root[data-theme="light"] [class*="text-neutral-2"],
+:root[data-theme="light"] [class*="text-neutral-3"],
+:root[data-theme="light"] [class*="text-neutral-4"] {
+  color: #20261c !important;
+}
+
+:root[data-theme="light"] [class*="text-neutral-5"],
+:root[data-theme="light"] [class*="text-neutral-6"] {
+  color: #66705f !important;
+}
+
 * {
   box-sizing: border-box;
 }

@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import { colors, fonts } from '@/theme/colors';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary, MapPin } from '@/types/cruiser';
 
 type MapNodeDetailModalProps = {
@@ -287,13 +287,13 @@ function friendlyAccessReason(pin: MapPin) {
   return 'Bu etkinlik şu anda yeni katılımcı kabul etmiyor.';
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   markerHalo: {
     width: 44,
     height: 48,
     borderRadius: 18,
     borderWidth: 1,
-    backgroundColor: 'rgba(5,6,5,0.9)',
+    backgroundColor: colors.backgroundRaised,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: colors.black,
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 9,
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -493,4 +493,4 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.75, transform: [{ scale: 0.985 }] },
   disabled: { opacity: 0.55 },
-});
+}));

@@ -28,10 +28,11 @@ import { APP_ID } from '@/lib/firebase-paths';
 import { getAllTimeHonors } from '@/lib/leaderboard';
 import { useAuth } from '@/providers/auth-provider';
 import { useDriverProfile } from '@/providers/driver-profile-provider';
-import { colors, fonts } from '@/theme/colors';
+import { useAppTheme } from '@/providers/theme-provider';
+import { colors, createThemedStyles, fonts, type AppThemeMode } from '@/theme/colors';
 
 type Panel = 'settings' | 'service' | 'achievements' | null;
-type SettingsSection = 'privacy' | 'blocked' | 'vehicle' | 'account' | 'security';
+type SettingsSection = 'appearance' | 'privacy' | 'blocked' | 'vehicle' | 'account' | 'security';
 type Achievement = {
   key: string;
   title: string;
@@ -565,6 +566,7 @@ function SettingsPanel({
   userId: string;
   visible: boolean;
 }) {
+  const { mode: themeMode, resolvedTheme, setMode: setThemeMode } = useAppTheme();
   const [fullName, setFullName] = useState(profile?.fullName ?? '');
   const [model, setModel] = useState(profile?.model ?? '');
   const [odometer, setOdometer] = useState(String(profile?.odometer ?? 0));
@@ -677,8 +679,18 @@ function SettingsPanel({
     value: string;
   }[] = [
     {
-      key: 'privacy',
+      key: 'appearance',
       code: '01',
+      icon: 'contrast-outline',
+      title: 'Görünüm',
+      description: 'Sistem temasını kullan veya açık ve koyu görünüm arasında seçim yap.',
+      value: themeMode === 'system'
+        ? `Sistem · ${resolvedTheme === 'dark' ? 'Koyu' : 'Açık'}`
+        : themeMode === 'dark' ? 'Koyu tema' : 'Açık tema',
+    },
+    {
+      key: 'privacy',
+      code: '02',
       icon: 'location-outline',
       title: 'Gizlilik ve Konum',
       description: 'Canlı harita görünürlüğü, konum hassasiyeti ve güvenli bölge.',
@@ -686,7 +698,7 @@ function SettingsPanel({
     },
     {
       key: 'blocked',
-      code: '02',
+      code: '03',
       icon: 'ban-outline',
       title: 'Engellenen Kullanıcılar',
       description: 'Engellediğin sürücüleri görüntüle ve engelleri yönet.',
@@ -694,7 +706,7 @@ function SettingsPanel({
     },
     {
       key: 'vehicle',
-      code: '03',
+      code: '04',
       icon: 'car-sport-outline',
       title: 'Araç ve Profil',
       description: 'Araç bilgileri, kilometre, bölge ve profil fotoğrafı.',
@@ -702,7 +714,7 @@ function SettingsPanel({
     },
     {
       key: 'account',
-      code: '04',
+      code: '05',
       icon: 'folder-open-outline',
       title: 'Hesap ve Veri Kontrolleri',
       description: 'E-posta doğrulama, veri aktarımı ve hesap silme.',
@@ -710,7 +722,7 @@ function SettingsPanel({
     },
     {
       key: 'security',
-      code: '05',
+      code: '06',
       icon: 'shield-checkmark-outline',
       title: 'Şifre ve Güvenlik',
       description: 'Hesap e-postası ve güvenli şifre yenileme akışı.',
@@ -785,6 +797,62 @@ function SettingsPanel({
             </Text>
           </View>
         </>
+      ) : null}
+      {activeSection === 'appearance' ? (
+        <View style={styles.settingsSection}>
+          <View style={styles.appearanceIntro}>
+            <View style={styles.appearancePreview}>
+              <Ionicons
+                name={resolvedTheme === 'dark' ? 'moon' : 'sunny'}
+                size={24}
+                color={colors.lime}
+              />
+            </View>
+            <View style={styles.settingCopy}>
+              <Text style={styles.settingTitle}>Uygulama Teması</Text>
+              <Text style={styles.settingDescription}>
+                Seçimin bu cihazda saklanır ve uygulamanın tüm ekranlarına uygulanır.
+              </Text>
+            </View>
+          </View>
+          {([
+            { value: 'system', label: 'Sistem', description: 'Telefonunun açık veya koyu temasını takip eder.', icon: 'phone-portrait-outline' },
+            { value: 'light', label: 'Açık', description: 'Gündüz kullanımı için aydınlık ve yüksek okunabilirlik.', icon: 'sunny-outline' },
+            { value: 'dark', label: 'Koyu', description: 'Gece sürüşleri için düşük parlaklıklı CRUISER görünümü.', icon: 'moon-outline' },
+          ] as const).map((option) => {
+            const selected = themeMode === option.value;
+            return (
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                key={option.value}
+                onPress={() => setThemeMode(option.value as AppThemeMode)}
+                style={({ pressed }) => [
+                  styles.appearanceOption,
+                  selected && styles.appearanceOptionActive,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={[styles.appearanceOptionIcon, selected && styles.appearanceOptionIconActive]}>
+                  <Ionicons
+                    name={option.icon}
+                    size={20}
+                    color={selected ? colors.black : colors.textMuted}
+                  />
+                </View>
+                <View style={styles.settingCopy}>
+                  <Text style={styles.appearanceOptionTitle}>{option.label}</Text>
+                  <Text style={styles.settingDescription}>{option.description}</Text>
+                </View>
+                <Ionicons
+                  name={selected ? 'radio-button-on' : 'radio-button-off'}
+                  size={21}
+                  color={selected ? colors.lime : colors.textFaint}
+                />
+              </Pressable>
+            );
+          })}
+        </View>
       ) : null}
       {activeSection === 'vehicle' ? (
         <>
@@ -1111,7 +1179,7 @@ function formatDuration(value: unknown) {
   return hours ? `${hours}sa ${minutes}dk` : `${minutes}dk`;
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
     width: 66,
@@ -1133,7 +1201,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1164,7 +1232,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(4,6,4,0.42)',
+    backgroundColor: colors.backgroundRaised,
     justifyContent: 'center',
   },
   compactMetricLabel: {
@@ -1233,7 +1301,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(4,6,4,0.42)',
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -1259,7 +1327,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(4,6,4,0.42)',
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -1311,7 +1379,7 @@ const styles = StyleSheet.create({
     minHeight: 39,
     paddingHorizontal: 11,
     borderRadius: 13,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -1350,7 +1418,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1418,7 +1486,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     color: colors.text,
     fontFamily: fonts.regular,
     fontSize: 12,
@@ -1482,7 +1550,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.borderStrong,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1561,6 +1629,56 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   settingsSection: { gap: 9 },
+  appearanceIntro: {
+    minHeight: 82,
+    padding: 14,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.limeMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  appearancePreview: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  appearanceOption: {
+    minHeight: 74,
+    padding: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+  },
+  appearanceOptionActive: {
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.limeMuted,
+  },
+  appearanceOptionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  appearanceOptionIconActive: { backgroundColor: colors.lime },
+  appearanceOptionTitle: {
+    color: colors.text,
+    fontFamily: fonts.extraBold,
+    fontSize: 12,
+  },
   settingRow: {
     minHeight: 70,
     padding: 13,
@@ -1586,7 +1704,7 @@ const styles = StyleSheet.create({
     marginTop: 11,
     padding: 3,
     borderRadius: 15,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     gap: 3,
   },
@@ -1723,4 +1841,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   pressed: { opacity: 0.72, transform: [{ scale: 0.985 }] },
-});
+}));

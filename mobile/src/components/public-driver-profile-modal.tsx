@@ -5,7 +5,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -14,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAllTimeLeaderboard } from '@/hooks/use-all-time-leaderboard';
 import { getAllTimeHonors } from '@/lib/leaderboard';
-import { colors, fonts } from '@/theme/colors';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary } from '@/types/cruiser';
 
 export type ProfileFriendshipState = 'none' | 'incoming' | 'outgoing' | 'accepted' | 'blocked' | 'self';
@@ -513,7 +512,7 @@ function publicHonorStyle(rank: 1 | 2 | 3) {
   return styles.honorBronze;
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   root: { flex: 1, backgroundColor: colors.background },
   header: {
     minHeight: 78,
@@ -629,7 +628,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     justifyContent: 'center',
   },
   metricLabel: {
@@ -645,7 +644,7 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
   },
   blockTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 12 },
   progressTrack: {
@@ -763,4 +762,4 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
-});
+}));

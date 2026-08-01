@@ -31,7 +31,8 @@ import { ScreenShell, Surface } from '@/components/screen-shell';
 import { useMapWorld } from '@/hooks/use-map-world';
 import { useAuth } from '@/providers/auth-provider';
 import { useDriverProfile } from '@/providers/driver-profile-provider';
-import { colors, fonts } from '@/theme/colors';
+import { useAppTheme } from '@/providers/theme-provider';
+import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary, MapPin } from '@/types/cruiser';
 
 const ANKARA: Region = {
@@ -63,6 +64,7 @@ const eventFilters: { value: EventFilter; label: string }[] = [
 ];
 
 export default function MapScreen() {
+  const { resolvedTheme } = useAppTheme();
   const { profile } = useAuth();
   const { mapWorld: world, openDriverProfile } = useDriverProfile();
   const [selected, setSelected] = useState<MapPin | null>(null);
@@ -431,7 +433,7 @@ export default function MapScreen() {
                 provider={mapProvider}
                 showsUserLocation
                 style={styles.editorMap}
-                userInterfaceStyle="dark"
+                userInterfaceStyle={resolvedTheme}
               >
                 {points.map((point, index) => (
                   <Marker coordinate={point} key={`editor-${index}`}>
@@ -995,7 +997,7 @@ function FlagButton({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = createThemedStyles(() => ({
   screenContent: { paddingTop: 14, paddingBottom: 116, gap: 12 },
   eventHero: {
     minHeight: 132,
@@ -1083,7 +1085,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
   },
   eventCardCompact: { width: 248 },
   eventCardPressed: {
@@ -1210,7 +1212,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -1240,7 +1242,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 11,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     color: colors.text,
     fontFamily: fonts.semibold,
     fontSize: 10,
@@ -1251,7 +1253,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: 'rgba(4,6,4,0.38)',
+    backgroundColor: colors.backgroundRaised,
   },
   reviewAuthor: { color: colors.lime, fontFamily: fonts.bold, fontSize: 9 },
   reviewText: { marginTop: 3, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 10 },
@@ -1269,7 +1271,7 @@ const styles = StyleSheet.create({
   },
   helpfulText: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 9 },
   photoGrid: { marginTop: 12, flexDirection: 'row', gap: 7 },
-  spotPhoto: { flex: 1, height: 92, borderRadius: 14, backgroundColor: colors.black },
+  spotPhoto: { flex: 1, height: 92, borderRadius: 14, backgroundColor: colors.backgroundRaised },
   detailRow: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   detailText: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 10 },
   trustRequirement: {
@@ -1279,7 +1281,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -1328,7 +1330,7 @@ const styles = StyleSheet.create({
   manageButtonText: { color: colors.limeBright, fontFamily: fonts.bold, fontSize: 11 },
   deleteButton: { borderColor: 'rgba(244,63,94,0.28)', backgroundColor: 'rgba(244,63,94,0.08)' },
   deleteButtonText: { color: colors.rose, fontFamily: fonts.bold, fontSize: 11 },
-  eventEditForm: { marginTop: 11, padding: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.black, gap: 9 },
+  eventEditForm: { marginTop: 11, padding: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.backgroundRaised, gap: 9 },
   editNumberRow: { flexDirection: 'row', gap: 8 },
   editNumberInput: { flex: 1 },
   editError: { color: colors.rose, fontFamily: fonts.semibold, fontSize: 9, lineHeight: 13 },
@@ -1338,7 +1340,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.borderStrong,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     gap: 10,
   },
   scoreRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -1454,7 +1456,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     borderWidth: 1,
     borderColor: colors.lime,
-    backgroundColor: colors.black,
+    backgroundColor: colors.backgroundRaised,
     color: colors.limeBright,
     fontFamily: fonts.extraBold,
     fontSize: 16,
@@ -1469,7 +1471,7 @@ const styles = StyleSheet.create({
     bottom: 8,
     padding: 9,
     borderRadius: 12,
-    backgroundColor: 'rgba(5,6,5,0.86)',
+    backgroundColor: colors.backgroundRaised,
   },
   selectionHintText: { color: colors.text, fontFamily: fonts.semibold, fontSize: 10, textAlign: 'center' },
   routeActions: { marginTop: 9, flexDirection: 'row', gap: 8 },
@@ -1516,4 +1518,4 @@ const styles = StyleSheet.create({
   },
   saveButtonText: { color: colors.black, fontFamily: fonts.bold, fontSize: 13 },
   pressed: { opacity: 0.76, transform: [{ scale: 0.985 }] },
-});
+}));
