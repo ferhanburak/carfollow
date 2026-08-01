@@ -17,7 +17,7 @@ function projectDriver(profile, userId) {
   return {
     userId,
     plate: safeText(profile?.plate, 24),
-    fullName: safeText(profile?.fullName, 80) || "CRUISER Driver",
+    fullName: safeText(profile?.fullName, 80) || "TrackSnap Driver",
     model: safeText(profile?.model, 100),
   };
 }

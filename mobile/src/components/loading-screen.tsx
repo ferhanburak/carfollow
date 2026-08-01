@@ -14,7 +14,7 @@ export function LoadingScreen() {
         source={require('../../assets/images/cruiser-road-mark.png')}
         style={styles.logo}
       />
-      <Text style={styles.wordmark}>CRUISER</Text>
+      <Text style={styles.wordmark}>TrackSnap</Text>
     </LinearGradient>
   );
 }

@@ -99,7 +99,7 @@ export function AppHeader() {
           style={({ pressed }) => [styles.identity, pressed && styles.pressed]}
         >
           <Text numberOfLines={1} style={styles.identityName}>
-            {profile?.fullName || 'CRUISER'}
+            {profile?.fullName || 'TrackSnap'}
           </Text>
           <Text numberOfLines={1} style={styles.identityVehicle}>
             {profile?.model || 'Sürücü ağı'}

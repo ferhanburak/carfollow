@@ -194,7 +194,7 @@ export default function LiveMapScreen() {
                 <Text style={styles.driverPlate}>
                   {selectedDriver.relation === 'self'
                     ? profile?.fullName
-                    : selectedDriver.plate || 'CRUISER sürücüsü'}
+                    : selectedDriver.plate || 'TrackSnap sürücüsü'}
                 </Text>
                 <Text style={styles.driverMeta}>
                   {relationLabel(selectedDriver.relation)} · {Math.round(selectedDriver.speed)} KM/H

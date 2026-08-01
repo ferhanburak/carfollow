@@ -41,7 +41,7 @@ function buildClanDocument({ clanId, owner, name, tag, description, periodKey = 
     nameNormalized: normalizeClanName(safeName),
     tag: safeTag,
     tagNormalized: safeTag.toLowerCase(),
-    description: sanitizeClanText(description, 280) || "Yeni kurulan CRUISER klani.",
+    description: sanitizeClanText(description, 280) || "Yeni kurulan TrackSnap klanı.",
     ownerUserId: ownerProfile.userId,
     ownerPlate: ownerProfile.plate,
     ownerName: ownerProfile.fullName,

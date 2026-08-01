@@ -120,7 +120,7 @@ export default function ProfileScreen() {
             )}
           </View>
           <View style={styles.profileCopy}>
-            <Text style={styles.name}>{profile?.fullName || 'CRUISER sürücüsü'}</Text>
+            <Text style={styles.name}>{profile?.fullName || 'TrackSnap sürücüsü'}</Text>
             <Text style={styles.plate}>{profile?.plate || 'PLAKA YOK'}</Text>
             <Text style={styles.model}>{profile?.model || 'Araç bilgisi yok'}</Text>
           </View>

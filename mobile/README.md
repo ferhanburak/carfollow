@@ -1,6 +1,6 @@
-# CRUISER Mobile
+# TrackSnap Mobile
 
-CRUISER'ın Android ve iOS uygulaması Expo SDK 57, Expo Router ve Firebase JS SDK ile geliştirilir. Web uygulaması kök dizinde bağımsız çalışmaya devam eder.
+TrackSnap'in Android ve iOS uygulaması Expo SDK 57, Expo Router ve Firebase JS SDK ile geliştirilir. Web uygulaması kök dizinde bağımsız çalışmaya devam eder.
 
 ## Gereksinimler
 

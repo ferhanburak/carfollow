@@ -188,7 +188,7 @@ export function MapNodeDetailModal({
                 <View style={styles.driverCopy}>
                   <Text style={styles.sectionLabel}>Oluşturan</Text>
                   <Text numberOfLines={1} style={styles.hostName}>
-                    {pin.createdByName || pin.createdByPlate || 'CRUISER sürücüsü'}
+                    {pin.createdByName || pin.createdByPlate || 'TrackSnap sürücüsü'}
                   </Text>
                 </View>
                 <Ionicons color={colors.textFaint} name="chevron-forward" size={15} />

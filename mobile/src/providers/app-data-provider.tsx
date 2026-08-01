@@ -87,7 +87,7 @@ function normalizeThread(
   return {
     id: threadId,
     participantUserId,
-    participantName: profile.fullName || profile.plate || 'CRUISER sürücüsü',
+    participantName: profile.fullName || profile.plate || 'TrackSnap sürücüsü',
     participantPlate: profile.plate || '',
     participantModel: profile.model || 'Araç bilgisi yok',
     messages: normalizeMessages(payload.messages as Record<string, DirectMessage> | undefined),

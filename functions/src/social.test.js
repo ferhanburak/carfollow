@@ -61,7 +61,7 @@ test("public profile projection follows the relationship access matrix", () => {
   const stranger = projectPublicProfileForViewer(privateTarget);
   assert.equal(stranger.relation, PROFILE_RELATIONS.STRANGER);
   assert.equal(stranger.plate, maskPlate(privateTarget.plate));
-  assert.equal(stranger.fullName, "CRUISER Driver");
+  assert.equal(stranger.fullName, "TrackSnap Driver");
   assert.equal(stranger.model, "");
   assert.equal(stranger.region, "");
   assert.equal(stranger.avatar, "");
@@ -133,7 +133,7 @@ test("plate search returns the exact requested plate with privacy-scoped profile
 
   assert.equal(result.plate, "34 TEST 01");
   assert.equal(result.plateMasked, "34 ••• 01");
-  assert.equal(result.fullName, "CRUISER Driver");
+  assert.equal(result.fullName, "TrackSnap Driver");
   assert.equal(result.model, "");
   assert.equal(result.region, "Istanbul");
   assert.equal(maskPlate("06 TEST 02"), "06 ••• 02");

@@ -399,7 +399,7 @@ exports.finalizeRegistration = secureCall("finalizeRegistration", { rateLimit: {
         profileSnapshot.data().plateNormalized !== bundle.claim.plateNormalized ||
         (existingClaim?.uid && existingClaim.uid !== userId)
       ) {
-        throw new HttpsError("failed-precondition", "This account already has a different CRUISER identity.");
+        throw new HttpsError("failed-precondition", "This account already has a different TrackSnap identity.");
       }
       return;
     }
@@ -2650,7 +2650,7 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
           type: "maintenance-critical",
           title: "Kritik bakım uyarısı",
           body: `${part.name ?? part.key} ömrü %${health.healthPercent} seviyesine düştü.`,
-          actor: { userId, fullName: "CRUISER Garage", plate: profile.plate },
+          actor: { userId, fullName: "TrackSnap Garage", plate: profile.plate },
           action: { type: "garage", targetId: partDocument.id },
         }, timestamp);
       }
@@ -3174,7 +3174,7 @@ exports.resolveModerationReport = secureCall("resolveModerationReport", { rateLi
           : decision === "warn"
             ? "Topluluk kurallarina uygun davranman için hesabına uyari verildi."
             : "Hesabin topluluk guvenligi nedeniyle gecici olarak kisitlandi.",
-        actor: { userId: moderatorUserId, fullName: "CRUISER Safety" },
+        actor: { userId: moderatorUserId, fullName: "TrackSnap Safety" },
         action: { type: "profile", targetId: recipientUserId },
       }, timestamp);
     }

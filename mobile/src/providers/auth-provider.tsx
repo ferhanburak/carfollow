@@ -132,7 +132,7 @@ function getErrorMessage(error: unknown) {
 
 async function loadProfile(userId: string): Promise<CruiserProfile> {
   const snapshot = await getDoc(doc(firestoreDb, privateProfilePath(userId)));
-  if (!snapshot.exists()) throw new Error('CRUISER profili bulunamadı.');
+  if (!snapshot.exists()) throw new Error('TrackSnap profili bulunamadı.');
   return snapshot.data() as CruiserProfile;
 }
 

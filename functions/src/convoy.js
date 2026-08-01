@@ -123,7 +123,7 @@ function projectDriver(profile, fallbackUserId = "") {
   return {
     userId,
     plate: safeText(profile?.plate, 24),
-    fullName: safeText(profile?.fullName, 80) || "CRUISER Driver",
+    fullName: safeText(profile?.fullName, 80) || "TrackSnap Driver",
     model: safeText(profile?.model, 100),
     region: safeText(profile?.region, 80),
     score,

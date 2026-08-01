@@ -127,7 +127,7 @@ export default function MapScreen() {
           type: editorType,
           name: name.trim(),
           description: description.trim(),
-          tags: editorType === 'spot' ? ['#CRUISER'] : [],
+          tags: editorType === 'spot' ? ['#TrackSnap'] : [],
           lat: first.latitude,
           lng: first.longitude,
         });
@@ -938,7 +938,7 @@ function DriverIdentity({
       </View>
       <View style={styles.selectedCopy}>
         <Text numberOfLines={1} style={styles.driverIdentityName}>
-          {driver.fullName || driver.plate || 'CRUISER sürücüsü'}
+          {driver.fullName || driver.plate || 'TrackSnap sürücüsü'}
         </Text>
         <Text numberOfLines={1} style={styles.driverIdentityMeta}>
           {driver.model || label}

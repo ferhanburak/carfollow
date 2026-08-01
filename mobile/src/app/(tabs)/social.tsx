@@ -104,7 +104,7 @@ export default function SocialScreen() {
       setActiveThread(existing ?? {
         id: threadId,
         participantUserId: driver.userId,
-        participantName: driver.fullName || driver.plate || 'CRUISER sürücüsü',
+        participantName: driver.fullName || driver.plate || 'TrackSnap sürücüsü',
         participantPlate: driver.plate || '',
         participantModel: driver.model || 'Araç bilgisi yok',
         messages: [],
@@ -594,7 +594,7 @@ function DriverCard({
         <View style={styles.copy}>
           {showPlate && driver.plate ? <Text style={styles.plate}>{driver.plate}</Text> : null}
           <Text numberOfLines={1} style={styles.driverName}>
-            {driver.fullName || 'CRUISER sürücüsü'}
+            {driver.fullName || 'TrackSnap sürücüsü'}
           </Text>
           <Text numberOfLines={1} style={styles.driverModel}>
             {driver.model || driver.region || 'Araç bilgisi yok'}
@@ -857,7 +857,7 @@ function ClanCenterModal({
                       <DriverAvatar />
                       <View style={styles.copy}>
                         <Text style={styles.driverName}>
-                          {member.fullName || member.plate || 'CRUISER sürücüsü'}
+                          {member.fullName || member.plate || 'TrackSnap sürücüsü'}
                           {isSelf ? ' (Sen)' : ''}
                         </Text>
                         <Text style={styles.driverModel}>{member.model || 'Araç bilgisi yok'}</Text>

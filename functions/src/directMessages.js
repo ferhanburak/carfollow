@@ -39,7 +39,7 @@ function projectChatProfile(profile, fallbackUserId = "") {
   return {
     userId,
     plate: String(profile?.plate ?? "").slice(0, 24),
-    fullName: String(profile?.fullName ?? profile?.plate ?? "CRUISER Driver").slice(0, 80),
+    fullName: String(profile?.fullName ?? profile?.plate ?? "TrackSnap Driver").slice(0, 80),
     model: String(profile?.model ?? "").slice(0, 100),
     avatar: String(profile?.avatar ?? "").slice(0, 2048),
   };

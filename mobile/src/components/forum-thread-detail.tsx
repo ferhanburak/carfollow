@@ -320,7 +320,7 @@ export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread
                     <Text style={styles.friendInitial}>{(friend.fullName || 'C').charAt(0).toUpperCase()}</Text>
                   </View>
                   <View style={styles.friendCopy}>
-                    <Text style={styles.friendName}>{friend.fullName || 'CRUISER sürücüsü'}</Text>
+                    <Text style={styles.friendName}>{friend.fullName || 'TrackSnap sürücüsü'}</Text>
                     <Text style={styles.friendModel}>{friend.model || 'Araç bilgisi yok'}</Text>
                   </View>
                   <Ionicons

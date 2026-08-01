@@ -190,7 +190,7 @@ export function useMapWorld() {
           pinId,
           storagePath,
           imageUrl,
-          title: 'CRUISER spot',
+          title: 'TrackSnap spot',
         });
       } catch (uploadError) {
         await deleteObject(storageReference).catch(() => {});

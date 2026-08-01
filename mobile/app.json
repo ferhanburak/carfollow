@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "CRUISER",
+    "name": "TrackSnap",
     "slug": "carfollow-cruiser",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -42,8 +42,8 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "CRUISER, sürüş hızını, mesafeyi ve haritadaki konumunu hesaplamak için konumuna erişir.",
-          "locationAlwaysAndWhenInUsePermission": "CRUISER, aktif sürüş oturumunu ekran kapalıyken de sürdürebilmek için konumuna erişir.",
+          "locationWhenInUsePermission": "TrackSnap, sürüş hızını, mesafeyi ve haritadaki konumunu hesaplamak için konumuna erişir.",
+          "locationAlwaysAndWhenInUsePermission": "TrackSnap, aktif sürüş oturumunu ekran kapalıyken de sürdürebilmek için konumuna erişir.",
           "isAndroidBackgroundLocationEnabled": false,
           "isAndroidForegroundServiceEnabled": true,
           "isIosBackgroundLocationEnabled": true
@@ -52,7 +52,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "CRUISER, profilinde ve topluluk gönderilerinde paylaşacağın görselleri seçebilmek için fotoğraflarına erişir.",
+          "photosPermission": "TrackSnap, profilinde ve topluluk gönderilerinde paylaşacağın görselleri seçebilmek için fotoğraflarına erişir.",
           "cameraPermission": false,
           "microphonePermission": false
         }
