@@ -11,7 +11,7 @@ import {
   View,
   type ScrollViewProps,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PropsWithChildren, ReactNode } from 'react';
 
 import { useAuth } from '@/providers/auth-provider';
@@ -32,6 +32,8 @@ export function ScreenShell({
   action,
   scrollProps,
 }: ScreenShellProps) {
+  const insets = useSafeAreaInsets();
+
   return (
     <LinearGradient
       colors={[colors.background, '#0b0f08', colors.background]}
@@ -41,7 +43,11 @@ export function ScreenShell({
         <AppHeader />
         <ScrollView
           {...scrollProps}
-          contentContainerStyle={[styles.content, scrollProps?.contentContainerStyle]}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: 120 + insets.bottom },
+            scrollProps?.contentContainerStyle,
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {title ? (

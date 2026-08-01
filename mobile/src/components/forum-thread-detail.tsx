@@ -8,13 +8,13 @@ import {
   Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   addForumReply,
@@ -131,7 +131,7 @@ export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread
   return (
     <>
     <Modal animationType="slide" onRequestClose={closeDetail} visible transparent={false}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top', 'bottom', 'left', 'right']} style={styles.safeArea}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardView}
@@ -141,13 +141,7 @@ export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread
               <Ionicons color={colors.text} name="arrow-back" size={22} />
             </Pressable>
             <Text style={styles.topTitle}>Gönderi</Text>
-            <Pressable
-              accessibilityLabel="Gönderiyi paylaş"
-              onPress={openShare}
-              style={styles.iconButton}
-            >
-              <Ionicons color={colors.textMuted} name="share-outline" size={21} />
-            </Pressable>
+            <View style={styles.headerSpacer} />
           </View>
 
           <ScrollView
@@ -410,6 +404,7 @@ const styles = StyleSheet.create({
   },
   topTitle: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 17 },
   iconButton: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
+  headerSpacer: { width: 46, height: 46 },
   scrollContent: { paddingBottom: 40 },
   post: { padding: 17, borderBottomWidth: 1, borderBottomColor: colors.border },
   authorRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10 },

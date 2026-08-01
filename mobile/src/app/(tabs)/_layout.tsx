@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Redirect, Tabs } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/providers/auth-provider';
 import { DriverProfileProvider } from '@/providers/driver-profile-provider';
@@ -20,6 +21,7 @@ const icons: Record<string, { active: IconName; idle: IconName }> = {
 
 export default function TabLayout() {
   const { status, user } = useAuth();
+  const insets = useSafeAreaInsets();
 
   if (status === 'loading') {
     return (
@@ -40,7 +42,10 @@ export default function TabLayout() {
           tabBarHideOnKeyboard: true,
           tabBarActiveTintColor: colors.lime,
           tabBarInactiveTintColor: colors.textFaint,
-          tabBarStyle: styles.tabBar,
+          tabBarStyle: [
+            styles.tabBar,
+            { bottom: Math.max(insets.bottom + 8, 10) },
+          ],
           tabBarItemStyle: styles.tabItem,
           sceneStyle: styles.scene,
           tabBarIcon: ({ color, focused }) => {
@@ -93,7 +98,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 14,
     right: 14,
-    bottom: 10,
     height: 68,
     paddingTop: 5,
     paddingBottom: 5,
