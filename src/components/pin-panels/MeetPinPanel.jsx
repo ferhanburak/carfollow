@@ -313,6 +313,7 @@ export function MeetPinPanel({
   user,
   onApproveCruiseJoinRequest,
   onDeclineCruiseJoinRequest,
+  onDeleteConvoy,
   onJoinCruise,
   onLikePin,
   onInviteDriver,
@@ -335,6 +336,8 @@ export function MeetPinPanel({
   const isManager = pin.viewerManagementRole === "manager" || selfAttendee?.managementRole === "manager";
   const canManage = isHost || isManager;
   const lifecycleStatus = pin.lifecycleStatus ?? "planning";
+  const canDelete = isHost && ["planning", "delayed", "completed", "cancelled"].includes(lifecycleStatus);
+  const canLike = pin.backendCanLike !== false;
   const convoyError = getActionError(convoyFeedback);
 
   return (
@@ -348,11 +351,15 @@ export function MeetPinPanel({
 
       <button
         type="button"
+        disabled={!canLike}
         onClick={onLikePin}
-        className="mt-3 inline-flex min-h-12 items-center rounded-2xl border border-lime-400/25 bg-lime-400/10 px-4 text-sm font-semibold text-lime-200 transition hover:bg-lime-400/15 active:scale-[0.98]"
+        className="mt-3 inline-flex min-h-12 items-center rounded-2xl border border-lime-400/25 bg-lime-400/10 px-4 text-sm font-semibold text-lime-200 transition hover:bg-lime-400/15 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03] disabled:text-neutral-500"
       >
         Beğen {Number(pin.likes ?? 0)}
       </button>
+      {!canLike ? (
+        <p className="mt-2 text-xs text-neutral-500">Buluşma ve konvoyları yalnızca onaylı katılımcılar beğenebilir.</p>
+      ) : null}
 
       <div className="mt-4 grid grid-cols-2 gap-3">
         <InsightCard label="Launch Time" value={accessState.canViewDetails ? formatLaunchTime(pin) : "Restricted"} />
@@ -441,6 +448,19 @@ export function MeetPinPanel({
             ))}
           </div>
           {["planning", "delayed"].includes(lifecycleStatus) ? <ConvoyEditPanel onUpdate={onUpdateConvoyDetails} pin={pin} /> : null}
+          {canDelete ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm(`${pin.name} etkinliğini kalıcı olarak silmek istiyor musun?`)) {
+                  void onDeleteConvoy?.();
+                }
+              }}
+              className="mt-3 min-h-12 w-full rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20 active:scale-[0.98]"
+            >
+              Etkinliği Sil
+            </button>
+          ) : null}
         </div>
       ) : null}
 

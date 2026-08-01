@@ -10,7 +10,6 @@ import {
   Pressable,
   SafeAreaView,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -24,6 +23,8 @@ import {
   type ForumReply,
   type ForumThread,
 } from '@/hooks/use-forum-feed';
+import { useSocialWorld } from '@/hooks/use-social-world';
+import { useAppData } from '@/providers/app-data-provider';
 import { colors, fonts } from '@/theme/colors';
 import type { DriverSummary } from '@/types/cruiser';
 
@@ -42,9 +43,13 @@ type Props = {
 };
 
 export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread }: Props) {
+  const appData = useAppData();
+  const social = useSocialWorld();
   const [replyBody, setReplyBody] = useState('');
   const [pendingKey, setPendingKey] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [shareOpen, setShareOpen] = useState(false);
+  const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
 
   if (!thread) return null;
 
@@ -52,7 +57,14 @@ export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread
     setReplyBody('');
     setFeedback('');
     setPendingKey('');
+    setShareOpen(false);
+    setSelectedFriendIds([]);
     onClose();
+  };
+
+  const openShare = () => {
+    setFeedback('');
+    setShareOpen(true);
   };
 
   const canPinSolution = (
@@ -96,7 +108,28 @@ export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread
     });
   };
 
+  const sendToFriends = () => {
+    if (!selectedFriendIds.length) return;
+    void runAction('share', async () => {
+      await Promise.all(selectedFriendIds.map((targetUserId) => appData.sendMessage(
+        targetUserId,
+        'Bir forum gönderisi paylaştı.',
+        {
+          type: 'forum',
+          targetId: thread.id,
+          title: categoryLabels[thread.category],
+          preview: thread.body.slice(0, 280),
+          imageUrl: thread.imageUrl || '',
+        },
+      )));
+      setShareOpen(false);
+      setSelectedFriendIds([]);
+      setFeedback('Gönderi mesaj olarak iletildi.');
+    });
+  };
+
   return (
+    <>
     <Modal animationType="slide" onRequestClose={closeDetail} visible transparent={false}>
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
@@ -110,7 +143,7 @@ export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread
             <Text style={styles.topTitle}>Gönderi</Text>
             <Pressable
               accessibilityLabel="Gönderiyi paylaş"
-              onPress={() => void Share.share({ message: `${thread.authorName}\n\n${thread.body}` })}
+              onPress={openShare}
               style={styles.iconButton}
             >
               <Ionicons color={colors.textMuted} name="share-outline" size={21} />
@@ -142,13 +175,10 @@ export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread
               ) : null}
               <Text style={styles.timestamp}>{formatLongDate(thread.createdAt?.toDate?.())}</Text>
               <View style={styles.metrics}>
-                <Text style={styles.metric}><Text style={styles.metricValue}>{thread.replyCount || 0}</Text> yanıt</Text>
                 <Text style={styles.metric}><Text style={styles.metricValue}>{thread.likeCount || 0}</Text> beğeni</Text>
+                <Text style={styles.metric}><Text style={styles.metricValue}>{thread.replyCount || 0}</Text> yanıt</Text>
               </View>
               <View style={styles.postActions}>
-                <Pressable accessibilityLabel="Yanıt alanına git" style={styles.actionButton}>
-                  <Ionicons color={colors.textMuted} name="chatbubble-outline" size={21} />
-                </Pressable>
                 <Pressable
                   accessibilityLabel={thread.likedByViewer ? 'Beğeniyi kaldır' : 'Gönderiyi beğen'}
                   disabled={Boolean(pendingKey)}
@@ -165,9 +195,12 @@ export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread
                     />
                   )}
                 </Pressable>
+                <Pressable accessibilityLabel="Yanıt alanına git" style={styles.actionButton}>
+                  <Ionicons color={colors.textMuted} name="chatbubble-outline" size={21} />
+                </Pressable>
                 <Pressable
                   accessibilityLabel="Gönderiyi paylaş"
-                  onPress={() => void Share.share({ message: `${thread.authorName}\n\n${thread.body}` })}
+                  onPress={openShare}
                   style={styles.actionButton}
                 >
                   <Ionicons color={colors.textMuted} name="share-outline" size={21} />
@@ -267,6 +300,63 @@ export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
+    <Modal animationType="fade" onRequestClose={() => setShareOpen(false)} transparent visible={shareOpen}>
+      <View style={styles.shareBackdrop}>
+        <View style={styles.shareSheet}>
+          <View style={styles.shareHeader}>
+            <View>
+              <Text style={styles.shareTitle}>Arkadaşlarına Gönder</Text>
+              <Text style={styles.shareSubtitle}>Gönderi seçtiğin sohbetlere kart olarak iletilir.</Text>
+            </View>
+            <Pressable onPress={() => setShareOpen(false)} style={styles.iconButton}>
+              <Ionicons color={colors.text} name="close" size={22} />
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.friendList} showsVerticalScrollIndicator={false}>
+            {social.friends.length ? social.friends.map((friend) => {
+              const selected = selectedFriendIds.includes(friend.userId);
+              return (
+                <Pressable
+                  key={friend.userId}
+                  onPress={() => setSelectedFriendIds((current) => selected
+                    ? current.filter((userId) => userId !== friend.userId)
+                    : [...current, friend.userId])}
+                  style={[styles.friendRow, selected && styles.friendRowSelected]}
+                >
+                  <View style={styles.friendAvatar}>
+                    <Text style={styles.friendInitial}>{(friend.fullName || 'C').charAt(0).toUpperCase()}</Text>
+                  </View>
+                  <View style={styles.friendCopy}>
+                    <Text style={styles.friendName}>{friend.fullName || 'CRUISER sürücüsü'}</Text>
+                    <Text style={styles.friendModel}>{friend.model || 'Araç bilgisi yok'}</Text>
+                  </View>
+                  <Ionicons
+                    color={selected ? colors.lime : colors.textFaint}
+                    name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={22}
+                  />
+                </Pressable>
+              );
+            }) : (
+              <Text style={styles.noFriends}>Gönderiyi iletebileceğin bir arkadaşın henüz yok.</Text>
+            )}
+          </ScrollView>
+          <Pressable
+            disabled={!selectedFriendIds.length || pendingKey === 'share'}
+            onPress={sendToFriends}
+            style={[styles.shareButton, (!selectedFriendIds.length || pendingKey === 'share') && styles.buttonDisabled]}
+          >
+            {pendingKey === 'share' ? <ActivityIndicator color={colors.black} /> : (
+              <>
+                <Ionicons color={colors.black} name="send" size={18} />
+                <Text style={styles.shareButtonText}>Gönder ({selectedFriendIds.length})</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -366,4 +456,20 @@ const styles = StyleSheet.create({
   pinButtonText: { color: colors.limeBright, fontFamily: fonts.bold, fontSize: 9 },
   pinButtonTextActive: { color: colors.black },
   pressed: { opacity: 0.72 },
+  shareBackdrop: { flex: 1, padding: 16, backgroundColor: 'rgba(0,0,0,0.78)', justifyContent: 'flex-end' },
+  shareSheet: { maxHeight: '76%', padding: 16, borderRadius: 28, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.backgroundRaised },
+  shareHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  shareTitle: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 17 },
+  shareSubtitle: { maxWidth: 280, marginTop: 3, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 10 },
+  friendList: { paddingVertical: 13, gap: 8 },
+  friendRow: { minHeight: 62, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  friendRowSelected: { borderColor: colors.lime, backgroundColor: colors.limeMuted },
+  friendAvatar: { width: 38, height: 38, borderRadius: 14, backgroundColor: colors.black, alignItems: 'center', justifyContent: 'center' },
+  friendInitial: { color: colors.lime, fontFamily: fonts.extraBold, fontSize: 14 },
+  friendCopy: { flex: 1 },
+  friendName: { color: colors.text, fontFamily: fonts.bold, fontSize: 12 },
+  friendModel: { marginTop: 2, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9 },
+  noFriends: { paddingVertical: 30, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 12, textAlign: 'center' },
+  shareButton: { minHeight: 52, borderRadius: 18, backgroundColor: colors.lime, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  shareButtonText: { color: colors.black, fontFamily: fonts.extraBold, fontSize: 13 },
 });

@@ -6,6 +6,7 @@ import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Platform,
   Pressable,
@@ -277,6 +278,15 @@ export default function MapScreen() {
               setNotice(world.error || 'Faydalı oyu güncellenemedi.');
             }
           }}
+          onDelete={async () => {
+            try {
+              await world.deleteConvoy(selected.id);
+              setSelected(null);
+              setNotice('Etkinlik kaldırıldı.');
+            } catch {
+              setNotice(world.error || 'Etkinlik kaldırılamadı.');
+            }
+          }}
           onOpenDriver={(driver) => void openDriverProfile(driver, { convoyId: selected.id })}
           onPhoto={async (asset) => {
             try {
@@ -292,6 +302,16 @@ export default function MapScreen() {
               setNotice('Yıkama değerlendirmeniz kaydedildi.');
             } catch {
               setNotice(world.error || 'Değerlendirme kaydedilemedi.');
+            }
+          }}
+          onUpdate={async (details) => {
+            try {
+              await world.updateConvoy(selected.id, details);
+              setSelected(null);
+              setNotice('Etkinlik bilgileri güncellendi.');
+            } catch {
+              setNotice(world.error || 'Etkinlik güncellenemedi.');
+              throw new Error(world.error || 'Etkinlik güncellenemedi.');
             }
           }}
           photos={world.photos.filter((photo) => photo.pinId === selected.id)}
@@ -484,10 +504,12 @@ function SelectedNode({
   onClose,
   onJoin,
   onLike,
+  onDelete,
   onHelpfulReview,
   onOpenDriver,
   onPhoto,
   onReview,
+  onUpdate,
   photos,
   pin,
   reviews,
@@ -496,6 +518,7 @@ function SelectedNode({
   onClose: () => void;
   onJoin: () => void;
   onLike: () => void;
+  onDelete: () => Promise<void>;
   onHelpfulReview: (reviewId: string) => Promise<void>;
   onOpenDriver: (driver: DriverSummary) => void;
   onPhoto: (asset: ImagePicker.ImagePickerAsset) => Promise<void>;
@@ -506,6 +529,7 @@ function SelectedNode({
     shadowDrying: boolean;
     note: string;
   }) => Promise<void>;
+  onUpdate: (details: Record<string, unknown>) => Promise<void>;
   photos: ReturnType<typeof useMapWorld>['photos'];
   pin: MapPin;
   reviews: ReturnType<typeof useMapWorld>['reviews'];
@@ -516,6 +540,14 @@ function SelectedNode({
   const [allowsBuckets, setAllowsBuckets] = useState(false);
   const [shadowDrying, setShadowDrying] = useState(false);
   const [note, setNote] = useState('');
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState(pin.name);
+  const [editRoute, setEditRoute] = useState(pin.route || 'Tek nokta buluşması');
+  const [editCapacity, setEditCapacity] = useState(String(pin.capacity ?? 12));
+  const [editScore, setEditScore] = useState(String(pin.minDriverScore ?? 0));
+  const [editError, setEditError] = useState('');
+  const isHost = pin.type === 'meet' && pin.viewerManagementRole === 'host';
+  const editable = isHost && ['planning', 'delayed'].includes(pin.lifecycleStatus ?? 'planning');
 
   const choosePhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -631,7 +663,14 @@ function SelectedNode({
           </Pressable>
         ) : null}
         {pin.type === 'meet' || pin.type === 'spot' ? (
-          <Pressable disabled={Boolean(busy)} onPress={onLike} style={styles.secondarySmall}>
+          <Pressable
+            disabled={Boolean(busy) || (pin.type === 'meet' && !pin.backendCanLike)}
+            onPress={onLike}
+            style={[
+              styles.secondarySmall,
+              pin.type === 'meet' && !pin.backendCanLike && styles.actionDisabled,
+            ]}
+          >
             <Ionicons name="heart-outline" size={17} color={colors.lime} />
             <Text style={styles.secondarySmallText}>{pin.likes ?? 0}</Text>
           </Pressable>
@@ -657,6 +696,93 @@ function SelectedNode({
           </Pressable>
         ) : null}
       </View>
+      {pin.type === 'meet' && !pin.backendCanLike ? (
+        <Text style={styles.likeHint}>Buluşma ve konvoy beğenileri yalnızca onaylı katılımcılara açıktır.</Text>
+      ) : null}
+      {isHost ? (
+        <View style={styles.managementActions}>
+          {editable ? (
+            <Pressable onPress={() => setEditOpen((current) => !current)} style={styles.manageButton}>
+              <Ionicons name="create-outline" size={17} color={colors.limeBright} />
+              <Text style={styles.manageButtonText}>Düzenle</Text>
+            </Pressable>
+          ) : null}
+          {(editable || ['completed', 'cancelled'].includes(pin.lifecycleStatus ?? 'planning')) ? (
+            <Pressable
+              onPress={() => Alert.alert(
+                'Etkinliği kaldır',
+                'Bu etkinlik ve katılımcı kayıtları kalıcı olarak silinecek.',
+                [
+                  { text: 'Vazgeç', style: 'cancel' },
+                  { text: 'Sil', style: 'destructive', onPress: () => void onDelete() },
+                ],
+              )}
+              style={[styles.manageButton, styles.deleteButton]}
+            >
+              <Ionicons name="trash-outline" size={17} color={colors.rose} />
+              <Text style={styles.deleteButtonText}>Kaldır</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+      {editOpen && editable ? (
+        <View style={styles.eventEditForm}>
+          <TextInput
+            maxLength={100}
+            onChangeText={setEditName}
+            placeholder="Etkinlik adı"
+            placeholderTextColor={colors.textFaint}
+            style={styles.reviewInput}
+            value={editName}
+          />
+          <TextInput
+            maxLength={240}
+            onChangeText={setEditRoute}
+            placeholder="Buluşma veya rota açıklaması"
+            placeholderTextColor={colors.textFaint}
+            style={styles.reviewInput}
+            value={editRoute}
+          />
+          <View style={styles.editNumberRow}>
+            <TextInput
+              keyboardType="number-pad"
+              maxLength={2}
+              onChangeText={setEditCapacity}
+              placeholder="Kapasite"
+              placeholderTextColor={colors.textFaint}
+              style={[styles.reviewInput, styles.editNumberInput]}
+              value={editCapacity}
+            />
+            <TextInput
+              keyboardType="number-pad"
+              maxLength={3}
+              onChangeText={setEditScore}
+              placeholder="Güven puanı"
+              placeholderTextColor={colors.textFaint}
+              style={[styles.reviewInput, styles.editNumberInput]}
+              value={editScore}
+            />
+          </View>
+          {editError ? <Text style={styles.editError}>{editError}</Text> : null}
+          <Pressable
+            disabled={Boolean(busy)}
+            onPress={async () => {
+              const capacity = Number(editCapacity);
+              const minDriverScore = Number(editScore);
+              if (!editName.trim() || !editRoute.trim() || !Number.isInteger(capacity) || capacity < 2 || capacity > 50 || !Number.isFinite(minDriverScore) || minDriverScore < 0 || minDriverScore > 100) {
+                setEditError('Ad, açıklama, 2-50 kapasite ve 0-100 güven puanı geçerli olmalıdır.');
+                return;
+              }
+              setEditError('');
+              await onUpdate({ name: editName.trim(), route: editRoute.trim(), capacity, minDriverScore });
+              setEditOpen(false);
+            }}
+            style={styles.reviewSubmit}
+          >
+            {busy ? <ActivityIndicator color={colors.black} /> : <Text style={styles.primarySmallText}>Değişiklikleri Kaydet</Text>}
+          </Pressable>
+        </View>
+      ) : null}
       {reviewOpen && pin.type === 'wash' ? (
         <View style={styles.reviewForm}>
           <ScorePicker label="Köpük kalitesi" onChange={setFoam} value={foam} />
@@ -983,6 +1109,17 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   secondarySmallText: { color: colors.text, fontFamily: fonts.bold, fontSize: 12 },
+  actionDisabled: { opacity: 0.38 },
+  likeHint: { marginTop: 7, color: colors.textFaint, fontFamily: fonts.regular, fontSize: 9, lineHeight: 13 },
+  managementActions: { marginTop: 10, flexDirection: 'row', gap: 8 },
+  manageButton: { flex: 1, minHeight: 44, borderRadius: 14, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.limeMuted, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  manageButtonText: { color: colors.limeBright, fontFamily: fonts.bold, fontSize: 11 },
+  deleteButton: { borderColor: 'rgba(244,63,94,0.28)', backgroundColor: 'rgba(244,63,94,0.08)' },
+  deleteButtonText: { color: colors.rose, fontFamily: fonts.bold, fontSize: 11 },
+  eventEditForm: { marginTop: 11, padding: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.black, gap: 9 },
+  editNumberRow: { flexDirection: 'row', gap: 8 },
+  editNumberInput: { flex: 1 },
+  editError: { color: colors.rose, fontFamily: fonts.semibold, fontSize: 9, lineHeight: 13 },
   reviewForm: {
     marginTop: 12,
     padding: 12,

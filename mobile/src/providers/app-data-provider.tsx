@@ -39,7 +39,11 @@ type AppDataValue = {
   markNotificationRead: (notificationId: string) => Promise<void>;
   markAllNotificationsRead: () => Promise<void>;
   openThread: (targetUserId: string) => Promise<string>;
-  sendMessage: (targetUserId: string, body: string) => Promise<void>;
+  sendMessage: (
+    targetUserId: string,
+    body: string,
+    share?: DirectMessage['share'],
+  ) => Promise<void>;
   markThreadRead: (threadId: string) => Promise<void>;
 };
 
@@ -210,8 +214,8 @@ export function AppDataProvider({ children }: PropsWithChildren) {
       );
       return response.threadId;
     },
-    sendMessage: async (targetUserId, body) => {
-      await callFirebase('sendDirectMessage', { targetUserId, body: body.trim() });
+    sendMessage: async (targetUserId, body, share) => {
+      await callFirebase('sendDirectMessage', { targetUserId, body: body.trim(), share });
     },
     markThreadRead: async (threadId) => {
       if (!user) return;

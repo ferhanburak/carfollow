@@ -59,6 +59,7 @@ const {
   buildConvoyMemberDocument,
   buildPublicMapSummary,
   canDeleteConvoy,
+  canLikeConvoy,
   canManageConvoy,
   canSeeConvoy,
   meetsTrust,
@@ -71,6 +72,7 @@ const {
   buildDirectMessageThreadId,
   buildThreadSetupUpdates,
   sanitizeMessageBody,
+  sanitizeSharedContent,
 } = require("./directMessages");
 const {
   buildModerationAuditDocument,
@@ -1012,15 +1014,17 @@ exports.sendDirectMessage = secureCall("sendDirectMessage", {
   const actorUserId = requireAuth(request);
   const targetUserId = requireTargetUserId(request, actorUserId);
   let body;
+  let share;
   try {
     body = sanitizeMessageBody(request.data?.body);
+    share = sanitizeSharedContent(request.data?.share);
   } catch (error) {
     throw new HttpsError("invalid-argument", error.message);
   }
   const state = await ensureDirectMessageThreadState(actorUserId, targetUserId);
   const messageRef = realtimeDb.ref(`${state.rootPath}/threads/${state.threadId}/messages`).push();
   const timestamp = Date.now();
-  const message = buildDirectMessage({ messageId: messageRef.key, senderProfile: state.actor, body, timestamp });
+  const message = buildDirectMessage({ messageId: messageRef.key, senderProfile: state.actor, body, share, timestamp });
   await realtimeDb.ref(state.rootPath).update({
     ...state.threadSetupUpdates,
     [`threads/${state.threadId}/messages/${message.id}`]: message,
@@ -1193,17 +1197,26 @@ exports.deleteConvoy = secureCall("deleteConvoy", { rateLimit: { limit: 12, wind
   const clanMembership = convoy.clanId ? await clanMemberDocument(convoy.clanId, actorUserId).get() : null;
   const clanRole = clanMembership?.exists ? clanMembership.data().role : "";
   if (!canDeleteConvoy(convoy, actorUserId, clanRole)) {
-    throw new HttpsError("permission-denied", "Only clan management can delete planned events; closed events can also be deleted by the host.");
+    throw new HttpsError("permission-denied", "Only the event host or clan management can delete this event.");
   }
 
-  const membersSnapshot = await publicCollection("convoyMembers").where("convoyId", "==", convoyId).get();
+  const [membersSnapshot, likesSnapshot] = await Promise.all([
+    publicCollection("convoyMembers").where("convoyId", "==", convoyId).get(),
+    publicCollection("mapLikes").where("pinId", "==", convoyId).get(),
+  ]);
   const batch = db.batch();
   membersSnapshot.docs.forEach((document) => batch.delete(document.ref));
+  likesSnapshot.docs.forEach((document) => batch.delete(document.ref));
   batch.delete(publicDocument("mapPins", convoyId));
   batch.delete(convoyRef);
   await batch.commit();
 
-  return { ok: true, convoyId, deletedMembers: membersSnapshot.size };
+  return {
+    ok: true,
+    convoyId,
+    deletedLikes: likesSnapshot.size,
+    deletedMembers: membersSnapshot.size,
+  };
 });
 
 exports.listAccessibleConvoys = secureCall("listAccessibleConvoys", async (request) => {
@@ -2766,18 +2779,27 @@ exports.toggleMapLike = secureCall("toggleMapLike", { rateLimit: { limit: 120, w
   }
   const pinRef = publicDocument("mapPins", pinId);
   const convoyRef = publicDocument("convoys", pinId);
+  const convoyMemberRef = publicDocument("convoyMembers", buildScopedMemberId(pinId, userId));
   const photoRef = targetType === "photo" ? publicDocument("mapSpotPhotos", photoId) : null;
   const likeId = `${pinId}__${photoId || "pin"}__${userId}`;
   const likeRef = publicDocument("mapLikes", likeId);
   let liked = false;
   let likes = 0;
   await db.runTransaction(async (transaction) => {
-    const reads = [transaction.get(pinRef), transaction.get(convoyRef), transaction.get(likeRef)];
+    const reads = [
+      transaction.get(pinRef),
+      transaction.get(convoyRef),
+      transaction.get(likeRef),
+      transaction.get(convoyMemberRef),
+    ];
     if (photoRef) reads.push(transaction.get(photoRef));
-    const [pinSnapshot, convoySnapshot, likeSnapshot, photoSnapshot] = await Promise.all(reads);
+    const [pinSnapshot, convoySnapshot, likeSnapshot, convoyMemberSnapshot, photoSnapshot] = await Promise.all(reads);
     const targetSnapshot = targetType === "pin" && convoySnapshot.exists ? convoySnapshot : pinSnapshot;
     if (!targetSnapshot.exists || (photoRef && (!photoSnapshot.exists || photoSnapshot.data().pinId !== pinId))) {
       throw new HttpsError("not-found", "Map target not found.");
+    }
+    if (targetType === "pin" && convoySnapshot.exists && !canLikeConvoy(convoyMemberSnapshot.data())) {
+      throw new HttpsError("permission-denied", "Only approved participants can like meetup and convoy events.");
     }
     const ownerUserId = targetType === "photo"
       ? String(photoSnapshot.data().userId ?? "")

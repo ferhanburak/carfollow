@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -45,6 +46,8 @@ const categoryLabels = Object.fromEntries(
 ) as Record<ForumThread['category'], string>;
 
 export default function ForumScreen() {
+  const params = useLocalSearchParams<{ threadId?: string }>();
+  const router = useRouter();
   const { profile } = useAuth();
   const { openDriverProfile } = useDriverProfile();
   const { error, loading, threads } = useForumFeed();
@@ -63,9 +66,10 @@ export default function ForumScreen() {
     () => threads.filter((thread) => filter === 'all' || thread.category === filter),
     [filter, threads],
   );
+  const routeThreadId = String(params.threadId ?? '');
   const selectedThread = useMemo(
-    () => threads.find((thread) => thread.id === selectedThreadId) ?? null,
-    [selectedThreadId, threads],
+    () => threads.find((thread) => thread.id === (selectedThreadId || routeThreadId)) ?? null,
+    [routeThreadId, selectedThreadId, threads],
   );
 
   const likeThread = async (thread: ForumThread) => {
@@ -373,7 +377,10 @@ export default function ForumScreen() {
 
       <ForumThreadDetail
         currentUserId={profile?.firebaseUid}
-        onClose={() => setSelectedThreadId('')}
+        onClose={() => {
+          setSelectedThreadId('');
+          if (params.threadId) router.replace('/(tabs)/forum');
+        }}
         onOpenDriver={(driver) => void openDriverProfile(driver)}
         thread={selectedThread}
       />

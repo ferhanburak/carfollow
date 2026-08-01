@@ -1076,6 +1076,7 @@ function ChatModal({
   thread: DirectMessageThread | null;
 }) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   return (
     <Modal animationType="slide" onRequestClose={onClose} visible={Boolean(thread)}>
       <View style={styles.modalRoot}>
@@ -1099,6 +1100,30 @@ function ChatModal({
             return (
               <View key={item.id} style={[styles.bubble, own ? styles.bubbleOwn : styles.bubbleOther]}>
                 <Text style={[styles.bubbleText, own && styles.bubbleTextOwn]}>{item.body}</Text>
+                {item.share ? (
+                  <Pressable
+                    onPress={() => {
+                      onClose();
+                      if (item.share?.type === 'forum') {
+                        router.push({ pathname: '/(tabs)/forum', params: { threadId: item.share.targetId } });
+                      } else {
+                        router.push('/(tabs)/map');
+                      }
+                    }}
+                    style={({ pressed }) => [styles.sharedCard, pressed && styles.pressed]}
+                  >
+                    <Ionicons
+                      color={colors.lime}
+                      name={item.share.type === 'forum' ? 'chatbox-ellipses-outline' : 'map-outline'}
+                      size={18}
+                    />
+                    <View style={styles.sharedCopy}>
+                      <Text style={styles.sharedTitle}>{item.share.title || 'Paylaşılan içerik'}</Text>
+                      <Text numberOfLines={2} style={styles.sharedPreview}>{item.share.preview}</Text>
+                    </View>
+                    <Ionicons color={colors.textFaint} name="chevron-forward" size={16} />
+                  </Pressable>
+                ) : null}
               </View>
             );
           })}
@@ -1492,6 +1517,22 @@ const styles = StyleSheet.create({
   bubbleOther: { alignSelf: 'flex-start', backgroundColor: colors.surface },
   bubbleText: { color: colors.text, fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
   bubbleTextOwn: { color: colors.black },
+  sharedCard: {
+    minWidth: 220,
+    maxWidth: 290,
+    marginTop: 8,
+    padding: 11,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.black,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  sharedCopy: { flex: 1 },
+  sharedTitle: { color: colors.limeBright, fontFamily: fonts.bold, fontSize: 10 },
+  sharedPreview: { marginTop: 3, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9, lineHeight: 13 },
   composer: {
     padding: 12,
     borderTopWidth: 1,

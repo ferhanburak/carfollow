@@ -1,4 +1,4 @@
-const DIRECT_MESSAGE_SCHEMA_VERSION = 1;
+const DIRECT_MESSAGE_SCHEMA_VERSION = 2;
 const { createHash } = require("node:crypto");
 
 function buildDirectMessageThreadId(leftUserId, rightUserId) {
@@ -14,6 +14,24 @@ function sanitizeMessageBody(value) {
     throw new Error("Message must be between 1 and 2000 characters.");
   }
   return body;
+}
+
+function sanitizeSharedContent(value) {
+  if (value == null) return null;
+  if (!value || typeof value !== "object" || !["forum", "event"].includes(value.type)) {
+    throw new Error("A valid shared item is required.");
+  }
+  const targetId = String(value.targetId ?? "").trim();
+  if (!targetId || targetId.includes("/") || targetId.length > 160) {
+    throw new Error("A valid shared item target is required.");
+  }
+  return {
+    type: value.type,
+    targetId,
+    title: String(value.title ?? "").trim().slice(0, 120),
+    preview: String(value.preview ?? "").trim().slice(0, 320),
+    imageUrl: String(value.imageUrl ?? "").trim().slice(0, 2048),
+  };
 }
 
 function projectChatProfile(profile, fallbackUserId = "") {
@@ -60,9 +78,9 @@ function buildThreadSetupUpdates({ threadId, leftProfile, rightProfile, timestam
   };
 }
 
-function buildDirectMessage({ messageId, senderProfile, body, timestamp }) {
+function buildDirectMessage({ messageId, senderProfile, body, share = null, timestamp }) {
   const sender = projectChatProfile(senderProfile);
-  return {
+  const message = {
     id: messageId,
     senderUid: sender.userId,
     authorPlate: sender.plate,
@@ -71,6 +89,9 @@ function buildDirectMessage({ messageId, senderProfile, body, timestamp }) {
     createdAt: timestamp,
     schemaVersion: DIRECT_MESSAGE_SCHEMA_VERSION,
   };
+  const sharedContent = sanitizeSharedContent(share);
+  if (sharedContent) message.share = sharedContent;
+  return message;
 }
 
 module.exports = {
@@ -81,4 +102,5 @@ module.exports = {
   buildThreadSetupUpdates,
   projectChatProfile,
   sanitizeMessageBody,
+  sanitizeSharedContent,
 };

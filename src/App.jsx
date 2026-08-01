@@ -434,6 +434,7 @@ function App() {
                 onPickLocation={pickMapLocation}
                 onApproveCruiseJoinRequest={approveCruiseJoinRequest}
                 onDeclineCruiseJoinRequest={declineCruiseJoinRequest}
+                onDeleteConvoy={deleteClanEvent}
                 onDeleteSpotPhoto={deleteSpotPhoto}
                 onDriverSearchChange={setFriendSearchQuery}
                 onInviteDriver={inviteDriverToMeet}

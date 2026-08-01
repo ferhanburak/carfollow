@@ -109,6 +109,7 @@ export type MapPin = {
   scheduledStartAtMs?: number;
   lifecycleStatus?: string;
   backendCanJoin?: boolean;
+  backendCanLike?: boolean;
   backendCanViewDetails?: boolean;
   backendAccessReason?: string;
   viewerManagementRole?: 'host' | 'manager' | 'member' | '';
@@ -123,6 +124,13 @@ export type DirectMessage = {
   senderUid?: string;
   body: string;
   createdAt: number;
+  share?: {
+    type: 'forum' | 'event';
+    targetId: string;
+    title?: string;
+    preview?: string;
+    imageUrl?: string;
+  };
 };
 
 export type DirectMessageThread = {

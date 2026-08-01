@@ -130,6 +130,22 @@ export function useMapWorld() {
         return response;
       },
     ),
+    updateConvoy: (convoyId: string, details: Record<string, unknown>) => run(
+      `update-${convoyId}`,
+      async () => {
+        const response = await callFirebase('updateConvoyDetails', { convoyId, details });
+        await refreshConvoys();
+        return response;
+      },
+    ),
+    deleteConvoy: (convoyId: string) => run(
+      `delete-${convoyId}`,
+      async () => {
+        const response = await callFirebase('deleteConvoy', { convoyId });
+        await refreshConvoys();
+        return response;
+      },
+    ),
     likePin: (pinId: string) => run(
       `like-${pinId}`,
       () => callFirebase('toggleMapLike', { pinId, targetType: 'pin' }),

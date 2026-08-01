@@ -223,6 +223,7 @@ export function MapScreen({
   onGhostRequestFriend,
   onApproveCruiseJoinRequest,
   onDeclineCruiseJoinRequest,
+  onDeleteConvoy,
   onDeleteSpotPhoto,
   onDriverSearchChange,
   onInviteDriver,
@@ -431,6 +432,10 @@ export function MapScreen({
             washFeedback={washFeedback}
             onApproveCruiseJoinRequest={onApproveCruiseJoinRequest}
             onDeclineCruiseJoinRequest={onDeclineCruiseJoinRequest}
+            onDeleteConvoy={async () => {
+              const deleted = await onDeleteConvoy?.(selectedPin.id);
+              if (deleted) setActiveOverlay(null);
+            }}
             onDeleteSpotPhoto={onDeleteSpotPhoto}
             onDriverSearchChange={onDriverSearchChange}
             onInviteDriver={onInviteDriver}

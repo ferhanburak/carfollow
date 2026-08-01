@@ -7,6 +7,7 @@ const {
   buildPublicMapSummary,
   DEFAULT_ARRIVAL_RADIUS_M,
   canDeleteConvoy,
+  canLikeConvoy,
   canManageConvoy,
   canSeeConvoy,
   getDistanceMeters,
@@ -128,7 +129,7 @@ test("clan members can inspect attendee details for their clan events", () => {
   assert.equal(presented.attendees.length, 1);
 });
 
-test("closed convoy deletion is limited to host or clan management", () => {
+test("event hosts and clan management can delete editable or closed events", () => {
   const completed = { ...createConvoy(), lifecycleStatus: "completed" };
   const planning = createConvoy();
   const rolling = { ...createConvoy(), lifecycleStatus: "rolling" };
@@ -138,11 +139,17 @@ test("closed convoy deletion is limited to host or clan management", () => {
   assert.equal(canDeleteConvoy(completed, "clan-owner", "owner"), true);
   assert.equal(canDeleteConvoy(completed, "clan-captain", "captain"), true);
   assert.equal(canDeleteConvoy(completed, "ordinary-member", "member"), false);
-  assert.equal(canDeleteConvoy(planning, "host", "member"), false);
+  assert.equal(canDeleteConvoy(planning, "host", "member"), true);
   assert.equal(canDeleteConvoy(planning, "clan-owner", "owner"), true);
   assert.equal(canDeleteConvoy(planning, "clan-captain", "captain"), true);
   assert.equal(canDeleteConvoy(planning, "ordinary-member", "member"), false);
   assert.equal(canDeleteConvoy(rolling, "clan-owner", "owner"), false);
+});
+
+test("event likes require an approved participant membership", () => {
+  assert.equal(canLikeConvoy({ membershipStatus: "approved" }), true);
+  assert.equal(canLikeConvoy({ membershipStatus: "pending" }), false);
+  assert.equal(canLikeConvoy(null), false);
 });
 
 test("scheduled convoy waits for launch time before GPS tracking starts", () => {

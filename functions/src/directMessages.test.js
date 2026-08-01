@@ -6,6 +6,7 @@ const {
   buildThreadMetadata,
   buildThreadSetupUpdates,
   sanitizeMessageBody,
+  sanitizeSharedContent,
 } = require("./directMessages");
 
 const left = { id: "driver-b", plate: "06 LEFT 06", fullName: "Left Driver", model: "Seat Ibiza" };
@@ -39,9 +40,24 @@ test("thread setup uses non-overlapping Realtime Database update paths", () => {
 });
 
 test("messages use server-owned sender identity and sanitized body", () => {
-  const message = buildDirectMessage({ messageId: "message-1", senderProfile: left, body: "  Merhaba  ", timestamp: 20 });
+  const message = buildDirectMessage({
+    messageId: "message-1",
+    senderProfile: left,
+    body: "  Merhaba  ",
+    share: { type: "forum", targetId: "thread-1", title: " Teknik ", preview: " Uzun onizleme " },
+    timestamp: 20,
+  });
   assert.equal(message.senderUid, "driver-b");
   assert.equal(message.body, "Merhaba");
+  assert.deepEqual(message.share, {
+    type: "forum",
+    targetId: "thread-1",
+    title: "Teknik",
+    preview: "Uzun onizleme",
+    imageUrl: "",
+  });
   assert.throws(() => sanitizeMessageBody(" "));
   assert.throws(() => sanitizeMessageBody("x".repeat(2001)));
+  assert.throws(() => sanitizeSharedContent({ type: "external", targetId: "item" }));
+  assert.throws(() => sanitizeSharedContent({ type: "forum", targetId: "bad/id" }));
 });

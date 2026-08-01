@@ -286,9 +286,14 @@ function canSeeDetails(convoy, profile, membership = null) {
 function canDeleteConvoy(convoy, actorUserId, clanRole = "") {
   const status = convoy?.lifecycleStatus ?? "planning";
   const isClanManager = Boolean(convoy?.clanId) && ["owner", "captain"].includes(clanRole);
-  if (status === "planning") return isClanManager;
+  const isHost = convoy?.hostUserId === actorUserId;
+  if (["planning", "delayed"].includes(status)) return isHost || isClanManager;
   if (!isClosedConvoy(convoy)) return false;
-  return convoy?.hostUserId === actorUserId || isClanManager;
+  return isHost || isClanManager;
+}
+
+function canLikeConvoy(membership) {
+  return membership?.membershipStatus === "approved";
 }
 
 function isClosedConvoy(convoy) {
@@ -321,6 +326,7 @@ function buildPublicMapSummary(convoy) {
     lifecycleStatus: convoy.lifecycleStatus,
     approvedCount: convoy.approvedCount,
     likes: Number(convoy.likes ?? 0),
+    backendCanLike: false,
     backendCanViewDetails: false,
     backendCanJoin: false,
     schemaVersion: CONVOY_SCHEMA_VERSION,
@@ -345,6 +351,7 @@ function presentConvoy(convoy, profile, membership, members) {
     ...base,
     backendCanViewDetails: detailsAllowed,
     backendCanJoin: canJoin,
+    backendCanLike: canLikeConvoy(membership),
     backendAccessReason: !trusted ? "Driver score requirement is not met." : full ? "Convoy capacity is full." : pendingSelf ? "Join request is awaiting host approval." : "",
     attendees: detailsAllowed ? approved : [],
     pendingRequests: canManageConvoy(convoy, membership, viewerUserId) ? pending : [],
@@ -357,6 +364,7 @@ module.exports = {
   ACCESS_POLICIES, ARRIVAL_CONFIRMATION_COUNT, CONVOY_SCHEMA_VERSION, DEFAULT_ARRIVAL_RADIUS_M, DETAIL_VISIBILITIES,
   LIFECYCLE_STATUSES, MAX_AUTO_ARRIVAL_ACCURACY_M, TRIP_STATUSES, VISIBILITIES,
   buildConvoyDocument, buildConvoyEditablePatch, buildConvoyMemberDocument, buildPublicMapSummary, canDeleteConvoy,
+  canLikeConvoy,
   canManageConvoy, canSeeConvoy, canSeeDetails, getConvoyManagementRole, getDistanceMeters, isClosedConvoy,
   meetsTrust, presentConvoy, projectDriver, resolveConvoyLocationUpdate, safeText,
 };

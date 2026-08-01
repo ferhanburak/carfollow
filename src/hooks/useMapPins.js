@@ -434,13 +434,13 @@ export function useMapPins({ initialWorld, user }) {
 
   const deleteClanEvent = async (convoyId) => {
     const target = mapPins.find((pin) => pin.id === convoyId && pin.type === "meet");
-    if (!target || !["planning", "completed", "cancelled"].includes(target.lifecycleStatus ?? "planning")) {
+    if (!target || !["planning", "delayed", "completed", "cancelled"].includes(target.lifecycleStatus ?? "planning")) {
       setClanEventFeedback("Sürüş halindeki etkinlikler silinemez.");
       return false;
     }
 
     setClanEventPendingId(convoyId);
-    setClanEventFeedback("Etkinlik klan gecmisinden siliniyor...");
+    setClanEventFeedback("Etkinlik siliniyor...");
     try {
       if (firebaseMapEnabled) {
         await deleteFirebaseConvoy(convoyId);
@@ -449,7 +449,7 @@ export function useMapPins({ initialWorld, user }) {
         setMapPins((current) => current.filter((pin) => pin.id !== convoyId));
       }
       if (selectedPinId === convoyId) setSelectedPinId(null);
-      setClanEventFeedback(`${target.name} klan gecmisinden silindi.`);
+      setClanEventFeedback(`${target.name} silindi.`);
       return true;
     } catch (error) {
       console.error("Clan event could not be deleted", error);
