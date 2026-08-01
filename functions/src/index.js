@@ -49,6 +49,7 @@ const {
 } = require("./clan");
 const {
   buildCommunityContributionPatch,
+  buildMapPinEditablePatch,
   buildMapPinDocument,
   buildSpotPhotoDocument,
   buildWashRating,
@@ -2774,6 +2775,88 @@ exports.createMapNode = secureCall("createMapNode", { rateLimit: { limit: 12, wi
   return { ok: true, pinId: pinRef.id };
 });
 
+exports.updateMapNode = secureCall("updateMapNode", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
+  const userId = requireAuth(request);
+  const pinId = String(request.data?.pinId ?? "");
+  if (!pinId || pinId.includes("/") || pinId.length > 180) {
+    throw new HttpsError("invalid-argument", "A valid map node is required.");
+  }
+  const pinRef = publicDocument("mapPins", pinId);
+  let patch;
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(pinRef);
+    const pin = requireSnapshot(snapshot, "not-found", "Map node not found.");
+    if (!["spot", "wash"].includes(pin.type)) {
+      throw new HttpsError("failed-precondition", "This map item cannot be edited here.");
+    }
+    if (String(pin.createdByUid ?? "") !== userId) {
+      throw new HttpsError("permission-denied", "Only the node owner can edit this map item.");
+    }
+    try {
+      patch = buildMapPinEditablePatch(
+        pin,
+        request.data?.details ?? {},
+        admin.firestore.FieldValue.serverTimestamp(),
+      );
+    } catch (error) {
+      throw new HttpsError("invalid-argument", error.message);
+    }
+    transaction.update(pinRef, patch);
+  });
+  return { ok: true, pinId };
+});
+
+exports.deleteMapNode = secureCall("deleteMapNode", { rateLimit: { limit: 12, windowSeconds: 3600 } }, async (request) => {
+  const userId = requireAuth(request);
+  const pinId = String(request.data?.pinId ?? "");
+  if (!pinId || pinId.includes("/") || pinId.length > 180) {
+    throw new HttpsError("invalid-argument", "A valid map node is required.");
+  }
+  const pinRef = publicDocument("mapPins", pinId);
+  const pinSnapshot = await pinRef.get();
+  const pin = requireSnapshot(pinSnapshot, "not-found", "Map node not found.");
+  if (!["spot", "wash"].includes(pin.type)) {
+    throw new HttpsError("failed-precondition", "This map item cannot be removed here.");
+  }
+  if (String(pin.createdByUid ?? "") !== userId) {
+    throw new HttpsError("permission-denied", "Only the node owner can remove this map item.");
+  }
+
+  const [photos, reviews, likes] = await Promise.all([
+    publicCollection("mapSpotPhotos").where("pinId", "==", pinId).get(),
+    publicCollection("washReviews").where("pinId", "==", pinId).get(),
+    publicCollection("mapLikes").where("pinId", "==", pinId).get(),
+  ]);
+  const helpfulVoteSnapshots = [];
+  const reviewIds = reviews.docs.map((document) => document.id);
+  for (let index = 0; index < reviewIds.length; index += 30) {
+    helpfulVoteSnapshots.push(await publicCollection("washReviewHelpfulVotes")
+      .where("reviewId", "in", reviewIds.slice(index, index + 30))
+      .get());
+  }
+
+  const writer = db.bulkWriter();
+  writer.delete(pinRef);
+  [...photos.docs, ...reviews.docs, ...likes.docs]
+    .forEach((document) => writer.delete(document.ref));
+  helpfulVoteSnapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((document) => writer.delete(document.ref));
+  });
+  await writer.close();
+
+  const storagePaths = [...photos.docs, ...reviews.docs]
+    .map((document) => String(document.data().storagePath ?? ""))
+    .filter((path) => path.startsWith(`artifacts/${APP_ID}/mapNodes/${pinId}/`));
+  await Promise.all(storagePaths.map((path) => storageBucket.file(path)
+    .delete({ ignoreNotFound: true })
+    .catch((error) => logger.warn("map.node.storage-delete-failed", {
+      pinId,
+      path,
+      errorCode: error?.code ?? "unknown",
+    }))));
+  return { ok: true, pinId };
+});
+
 exports.submitWashReview = secureCall("submitWashReview", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
   const userId = requireAuth(request);
   const pinId = String(request.data?.pinId ?? "");
@@ -2781,11 +2864,25 @@ exports.submitWashReview = secureCall("submitWashReview", { rateLimit: { limit: 
   const profile = await getUserProfile(userId);
   const pinRef = publicDocument("mapPins", pinId);
   const reviewRef = publicDocument("washReviews", `${pinId}__${userId}`);
+  const storagePath = String(request.data?.storagePath ?? "");
+  const imageUrl = String(request.data?.imageUrl ?? "");
+  const expectedPrefix = `artifacts/${APP_ID}/mapNodes/${pinId}/reviews/${userId}/`;
+  if ((storagePath || imageUrl) && (
+    !storagePath.startsWith(expectedPrefix) ||
+    storagePath.includes("..") ||
+    !imageUrl
+  )) {
+    throw new HttpsError("invalid-argument", "Review photo must be uploaded to the approved map path.");
+  }
   let rating;
+  let previousStoragePath = "";
   await db.runTransaction(async (transaction) => {
     const [pinSnapshot, previousReviewSnapshot] = await Promise.all([transaction.get(pinRef), transaction.get(reviewRef)]);
     if (!pinSnapshot.exists || pinSnapshot.data().type !== "wash") throw new HttpsError("not-found", "Wash node not found.");
     const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    previousStoragePath = previousReviewSnapshot.exists
+      ? String(previousReviewSnapshot.data().storagePath ?? "")
+      : "";
     let review;
     try {
       review = buildWashReviewDocument({
@@ -2803,6 +2900,15 @@ exports.submitWashReview = secureCall("submitWashReview", { rateLimit: { limit: 
     transaction.set(reviewRef, review, { merge: true });
     transaction.update(pinRef, { rating, updatedAt: timestamp });
   });
+  if (storagePath && previousStoragePath && previousStoragePath !== storagePath) {
+    await storageBucket.file(previousStoragePath).delete({ ignoreNotFound: true }).catch((error) => {
+      logger.warn("map.review.storage-delete-failed", {
+        pinId,
+        userId,
+        errorCode: error?.code ?? "unknown",
+      });
+    });
+  }
   return { ok: true, rating };
 });
 

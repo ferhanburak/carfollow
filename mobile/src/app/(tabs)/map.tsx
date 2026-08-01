@@ -65,7 +65,7 @@ const eventFilters: { value: EventFilter; label: string }[] = [
 
 export default function MapScreen() {
   const { resolvedTheme } = useAppTheme();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { mapWorld: world, openDriverProfile } = useDriverProfile();
   const [selected, setSelected] = useState<MapPin | null>(null);
   const [filter, setFilter] = useState<EventFilter>('all');
@@ -74,6 +74,7 @@ export default function MapScreen() {
   const [points, setPoints] = useState<Point[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [creationPhoto, setCreationPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [minDriverScore, setMinDriverScore] = useState('70');
   const [formError, setFormError] = useState('');
   const [notice, setNotice] = useState('');
@@ -93,6 +94,7 @@ export default function MapScreen() {
     setPoints([]);
     setName('');
     setDescription('');
+    setCreationPhoto(null);
     setMinDriverScore('70');
     setFormError('');
     setEditorOpen(true);
@@ -101,7 +103,13 @@ export default function MapScreen() {
   const closeEditor = () => {
     setEditorOpen(false);
     setPoints([]);
+    setCreationPhoto(null);
     setFormError('');
+  };
+
+  const chooseCreationPhoto = async () => {
+    const asset = await pickSingleImage();
+    if (asset) setCreationPhoto(asset);
   };
 
   const saveNode = async () => {
@@ -123,7 +131,7 @@ export default function MapScreen() {
     const first = points[0];
     try {
       if (editorType === 'spot' || editorType === 'wash') {
-        await world.createNode({
+        const created = await world.createNode({
           type: editorType,
           name: name.trim(),
           description: description.trim(),
@@ -131,6 +139,21 @@ export default function MapScreen() {
           lat: first.latitude,
           lng: first.longitude,
         });
+        let photoWarning = '';
+        if (editorType === 'spot' && creationPhoto) {
+          try {
+            await world.addSpotPhoto(created.pinId, creationPhoto);
+          } catch (photoError) {
+            photoWarning = photoError instanceof Error
+              ? `Nokta oluşturuldu ancak fotoğraf yüklenemedi: ${photoError.message}`
+              : 'Nokta oluşturuldu ancak fotoğraf yüklenemedi.';
+          }
+        }
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        closeEditor();
+        setNotice(photoWarning || 'Yeni kayıt oluşturuldu.');
+        setTimeout(() => setNotice(''), 3500);
+        return;
       } else {
         const startAt = Date.now() + 60 * 60 * 1000;
         await world.createConvoy({
@@ -295,9 +318,10 @@ export default function MapScreen() {
                   }}
                   onDelete={async () => {
                     try {
-                      await world.deleteConvoy(selected.id);
+                      if (selected.type === 'meet') await world.deleteConvoy(selected.id);
+                      else await world.deleteNode(selected.id);
                       setSelected(null);
-                      setNotice('Etkinlik kaldırıldı.');
+                      setNotice(selected.type === 'meet' ? 'Etkinlik kaldırıldı.' : 'Nokta kaldırıldı.');
                     } catch {
                       setNotice(world.error || 'Etkinlik kaldırılamadı.');
                     }
@@ -313,23 +337,27 @@ export default function MapScreen() {
                   }}
                   onReview={async (review) => {
                     try {
-                      await world.reviewWash(selected.id, review);
+                      const { image, ...details } = review;
+                      await world.reviewWash(selected.id, details, image);
                       setNotice('Yıkama değerlendirmeniz kaydedildi.');
                     } catch {
                       setNotice(world.error || 'Değerlendirme kaydedilemedi.');
+                      throw new Error(world.error || 'Değerlendirme kaydedilemedi.');
                     }
                   }}
                   onUpdate={async (details) => {
                     try {
-                      await world.updateConvoy(selected.id, details);
+                      if (selected.type === 'meet') await world.updateConvoy(selected.id, details);
+                      else await world.updateNode(selected.id, details);
                       setSelected(null);
-                      setNotice('Etkinlik bilgileri güncellendi.');
+                      setNotice(selected.type === 'meet' ? 'Etkinlik bilgileri güncellendi.' : 'Nokta bilgileri güncellendi.');
                     } catch {
                       setNotice(world.error || 'Etkinlik güncellenemedi.');
                       throw new Error(world.error || 'Etkinlik güncellenemedi.');
                     }
                   }}
                   photos={world.photos.filter((photo) => photo.pinId === selected.id)}
+                  currentUserId={user?.uid || ''}
                   pin={selected}
                   reviews={world.reviews.filter((review) => review.pinId === selected.id)}
                 />
@@ -402,6 +430,32 @@ export default function MapScreen() {
               style={[styles.input, styles.textArea]}
               value={description}
             />
+
+            {editorType === 'spot' ? (
+              <View style={styles.optionalPhotoField}>
+                <View style={styles.optionalPhotoCopy}>
+                  <Text style={styles.optionalPhotoTitle}>Başlangıç fotoğrafı</Text>
+                  <Text style={styles.optionalPhotoHint}>İsteğe bağlı · en fazla 10 MB</Text>
+                </View>
+                {creationPhoto ? (
+                  <View style={styles.optionalPhotoPreviewWrap}>
+                    <Image source={{ uri: creationPhoto.uri }} style={styles.optionalPhotoPreview} />
+                    <Pressable
+                      accessibilityLabel="Seçilen fotoğrafı kaldır"
+                      onPress={() => setCreationPhoto(null)}
+                      style={styles.removePhotoButton}
+                    >
+                      <Ionicons name="close" size={17} color={colors.white} />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable onPress={() => void chooseCreationPhoto()} style={styles.photoSelectButton}>
+                    <Ionicons name="image-outline" size={18} color={colors.limeBright} />
+                    <Text style={styles.photoSelectText}>Fotoğraf Seç</Text>
+                  </Pressable>
+                )}
+              </View>
+            ) : null}
 
             {editorType === 'meetup' || editorType === 'convoy' ? (
               <View style={styles.trustField}>
@@ -592,6 +646,7 @@ function sortEventPins(left: MapPin, right: MapPin) {
 
 function SelectedNode({
   busy,
+  currentUserId,
   onClose,
   onJoin,
   onLike,
@@ -606,6 +661,7 @@ function SelectedNode({
   reviews,
 }: {
   busy: string;
+  currentUserId: string;
   onClose: () => void;
   onJoin: () => void;
   onLike: () => void;
@@ -619,6 +675,7 @@ function SelectedNode({
     allowsBuckets: boolean;
     shadowDrying: boolean;
     note: string;
+    image?: ImagePicker.ImagePickerAsset;
   }) => Promise<void>;
   onUpdate: (details: Record<string, unknown>) => Promise<void>;
   photos: ReturnType<typeof useMapWorld>['photos'];
@@ -631,24 +688,31 @@ function SelectedNode({
   const [allowsBuckets, setAllowsBuckets] = useState(false);
   const [shadowDrying, setShadowDrying] = useState(false);
   const [note, setNote] = useState('');
+  const [reviewPhoto, setReviewPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState(pin.name);
-  const [editRoute, setEditRoute] = useState(pin.route || 'Tek nokta buluşması');
+  const [editRoute, setEditRoute] = useState(
+    pin.type === 'meet' ? pin.route || 'Tek nokta buluşması' : pin.description || '',
+  );
   const [editCapacity, setEditCapacity] = useState(String(pin.capacity ?? 12));
   const [editScore, setEditScore] = useState(String(pin.minDriverScore ?? 0));
   const [editError, setEditError] = useState('');
   const isHost = pin.type === 'meet' && pin.viewerManagementRole === 'host';
-  const editable = isHost && ['planning', 'delayed'].includes(pin.lifecycleStatus ?? 'planning');
+  const isNodeOwner = pin.type !== 'meet' && pin.createdByUid === currentUserId;
+  const eventEditable = isHost && ['planning', 'delayed'].includes(pin.lifecycleStatus ?? 'planning');
+  const editable = isNodeOwner || eventEditable;
+  const removable = isNodeOwner || (
+    isHost && (eventEditable || ['completed', 'cancelled'].includes(pin.lifecycleStatus ?? 'planning'))
+  );
 
   const choosePhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.84,
-      selectionLimit: 1,
-    });
-    if (!result.canceled) await onPhoto(result.assets[0]);
+    const asset = await pickSingleImage();
+    if (asset) await onPhoto(asset);
+  };
+
+  const chooseReviewPhoto = async () => {
+    const asset = await pickSingleImage();
+    if (asset) setReviewPhoto(asset);
   };
 
   return (
@@ -693,6 +757,13 @@ function SelectedNode({
                 Köpük {review.foam}/5 · Su {review.water}/5
                 {review.note ? ` · ${review.note}` : ''}
               </Text>
+              {review.imageUrl ? (
+                <Image
+                  contentFit="cover"
+                  source={{ uri: review.imageUrl }}
+                  style={styles.reviewPhoto}
+                />
+              ) : null}
               <Pressable
                 disabled={Boolean(busy)}
                 onPress={() => void onHelpfulReview(review.id)}
@@ -790,7 +861,7 @@ function SelectedNode({
       {pin.type === 'meet' && !pin.backendCanLike ? (
         <Text style={styles.likeHint}>Buluşma ve konvoy beğenileri yalnızca onaylı katılımcılara açıktır.</Text>
       ) : null}
-      {isHost ? (
+      {isHost || isNodeOwner ? (
         <View style={styles.managementActions}>
           {editable ? (
             <Pressable onPress={() => setEditOpen((current) => !current)} style={styles.manageButton}>
@@ -798,11 +869,13 @@ function SelectedNode({
               <Text style={styles.manageButtonText}>Düzenle</Text>
             </Pressable>
           ) : null}
-          {(editable || ['completed', 'cancelled'].includes(pin.lifecycleStatus ?? 'planning')) ? (
+          {removable ? (
             <Pressable
               onPress={() => Alert.alert(
-                'Etkinliği kaldır',
-                'Bu etkinlik ve katılımcı kayıtları kalıcı olarak silinecek.',
+                pin.type === 'meet' ? 'Etkinliği kaldır' : 'Noktayı kaldır',
+                pin.type === 'meet'
+                  ? 'Bu etkinlik ve katılımcı kayıtları kalıcı olarak silinecek.'
+                  : 'Bu nokta, bağlı fotoğraflar ve değerlendirmeler kalıcı olarak silinecek.',
                 [
                   { text: 'Vazgeç', style: 'cancel' },
                   { text: 'Sil', style: 'destructive', onPress: () => void onDelete() },
@@ -821,20 +894,20 @@ function SelectedNode({
           <TextInput
             maxLength={100}
             onChangeText={setEditName}
-            placeholder="Etkinlik adı"
+            placeholder={pin.type === 'meet' ? 'Etkinlik adı' : 'Nokta adı'}
             placeholderTextColor={colors.textFaint}
             style={styles.reviewInput}
             value={editName}
           />
           <TextInput
-            maxLength={240}
+            maxLength={pin.type === 'meet' ? 240 : 500}
             onChangeText={setEditRoute}
-            placeholder="Buluşma veya rota açıklaması"
+            placeholder={pin.type === 'meet' ? 'Buluşma veya rota açıklaması' : 'Nokta açıklaması'}
             placeholderTextColor={colors.textFaint}
             style={styles.reviewInput}
             value={editRoute}
           />
-          <View style={styles.editNumberRow}>
+          {pin.type === 'meet' ? <View style={styles.editNumberRow}>
             <TextInput
               keyboardType="number-pad"
               maxLength={2}
@@ -853,11 +926,25 @@ function SelectedNode({
               style={[styles.reviewInput, styles.editNumberInput]}
               value={editScore}
             />
-          </View>
+          </View> : null}
           {editError ? <Text style={styles.editError}>{editError}</Text> : null}
           <Pressable
             disabled={Boolean(busy)}
             onPress={async () => {
+              if (pin.type !== 'meet') {
+                if (!editName.trim()) {
+                  setEditError('Nokta adı zorunludur.');
+                  return;
+                }
+                setEditError('');
+                await onUpdate({
+                  name: editName.trim(),
+                  description: editRoute.trim(),
+                  tags: pin.type === 'spot' ? pin.tags || [] : [],
+                });
+                setEditOpen(false);
+                return;
+              }
               const capacity = Number(editCapacity);
               const minDriverScore = Number(editScore);
               if (!editName.trim() || !editRoute.trim() || !Number.isInteger(capacity) || capacity < 2 || capacity > 50 || !Number.isFinite(minDriverScore) || minDriverScore < 0 || minDriverScore > 100) {
@@ -898,12 +985,43 @@ function SelectedNode({
             style={styles.reviewInput}
             value={note}
           />
+          <View style={styles.reviewPhotoField}>
+            <View style={styles.optionalPhotoCopy}>
+              <Text style={styles.optionalPhotoTitle}>Değerlendirme fotoğrafı</Text>
+              <Text style={styles.optionalPhotoHint}>İsteğe bağlı · en fazla 10 MB</Text>
+            </View>
+            {reviewPhoto ? (
+              <View style={styles.optionalPhotoPreviewWrap}>
+                <Image source={{ uri: reviewPhoto.uri }} style={styles.optionalPhotoPreview} />
+                <Pressable
+                  accessibilityLabel="Değerlendirme fotoğrafını kaldır"
+                  onPress={() => setReviewPhoto(null)}
+                  style={styles.removePhotoButton}
+                >
+                  <Ionicons name="close" size={17} color={colors.white} />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable onPress={() => void chooseReviewPhoto()} style={styles.photoSelectButton}>
+                <Ionicons name="image-outline" size={18} color={colors.limeBright} />
+                <Text style={styles.photoSelectText}>Fotoğraf Seç</Text>
+              </Pressable>
+            )}
+          </View>
           <Pressable
             disabled={Boolean(busy)}
             onPress={async () => {
-              await onReview({ foam, water, allowsBuckets, shadowDrying, note });
+              await onReview({
+                foam,
+                water,
+                allowsBuckets,
+                shadowDrying,
+                note,
+                ...(reviewPhoto ? { image: reviewPhoto } : {}),
+              });
               setReviewOpen(false);
               setNote('');
+              setReviewPhoto(null);
             }}
             style={styles.reviewSubmit}
           >
@@ -995,6 +1113,29 @@ function FlagButton({
       <Text style={[styles.flagText, active && styles.flagTextActive]}>{label}</Text>
     </Pressable>
   );
+}
+
+async function pickSingleImage() {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) {
+    Alert.alert(
+      'Fotoğraf izni gerekli',
+      'Cihazınızdaki bir görseli seçebilmek için fotoğraf erişimine izin verin.',
+    );
+    return null;
+  }
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    quality: 0.84,
+    selectionLimit: 1,
+  });
+  if (result.canceled || !result.assets[0]) return null;
+  const asset = result.assets[0];
+  if (Number(asset.fileSize ?? 0) > 10 * 1024 * 1024) {
+    Alert.alert('Görsel çok büyük', 'En fazla 10 MB boyutunda bir görsel seçin.');
+    return null;
+  }
+  return asset;
 }
 
 const styles = createThemedStyles(() => ({
@@ -1257,6 +1398,13 @@ const styles = createThemedStyles(() => ({
   },
   reviewAuthor: { color: colors.lime, fontFamily: fonts.bold, fontSize: 9 },
   reviewText: { marginTop: 3, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 10 },
+  reviewPhoto: {
+    width: '100%',
+    height: 148,
+    marginTop: 9,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+  },
   helpfulButton: {
     alignSelf: 'flex-start',
     minHeight: 36,
@@ -1380,6 +1528,14 @@ const styles = createThemedStyles(() => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  reviewPhotoField: {
+    padding: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    gap: 9,
+  },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.74)' },
   editor: {
     maxHeight: '92%',
@@ -1434,6 +1590,60 @@ const styles = createThemedStyles(() => ({
     fontSize: 13,
   },
   textArea: { minHeight: 72, paddingTop: 13, textAlignVertical: 'top' },
+  optionalPhotoField: {
+    minHeight: 70,
+    marginBottom: 10,
+    padding: 11,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  optionalPhotoCopy: { flex: 1 },
+  optionalPhotoTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 11 },
+  optionalPhotoHint: {
+    marginTop: 3,
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 9,
+  },
+  optionalPhotoPreviewWrap: { position: 'relative' },
+  optionalPhotoPreview: {
+    width: 76,
+    height: 58,
+    borderRadius: 12,
+    backgroundColor: colors.backgroundRaised,
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: -7,
+    right: -7,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.surface,
+    backgroundColor: colors.rose,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoSelectButton: {
+    minWidth: 112,
+    minHeight: 48,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.limeMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  photoSelectText: { color: colors.limeBright, fontFamily: fonts.bold, fontSize: 10 },
   trustField: {
     minHeight: 58,
     marginBottom: 10,

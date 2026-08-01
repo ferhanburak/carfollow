@@ -17,6 +17,13 @@ export type SpotPhoto = {
   createdAt: number;
 };
 
+export type MapUploadImage = {
+  uri: string;
+  fileName?: string | null;
+  fileSize?: number;
+  mimeType?: string | null;
+};
+
 export type WashReview = {
   id: string;
   pinId: string;
@@ -25,6 +32,8 @@ export type WashReview = {
   foam: number;
   water: number;
   note?: string;
+  imageUrl?: string;
+  storagePath?: string;
   helpfulCount?: number;
   createdAt: number;
 };
@@ -112,7 +121,15 @@ export function useMapWorld() {
     refreshConvoys,
     createNode: (pin: Record<string, unknown>) => run(
       'create-node',
-      () => callFirebase('createMapNode', { pin }),
+      () => callFirebase<{ ok: boolean; pinId: string }>('createMapNode', { pin }),
+    ),
+    updateNode: (pinId: string, details: Record<string, unknown>) => run(
+      `update-node-${pinId}`,
+      () => callFirebase('updateMapNode', { pinId, details }),
+    ),
+    deleteNode: (pinId: string) => run(
+      `delete-node-${pinId}`,
+      () => callFirebase('deleteMapNode', { pinId }),
     ),
     createConvoy: (pin: Record<string, unknown>) => run(
       'create-convoy',
@@ -156,44 +173,18 @@ export function useMapWorld() {
     ),
     addSpotPhoto: (
       pinId: string,
-      image: {
-        uri: string;
-        fileName?: string | null;
-        fileSize?: number;
-        mimeType?: string | null;
-      },
+      image: MapUploadImage,
     ) => run(`photo-${pinId}`, async () => {
-      const userId = firebaseAuth.currentUser?.uid;
-      if (!userId) throw new Error('Fotoğraf yüklemek için yeniden giriş yapmalısınız.');
-      if (Number(image.fileSize ?? 0) > 10 * 1024 * 1024) {
-        throw new Error('Görsel en fazla 10 MB olabilir.');
-      }
-      const response = await fetch(image.uri);
-      const blob = await response.blob();
-      if (!blob.type.startsWith('image/') || blob.size > 10 * 1024 * 1024) {
-        throw new Error('En fazla 10 MB boyutunda bir görsel seçin.');
-      }
-      const safeName = String(image.fileName || `spot-${Date.now()}.jpg`)
-        .normalize('NFKD')
-        .replace(/[^\w.-]+/g, '-')
-        .slice(-100);
-      const storagePath =
-        `artifacts/${APP_ID}/mapNodes/${pinId}/photos/${userId}/${Date.now()}-${safeName}`;
-      const storageReference = ref(firebaseStorage, storagePath);
+      const uploaded = await uploadMapImage(pinId, 'photos', image);
       try {
-        await uploadBytes(storageReference, blob, {
-          cacheControl: 'public,max-age=86400',
-          contentType: image.mimeType || blob.type || 'image/jpeg',
-        });
-        const imageUrl = await getDownloadURL(storageReference);
         return await callFirebase('addMapSpotPhoto', {
           pinId,
-          storagePath,
-          imageUrl,
+          storagePath: uploaded.storagePath,
+          imageUrl: uploaded.imageUrl,
           title: 'TrackSnap spot',
         });
       } catch (uploadError) {
-        await deleteObject(storageReference).catch(() => {});
+        await deleteObject(uploaded.storageReference).catch(() => {});
         throw uploadError;
       }
     }),
@@ -206,9 +197,55 @@ export function useMapWorld() {
         shadowDrying: boolean;
         note: string;
       },
-    ) => run(
-      `review-${pinId}`,
-      () => callFirebase('submitWashReview', { pinId, ...review }),
-    ),
+      image?: MapUploadImage,
+    ) => run(`review-${pinId}`, async () => {
+      const uploaded = image ? await uploadMapImage(pinId, 'reviews', image) : null;
+      try {
+        return await callFirebase('submitWashReview', {
+          pinId,
+          ...review,
+          ...(uploaded ? {
+            storagePath: uploaded.storagePath,
+            imageUrl: uploaded.imageUrl,
+          } : {}),
+        });
+      } catch (reviewError) {
+        if (uploaded) await deleteObject(uploaded.storageReference).catch(() => {});
+        throw reviewError;
+      }
+    }),
+  };
+}
+
+async function uploadMapImage(
+  pinId: string,
+  category: 'photos' | 'reviews',
+  image: MapUploadImage,
+) {
+  const userId = firebaseAuth.currentUser?.uid;
+  if (!userId) throw new Error('Fotoğraf yüklemek için yeniden giriş yapmalısınız.');
+  if (Number(image.fileSize ?? 0) > 10 * 1024 * 1024) {
+    throw new Error('Görsel en fazla 10 MB olabilir.');
+  }
+  const response = await fetch(image.uri);
+  const blob = await response.blob();
+  if (!blob.type.startsWith('image/') || blob.size > 10 * 1024 * 1024) {
+    throw new Error('En fazla 10 MB boyutunda bir görsel seçin.');
+  }
+  const safeName = String(image.fileName || `${category}-${Date.now()}.jpg`)
+    .normalize('NFKD')
+    .replace(/[^\w.-]+/g, '-')
+    .slice(-100);
+  const storagePath =
+    `artifacts/${APP_ID}/mapNodes/${pinId}/${category}/${userId}/${Date.now()}-${safeName}`;
+  const storageReference = ref(firebaseStorage, storagePath);
+  await uploadBytes(storageReference, blob, {
+    cacheControl: 'public,max-age=86400',
+    contentType: image.mimeType || blob.type || 'image/jpeg',
+  });
+  return {
+    imageUrl: await getDownloadURL(storageReference),
+    storagePath,
+    storageReference,
   };
 }

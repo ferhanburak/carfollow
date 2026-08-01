@@ -55,9 +55,38 @@ function buildMapPinDocument({ pinId, pin, profile, userId, timestamp }) {
   }
   return {
     ...base,
+    description: safeText(pin?.description, 500),
     rating: { foam: 0, water: 0, reviews: 0, allowsBuckets: 0, shadowDrying: 0 },
     ratingTotals: { foam: 0, water: 0, allowsBuckets: 0, shadowDrying: 0 },
   };
+}
+
+function buildMapPinEditablePatch(currentPin, details, timestamp) {
+  if (!currentPin || !["spot", "wash"].includes(currentPin.type)) {
+    throw new Error("Only spot and wash map nodes can be edited.");
+  }
+  const name = safeText(details?.name, 100);
+  if (!name) throw new Error("A node name is required.");
+  const patch = {
+    name,
+    description: safeText(details?.description, 500),
+    updatedAt: timestamp,
+  };
+  if (currentPin.type === "spot") patch.tags = safeTags(details?.tags);
+
+  const hasLat = details?.lat != null;
+  const hasLng = details?.lng != null;
+  if (hasLat !== hasLng) throw new Error("Both map coordinates are required when moving a node.");
+  if (hasLat) {
+    const lat = Number(details.lat);
+    const lng = Number(details.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+      throw new Error("A valid map location is required.");
+    }
+    patch.lat = lat;
+    patch.lng = lng;
+  }
+  return patch;
 }
 
 const COMMUNITY_CONTRIBUTION_WEIGHTS = Object.freeze({
@@ -85,7 +114,7 @@ function buildWashReviewDocument({ pinId, userId, profile, review, helpfulCount 
   if (![foam, water].every((score) => Number.isInteger(score) && score >= 1 && score <= 5)) {
     throw new Error("Wash scores must be between 1 and 5.");
   }
-  return {
+  const result = {
     id: `${pinId}__${userId}`,
     pinId,
     userId,
@@ -100,6 +129,16 @@ function buildWashReviewDocument({ pinId, userId, profile, review, helpfulCount 
     createdAt: timestamp,
     updatedAt: timestamp,
   };
+  const imageUrl = safeText(review?.imageUrl, 2048);
+  const storagePath = safeText(review?.storagePath, 512);
+  if (Boolean(imageUrl) !== Boolean(storagePath)) {
+    throw new Error("Wash review image metadata is incomplete.");
+  }
+  if (imageUrl) {
+    result.imageUrl = imageUrl;
+    result.storagePath = storagePath;
+  }
+  return result;
 }
 
 function buildWashRating(previousRating = {}, previousReview, nextReview) {
@@ -128,6 +167,7 @@ function buildSpotPhotoDocument({ photoId, pinId, userId, profile, title, imageU
 module.exports = {
   COMMUNITY_CONTRIBUTION_WEIGHTS,
   buildCommunityContributionPatch,
+  buildMapPinEditablePatch,
   buildMapPinDocument,
   buildSpotPhotoDocument,
   buildWashRating,

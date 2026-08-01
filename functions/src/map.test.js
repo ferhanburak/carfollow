@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   buildCommunityContributionPatch,
+  buildMapPinEditablePatch,
   buildMapPinDocument,
   buildWashRating,
   buildWashReviewDocument,
@@ -18,6 +19,21 @@ test("buildMapPinDocument keeps spot data public-safe and initializes counters",
   assert.deepEqual(node.tags, ["#sunset", "#smooth-asphalt"]);
   assert.equal(node.likes, 0);
   assert.equal(node.createdByUid, "driver-1");
+});
+
+test("map node edits preserve ownership and accept only mutable public fields", () => {
+  const patch = buildMapPinEditablePatch(
+    { type: "spot", createdByUid: "driver-1" },
+    { name: " Yeni Spot ", description: " Gün batımı ", tags: ["ankara", "#sunset"] },
+    "later",
+  );
+  assert.deepEqual(patch, {
+    name: "Yeni Spot",
+    description: "Gün batımı",
+    tags: ["#ankara", "#sunset"],
+    updatedAt: "later",
+  });
+  assert.equal(Object.hasOwn(patch, "createdByUid"), false);
 });
 
 test("wash rating replaces a driver's previous review instead of inflating totals", () => {
@@ -37,6 +53,30 @@ test("wash review helpful count can only be supplied by trusted server state", (
     timestamp: "now",
   });
   assert.equal(review.helpfulCount, 4);
+});
+
+test("wash reviews keep optional image metadata together", () => {
+  const review = buildWashReviewDocument({
+    pinId: "wash-1",
+    userId: "driver-1",
+    profile,
+    review: {
+      foam: 5,
+      water: 4,
+      imageUrl: "https://example.test/wash.jpg",
+      storagePath: "artifacts/cruiser-app-prod/mapNodes/wash-1/reviews/driver-1/wash.jpg",
+    },
+    timestamp: "now",
+  });
+  assert.equal(review.imageUrl, "https://example.test/wash.jpg");
+  assert.match(review.storagePath, /wash-1\/reviews\/driver-1/);
+  assert.throws(() => buildWashReviewDocument({
+    pinId: "wash-1",
+    userId: "driver-1",
+    profile,
+    review: { foam: 5, water: 4, imageUrl: "https://example.test/wash.jpg" },
+    timestamp: "now",
+  }), /metadata is incomplete/);
 });
 
 test("community contribution keeps safety score separate and applies weighted kudos", () => {
