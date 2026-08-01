@@ -10,7 +10,12 @@ export function buildForumState({ threads = [], replies = [], likes = [], viewer
     const normalized = { ...reply, createdAt: toMillis(reply.createdAt) };
     repliesByThread.set(reply.threadId, [...(repliesByThread.get(reply.threadId) ?? []), normalized]);
   });
-  const likedThreadIds = new Set(likes.filter((like) => like.userId === viewerUserId).map((like) => like.threadId));
+  const likedThreadIds = new Set(likes
+    .filter((like) => like.userId === viewerUserId && like.targetType !== "reply" && !like.replyId)
+    .map((like) => like.threadId));
+  const likedReplyIds = new Set(likes
+    .filter((like) => like.userId === viewerUserId && (like.targetType === "reply" || like.replyId))
+    .map((like) => like.replyId));
 
   return threads
     .filter((thread) => thread.status !== "deleted" && thread.status !== "hidden")
@@ -19,7 +24,14 @@ export function buildForumState({ threads = [], replies = [], likes = [], viewer
       createdAt: toMillis(thread.createdAt),
       updatedAt: toMillis(thread.updatedAt),
       likedByViewer: likedThreadIds.has(thread.id),
-      replies: (repliesByThread.get(thread.id) ?? []).sort((left, right) => left.createdAt - right.createdAt),
+      replies: (repliesByThread.get(thread.id) ?? [])
+        .filter((reply) => reply.status !== "deleted" && reply.status !== "hidden")
+        .map((reply) => ({ ...reply, likedByViewer: likedReplyIds.has(reply.id) }))
+        .sort((left, right) => {
+          if (left.id === thread.pinnedReplyId) return -1;
+          if (right.id === thread.pinnedReplyId) return 1;
+          return left.createdAt - right.createdAt;
+        }),
     }))
     .sort((left, right) => right.createdAt - left.createdAt);
 }
@@ -112,5 +124,6 @@ export async function createFirebaseForumThread(thread, imageFile) {
   }
 }
 
-export const toggleFirebaseForumLike = (threadId) => callForumFunction("toggleForumLike", { threadId });
+export const toggleFirebaseForumLike = (threadId, replyId = "") => callForumFunction("toggleForumLike", { threadId, replyId });
 export const addFirebaseForumReply = (threadId, body) => callForumFunction("addForumReply", { threadId, body });
+export const pinFirebaseForumSolution = (threadId, replyId) => callForumFunction("pinForumSolution", { threadId, replyId });

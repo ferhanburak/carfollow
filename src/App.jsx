@@ -603,8 +603,10 @@ function App() {
                 form={forum.form}
                 onFormChange={forum.setForm}
                 pendingKey={forum.pendingKey}
+                pinSolution={forum.pinSolution}
                 threads={forum.threads}
                 toggleLike={forum.toggleLike}
+                toggleReplyLike={forum.toggleReplyLike}
                 user={safeUser ?? user}
               />
             ) : null}

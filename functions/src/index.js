@@ -94,6 +94,7 @@ const {
 const {
   buildForumReplyDocument,
   buildForumThreadDocument,
+  supportsPinnedSolution,
 } = require("./forum");
 const {
   ACCOUNT_DELETE_CONFIRMATION,
@@ -3064,30 +3065,55 @@ exports.createForumThread = secureCall("createForumThread", {
   return { ok: true, threadId: threadRef.id };
 });
 
-exports.toggleForumLike = secureCall("toggleForumLike", { rateLimit: { limit: 90, windowSeconds: 3600 } }, async (request) => {
+exports.toggleForumLike = secureCall("toggleForumLike", {
+  ...LATENCY_SENSITIVE_OPTIONS,
+  rateLimit: { limit: 90, windowSeconds: 3600 },
+}, async (request) => {
   const userId = requireAuth(request);
   const threadId = sanitizeOperationalText(request.data?.threadId, 180);
+  const replyId = sanitizeOperationalText(request.data?.replyId, 180);
   if (!threadId || threadId.includes("/")) throw new HttpsError("invalid-argument", "Geçerli bir forum konusu gerekli.");
   const threadRef = publicDocument("forumThreads", threadId);
-  const likeRef = publicDocument("forumLikes", `${threadId}_${userId}`);
+  if (replyId.includes("/")) throw new HttpsError("invalid-argument", "Geçerli bir forum yanıtı gerekli.");
+  const targetRef = replyId ? publicDocument("forumReplies", replyId) : threadRef;
+  // Preserve existing thread-like IDs so deployed clients remain compatible.
+  const likeRef = publicDocument("forumLikes", replyId
+    ? `${threadId}_${replyId}_${userId}`
+    : `${threadId}_${userId}`);
   let liked = false;
   await db.runTransaction(async (transaction) => {
-    const [threadSnapshot, likeSnapshot] = await Promise.all([transaction.get(threadRef), transaction.get(likeRef)]);
+    const [threadSnapshot, targetSnapshot, likeSnapshot] = await Promise.all([
+      transaction.get(threadRef),
+      replyId ? transaction.get(targetRef) : transaction.get(threadRef),
+      transaction.get(likeRef),
+    ]);
     if (!threadSnapshot.exists || threadSnapshot.data().status !== "active") throw new HttpsError("not-found", "Forum konusu bulunamadı.");
-    const currentCount = Number(threadSnapshot.data().likeCount ?? 0);
+    if (!targetSnapshot.exists || targetSnapshot.data().status !== "active") throw new HttpsError("not-found", "Forum yanıtı bulunamadı.");
+    if (replyId && targetSnapshot.data().threadId !== threadId) throw new HttpsError("invalid-argument", "Forum yanıtı bu konuya ait değil.");
+    const currentCount = Number(targetSnapshot.data().likeCount ?? 0);
     if (likeSnapshot.exists) {
       transaction.delete(likeRef);
-      transaction.update(threadRef, { likeCount: Math.max(0, currentCount - 1), updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      transaction.update(targetRef, { likeCount: Math.max(0, currentCount - 1), updatedAt: admin.firestore.FieldValue.serverTimestamp() });
     } else {
       liked = true;
-      transaction.set(likeRef, { id: likeRef.id, threadId, userId, createdAt: admin.firestore.FieldValue.serverTimestamp() });
-      transaction.update(threadRef, { likeCount: currentCount + 1, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      transaction.set(likeRef, {
+        id: likeRef.id,
+        threadId,
+        replyId: replyId || null,
+        targetType: replyId ? "reply" : "thread",
+        userId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      transaction.update(targetRef, { likeCount: currentCount + 1, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
     }
   });
   return { ok: true, liked };
 });
 
-exports.addForumReply = secureCall("addForumReply", { rateLimit: { limit: 30, windowSeconds: 3600 } }, async (request) => {
+exports.addForumReply = secureCall("addForumReply", {
+  ...LATENCY_SENSITIVE_OPTIONS,
+  rateLimit: { limit: 30, windowSeconds: 3600 },
+}, async (request) => {
   const userId = requireAuth(request);
   const threadId = sanitizeOperationalText(request.data?.threadId, 180);
   if (!threadId || threadId.includes("/")) throw new HttpsError("invalid-argument", "Geçerli bir forum konusu gerekli.");
@@ -3116,4 +3142,46 @@ exports.addForumReply = secureCall("addForumReply", { rateLimit: { limit: 30, wi
     });
   });
   return { ok: true, replyId: replyRef.id };
+});
+
+exports.pinForumSolution = secureCall("pinForumSolution", {
+  ...LATENCY_SENSITIVE_OPTIONS,
+  rateLimit: { limit: 40, windowSeconds: 3600 },
+}, async (request) => {
+  const userId = requireAuth(request);
+  const threadId = sanitizeOperationalText(request.data?.threadId, 180);
+  const replyId = sanitizeOperationalText(request.data?.replyId, 180);
+  if (!threadId || !replyId || threadId.includes("/") || replyId.includes("/")) {
+    throw new HttpsError("invalid-argument", "Geçerli bir forum konusu ve yanıtı gerekli.");
+  }
+
+  const threadRef = publicDocument("forumThreads", threadId);
+  const replyRef = publicDocument("forumReplies", replyId);
+  let pinned = false;
+  await db.runTransaction(async (transaction) => {
+    const [threadSnapshot, replySnapshot] = await Promise.all([
+      transaction.get(threadRef),
+      transaction.get(replyRef),
+    ]);
+    if (!threadSnapshot.exists || threadSnapshot.data().status !== "active") {
+      throw new HttpsError("not-found", "Forum konusu bulunamadı.");
+    }
+    if (threadSnapshot.data().authorUserId !== userId) {
+      throw new HttpsError("permission-denied", "Yalnızca konu sahibi çözüm sabitleyebilir.");
+    }
+    if (!supportsPinnedSolution(threadSnapshot.data().category)) {
+      throw new HttpsError("failed-precondition", "Bu kategoride çözüm sabitleme kullanılamaz.");
+    }
+    if (!replySnapshot.exists || replySnapshot.data().status !== "active" || replySnapshot.data().threadId !== threadId) {
+      throw new HttpsError("not-found", "Forum yanıtı bulunamadı.");
+    }
+
+    pinned = threadSnapshot.data().pinnedReplyId !== replyId;
+    transaction.update(threadRef, {
+      pinnedReplyId: pinned ? replyId : null,
+      resolvedAt: pinned ? admin.firestore.FieldValue.serverTimestamp() : null,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+  return { ok: true, pinned, replyId };
 });

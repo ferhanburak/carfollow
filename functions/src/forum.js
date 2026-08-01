@@ -38,6 +38,7 @@ function buildForumThreadDocument({ id, input, profile, timestamp }) {
     authorModel: cleanText(profile.model, 120),
     likeCount: 0,
     replyCount: 0,
+    pinnedReplyId: null,
     status: "active",
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -54,10 +55,16 @@ function buildForumReplyDocument({ id, threadId, body, profile, timestamp }) {
     authorUserId: profile.userId,
     authorName: cleanText(profile.fullName, 100),
     authorPlate: cleanText(profile.plate, 20),
+    authorModel: cleanText(profile.model, 120),
+    likeCount: 0,
     status: "active",
     createdAt: timestamp,
     updatedAt: timestamp,
   };
+}
+
+function supportsPinnedSolution(category) {
+  return category === "technical" || category === "builds";
 }
 
 module.exports = {
@@ -65,4 +72,5 @@ module.exports = {
   buildForumReplyDocument,
   buildForumThreadDocument,
   normalizeForumLocation,
+  supportsPinnedSolution,
 };

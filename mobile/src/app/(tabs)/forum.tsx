@@ -15,8 +15,10 @@ import {
 } from 'react-native';
 
 import { ScreenShell } from '@/components/screen-shell';
+import { ForumThreadDetail } from '@/components/forum-thread-detail';
 import {
   createForumThread,
+  toggleForumLike,
   type ForumThread,
   useForumFeed,
 } from '@/hooks/use-forum-feed';
@@ -54,11 +56,30 @@ export default function ForumScreen() {
   const [selectedLocation, setSelectedLocation] = useState<ForumThread['location']>(null);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [selectedThreadId, setSelectedThreadId] = useState('');
+  const [pendingLikeId, setPendingLikeId] = useState('');
 
   const visibleThreads = useMemo(
     () => threads.filter((thread) => filter === 'all' || thread.category === filter),
     [filter, threads],
   );
+  const selectedThread = useMemo(
+    () => threads.find((thread) => thread.id === selectedThreadId) ?? null,
+    [selectedThreadId, threads],
+  );
+
+  const likeThread = async (thread: ForumThread) => {
+    if (pendingLikeId) return;
+    setPendingLikeId(thread.id);
+    try {
+      await toggleForumLike(thread.id);
+      void Haptics.selectionAsync();
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : 'Beğeni işlemi tamamlanamadı.');
+    } finally {
+      setPendingLikeId('');
+    }
+  };
 
   const publish = async () => {
     if (body.trim().length < 8) {
@@ -342,19 +363,35 @@ export default function ForumScreen() {
       {visibleThreads.map((thread) => (
         <ThreadCard
           key={thread.id}
+          likePending={pendingLikeId === thread.id}
+          onOpen={() => setSelectedThreadId(thread.id)}
           onOpenDriver={(driver) => void openDriverProfile(driver)}
+          onToggleLike={() => void likeThread(thread)}
           thread={thread}
         />
       ))}
+
+      <ForumThreadDetail
+        currentUserId={profile?.firebaseUid}
+        onClose={() => setSelectedThreadId('')}
+        onOpenDriver={(driver) => void openDriverProfile(driver)}
+        thread={selectedThread}
+      />
     </ScreenShell>
   );
 }
 
 function ThreadCard({
+  likePending,
+  onOpen,
   onOpenDriver,
+  onToggleLike,
   thread,
 }: {
+  likePending: boolean;
+  onOpen: () => void;
   onOpenDriver: (driver: DriverSummary) => void;
+  onToggleLike: () => void;
   thread: ForumThread;
 }) {
   return (
@@ -382,7 +419,8 @@ function ThreadCard({
         <Text style={styles.threadCategory}>{categoryLabels[thread.category]}</Text>
         <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
       </Pressable>
-      <Text style={styles.threadBody}>{thread.body}</Text>
+      <Pressable onPress={onOpen} style={({ pressed }) => pressed && styles.authorPressed}>
+        <Text style={styles.threadBody}>{thread.body}</Text>
           {thread.imageUrl ? (
         <Image
           contentFit="cover"
@@ -397,16 +435,33 @@ function ThreadCard({
               <Text style={styles.threadLocationText}>{thread.location.label}</Text>
             </View>
           ) : null}
+      </Pressable>
       <View style={styles.threadActions}>
-        <View style={styles.threadAction}>
-          <Ionicons color={colors.textMuted} name="heart-outline" size={19} />
+        <Pressable
+          accessibilityLabel={thread.likedByViewer ? 'Beğeniyi kaldır' : 'Gönderiyi beğen'}
+          disabled={likePending}
+          onPress={onToggleLike}
+          style={styles.threadAction}
+        >
+          {likePending ? (
+            <ActivityIndicator color={colors.rose} size="small" />
+          ) : (
+            <Ionicons
+              color={thread.likedByViewer ? colors.rose : colors.textMuted}
+              name={thread.likedByViewer ? 'heart' : 'heart-outline'}
+              size={19}
+            />
+          )}
           <Text style={styles.actionCount}>{thread.likeCount || 0}</Text>
-        </View>
-        <View style={styles.threadAction}>
+        </Pressable>
+        <Pressable onPress={onOpen} style={styles.threadAction}>
           <Ionicons color={colors.textMuted} name="chatbubble-outline" size={18} />
           <Text style={styles.actionCount}>{thread.replyCount || 0}</Text>
-        </View>
-        <Ionicons color={colors.textFaint} name="share-outline" size={19} />
+        </Pressable>
+        <Pressable accessibilityLabel="Gönderi detayını aç" onPress={onOpen} style={styles.openThread}>
+          <Text style={styles.openThreadText}>Konuşmayı gör</Text>
+          <Ionicons color={colors.textFaint} name="chevron-forward" size={15} />
+        </Pressable>
       </View>
     </View>
   );
@@ -656,6 +711,8 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   threadAction: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  openThread: { marginLeft: 'auto', minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 3 },
+  openThreadText: { color: colors.textFaint, fontFamily: fonts.semibold, fontSize: 10 },
   actionCount: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 11 },
   pressed: { opacity: 0.7, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.5 },

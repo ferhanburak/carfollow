@@ -3,6 +3,7 @@ import {
   addFirebaseForumReply,
   createFirebaseForumThread,
   isFirebaseForumRepositoryEnabled,
+  pinFirebaseForumSolution,
   subscribeFirebaseForum,
   toggleFirebaseForumLike,
 } from "../repositories/firebaseForumRepository";
@@ -81,14 +82,38 @@ export function useForum(user, enabled = true) {
     }
   };
 
+  const toggleReplyLike = async (threadId, replyId) => {
+    setPendingKey(`reply-like:${replyId}`);
+    try {
+      await toggleFirebaseForumLike(threadId, replyId);
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Yanıt beğenisi kaydedilemedi.");
+    } finally {
+      setPendingKey("");
+    }
+  };
+
+  const pinSolution = async (threadId, replyId) => {
+    setPendingKey(`pin:${replyId}`);
+    try {
+      await pinFirebaseForumSolution(threadId, replyId);
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Çözüm sabitlenemedi.");
+    } finally {
+      setPendingKey("");
+    }
+  };
+
   return {
     addReply,
     createThread,
     feedback,
     form,
     pendingKey,
+    pinSolution,
     setForm,
     threads,
     toggleLike,
+    toggleReplyLike,
   };
 }

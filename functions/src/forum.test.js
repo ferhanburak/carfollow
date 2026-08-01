@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { buildForumReplyDocument, buildForumThreadDocument } = require("./forum");
+const { buildForumReplyDocument, buildForumThreadDocument, supportsPinnedSolution } = require("./forum");
 
 const profile = { userId: "user-1", fullName: "Test Driver", plate: "06 TEST 01", model: "Golf GTI" };
 
@@ -30,8 +30,28 @@ test("buildForumThreadDocument keeps only category-specific metadata", () => {
   assert.equal(thread.storagePath, "artifacts/cruiser-app-prod/forumThreads/user-1/forum.jpg");
   assert.equal("title" in thread, false);
   assert.equal(thread.likeCount, 0);
+  assert.equal(thread.pinnedReplyId, null);
 });
 
 test("buildForumReplyDocument rejects empty replies", () => {
   assert.throws(() => buildForumReplyDocument({ id: "reply-1", threadId: "thread-1", body: " ", profile, timestamp: 123 }));
+});
+
+test("forum replies initialize like metadata and keep the vehicle model", () => {
+  const reply = buildForumReplyDocument({
+    id: "reply-1",
+    threadId: "thread-1",
+    body: "Check the oil pressure sensor too.",
+    profile,
+    timestamp: 123,
+  });
+  assert.equal(reply.authorModel, "Golf GTI");
+  assert.equal(reply.likeCount, 0);
+});
+
+test("only technical and build threads support pinned solutions", () => {
+  assert.equal(supportsPinnedSolution("technical"), true);
+  assert.equal(supportsPinnedSolution("builds"), true);
+  assert.equal(supportsPinnedSolution("places"), false);
+  assert.equal(supportsPinnedSolution("roadlife"), false);
 });

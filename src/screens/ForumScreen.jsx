@@ -20,7 +20,7 @@ function ActionIcon({ children }) {
   );
 }
 
-function ThreadCard({ onAddReply, onToggleLike, pendingKey, thread }) {
+function ThreadCard({ onAddReply, onPinSolution, onToggleLike, onToggleReplyLike, pendingKey, thread, viewerUserId }) {
   const [reply, setReply] = useState("");
   const [repliesOpen, setRepliesOpen] = useState(false);
 
@@ -32,6 +32,8 @@ function ThreadCard({ onAddReply, onToggleLike, pendingKey, thread }) {
   const locationUrl = sharedLocation
     ? `https://www.google.com/maps/search/?api=1&query=${sharedLocation.lat},${sharedLocation.lng}`
     : "";
+  const canPinSolution = thread.authorUserId === viewerUserId && ["technical", "builds"].includes(thread.category);
+  const solutionLabel = thread.category === "technical" ? "Çözüm" : "En yararlı cevap";
 
   return (
     <article className="border-b border-white/10 px-4 py-4 transition-colors hover:bg-white/[0.025]">
@@ -85,12 +87,26 @@ function ThreadCard({ onAddReply, onToggleLike, pendingKey, thread }) {
       </div>
       {repliesOpen ? (
         <div className="mt-4 space-y-3 border-t border-white/8 pt-4">
-          {(thread.replies ?? []).map((item) => (
-            <div key={item.id} className="rounded-xl bg-black/25 px-3 py-3">
+          {(thread.replies ?? []).map((item) => {
+            const pinned = thread.pinnedReplyId === item.id;
+            return (
+            <div key={item.id} className={`rounded-xl border px-3 py-3 ${pinned ? "border-lime-400/40 bg-lime-400/[0.07]" : "border-transparent bg-black/25"}`}>
+              {pinned ? <p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-lime-400">✓ {solutionLabel}</p> : null}
               <p className="text-xs font-semibold text-lime-200">{item.authorName}</p>
               <p className="mt-1 text-sm text-neutral-300">{item.body}</p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <button type="button" disabled={pendingKey === `reply-like:${item.id}`} onClick={() => onToggleReplyLike(thread.id, item.id)} className={`flex min-h-10 items-center gap-1.5 text-xs ${item.likedByViewer ? "text-rose-400" : "text-neutral-500"}`}>
+                  <ActionIcon><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" /></ActionIcon>
+                  {item.likeCount ?? 0}
+                </button>
+                {canPinSolution ? (
+                  <button type="button" disabled={pendingKey === `pin:${item.id}`} onClick={() => onPinSolution(thread.id, item.id)} className={`min-h-10 rounded-xl border px-3 text-[10px] font-bold ${pinned ? "border-lime-400 bg-lime-400 text-black" : "border-lime-400/25 text-lime-300"}`}>
+                    {pinned ? "Sabitlemeyi kaldır" : `${solutionLabel} olarak sabitle`}
+                  </button>
+                ) : null}
+              </div>
             </div>
-          ))}
+          );})}
           <textarea value={reply} onChange={(event) => setReply(event.target.value)} rows={2} placeholder="Yanitini yaz..." className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-3 text-sm outline-none focus:border-lime-400" />
           <button type="button" disabled={!reply.trim() || pendingKey === `reply:${thread.id}`} onClick={submitReply} className="min-h-12 w-full rounded-xl bg-lime-400 text-xs font-bold text-black disabled:opacity-40">
             {pendingKey === `reply:${thread.id}` ? "Gönderiliyor..." : "Yanitla"}
@@ -101,7 +117,7 @@ function ThreadCard({ onAddReply, onToggleLike, pendingKey, thread }) {
   );
 }
 
-export function ForumScreen({ addReply, createThread, feedback, form, onFormChange, pendingKey, threads, toggleLike, user }) {
+export function ForumScreen({ addReply, createThread, feedback, form, onFormChange, pendingKey, pinSolution, threads, toggleLike, toggleReplyLike, user }) {
   const [activeCategory, setActiveCategory] = useState("all");
   const [composerOpen, setComposerOpen] = useState(false);
   const [imageFile, setImageFile] = useState(null);
@@ -308,7 +324,18 @@ export function ForumScreen({ addReply, createThread, feedback, form, onFormChan
       </div>
 
       <div>
-        {visibleThreads.map((thread) => <ThreadCard key={thread.id} onAddReply={addReply} onToggleLike={toggleLike} pendingKey={pendingKey} thread={thread} />)}
+        {visibleThreads.map((thread) => (
+          <ThreadCard
+            key={thread.id}
+            onAddReply={addReply}
+            onPinSolution={pinSolution}
+            onToggleLike={toggleLike}
+            onToggleReplyLike={toggleReplyLike}
+            pendingKey={pendingKey}
+            thread={thread}
+            viewerUserId={user?.firebaseUid ?? user?.userId ?? user?.id}
+          />
+        ))}
         {!visibleThreads.length ? <div className="p-8 text-center text-sm text-neutral-500">Bu kategoride henüz paylaşım yok. İlk paylaşımı sen yap.</div> : null}
       </div>
     </section>

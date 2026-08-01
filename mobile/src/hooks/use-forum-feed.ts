@@ -12,7 +12,7 @@ import {
   ref,
   uploadBytes,
 } from 'firebase/storage';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   firebaseAuth,
@@ -21,6 +21,28 @@ import {
   firestoreDb,
 } from '@/lib/firebase';
 import { APP_ID, publicCollectionPath } from '@/lib/firebase-paths';
+
+export type ForumReply = {
+  id: string;
+  threadId: string;
+  body: string;
+  authorUserId: string;
+  authorName: string;
+  authorPlate?: string;
+  authorModel?: string;
+  likeCount: number;
+  likedByViewer?: boolean;
+  createdAt?: Timestamp;
+  status?: string;
+};
+
+type ForumLike = {
+  id: string;
+  threadId: string;
+  replyId?: string | null;
+  targetType?: 'thread' | 'reply';
+  userId: string;
+};
 
 export type ForumThread = {
   id: string;
@@ -39,13 +61,18 @@ export type ForumThread = {
   authorModel: string;
   likeCount: number;
   replyCount: number;
+  pinnedReplyId?: string | null;
+  likedByViewer?: boolean;
+  replies: ForumReply[];
   createdAt?: Timestamp;
   status?: string;
 };
 
 export function useForumFeed() {
-  const [threads, setThreads] = useState<ForumThread[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rawThreads, setRawThreads] = useState<Omit<ForumThread, 'replies'>[]>([]);
+  const [rawReplies, setRawReplies] = useState<ForumReply[]>([]);
+  const [rawLikes, setRawLikes] = useState<ForumLike[]>([]);
+  const [loadingState, setLoadingState] = useState({ threads: true, replies: true, likes: true });
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -54,9 +81,9 @@ export function useForumFeed() {
       limit(50),
     );
 
-    return onSnapshot(feedQuery, (snapshot) => {
+    const stopThreads = onSnapshot(feedQuery, (snapshot) => {
       const nextThreads = snapshot.docs
-        .map((entry) => ({ id: entry.id, ...entry.data() }) as ForumThread)
+        .map((entry) => ({ id: entry.id, ...entry.data() }) as Omit<ForumThread, 'replies'>)
         .filter((thread) => (
           thread.body &&
           thread.authorName &&
@@ -66,16 +93,98 @@ export function useForumFeed() {
         .sort((left, right) => (
           (right.createdAt?.toMillis?.() ?? 0) - (left.createdAt?.toMillis?.() ?? 0)
         ));
-      setThreads(nextThreads);
+      setRawThreads(nextThreads);
       setError('');
-      setLoading(false);
+      setLoadingState((current) => ({ ...current, threads: false }));
     }, (snapshotError) => {
       setError(snapshotError.message);
-      setLoading(false);
+      setLoadingState((current) => ({ ...current, threads: false }));
     });
+
+    const stopReplies = onSnapshot(
+      query(collection(firestoreDb, publicCollectionPath('forumReplies')), limit(300)),
+      (snapshot) => {
+        setRawReplies(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as ForumReply));
+        setLoadingState((current) => ({ ...current, replies: false }));
+      },
+      (snapshotError) => {
+        setError(snapshotError.message);
+        setLoadingState((current) => ({ ...current, replies: false }));
+      },
+    );
+
+    const stopLikes = onSnapshot(
+      query(collection(firestoreDb, publicCollectionPath('forumLikes')), limit(600)),
+      (snapshot) => {
+        setRawLikes(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as ForumLike));
+        setLoadingState((current) => ({ ...current, likes: false }));
+      },
+      (snapshotError) => {
+        setError(snapshotError.message);
+        setLoadingState((current) => ({ ...current, likes: false }));
+      },
+    );
+
+    return () => {
+      stopThreads();
+      stopReplies();
+      stopLikes();
+    };
   }, []);
 
-  return { threads, loading, error };
+  const threads = useMemo(() => {
+    const viewerId = firebaseAuth.currentUser?.uid;
+    const viewerThreadLikes = new Set(rawLikes
+      .filter((like) => like.userId === viewerId && like.targetType !== 'reply' && !like.replyId)
+      .map((like) => like.threadId));
+    const viewerReplyLikes = new Set(rawLikes
+      .filter((like) => like.userId === viewerId && (like.targetType === 'reply' || Boolean(like.replyId)))
+      .map((like) => like.replyId)
+      .filter(Boolean));
+
+    return rawThreads.map((thread) => {
+      const replies = rawReplies
+        .filter((reply) => reply.threadId === thread.id && reply.status !== 'deleted' && reply.status !== 'hidden')
+        .map((reply) => ({ ...reply, likedByViewer: viewerReplyLikes.has(reply.id) }))
+        .sort((left, right) => {
+          if (left.id === thread.pinnedReplyId) return -1;
+          if (right.id === thread.pinnedReplyId) return 1;
+          return (left.createdAt?.toMillis?.() ?? 0) - (right.createdAt?.toMillis?.() ?? 0);
+        });
+      return {
+        ...thread,
+        likedByViewer: viewerThreadLikes.has(thread.id),
+        replies,
+      } as ForumThread;
+    });
+  }, [rawLikes, rawReplies, rawThreads]);
+
+  return {
+    threads,
+    loading: loadingState.threads || loadingState.replies || loadingState.likes,
+    error,
+  };
+}
+
+export async function toggleForumLike(threadId: string, replyId?: string) {
+  const result = await httpsCallable(firebaseFunctions, 'toggleForumLike')({
+    threadId,
+    replyId: replyId ?? '',
+  });
+  return result.data;
+}
+
+export async function addForumReply(threadId: string, body: string) {
+  const result = await httpsCallable(firebaseFunctions, 'addForumReply')({
+    threadId,
+    body: body.trim(),
+  });
+  return result.data;
+}
+
+export async function pinForumSolution(threadId: string, replyId: string) {
+  const result = await httpsCallable(firebaseFunctions, 'pinForumSolution')({ threadId, replyId });
+  return result.data;
 }
 
 export async function createForumThread(
