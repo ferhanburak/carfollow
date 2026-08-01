@@ -14,6 +14,8 @@ import { AuthProvider } from '@/providers/auth-provider';
 import { AppDataProvider } from '@/providers/app-data-provider';
 import { colors } from '@/theme/colors';
 
+import '@/lib/background-drive';
+
 void SplashScreen.preventAutoHideAsync();
 
 const cruiserTheme = {

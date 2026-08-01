@@ -44,7 +44,8 @@
         {
           "locationWhenInUsePermission": "CRUISER, sürüş hızını, mesafeyi ve haritadaki konumunu hesaplamak için konumuna erişir.",
           "locationAlwaysAndWhenInUsePermission": "CRUISER, aktif sürüş oturumunu ekran kapalıyken de sürdürebilmek için konumuna erişir.",
-          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": true,
           "isIosBackgroundLocationEnabled": true
         }
       ],

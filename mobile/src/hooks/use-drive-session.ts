@@ -1,16 +1,19 @@
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import { httpsCallable } from 'firebase/functions';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, Platform } from 'react-native';
 
 import {
-  createDriveMetrics,
-  processGpsPosition,
-  stabilizeDisplayedSpeed,
-  updateDriveMetrics,
-  type DisplayedSpeed,
-  type DriveMetrics,
-  type GpsPoint,
-} from '@/lib/drive-telemetry';
+  clearBackgroundDrive,
+  isBackgroundDriveRunning,
+  readBackgroundDriveSnapshot,
+  startBackgroundDrive,
+  stopBackgroundDrive,
+  subscribeToBackgroundDrive,
+  type BackgroundDriveSnapshot,
+} from '@/lib/background-drive';
+import { createDriveMetrics, type DriveMetrics } from '@/lib/drive-telemetry';
 import { firebaseFunctions } from '@/lib/firebase';
 import { useAuth } from '@/providers/auth-provider';
 
@@ -66,18 +69,44 @@ const initialState: DriveSessionState = {
 function getLocationError(error: unknown) {
   const message = error instanceof Error ? error.message : '';
   if (message.toLowerCase().includes('permission')) {
-    return 'Konum izni olmadan sürüş kaydı başlatılamaz.';
+    return 'Arka plan sürüş takibi için konum ve bildirim izinlerini açmalısın.';
   }
   return message || 'GPS konumu okunamadı.';
+}
+
+function elapsedSince(startedAt: number | null) {
+  if (!startedAt) return 0;
+  return Math.max(0, Math.floor((Date.now() - startedAt) / 1_000));
+}
+
+async function requestDrivePermissions() {
+  const servicesEnabled = await Location.hasServicesEnabledAsync();
+  if (!servicesEnabled) throw new Error('Telefonun konum servisini açmalısın.');
+
+  const foregroundPermission = await Location.requestForegroundPermissionsAsync();
+  if (!foregroundPermission.granted) {
+    throw new Error('Konum izni olmadan sürüş kaydı başlatılamaz.');
+  }
+
+  if (Platform.OS === 'ios') {
+    const backgroundPermission = await Location.requestBackgroundPermissionsAsync();
+    if (!backgroundPermission.granted) {
+      throw new Error('Ekran kapalıyken sürüş kaydı için konum iznini “Her Zaman” seçmelisin.');
+    }
+  }
+
+  if (Platform.OS === 'android') {
+    const notificationPermission = await Notifications.requestPermissionsAsync();
+    if (!notificationPermission.granted) {
+      throw new Error('Arka plan sürüş durumunu görebilmek için bildirim iznini açmalısın.');
+    }
+  }
 }
 
 export function useDriveSession() {
   const { user, refreshProfile } = useAuth();
   const [state, setState] = useState<DriveSessionState>(initialState);
-  const subscriptionRef = useRef<Location.LocationSubscription | null>(null);
-  const pointRef = useRef<GpsPoint | null>(null);
-  const metricsRef = useRef<DriveMetrics>(createDriveMetrics());
-  const displayedSpeedRef = useRef<DisplayedSpeed | null>(null);
+  const snapshotRef = useRef<BackgroundDriveSnapshot | null>(null);
   const startedAtRef = useRef<number | null>(null);
   const stateRef = useRef(state);
 
@@ -85,14 +114,61 @@ export function useDriveSession() {
     stateRef.current = state;
   }, [state]);
 
+  const hydrateSnapshot = useCallback((snapshot: BackgroundDriveSnapshot, running: boolean) => {
+    snapshotRef.current = snapshot;
+    startedAtRef.current = snapshot.startedAt;
+    setState((current) => ({
+      ...current,
+      accuracy: snapshot.accuracy,
+      currentSpeedKmh: running ? snapshot.currentSpeedKmh : 0,
+      elapsedSeconds: elapsedSince(snapshot.startedAt),
+      error: running ? '' : 'Sürüş takibi durdu; kaydı sunucuya gönderebilirsin.',
+      isDriving: running,
+      location: snapshot.location,
+      metrics: snapshot.metrics,
+      pending: false,
+      sessionId: snapshot.sessionId,
+      status: running ? 'active' : 'error',
+      statusMessage: running
+        ? snapshot.statusMessage
+        : 'Sürüş verisi cihazda korunuyor; kaydı tamamlamayı yeniden deneyebilirsin.',
+    }));
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    let mounted = true;
+
+    const restore = async () => {
+      const snapshot = await readBackgroundDriveSnapshot();
+      if (!mounted || !snapshot) return;
+      if (snapshot.userId !== user.uid) {
+        await clearBackgroundDrive();
+        return;
+      }
+      const running = await isBackgroundDriveRunning();
+      if (mounted) hydrateSnapshot(snapshot, running);
+    };
+
+    void restore();
+    const unsubscribe = subscribeToBackgroundDrive((snapshot) => {
+      if (snapshot.userId === user.uid) hydrateSnapshot(snapshot, true);
+    });
+    const appStateSubscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') void restore();
+    });
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+      appStateSubscription.remove();
+    };
+  }, [hydrateSnapshot, user]);
+
   useEffect(() => {
     if (!state.isDriving || !startedAtRef.current) return;
-
     const updateElapsed = () => {
-      const elapsedSeconds = Math.max(
-        0,
-        Math.floor((Date.now() - Number(startedAtRef.current)) / 1000),
-      );
+      const elapsedSeconds = elapsedSince(startedAtRef.current);
       setState((current) => (
         current.elapsedSeconds === elapsedSeconds
           ? current
@@ -104,45 +180,6 @@ export function useDriveSession() {
     return () => clearInterval(timer);
   }, [state.isDriving]);
 
-  useEffect(() => () => {
-    subscriptionRef.current?.remove();
-    subscriptionRef.current = null;
-  }, []);
-
-  const consumePosition = useCallback((position: Location.LocationObject) => {
-    const reading = processGpsPosition(pointRef.current, position);
-    if (reading.accepted) pointRef.current = reading.nextPoint;
-
-    const displayedSpeed = stabilizeDisplayedSpeed(displayedSpeedRef.current, reading);
-    displayedSpeedRef.current = displayedSpeed;
-    metricsRef.current = updateDriveMetrics(metricsRef.current, reading);
-
-    setState((current) => ({
-      ...current,
-      accuracy: reading.accuracy ?? current.accuracy,
-      currentSpeedKmh: displayedSpeed.speedKmh,
-      error: reading.gpsStatus === 'error' ? 'GPS örneği doğrulanamadı.' : '',
-      location: reading.location ?? current.location,
-      metrics: metricsRef.current,
-      statusMessage: reading.gpsStatus === 'weak'
-        ? 'GPS doğruluğu zayıf; bu örnek mesafeye eklenmedi.'
-        : 'Gerçek GPS telemetrisi aktif.',
-    }));
-  }, []);
-
-  const beginWatcher = useCallback(async () => {
-    subscriptionRef.current?.remove();
-    subscriptionRef.current = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.BestForNavigation,
-        distanceInterval: 1,
-        mayShowUserSettingsDialog: true,
-        timeInterval: 1_000,
-      },
-      consumePosition,
-    );
-  }, [consumePosition]);
-
   const start = useCallback(async () => {
     if (!user || stateRef.current.pending || stateRef.current.isDriving) return false;
 
@@ -151,19 +188,12 @@ export function useDriveSession() {
       error: '',
       pending: true,
       status: 'requesting-permission',
-      statusMessage: 'Konum izni kontrol ediliyor...',
+      statusMessage: 'Arka plan konum ve bildirim izinleri kontrol ediliyor...',
     }));
 
+    let openedSessionId = '';
     try {
-      const servicesEnabled = await Location.hasServicesEnabledAsync();
-      if (!servicesEnabled) {
-        throw new Error('Telefonun konum servisini açmalısın.');
-      }
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (!permission.granted) {
-        throw new Error('Konum izni olmadan sürüş kaydı başlatılamaz.');
-      }
-
+      await requestDrivePermissions();
       setState((current) => ({
         ...current,
         status: 'starting',
@@ -175,29 +205,34 @@ export function useDriveSession() {
         { sessionId: string },
         StartDriveResult
       >(firebaseFunctions, 'startDriveSession')({ sessionId: requestedSessionId });
-      const sessionId = response.data.sessionId || requestedSessionId;
+      openedSessionId = response.data.sessionId || requestedSessionId;
 
-      pointRef.current = null;
-      metricsRef.current = createDriveMetrics();
-      displayedSpeedRef.current = null;
-      startedAtRef.current = Date.now();
-      await beginWatcher();
-
-      setState({
-        ...initialState,
+      const snapshot = await startBackgroundDrive(openedSessionId, user.uid);
+      hydrateSnapshot(snapshot, true);
+      setState((current) => ({
+        ...current,
+        error: '',
         isDriving: true,
         pending: false,
-        sessionId,
         status: 'active',
         statusMessage: response.data.resumed
-          ? 'Açık sürüş oturumuna yeniden bağlanıldı.'
-          : 'Sürüş başladı; güvenilir GPS örnekleri kaydediliyor.',
-      });
+          ? 'Açık sürüş oturumuna yeniden bağlanıldı; arka plan takibi aktif.'
+          : 'Sürüş başladı; ekran kapalıyken de GPS kaydedilecek.',
+      }));
       return true;
     } catch (error) {
+      if (openedSessionId) {
+        await httpsCallable(firebaseFunctions, 'finishDriveSession')({
+          acceptedSampleCount: 0,
+          qualifiedSpeedSampleCount: 0,
+          reportedKm: 0,
+          reportedMaxSpeedKmh: 0,
+          reportedMovingSeconds: 0,
+          sessionId: openedSessionId,
+        }).catch(() => undefined);
+      }
       const message = getLocationError(error);
-      subscriptionRef.current?.remove();
-      subscriptionRef.current = null;
+      await clearBackgroundDrive();
       setState((current) => ({
         ...current,
         error: message,
@@ -208,25 +243,25 @@ export function useDriveSession() {
       }));
       return false;
     }
-  }, [beginWatcher, user]);
+  }, [hydrateSnapshot, user]);
 
   const finish = useCallback(async () => {
     const current = stateRef.current;
     if (!current.sessionId || current.pending) return false;
 
-    subscriptionRef.current?.remove();
-    subscriptionRef.current = null;
     setState((value) => ({
       ...value,
       currentSpeedKmh: 0,
       isDriving: false,
       pending: true,
       status: 'finalizing',
-      statusMessage: 'Sürüş verileri doğrulanıyor...',
+      statusMessage: 'Arka plan takibi kapatılıyor ve sürüş doğrulanıyor...',
     }));
 
     try {
-      const metrics = metricsRef.current;
+      await stopBackgroundDrive();
+      const snapshot = await readBackgroundDriveSnapshot();
+      const metrics = snapshot?.metrics ?? snapshotRef.current?.metrics ?? current.metrics;
       const response = await httpsCallable<
         {
           acceptedSampleCount: number;
@@ -247,6 +282,8 @@ export function useDriveSession() {
       });
       const acceptedKm = Number(response.data.acceptedKm ?? metrics.sessionKm);
       const rejectedKm = Number(response.data.rejectedKm ?? 0);
+      await clearBackgroundDrive();
+      snapshotRef.current = null;
       startedAtRef.current = null;
       await refreshProfile();
 
@@ -273,18 +310,15 @@ export function useDriveSession() {
         isDriving: false,
         pending: false,
         status: 'error',
-        statusMessage: 'Sürüş verisi korunuyor; tamamlamayı yeniden deneyebilirsin.',
+        statusMessage: 'Sürüş verisi cihazda korunuyor; tamamlamayı yeniden deneyebilirsin.',
       }));
       return false;
     }
   }, [refreshProfile]);
 
   const reset = useCallback(() => {
-    subscriptionRef.current?.remove();
-    subscriptionRef.current = null;
-    pointRef.current = null;
-    metricsRef.current = createDriveMetrics();
-    displayedSpeedRef.current = null;
+    void clearBackgroundDrive();
+    snapshotRef.current = null;
     startedAtRef.current = null;
     setState(initialState);
   }, []);
