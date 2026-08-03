@@ -13,10 +13,16 @@ import type { DriverSummary, MapPin } from '@/types/cruiser';
 
 type MapNodeDetailModalProps = {
   busy?: boolean;
+  currentUserId?: string;
   onClose: () => void;
+  onCancelTrip?: () => void;
   onJoin?: () => void;
   onLike?: () => void;
   onOpenDriver?: (driver: DriverSummary) => void;
+  onRateMember?: (driver: DriverSummary, signal: 'harmony' | 'alert') => void;
+  onRemoveMember?: (driver: DriverSummary) => void;
+  onRespondRequest?: (driver: DriverSummary, decision: 'approved' | 'declined') => void;
+  onSetRole?: (driver: DriverSummary, role: 'manager' | 'member') => void;
   pin: MapPin | null;
 };
 
@@ -46,10 +52,16 @@ export function MapNodeMarker({
 
 export function MapNodeDetailModal({
   busy = false,
+  currentUserId,
   onClose,
+  onCancelTrip,
   onJoin,
   onLike,
   onOpenDriver,
+  onRateMember,
+  onRemoveMember,
+  onRespondRequest,
+  onSetRole,
   pin,
 }: MapNodeDetailModalProps) {
   if (!pin) return null;
@@ -58,6 +70,10 @@ export function MapNodeDetailModal({
   const capacity = Number(pin.capacity ?? 12);
   const approvedCount = Number(pin.approvedCount ?? 1);
   const minDriverScore = Number(pin.minDriverScore ?? 0);
+  const canManage = ['host', 'manager'].includes(pin.viewerManagementRole ?? '');
+  const isHost = pin.viewerManagementRole === 'host';
+  const canRate = pin.lifecycleStatus === 'completed'
+    && pin.viewerMembershipStatus === 'approved';
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} transparent visible>
@@ -116,6 +132,13 @@ export function MapNodeDetailModal({
                     label="Beğeni"
                     value={`${Number(pin.likes ?? 0)}`}
                   />
+                  {pin.eventMode === 'convoy' ? (
+                    <Metric
+                      icon="navigate-circle-outline"
+                      label="Sürüş durumu"
+                      value={tripStatusLabel(pin.viewerTripStatus, pin.lifecycleStatus)}
+                    />
+                  ) : null}
                 </View>
 
                 {pin.backendCanViewDetails === false ? (
@@ -127,31 +150,90 @@ export function MapNodeDetailModal({
                   </View>
                 ) : null}
 
+                {canManage && pin.pendingRequests?.length ? (
+                  <View style={styles.attendees}>
+                    <Text style={styles.sectionLabel}>Bekleyen katılım istekleri</Text>
+                    {pin.pendingRequests.map((driver) => (
+                      <View key={driver.userId} style={styles.memberCard}>
+                        <DriverHeader driver={driver} onOpenDriver={onOpenDriver} />
+                        <View style={styles.actionRow}>
+                          <SmallAction
+                            disabled={busy}
+                            icon="checkmark"
+                            label="Kabul"
+                            onPress={() => onRespondRequest?.(driver, 'approved')}
+                            positive
+                          />
+                          <SmallAction
+                            danger
+                            disabled={busy}
+                            icon="close"
+                            label="Reddet"
+                            onPress={() => onRespondRequest?.(driver, 'declined')}
+                          />
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+
                 {pin.attendees?.length ? (
                   <View style={styles.attendees}>
                     <Text style={styles.sectionLabel}>Katılımcılar</Text>
-                    {pin.attendees.slice(0, 6).map((driver) => (
-                      <Pressable
-                        disabled={!driver.userId || !onOpenDriver}
-                        key={driver.userId}
-                        onPress={() => onOpenDriver?.(driver)}
-                        style={({ pressed }) => [
-                          styles.driver,
-                          pressed && styles.pressed,
-                        ]}
-                      >
-                        <Ionicons color={colors.limeBright} name="person-circle-outline" size={24} />
-                        <View style={styles.driverCopy}>
-                          <Text numberOfLines={1} style={styles.driverName}>
-                            {driver.fullName || driver.plate || 'Sürücü'}
-                          </Text>
-                          <Text numberOfLines={1} style={styles.driverMeta}>
-                            {driver.model || 'Katılımcı'}
-                          </Text>
+                    {pin.attendees.map((driver) => {
+                      const isSelf = driver.userId === currentUserId;
+                      const isTargetHost = driver.managementRole === 'host'
+                        || driver.userId === pin.hostUserId;
+                      const canRemove = canManage && !isSelf && !isTargetHost
+                        && (isHost || driver.managementRole !== 'manager');
+                      return (
+                        <View key={driver.userId} style={styles.memberCard}>
+                          <DriverHeader driver={driver} onOpenDriver={onOpenDriver} />
+                          <View style={styles.memberStatusRow}>
+                            <Text style={styles.tripBadge}>{tripStatusLabel(driver.tripStatus)}</Text>
+                            <Text style={styles.roleBadge}>{roleLabel(driver.managementRole)}</Text>
+                          </View>
+                          {isHost && !isSelf && !isTargetHost ? (
+                            <SmallAction
+                              disabled={busy}
+                              icon={driver.managementRole === 'manager' ? 'person-outline' : 'shield-outline'}
+                              label={driver.managementRole === 'manager' ? 'Üye yap' : 'Yardımcı yap'}
+                              onPress={() => onSetRole?.(
+                                driver,
+                                driver.managementRole === 'manager' ? 'member' : 'manager',
+                              )}
+                            />
+                          ) : null}
+                          {canRemove ? (
+                            <SmallAction
+                              danger
+                              disabled={busy}
+                              icon="person-remove-outline"
+                              label="Konvoydan çıkar"
+                              onPress={() => onRemoveMember?.(driver)}
+                            />
+                          ) : null}
+                          {canRate && !isSelf ? (
+                            <View style={styles.actionRow}>
+                              <SmallAction
+                                disabled={busy}
+                                icon="thumbs-up-outline"
+                                label="Uyumlu"
+                                onPress={() => onRateMember?.(driver, 'harmony')}
+                                positive
+                              />
+                              <SmallAction
+                                danger
+                                disabled={busy}
+                                icon="warning-outline"
+                                label="Sorunlu"
+                                onPress={() => onRateMember?.(driver, 'alert')}
+                              />
+                            </View>
+                          ) : null}
                         </View>
-                        <Ionicons color={colors.textFaint} name="chevron-forward" size={15} />
-                      </Pressable>
-                    ))}
+                      );
+                    })}
                   </View>
                 ) : null}
               </>
@@ -228,11 +310,105 @@ export function MapNodeDetailModal({
             {pin.type === 'meet' && !pin.backendCanJoin && pin.backendAccessReason ? (
               <Text style={styles.accessMessage}>{friendlyAccessReason(pin)}</Text>
             ) : null}
+
+            {pin.type === 'meet'
+            && pin.eventMode === 'convoy'
+            && pin.viewerMembershipStatus === 'approved'
+            && !['completed', 'cancelled'].includes(pin.lifecycleStatus ?? '')
+            && pin.viewerTripStatus !== 'cancelled'
+            && onCancelTrip ? (
+              <Pressable
+                disabled={busy}
+                onPress={onCancelTrip}
+                style={({ pressed }) => [styles.cancelTrip, pressed && styles.pressed]}
+              >
+                <Ionicons color={colors.rose} name="exit-outline" size={17} />
+                <Text style={styles.cancelTripText}>Konvoy sürüşünden ayrıl</Text>
+              </Pressable>
+            ) : null}
           </ScrollView>
         </View>
       </View>
     </Modal>
   );
+}
+
+function DriverHeader({
+  driver,
+  onOpenDriver,
+}: {
+  driver: DriverSummary;
+  onOpenDriver?: (driver: DriverSummary) => void;
+}) {
+  return (
+    <Pressable
+      disabled={!driver.userId || !onOpenDriver}
+      onPress={() => onOpenDriver?.(driver)}
+      style={({ pressed }) => [styles.driver, pressed && styles.pressed]}
+    >
+      <Ionicons color={colors.limeBright} name="person-circle-outline" size={24} />
+      <View style={styles.driverCopy}>
+        <Text numberOfLines={1} style={styles.driverName}>
+          {driver.fullName || driver.plate || 'Sürücü'}
+        </Text>
+        <Text numberOfLines={1} style={styles.driverMeta}>
+          {driver.model || 'Katılımcı'}
+        </Text>
+      </View>
+      <Ionicons color={colors.textFaint} name="chevron-forward" size={15} />
+    </Pressable>
+  );
+}
+
+function SmallAction({
+  danger = false,
+  disabled = false,
+  icon,
+  label,
+  onPress,
+  positive = false,
+}: {
+  danger?: boolean;
+  disabled?: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  positive?: boolean;
+}) {
+  return (
+    <Pressable
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.smallAction,
+        positive && styles.smallActionPositive,
+        danger && styles.smallActionDanger,
+        pressed && styles.pressed,
+        disabled && styles.disabled,
+      ]}
+    >
+      <Ionicons
+        color={danger ? colors.rose : positive ? colors.limeBright : colors.textMuted}
+        name={icon}
+        size={15}
+      />
+      <Text style={[styles.smallActionText, danger && styles.smallActionTextDanger]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function tripStatusLabel(tripStatus?: string, lifecycleStatus?: string) {
+  if (lifecycleStatus === 'completed') return 'Tamamlandı';
+  if (lifecycleStatus === 'cancelled' || tripStatus === 'cancelled') return 'İptal';
+  if (tripStatus === 'arrived') return 'Ulaştı';
+  if (tripStatus === 'enroute') return 'Yolda';
+  return 'Hazır';
+}
+
+function roleLabel(role?: string) {
+  if (role === 'host') return 'Kurucu';
+  if (role === 'manager') return 'Yardımcı';
+  return 'Katılımcı';
 }
 
 export function mapNodeIcon(pin: MapPin): keyof typeof Ionicons.glyphMap {
@@ -425,6 +601,14 @@ const styles = createThemedStyles(() => ({
     lineHeight: 15,
   },
   attendees: { marginTop: 14, gap: 7 },
+  memberCard: {
+    padding: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundRaised,
+    gap: 7,
+  },
   sectionLabel: {
     color: colors.textFaint,
     fontFamily: fonts.bold,
@@ -436,9 +620,6 @@ const styles = createThemedStyles(() => ({
     minHeight: 50,
     paddingHorizontal: 10,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.backgroundRaised,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 9,
@@ -446,6 +627,36 @@ const styles = createThemedStyles(() => ({
   driverCopy: { flex: 1 },
   driverName: { color: colors.text, fontFamily: fonts.bold, fontSize: 10 },
   driverMeta: { marginTop: 2, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9 },
+  memberStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  tripBadge: {
+    color: colors.limeBright,
+    fontFamily: fonts.bold,
+    fontSize: 8,
+    textTransform: 'uppercase',
+  },
+  roleBadge: {
+    color: colors.textFaint,
+    fontFamily: fonts.semibold,
+    fontSize: 8,
+    textTransform: 'uppercase',
+  },
+  actionRow: { flexDirection: 'row', gap: 7 },
+  smallAction: {
+    minHeight: 40,
+    flex: 1,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  smallActionPositive: { borderColor: 'rgba(163,230,53,0.3)' },
+  smallActionDanger: { borderColor: 'rgba(244,63,94,0.3)' },
+  smallActionText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 9 },
+  smallActionTextDanger: { color: colors.rose },
   host: {
     minHeight: 58,
     marginTop: 13,
@@ -491,6 +702,18 @@ const styles = createThemedStyles(() => ({
     lineHeight: 15,
     textAlign: 'center',
   },
+  cancelTrip: {
+    minHeight: 46,
+    marginTop: 12,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(244,63,94,0.3)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  cancelTripText: { color: colors.rose, fontFamily: fonts.bold, fontSize: 10 },
   pressed: { opacity: 0.75, transform: [{ scale: 0.985 }] },
   disabled: { opacity: 0.55 },
 }));

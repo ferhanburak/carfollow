@@ -357,6 +357,9 @@ function presentConvoy(convoy, profile, membership, members) {
     pendingRequests: canManageConvoy(convoy, membership, viewerUserId) ? pending : [],
     invitedGuests: detailsAllowed ? (convoy.invitedGuests ?? []) : [],
     viewerManagementRole,
+    viewerMembershipStatus: membership?.membershipStatus ?? "",
+    viewerTripStatus: membership?.tripStatus ?? "",
+    viewerTrackingStatus: membership?.trackingStatus ?? "",
   };
 }
 

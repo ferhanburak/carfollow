@@ -23,6 +23,12 @@ export type DriverSummary = {
   friendshipId?: string;
   friendshipStatus?: 'none' | 'incoming' | 'outgoing' | 'accepted';
   status?: string;
+  membershipStatus?: 'pending' | 'approved';
+  managementRole?: 'host' | 'manager' | 'member';
+  tripStatus?: 'ready' | 'enroute' | 'arrived' | 'cancelled';
+  trackingStatus?: 'active' | 'inactive';
+  distanceToDestinationM?: number | null;
+  arrivalVerificationStatus?: 'tracking' | 'verifying' | 'low-accuracy' | 'confirmed';
 };
 
 export type Friendship = {
@@ -108,11 +114,15 @@ export type MapPin = {
   maxAlertVotes?: number;
   scheduledStartAtMs?: number;
   lifecycleStatus?: string;
+  automaticArrivalTracking?: boolean;
   backendCanJoin?: boolean;
   backendCanLike?: boolean;
   backendCanViewDetails?: boolean;
   backendAccessReason?: string;
   viewerManagementRole?: 'host' | 'manager' | 'member' | '';
+  viewerMembershipStatus?: 'pending' | 'approved' | '';
+  viewerTripStatus?: 'ready' | 'enroute' | 'arrived' | 'cancelled' | '';
+  viewerTrackingStatus?: 'active' | 'inactive' | '';
   invitedGuests?: DriverSummary[];
   pendingRequests?: DriverSummary[];
   attendees?: DriverSummary[];

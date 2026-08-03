@@ -147,6 +147,71 @@ export function useMapWorld() {
         return response;
       },
     ),
+    respondConvoyRequest: (
+      convoyId: string,
+      memberUserId: string,
+      decision: 'approved' | 'declined',
+    ) => run(`respond-${convoyId}-${memberUserId}`, async () => {
+      const response = await callFirebase('respondConvoyJoinRequest', {
+        convoyId,
+        memberUserId,
+        decision,
+      });
+      await refreshConvoys();
+      return response;
+    }),
+    removeConvoyMember: (convoyId: string, memberUserId: string) => run(
+      `remove-${convoyId}-${memberUserId}`,
+      async () => {
+        const response = await callFirebase('removeConvoyMember', { convoyId, memberUserId });
+        await refreshConvoys();
+        return response;
+      },
+    ),
+    setConvoyMemberRole: (
+      convoyId: string,
+      memberUserId: string,
+      managementRole: 'manager' | 'member',
+    ) => run(`role-${convoyId}-${memberUserId}`, async () => {
+      const response = await callFirebase('setConvoyMemberRole', {
+        convoyId,
+        memberUserId,
+        managementRole,
+      });
+      await refreshConvoys();
+      return response;
+    }),
+    cancelConvoyTrip: (convoyId: string) => run(`cancel-trip-${convoyId}`, async () => {
+      const response = await callFirebase('updateConvoyTripStatus', {
+        convoyId,
+        tripStatus: 'cancelled',
+      });
+      await refreshConvoys();
+      return response;
+    }),
+    rateConvoyMember: (
+      convoyId: string,
+      targetUserId: string,
+      signal: 'harmony' | 'alert',
+    ) => run(`rate-${convoyId}-${targetUserId}`, async () => {
+      const response = await callFirebase('rateConvoyMember', {
+        convoyId,
+        targetUserId,
+        signal,
+      });
+      await refreshConvoys();
+      return response;
+    }),
+    syncConvoyLocation: async (
+      convoyId: string,
+      location: { lat: number; lng: number; accuracy: number },
+    ) => callFirebase<{
+      convoyId: string;
+      lifecycleStatus: string;
+      tripStatus: string;
+      distanceToDestinationM?: number | null;
+      completed?: boolean;
+    }>('syncConvoyLocation', { convoyId, ...location }),
     updateConvoy: (convoyId: string, details: Record<string, unknown>) => run(
       `update-${convoyId}`,
       async () => {

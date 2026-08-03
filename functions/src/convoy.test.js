@@ -102,6 +102,10 @@ test("convoy management roles keep host authority and allow delegated managers",
   assert.equal(canManageConvoy(convoy, hostMembership, host.id), true);
   assert.equal(canManageConvoy(convoy, managerMembership, guest.id), true);
   assert.equal(canManageConvoy(convoy, memberMembership, guest.id), false);
+  const presented = presentConvoy(convoy, guest, managerMembership, [managerMembership]);
+  assert.equal(presented.viewerManagementRole, "manager");
+  assert.equal(presented.viewerMembershipStatus, "approved");
+  assert.equal(presented.viewerTripStatus, "ready");
 });
 
 test("editable convoy patch validates capacity and preserves route coordinates", () => {

@@ -300,6 +300,14 @@ export default function MapScreen() {
                       setNotice(world.error || 'Katılım isteği gönderilemedi.');
                     }
                   }}
+                  onCancelTrip={() => Alert.alert(
+                    'Konvoy sürüşünden ayrıl',
+                    'GPS konvoy takibiniz durdurulacak. Devam edilsin mi?',
+                    [
+                      { text: 'Vazgeç', style: 'cancel' },
+                      { text: 'Ayrıl', style: 'destructive', onPress: () => void world.cancelConvoyTrip(selected.id) },
+                    ],
+                  )}
                   onLike={async () => {
                     try {
                       await world.likePin(selected.id);
@@ -327,6 +335,30 @@ export default function MapScreen() {
                     }
                   }}
                   onOpenDriver={(driver) => void openDriverProfile(driver, { convoyId: selected.id })}
+                  onRateMember={(driver, signal) => void world.rateConvoyMember(
+                    selected.id,
+                    driver.userId,
+                    signal,
+                  ).then(() => setNotice('Konvoy değerlendirmeniz kaydedildi.'))
+                    .catch(() => setNotice(world.error || 'Değerlendirme kaydedilemedi.'))}
+                  onRemoveMember={(driver) => Alert.alert(
+                    'Katılımcıyı çıkar',
+                    `${driver.fullName || 'Bu sürücü'} konvoydan çıkarılsın mı?`,
+                    [
+                      { text: 'Vazgeç', style: 'cancel' },
+                      { text: 'Çıkar', style: 'destructive', onPress: () => void world.removeConvoyMember(selected.id, driver.userId) },
+                    ],
+                  )}
+                  onRespondRequest={(driver, decision) => void world.respondConvoyRequest(
+                    selected.id,
+                    driver.userId,
+                    decision,
+                  ).catch(() => setNotice(world.error || 'Katılım isteği güncellenemedi.'))}
+                  onSetRole={(driver, role) => void world.setConvoyMemberRole(
+                    selected.id,
+                    driver.userId,
+                    role,
+                  ).catch(() => setNotice(world.error || 'Konvoy rolü güncellenemedi.'))}
                   onPhoto={async (asset) => {
                     try {
                       await world.addSpotPhoto(selected.id, asset);
@@ -358,7 +390,7 @@ export default function MapScreen() {
                   }}
                   photos={world.photos.filter((photo) => photo.pinId === selected.id)}
                   currentUserId={user?.uid || ''}
-                  pin={selected}
+                  pin={world.pins.find((pin) => pin.id === selected.id) ?? selected}
                   reviews={world.reviews.filter((review) => review.pinId === selected.id)}
                 />
               ) : null}
@@ -644,15 +676,33 @@ function sortEventPins(left: MapPin, right: MapPin) {
   return eventPopularity(right) - eventPopularity(left);
 }
 
+function convoyRoleLabel(role?: string) {
+  if (role === 'host') return 'Kurucu';
+  if (role === 'manager') return 'Yardımcı';
+  return 'Katılımcı';
+}
+
+function convoyTripLabel(status?: string) {
+  if (status === 'arrived') return 'Ulaştı';
+  if (status === 'enroute') return 'Yolda';
+  if (status === 'cancelled') return 'İptal';
+  return 'Hazır';
+}
+
 function SelectedNode({
   busy,
   currentUserId,
+  onCancelTrip,
   onClose,
   onJoin,
   onLike,
   onDelete,
   onHelpfulReview,
   onOpenDriver,
+  onRateMember,
+  onRemoveMember,
+  onRespondRequest,
+  onSetRole,
   onPhoto,
   onReview,
   onUpdate,
@@ -662,12 +712,17 @@ function SelectedNode({
 }: {
   busy: string;
   currentUserId: string;
+  onCancelTrip: () => void;
   onClose: () => void;
   onJoin: () => void;
   onLike: () => void;
   onDelete: () => Promise<void>;
   onHelpfulReview: (reviewId: string) => Promise<void>;
   onOpenDriver: (driver: DriverSummary) => void;
+  onRateMember: (driver: DriverSummary, signal: 'harmony' | 'alert') => void;
+  onRemoveMember: (driver: DriverSummary) => void;
+  onRespondRequest: (driver: DriverSummary, decision: 'approved' | 'declined') => void;
+  onSetRole: (driver: DriverSummary, role: 'manager' | 'member') => void;
   onPhoto: (asset: ImagePicker.ImagePickerAsset) => Promise<void>;
   onReview: (review: {
     foam: number;
@@ -802,18 +857,103 @@ function SelectedNode({
               Minimum güven puanı: {Number(pin.minDriverScore ?? 0)}/100
             </Text>
           </View>
+          {['host', 'manager'].includes(pin.viewerManagementRole ?? '')
+          && pin.pendingRequests?.length ? (
+            <View style={styles.attendeeList}>
+              <Text style={styles.attendeeTitle}>Bekleyen katılım istekleri</Text>
+              {pin.pendingRequests.map((driver) => (
+                <View key={driver.userId} style={styles.convoyMemberBlock}>
+                  <DriverIdentity driver={driver} label="Onay bekliyor" onOpen={onOpenDriver} />
+                  <View style={styles.convoyMemberActions}>
+                    <Pressable
+                      disabled={Boolean(busy)}
+                      onPress={() => onRespondRequest(driver, 'approved')}
+                      style={styles.manageButton}
+                    >
+                      <Ionicons name="checkmark" size={16} color={colors.limeBright} />
+                      <Text style={styles.manageButtonText}>Kabul</Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={Boolean(busy)}
+                      onPress={() => onRespondRequest(driver, 'declined')}
+                      style={[styles.manageButton, styles.deleteButton]}
+                    >
+                      <Ionicons name="close" size={16} color={colors.rose} />
+                      <Text style={styles.deleteButtonText}>Reddet</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
           {pin.attendees?.length ? (
             <View style={styles.attendeeList}>
               <Text style={styles.attendeeTitle}>Katılımcılar</Text>
-              {pin.attendees.map((driver) => (
-                <DriverIdentity
-                  driver={driver}
-                  key={driver.userId}
-                  label={driver.relation === 'self' ? 'Siz' : 'Katılımcı'}
-                  onOpen={onOpenDriver}
-                />
-              ))}
+              {pin.attendees.map((driver) => {
+                const self = driver.userId === currentUserId;
+                const targetHost = driver.userId === pin.hostUserId || driver.managementRole === 'host';
+                const canRemove = ['host', 'manager'].includes(pin.viewerManagementRole ?? '')
+                  && !self && !targetHost
+                  && (pin.viewerManagementRole === 'host' || driver.managementRole !== 'manager');
+                return (
+                  <View key={driver.userId} style={styles.convoyMemberBlock}>
+                    <DriverIdentity
+                      driver={driver}
+                      label={`${convoyRoleLabel(driver.managementRole)} · ${convoyTripLabel(driver.tripStatus)}`}
+                      onOpen={onOpenDriver}
+                    />
+                    {pin.viewerManagementRole === 'host' && !self && !targetHost ? (
+                      <Pressable
+                        disabled={Boolean(busy)}
+                        onPress={() => onSetRole(
+                          driver,
+                          driver.managementRole === 'manager' ? 'member' : 'manager',
+                        )}
+                        style={styles.manageButton}
+                      >
+                        <Ionicons name="shield-outline" size={16} color={colors.limeBright} />
+                        <Text style={styles.manageButtonText}>
+                          {driver.managementRole === 'manager' ? 'Katılımcı yap' : 'Yardımcı yap'}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                    {canRemove ? (
+                      <Pressable
+                        disabled={Boolean(busy)}
+                        onPress={() => onRemoveMember(driver)}
+                        style={[styles.manageButton, styles.deleteButton]}
+                      >
+                        <Ionicons name="person-remove-outline" size={16} color={colors.rose} />
+                        <Text style={styles.deleteButtonText}>Konvoydan çıkar</Text>
+                      </Pressable>
+                    ) : null}
+                    {pin.lifecycleStatus === 'completed'
+                    && pin.viewerMembershipStatus === 'approved'
+                    && !self ? (
+                      <View style={styles.convoyMemberActions}>
+                        <Pressable onPress={() => onRateMember(driver, 'harmony')} style={styles.manageButton}>
+                          <Ionicons name="thumbs-up-outline" size={16} color={colors.limeBright} />
+                          <Text style={styles.manageButtonText}>Uyumlu</Text>
+                        </Pressable>
+                        <Pressable onPress={() => onRateMember(driver, 'alert')} style={[styles.manageButton, styles.deleteButton]}>
+                          <Ionicons name="warning-outline" size={16} color={colors.rose} />
+                          <Text style={styles.deleteButtonText}>Sorunlu</Text>
+                        </Pressable>
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })}
             </View>
+          ) : null}
+          {pin.eventMode === 'convoy'
+          && pin.viewerMembershipStatus === 'approved'
+          && !['completed', 'cancelled'].includes(pin.lifecycleStatus ?? '')
+          && pin.viewerTripStatus !== 'cancelled' ? (
+            <Pressable onPress={onCancelTrip} style={[styles.manageButton, styles.deleteButton]}>
+              <Ionicons name="exit-outline" size={16} color={colors.rose} />
+              <Text style={styles.deleteButtonText}>Konvoy sürüşünden ayrıl</Text>
+            </Pressable>
           ) : null}
         </>
       ) : null}
@@ -1440,6 +1580,15 @@ const styles = createThemedStyles(() => ({
     fontSize: 10,
   },
   attendeeList: { marginTop: 12 },
+  convoyMemberBlock: {
+    marginTop: 7,
+    padding: 7,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 7,
+  },
+  convoyMemberActions: { flexDirection: 'row', gap: 7 },
   attendeeTitle: {
     marginBottom: 2,
     color: colors.textFaint,

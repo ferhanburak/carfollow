@@ -29,7 +29,7 @@ const mapProvider =
 export default function LiveMapScreen() {
   const mapRef = useRef<MapView>(null);
   const { resolvedTheme } = useAppTheme();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { mapWorld, openDriverProfile } = useDriverProfile();
   const { drivers, location } = useLiveTelemetry();
   const [follow, setFollow] = useState(true);
@@ -216,7 +216,16 @@ export default function LiveMapScreen() {
 
         <MapNodeDetailModal
           busy={Boolean(mapWorld.busy)}
+          currentUserId={user?.uid}
           onClose={() => setSelectedPin(null)}
+          onCancelTrip={selectedPin?.type === 'meet' ? () => Alert.alert(
+            'Konvoy sürüşünden ayrıl',
+            'GPS konvoy takibiniz durdurulacak. Devam edilsin mi?',
+            [
+              { text: 'Vazgeç', style: 'cancel' },
+              { text: 'Ayrıl', style: 'destructive', onPress: () => void mapWorld.cancelConvoyTrip(selectedPin.id) },
+            ],
+          ) : undefined}
           onJoin={selectedPin?.backendCanJoin ? async () => {
             try {
               await mapWorld.joinConvoy(selectedPin.id);
@@ -236,7 +245,44 @@ export default function LiveMapScreen() {
           onOpenDriver={(driver) => void openDriverProfile(driver, {
             convoyId: selectedPin?.type === 'meet' ? selectedPin.id : undefined,
           })}
-          pin={selectedPin}
+          onRateMember={selectedPin?.type === 'meet' ? (driver, signal) => {
+            Alert.alert(
+              signal === 'harmony' ? 'Uyumlu sürücü' : 'Sorun bildir',
+              `${driver.fullName || 'Bu sürücü'} için oyun kaydedilsin mi?`,
+              [
+                { text: 'Vazgeç', style: 'cancel' },
+                {
+                  text: 'Kaydet',
+                  onPress: () => void mapWorld.rateConvoyMember(selectedPin.id, driver.userId, signal)
+                    .then(() => Alert.alert('Puan kaydedildi', 'Konvoy değerlendirmeniz işlendi.'))
+                    .catch(() => Alert.alert('Puanlama başarısız', mapWorld.error || 'Oy kaydedilemedi.')),
+                },
+              ],
+            );
+          } : undefined}
+          onRemoveMember={selectedPin?.type === 'meet' ? (driver) => Alert.alert(
+            'Katılımcıyı çıkar',
+            `${driver.fullName || 'Bu sürücü'} konvoydan çıkarılsın mı?`,
+            [
+              { text: 'Vazgeç', style: 'cancel' },
+              { text: 'Çıkar', style: 'destructive', onPress: () => void mapWorld.removeConvoyMember(selectedPin.id, driver.userId) },
+            ],
+          ) : undefined}
+          onRespondRequest={selectedPin?.type === 'meet' ? (driver, decision) => {
+            void mapWorld.respondConvoyRequest(selectedPin.id, driver.userId, decision)
+              .catch(() => Alert.alert('İşlem başarısız', mapWorld.error || 'Katılım isteği güncellenemedi.'));
+          } : undefined}
+          onSetRole={selectedPin?.type === 'meet' ? (driver, role) => Alert.alert(
+            'Konvoy rolünü değiştir',
+            `${driver.fullName || 'Bu sürücü'} ${role === 'manager' ? 'yardımcı' : 'katılımcı'} yapılsın mı?`,
+            [
+              { text: 'Vazgeç', style: 'cancel' },
+              { text: 'Onayla', onPress: () => void mapWorld.setConvoyMemberRole(selectedPin.id, driver.userId, role) },
+            ],
+          ) : undefined}
+          pin={selectedPin
+            ? mapWorld.pins.find((pin) => pin.id === selectedPin.id) ?? selectedPin
+            : null}
         />
       </SafeAreaView>
     </LinearGradient>

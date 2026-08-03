@@ -24,8 +24,10 @@ import {
   type ProfileFriendshipState,
 } from '@/components/public-driver-profile-modal';
 import { useMapWorld } from '@/hooks/use-map-world';
+import { useConvoyTracking } from '@/hooks/use-convoy-tracking';
 import { useSocialWorld } from '@/hooks/use-social-world';
 import { useAppData } from '@/providers/app-data-provider';
+import { useAuth } from '@/providers/auth-provider';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary, MapPin } from '@/types/cruiser';
 
@@ -42,9 +44,11 @@ const DriverProfileContext = createContext<DriverProfileContextValue | null>(nul
 
 export function DriverProfileProvider({ children }: PropsWithChildren) {
   const router = useRouter();
+  const { user } = useAuth();
   const appData = useAppData();
   const social = useSocialWorld();
   const mapWorld = useMapWorld();
+  useConvoyTracking(user?.uid, mapWorld);
   const [profileTarget, setProfileTarget] = useState<DriverSummary | null>(null);
   const [publicProfile, setPublicProfile] = useState<DriverSummary | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
