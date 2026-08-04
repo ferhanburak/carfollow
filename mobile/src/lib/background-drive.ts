@@ -13,6 +13,8 @@ import {
   type DriveMetrics,
   type GpsPoint,
 } from '@/lib/drive-telemetry';
+import { localizeCopy } from '@/i18n/copy-catalog';
+import { getPreferredLanguage } from '@/i18n/language-runtime';
 
 export const BACKGROUND_DRIVE_TASK = 'tracksnap-background-drive';
 
@@ -85,15 +87,16 @@ async function persistSnapshot(snapshot: BackgroundDriveSnapshot) {
   emitSnapshot(snapshot);
 }
 
-function formatNotificationDuration(startedAt: number) {
+function formatNotificationDuration(startedAt: number, language: 'tr' | 'en') {
   const totalMinutes = Math.max(0, Math.floor((Date.now() - startedAt) / 60_000));
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
+  if (language === 'en') return hours > 0 ? `${hours} hr ${minutes} min` : `${minutes} min`;
   return hours > 0 ? `${hours} sa ${minutes} dk` : `${minutes} dk`;
 }
 
-function formatNotificationDistance(distanceKm: number) {
-  return Math.max(0, distanceKm).toLocaleString('tr-TR', {
+function formatNotificationDistance(distanceKm: number, language: 'tr' | 'en') {
+  return Math.max(0, distanceKm).toLocaleString(language === 'en' ? 'en-US' : 'tr-TR', {
     minimumFractionDigits: distanceKm < 1 ? 2 : 1,
     maximumFractionDigits: distanceKm < 1 ? 2 : 1,
   });
@@ -101,12 +104,13 @@ function formatNotificationDistance(distanceKm: number) {
 
 async function updateDriveNotification(snapshot: BackgroundDriveSnapshot) {
   if (Platform.OS !== 'android') return;
+  const language = await getPreferredLanguage();
 
   await Notifications.scheduleNotificationAsync({
     identifier: DRIVE_NOTIFICATION_ID,
     content: {
-      title: 'TrackSnap · Sürüş modu aktif',
-      body: `${Math.round(snapshot.currentSpeedKmh)} km/sa · ${formatNotificationDistance(snapshot.metrics.sessionKm)} km · ${formatNotificationDuration(snapshot.startedAt)}`,
+      title: localizeCopy('TrackSnap · Sürüş modu aktif', language),
+      body: `${Math.round(snapshot.currentSpeedKmh)} ${language === 'en' ? 'km/h' : 'km/sa'} · ${formatNotificationDistance(snapshot.metrics.sessionKm, language)} km · ${formatNotificationDuration(snapshot.startedAt, language)}`,
       color: '#a3e635',
       data: { screen: 'drive', sessionId: snapshot.sessionId },
       priority: Notifications.AndroidNotificationPriority.LOW,
@@ -176,9 +180,10 @@ if (!TaskManager.isTaskDefined(BACKGROUND_DRIVE_TASK)) {
 
 export async function configureDriveNotificationChannel() {
   if (Platform.OS !== 'android') return;
+  const language = await getPreferredLanguage();
   await Notifications.setNotificationChannelAsync(DRIVE_NOTIFICATION_CHANNEL, {
-    name: 'Sürüş takibi',
-    description: 'Aktif sürüşte hız, mesafe ve süre bilgisini gösterir.',
+    name: localizeCopy('Sürüş takibi', language),
+    description: localizeCopy('Aktif sürüşte hız, mesafe ve süre bilgisini gösterir.', language),
     importance: Notifications.AndroidImportance.LOW,
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     showBadge: false,
@@ -208,6 +213,7 @@ export async function isBackgroundDriveRunning() {
 
 export async function startBackgroundDrive(sessionId: string, userId: string) {
   await configureDriveNotificationChannel();
+  const language = await getPreferredLanguage();
   const snapshot = createSnapshot(sessionId, userId);
   await persistSnapshot(snapshot);
 
@@ -224,8 +230,8 @@ export async function startBackgroundDrive(sessionId: string, userId: string) {
       showsBackgroundLocationIndicator: true,
       foregroundService: Platform.OS === 'android'
         ? {
-          notificationTitle: 'TrackSnap · Sürüş modu aktif',
-          notificationBody: 'GPS, hız ve mesafe arka planda kaydediliyor.',
+          notificationTitle: localizeCopy('TrackSnap · Sürüş modu aktif', language),
+          notificationBody: localizeCopy('GPS, hız ve mesafe arka planda kaydediliyor.', language),
           notificationColor: '#a3e635',
           killServiceOnDestroy: false,
         }

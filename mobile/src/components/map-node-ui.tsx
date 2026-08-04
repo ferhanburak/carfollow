@@ -1,13 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 
+import { LocalizedPressable as Pressable, LocalizedText as Text } from '@/components/localized-text';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary, MapPin } from '@/types/cruiser';
 

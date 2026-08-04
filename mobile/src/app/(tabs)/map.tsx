@@ -5,14 +5,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
 import MapView, {
@@ -23,10 +19,12 @@ import MapView, {
   type Region,
 } from 'react-native-maps';
 
+import { LocalizedPressable as Pressable, LocalizedText as Text, LocalizedTextInput as TextInput, localizedAlert } from '@/components/localized-text';
 import {
   mapNodeIcon,
   mapNodeLabel,
 } from '@/components/map-node-ui';
+import { getRuntimeLocale } from '@/i18n/language-runtime';
 import { ScreenShell, Surface } from '@/components/screen-shell';
 import { useMapWorld } from '@/hooks/use-map-world';
 import { useAuth } from '@/providers/auth-provider';
@@ -161,7 +159,7 @@ export default function MapScreen() {
           eventMode: editorType,
           name: name.trim(),
           route: description.trim() || (editorType === 'meetup' ? 'Tek nokta buluşması' : 'Harita rotası'),
-          time: new Date(startAt).toLocaleString('tr-TR', {
+          time: new Date(startAt).toLocaleString(getRuntimeLocale(), {
             day: '2-digit',
             month: '2-digit',
             hour: '2-digit',
@@ -300,7 +298,7 @@ export default function MapScreen() {
                       setNotice(world.error || 'Katılım isteği gönderilemedi.');
                     }
                   }}
-                  onCancelTrip={() => Alert.alert(
+                  onCancelTrip={() => localizedAlert(
                     'Konvoy sürüşünden ayrıl',
                     'GPS konvoy takibiniz durdurulacak. Devam edilsin mi?',
                     [
@@ -341,7 +339,7 @@ export default function MapScreen() {
                     signal,
                   ).then(() => setNotice('Konvoy değerlendirmeniz kaydedildi.'))
                     .catch(() => setNotice(world.error || 'Değerlendirme kaydedilemedi.'))}
-                  onRemoveMember={(driver) => Alert.alert(
+                  onRemoveMember={(driver) => localizedAlert(
                     'Katılımcıyı çıkar',
                     `${driver.fullName || 'Bu sürücü'} konvoydan çıkarılsın mı?`,
                     [
@@ -1011,7 +1009,7 @@ function SelectedNode({
           ) : null}
           {removable ? (
             <Pressable
-              onPress={() => Alert.alert(
+              onPress={() => localizedAlert(
                 pin.type === 'meet' ? 'Etkinliği kaldır' : 'Noktayı kaldır',
                 pin.type === 'meet'
                   ? 'Bu etkinlik ve katılımcı kayıtları kalıcı olarak silinecek.'
@@ -1258,7 +1256,7 @@ function FlagButton({
 async function pickSingleImage() {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
-    Alert.alert(
+    localizedAlert(
       'Fotoğraf izni gerekli',
       'Cihazınızdaki bir görseli seçebilmek için fotoğraf erişimine izin verin.',
     );
@@ -1272,7 +1270,7 @@ async function pickSingleImage() {
   if (result.canceled || !result.assets[0]) return null;
   const asset = result.assets[0];
   if (Number(asset.fileSize ?? 0) > 10 * 1024 * 1024) {
-    Alert.alert('Görsel çok büyük', 'En fazla 10 MB boyutunda bir görsel seçin.');
+    localizedAlert('Görsel çok büyük', 'En fazla 10 MB boyutunda bir görsel seçin.');
     return null;
   }
   return asset;

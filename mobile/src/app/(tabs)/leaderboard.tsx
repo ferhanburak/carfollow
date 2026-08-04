@@ -3,15 +3,15 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
-  Pressable,
   ScrollView,
-  Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LocalizedPressable as Pressable, LocalizedText as Text } from '@/components/localized-text';
 import { ScreenShell, Surface } from '@/components/screen-shell';
 import { useLeaderboards } from '@/hooks/use-leaderboards';
+import { getRuntimeLocale } from '@/i18n/language-runtime';
 import {
   allTimeMetricOptions,
   sortAllTimeLeaderboard,
@@ -423,13 +423,13 @@ function Stat({ label, value }: { label: string; value: string }) {
 function formatValue(value: number, metric: Metric) {
   if (metric === 'DriveSeconds') return formatDuration(value);
   if (metric === 'MaxSpeedKmh') return `${Math.round(value)} KM/H`;
-  return `${value.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} KM`;
+  return `${value.toLocaleString(getRuntimeLocale(), { maximumFractionDigits: 1 })} KM`;
 }
 
 function formatAllTimeValue(value: number, metric: AllTimeMetric) {
   if (metric === 'lifetimeDriveSeconds') return formatDuration(value);
   if (metric === 'lifetimeMaxSpeedKmh') return `${Math.round(value)} KM/H`;
-  return `${value.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} KM`;
+  return `${value.toLocaleString(getRuntimeLocale(), { maximumFractionDigits: 1 })} KM`;
 }
 
 function formatDuration(value: number) {

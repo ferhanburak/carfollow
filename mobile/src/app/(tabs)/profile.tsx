@@ -8,23 +8,21 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
 
+import { LocalizedPressable as Pressable, LocalizedText as Text, LocalizedTextInput as TextInput, localizedAlert } from '@/components/localized-text';
 import { ScreenShell, Surface } from '@/components/screen-shell';
 import { useAllTimeLeaderboard } from '@/hooks/use-all-time-leaderboard';
 import { useGarage, type VehiclePart } from '@/hooks/use-garage';
 import { firebaseAuth, firebaseStorage } from '@/lib/firebase';
 import { callFirebase, getFirebaseErrorMessage } from '@/lib/firebase-callable';
 import { APP_ID } from '@/lib/firebase-paths';
+import { getRuntimeLocale } from '@/i18n/language-runtime';
 import { getAllTimeHonors } from '@/lib/leaderboard';
 import { useAuth } from '@/providers/auth-provider';
 import { useDriverProfile } from '@/providers/driver-profile-provider';
@@ -267,7 +265,7 @@ export default function ProfileScreen() {
                 <View style={[styles.progressFill, { width: `${achievement.percent}%` }]} />
               </View>
               <Text style={styles.progressCaption}>
-                {achievement.current.toLocaleString('tr-TR')} / {achievement.target.toLocaleString('tr-TR')} {achievement.unit}
+                {achievement.current.toLocaleString(getRuntimeLocale())} / {achievement.target.toLocaleString(getRuntimeLocale())} {achievement.unit}
               </Text>
             </View>
           ))}
@@ -506,13 +504,13 @@ function ServicePanel({
               <View style={styles.logCopy}>
                 <Text style={styles.driverName}>{part?.name || log.partKey}</Text>
                 <Text style={styles.driverMeta}>
-                  {log.serviceDate} · {log.serviceKm.toLocaleString('tr-TR')} KM
+                  {log.serviceDate} · {log.serviceKm.toLocaleString(getRuntimeLocale())} KM
                 </Text>
-                <Text style={styles.driverMeta}>{log.serviceShop} · {log.cost.toLocaleString('tr-TR')} TL</Text>
+                <Text style={styles.driverMeta}>{log.serviceShop} · {log.cost.toLocaleString(getRuntimeLocale())} TL</Text>
               </View>
               <Pressable
                 disabled={garage.busy === `delete-${log.id}`}
-                onPress={() => Alert.alert(
+                onPress={() => localizedAlert(
                   'Kaydı sil',
                   'Bu servis kaydını silmek istediğinize emin misiniz?',
                   [
@@ -1082,7 +1080,7 @@ function SettingsPanel({
         danger
         icon="trash-outline"
         label="Hesabımı Sil"
-        onPress={() => Alert.alert(
+        onPress={() => localizedAlert(
           'Hesabı kalıcı olarak sil',
           'Bu işlem geri alınamaz. Devam etmek istiyor musunuz?',
           [
@@ -1229,7 +1227,7 @@ function healthColor(percent: number) {
 }
 
 function formatNumber(value: unknown) {
-  return Number(value ?? 0).toLocaleString('tr-TR', { maximumFractionDigits: 1 });
+  return Number(value ?? 0).toLocaleString(getRuntimeLocale(), { maximumFractionDigits: 1 });
 }
 
 function formatDuration(value: unknown) {

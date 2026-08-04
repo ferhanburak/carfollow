@@ -4,18 +4,16 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
-  Pressable,
   ScrollView,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LocalizedPressable as Pressable, LocalizedText as Text, LocalizedTextInput as TextInput, localizedAlert } from '@/components/localized-text';
 import { ScreenShell, Surface } from '@/components/screen-shell';
 import { useSocialWorld } from '@/hooks/use-social-world';
+import { getRuntimeLocale } from '@/i18n/language-runtime';
 import { useAppData } from '@/providers/app-data-provider';
 import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
@@ -520,7 +518,7 @@ export default function SocialScreen() {
 }
 
 function confirmAction(title: string, message: string, action: () => Promise<unknown>) {
-  Alert.alert(title, message, [
+  localizedAlert(title, message, [
     { text: 'Vazgeç', style: 'cancel' },
     { text: 'Onayla', style: 'destructive', onPress: () => runAction(action) },
   ]);
@@ -663,7 +661,7 @@ function ClanSummary({
         <Ionicons name="chevron-forward" size={20} color={colors.limeBright} />
       </View>
       <View style={styles.metrics}>
-        <Metric label="Aylık KM" value={monthlyKm.toLocaleString('tr-TR', { maximumFractionDigits: 1 })} />
+        <Metric label="Aylık KM" value={monthlyKm.toLocaleString(getRuntimeLocale(), { maximumFractionDigits: 1 })} />
         <Metric label="Üye" value={memberCount} />
         <Metric label="Etkinlik" value={eventCount} />
       </View>
@@ -822,7 +820,7 @@ function ClanCenterModal({
           <View style={styles.metrics}>
             <Metric
               label="Aylık KM"
-              value={(social.currentClan.monthlyKm ?? 0).toLocaleString('tr-TR', { maximumFractionDigits: 1 })}
+              value={(social.currentClan.monthlyKm ?? 0).toLocaleString(getRuntimeLocale(), { maximumFractionDigits: 1 })}
             />
             <Metric label="Üye" value={social.members.length} />
             <Metric label="Etkinlik" value={events.length} />

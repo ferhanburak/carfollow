@@ -3,15 +3,14 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
-  Pressable,
   ScrollView,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LocalizedPressable as Pressable, LocalizedText as Text, LocalizedTextInput as TextInput } from '@/components/localized-text';
 import { useAllTimeLeaderboard } from '@/hooks/use-all-time-leaderboard';
+import { getRuntimeLocale } from '@/i18n/language-runtime';
 import { getAllTimeHonors } from '@/lib/leaderboard';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary } from '@/types/cruiser';
@@ -196,7 +195,7 @@ export function PublicDriverProfileModal({
               <Metric label="Sürücü Skoru" value={`${score}/100`} />
               <Metric
                 label="Aylık KM"
-                value={`${Number(profile.monthlyKm ?? 0).toLocaleString('tr-TR', {
+                value={`${Number(profile.monthlyKm ?? 0).toLocaleString(getRuntimeLocale(), {
                   maximumFractionDigits: 1,
                 })} KM`}
               />

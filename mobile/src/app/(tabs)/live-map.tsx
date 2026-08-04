@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, Text, View } from 'react-native';
+import { Platform, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LocalizedPressable as Pressable, LocalizedText as Text, localizedAlert } from '@/components/localized-text';
 import { MapNodeDetailModal, MapNodeMarker } from '@/components/map-node-ui';
 import { AppHeader } from '@/components/screen-shell';
 import { useLiveTelemetry, type LiveDriver } from '@/hooks/use-live-telemetry';
@@ -218,7 +219,7 @@ export default function LiveMapScreen() {
           busy={Boolean(mapWorld.busy)}
           currentUserId={user?.uid}
           onClose={() => setSelectedPin(null)}
-          onCancelTrip={selectedPin?.type === 'meet' ? () => Alert.alert(
+          onCancelTrip={selectedPin?.type === 'meet' ? () => localizedAlert(
             'Konvoy sürüşünden ayrıl',
             'GPS konvoy takibiniz durdurulacak. Devam edilsin mi?',
             [
@@ -230,23 +231,23 @@ export default function LiveMapScreen() {
             try {
               await mapWorld.joinConvoy(selectedPin.id);
               setSelectedPin(null);
-              Alert.alert('İstek gönderildi', 'Etkinlik katılım isteğiniz iletildi.');
+              localizedAlert('İstek gönderildi', 'Etkinlik katılım isteğiniz iletildi.');
             } catch {
-              Alert.alert('Katılım başarısız', mapWorld.error || 'İstek gönderilemedi.');
+              localizedAlert('Katılım başarısız', mapWorld.error || 'İstek gönderilemedi.');
             }
           } : undefined}
           onLike={selectedPin && (selectedPin.type === 'meet' || selectedPin.type === 'spot') ? async () => {
             try {
               await mapWorld.likePin(selectedPin.id);
             } catch {
-              Alert.alert('Beğeni başarısız', mapWorld.error || 'Beğeni güncellenemedi.');
+              localizedAlert('Beğeni başarısız', mapWorld.error || 'Beğeni güncellenemedi.');
             }
           } : undefined}
           onOpenDriver={(driver) => void openDriverProfile(driver, {
             convoyId: selectedPin?.type === 'meet' ? selectedPin.id : undefined,
           })}
           onRateMember={selectedPin?.type === 'meet' ? (driver, signal) => {
-            Alert.alert(
+            localizedAlert(
               signal === 'harmony' ? 'Uyumlu sürücü' : 'Sorun bildir',
               `${driver.fullName || 'Bu sürücü'} için oyun kaydedilsin mi?`,
               [
@@ -254,13 +255,13 @@ export default function LiveMapScreen() {
                 {
                   text: 'Kaydet',
                   onPress: () => void mapWorld.rateConvoyMember(selectedPin.id, driver.userId, signal)
-                    .then(() => Alert.alert('Puan kaydedildi', 'Konvoy değerlendirmeniz işlendi.'))
-                    .catch(() => Alert.alert('Puanlama başarısız', mapWorld.error || 'Oy kaydedilemedi.')),
+                    .then(() => localizedAlert('Puan kaydedildi', 'Konvoy değerlendirmeniz işlendi.'))
+                    .catch(() => localizedAlert('Puanlama başarısız', mapWorld.error || 'Oy kaydedilemedi.')),
                 },
               ],
             );
           } : undefined}
-          onRemoveMember={selectedPin?.type === 'meet' ? (driver) => Alert.alert(
+          onRemoveMember={selectedPin?.type === 'meet' ? (driver) => localizedAlert(
             'Katılımcıyı çıkar',
             `${driver.fullName || 'Bu sürücü'} konvoydan çıkarılsın mı?`,
             [
@@ -270,9 +271,9 @@ export default function LiveMapScreen() {
           ) : undefined}
           onRespondRequest={selectedPin?.type === 'meet' ? (driver, decision) => {
             void mapWorld.respondConvoyRequest(selectedPin.id, driver.userId, decision)
-              .catch(() => Alert.alert('İşlem başarısız', mapWorld.error || 'Katılım isteği güncellenemedi.'));
+              .catch(() => localizedAlert('İşlem başarısız', mapWorld.error || 'Katılım isteği güncellenemedi.'));
           } : undefined}
-          onSetRole={selectedPin?.type === 'meet' ? (driver, role) => Alert.alert(
+          onSetRole={selectedPin?.type === 'meet' ? (driver, role) => localizedAlert(
             'Konvoy rolünü değiştir',
             `${driver.fullName || 'Bu sürücü'} ${role === 'manager' ? 'yardımcı' : 'katılımcı'} yapılsın mı?`,
             [

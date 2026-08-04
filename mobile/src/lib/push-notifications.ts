@@ -4,6 +4,8 @@ import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
+import { localizeCopy } from '@/i18n/copy-catalog';
+import { getPreferredLanguage } from '@/i18n/language-runtime';
 import { callFirebase } from '@/lib/firebase-callable';
 
 const PUSH_TOKEN_STORAGE_KEY = 'tracksnap-expo-push-token';
@@ -20,9 +22,10 @@ Notifications.setNotificationHandler({
 
 async function configureAndroidChannel() {
   if (Platform.OS !== 'android') return;
+  const language = await getPreferredLanguage();
   await Notifications.setNotificationChannelAsync(ALERTS_CHANNEL_ID, {
-    name: 'TrackSnap bildirimleri',
-    description: 'Sosyal, forum, etkinlik ve mesaj bildirimleri',
+    name: localizeCopy('TrackSnap bildirimleri', language),
+    description: localizeCopy('Sosyal, forum, etkinlik ve mesaj bildirimleri', language),
     importance: Notifications.AndroidImportance.HIGH,
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     vibrationPattern: [0, 180, 120, 180],

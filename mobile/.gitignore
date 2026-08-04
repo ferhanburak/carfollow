@@ -7,6 +7,7 @@ node_modules/
 .expo/
 dist/
 dist-verify/
+dist-i18n-verify/
 web-build/
 expo-env.d.ts
 

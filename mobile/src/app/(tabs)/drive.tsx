@@ -4,13 +4,13 @@ import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
-  Text,
   View,
 } from 'react-native';
 
+import { LocalizedPressable as Pressable, LocalizedText as Text } from '@/components/localized-text';
 import { ScreenShell } from '@/components/screen-shell';
 import { useDriveSession } from '@/hooks/use-drive-session';
+import { getRuntimeLocale } from '@/i18n/language-runtime';
 import { useAuth } from '@/providers/auth-provider';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
 
@@ -212,18 +212,18 @@ function formatDuration(seconds: number) {
 }
 
 function formatNumber(value: number) {
-  return value.toLocaleString('tr-TR', { maximumFractionDigits: 1 });
+  return value.toLocaleString(getRuntimeLocale(), { maximumFractionDigits: 1 });
 }
 
 function formatDistance(value: number) {
-  return Math.max(0, value).toLocaleString('tr-TR', {
+  return Math.max(0, value).toLocaleString(getRuntimeLocale(), {
     minimumFractionDigits: value < 1 ? 2 : 1,
     maximumFractionDigits: value < 1 ? 2 : 1,
   });
 }
 
 function formatDecimal(value: number) {
-  return value.toLocaleString('tr-TR', {
+  return value.toLocaleString(getRuntimeLocale(), {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   });

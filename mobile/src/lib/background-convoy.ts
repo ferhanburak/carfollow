@@ -6,6 +6,8 @@ import { Platform } from 'react-native';
 
 import { firebaseAuth } from '@/lib/firebase';
 import { callFirebase } from '@/lib/firebase-callable';
+import { localizeCopy } from '@/i18n/copy-catalog';
+import { getPreferredLanguage } from '@/i18n/language-runtime';
 
 export const BACKGROUND_CONVOY_TASK = 'tracksnap-background-convoy';
 
@@ -102,6 +104,7 @@ if (!TaskManager.isTaskDefined(BACKGROUND_CONVOY_TASK)) {
 }
 
 export async function startBackgroundConvoyTracking(convoyIds: string[]) {
+  const language = await getPreferredLanguage();
   const uniqueIds = [...new Set(convoyIds.filter(Boolean))];
   await AsyncStorage.setItem(CONVOY_STORAGE_KEY, JSON.stringify({
     version: 1,
@@ -126,8 +129,8 @@ export async function startBackgroundConvoyTracking(convoyIds: string[]) {
     showsBackgroundLocationIndicator: true,
     foregroundService: Platform.OS === 'android'
       ? {
-        notificationTitle: 'TrackSnap · Konvoy takibi aktif',
-        notificationBody: 'Konvoy ilerlemesi ve varış durumu GPS ile güncelleniyor.',
+        notificationTitle: localizeCopy('TrackSnap · Konvoy takibi aktif', language),
+        notificationBody: localizeCopy('Konvoy ilerlemesi ve varış durumu GPS ile güncelleniyor.', language),
         notificationColor: '#a3e635',
         killServiceOnDestroy: false,
       }

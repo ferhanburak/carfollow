@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
 
+import { localizeCopy } from '@/i18n/copy-catalog';
+import { setRuntimeLanguage } from '@/i18n/language-runtime';
+
 export type AppLanguage = 'tr' | 'en';
 
 const LANGUAGE_STORAGE_KEY = 'tracksnap.language.preference.v1';
@@ -149,6 +152,7 @@ type LanguageContextValue = {
   language: AppLanguage;
   setLanguage: (language: AppLanguage) => void;
   t: (key: TranslationKey) => string;
+  translate: (value: string) => string;
 };
 
 const defaultContext: LanguageContextValue = {
@@ -156,6 +160,7 @@ const defaultContext: LanguageContextValue = {
   language: 'tr',
   setLanguage: () => undefined,
   t: (key) => translations.tr[key],
+  translate: (value) => localizeCopy(value, 'tr'),
 };
 
 const LanguageContext = createContext<LanguageContextValue>(defaultContext);
@@ -163,6 +168,10 @@ const LanguageContext = createContext<LanguageContextValue>(defaultContext);
 export function AppLanguageProvider({ children }: PropsWithChildren) {
   const [language, setLanguageState] = useState<AppLanguage>('tr');
   const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setRuntimeLanguage(language);
+  }, [language]);
 
   useEffect(() => {
     let active = true;
@@ -188,6 +197,7 @@ export function AppLanguageProvider({ children }: PropsWithChildren) {
     language,
     setLanguage,
     t: (key) => translations[language][key],
+    translate: (text) => localizeCopy(text, language),
   }), [hydrated, language]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

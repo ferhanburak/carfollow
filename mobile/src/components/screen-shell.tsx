@@ -4,15 +4,14 @@ import { usePathname, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Modal,
-  Pressable,
   ScrollView,
-  Text,
   View,
   type ScrollViewProps,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PropsWithChildren, ReactNode } from 'react';
 
+import { LocalizedPressable as Pressable, LocalizedText as Text } from '@/components/localized-text';
 import { useAuth } from '@/providers/auth-provider';
 import { useAppData } from '@/providers/app-data-provider';
 import { useAppTheme } from '@/providers/theme-provider';

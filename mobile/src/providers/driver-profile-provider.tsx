@@ -2,11 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import {
-  Alert,
   Modal,
-  Pressable,
   ScrollView,
-  Text,
   View,
 } from 'react-native';
 import {
@@ -23,6 +20,11 @@ import {
   PublicDriverProfileModal,
   type ProfileFriendshipState,
 } from '@/components/public-driver-profile-modal';
+import {
+  LocalizedPressable as Pressable,
+  LocalizedText as Text,
+  localizedAlert,
+} from '@/components/localized-text';
 import { useMapWorld } from '@/hooks/use-map-world';
 import { useConvoyTracking } from '@/hooks/use-convoy-tracking';
 import { useSocialWorld } from '@/hooks/use-social-world';
@@ -120,7 +122,7 @@ export function DriverProfileProvider({ children }: PropsWithChildren) {
   };
 
   const confirm = (title: string, message: string, action: () => Promise<unknown>) => {
-    Alert.alert(title, message, [
+    localizedAlert(title, message, [
       { text: 'Vazgeç', style: 'cancel' },
       { text: 'Onayla', style: 'destructive', onPress: () => void action() },
     ]);

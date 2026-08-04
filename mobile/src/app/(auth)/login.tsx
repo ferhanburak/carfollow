@@ -8,14 +8,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
-  Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LocalizedPressable as Pressable, LocalizedText as Text, LocalizedTextInput as TextInput } from '@/components/localized-text';
 import { useAuth } from '@/providers/auth-provider';
 import { useAppLanguage } from '@/providers/language-provider';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';

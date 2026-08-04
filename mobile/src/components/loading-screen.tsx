@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image, Text, View } from 'react-native';
+import { Image, View } from 'react-native';
 
+import { LocalizedText as Text } from '@/components/localized-text';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
 
 export function LoadingScreen() {
