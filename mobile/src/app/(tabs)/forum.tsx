@@ -15,8 +15,14 @@ import { LocalizedPressable as Pressable, LocalizedText as Text, LocalizedTextIn
 import { ScreenShell } from '@/components/screen-shell';
 import { ForumThreadDetail } from '@/components/forum-thread-detail';
 import {
+  ForumEventCard,
+  ForumMentionRow,
+  ForumPollCard,
+} from '@/components/forum-rich-content';
+import {
   createForumThread,
   toggleForumLike,
+  voteForumPoll,
   type ForumThread,
   useForumFeed,
 } from '@/hooks/use-forum-feed';
@@ -26,6 +32,8 @@ import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary } from '@/types/cruiser';
 
 type Filter = 'all' | ForumThread['category'];
+type ComposerPanel = 'poll' | 'mentions' | 'event' | '';
+type PollDuration = 24 | 72 | 168;
 
 const categories: { key: Filter; label: string; composerLabel: string }[] = [
   { key: 'all', label: 'Tümü', composerLabel: 'Kategori seç' },
@@ -46,7 +54,7 @@ export default function ForumScreen() {
   const params = useLocalSearchParams<{ threadId?: string }>();
   const router = useRouter();
   const { profile } = useAuth();
-  const { openDriverProfile } = useDriverProfile();
+  const { mapWorld, openDriverProfile, social } = useDriverProfile();
   const { error, loading, threads } = useForumFeed();
   const [filter, setFilter] = useState<Filter>('all');
   const [composerOpen, setComposerOpen] = useState(false);
@@ -54,10 +62,34 @@ export default function ForumScreen() {
   const [body, setBody] = useState('');
   const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<ForumThread['location']>(null);
+  const [composerPanel, setComposerPanel] = useState<ComposerPanel>('');
+  const [pollEnabled, setPollEnabled] = useState(false);
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollDurationHours, setPollDurationHours] = useState<PollDuration>(72);
+  const [selectedMentionIds, setSelectedMentionIds] = useState<string[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [selectedThreadId, setSelectedThreadId] = useState('');
   const [pendingLikeId, setPendingLikeId] = useState('');
+  const [pendingPollThreadId, setPendingPollThreadId] = useState('');
+
+  const mentionCandidates = useMemo(() => {
+    const unique = new Map<string, DriverSummary>();
+    [...social.friends, ...social.members].forEach((driver) => {
+      if (driver.userId && driver.userId !== social.currentUserId) unique.set(driver.userId, driver);
+    });
+    return [...unique.values()].sort((left, right) =>
+      (left.fullName || '').localeCompare(right.fullName || '', 'tr-TR'));
+  }, [social.currentUserId, social.friends, social.members]);
+  const publicEvents = useMemo(() => mapWorld.activePins
+    .filter((pin) => (
+      pin.type === 'meet' &&
+      pin.visibility === 'public' &&
+      !['completed', 'cancelled', 'deleted'].includes(String(pin.lifecycleStatus ?? ''))
+    ))
+    .sort((left, right) => Number(left.scheduledStartAtMs ?? 0) - Number(right.scheduledStartAtMs ?? 0)),
+  [mapWorld.activePins]);
 
   const visibleThreads = useMemo(
     () => threads.filter((thread) => filter === 'all' || thread.category === filter),
@@ -82,19 +114,60 @@ export default function ForumScreen() {
     }
   };
 
+  const resetComposer = () => {
+    setBody('');
+    setSelectedImage(null);
+    setSelectedLocation(null);
+    setComposerPanel('');
+    setPollEnabled(false);
+    setPollOptions(['', '']);
+    setPollDurationHours(72);
+    setSelectedMentionIds([]);
+    setSelectedEventId('');
+  };
+
+  const votePoll = async (threadId: string, optionId: string) => {
+    if (pendingPollThreadId) return;
+    setPendingPollThreadId(threadId);
+    try {
+      await voteForumPoll(threadId, optionId);
+      void Haptics.selectionAsync();
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : 'Anket oyu kaydedilemedi.');
+    } finally {
+      setPendingPollThreadId('');
+    }
+  };
+
   const publish = async () => {
     if (body.trim().length < 8) {
       setFeedback('Paylaşım en az 8 karakter olmalıdır.');
       return;
     }
+    const normalizedPollOptions = pollOptions.map((option) => option.trim()).filter(Boolean);
+    const normalizedPollKeys = new Set(normalizedPollOptions.map((option) => option.toLocaleLowerCase('tr-TR')));
+    if (pollEnabled && (
+      normalizedPollOptions.length < 2 ||
+      normalizedPollOptions.length > 4 ||
+      normalizedPollKeys.size !== normalizedPollOptions.length
+    )) {
+      setFeedback('Anket için 2-4 benzersiz seçenek girin.');
+      return;
+    }
     setSubmitting(true);
     setFeedback('');
     try {
-      await createForumThread(category, body, selectedImage, selectedLocation);
+      await createForumThread(category, body, {
+        image: selectedImage,
+        location: selectedLocation,
+        poll: pollEnabled
+          ? { options: normalizedPollOptions, durationHours: pollDurationHours }
+          : null,
+        mentionUserIds: selectedMentionIds,
+        eventId: selectedEventId,
+      });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setBody('');
-      setSelectedImage(null);
-      setSelectedLocation(null);
+      resetComposer();
       setComposerOpen(false);
       setFeedback('Paylaşım yayınlandı.');
     } catch (error) {
@@ -105,6 +178,17 @@ export default function ForumScreen() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const toggleMention = (userId: string) => {
+    setSelectedMentionIds((current) => {
+      if (current.includes(userId)) return current.filter((id) => id !== userId);
+      if (current.length >= 5) {
+        setFeedback('En fazla 5 kullanıcı etiketleyebilirsiniz.');
+        return current;
+      }
+      return [...current, userId];
+    });
   };
 
   const chooseImage = async () => {
@@ -236,9 +320,7 @@ export default function ForumScreen() {
                 accessibilityLabel="Paylaşımı kapat"
                 onPress={() => {
                   setComposerOpen(false);
-                  setBody('');
-                  setSelectedImage(null);
-                  setSelectedLocation(null);
+                  resetComposer();
                   setFeedback('');
                 }}
                 style={styles.closeButton}
@@ -287,6 +369,104 @@ export default function ForumScreen() {
                 </Pressable>
               </View>
             ) : null}
+            {pollEnabled ? (
+              <View style={styles.richEditor}>
+                <View style={styles.richEditorHeader}>
+                  <View style={styles.richEditorTitleRow}>
+                    <Ionicons color={colors.lime} name="stats-chart" size={17} />
+                    <Text style={styles.richEditorTitle}>Anket</Text>
+                  </View>
+                  <Pressable onPress={() => {
+                    setPollEnabled(false);
+                    setPollOptions(['', '']);
+                    if (composerPanel === 'poll') setComposerPanel('');
+                  }} style={styles.miniClose}>
+                    <Ionicons color={colors.textMuted} name="close" size={17} />
+                  </Pressable>
+                </View>
+                {pollOptions.map((option, index) => (
+                  <View key={`poll-${index}`} style={styles.pollInputRow}>
+                    <TextInput
+                      maxLength={80}
+                      onChangeText={(value) => setPollOptions((current) => current.map((item, itemIndex) =>
+                        itemIndex === index ? value : item))}
+                      placeholder={`Seçenek ${index + 1}`}
+                      placeholderTextColor={colors.textFaint}
+                      selectionColor={colors.lime}
+                      style={styles.pollInput}
+                      value={option}
+                    />
+                    {pollOptions.length > 2 ? (
+                      <Pressable onPress={() => setPollOptions((current) => current.filter((_item, itemIndex) => itemIndex !== index))} style={styles.miniClose}>
+                        <Ionicons color={colors.rose} name="remove-circle-outline" size={19} />
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ))}
+                <View style={styles.pollFooterRow}>
+                  {pollOptions.length < 4 ? (
+                    <Pressable onPress={() => setPollOptions((current) => [...current, ''])} style={styles.addOptionButton}>
+                      <Ionicons color={colors.lime} name="add" size={17} />
+                      <Text style={styles.addOptionText}>Seçenek ekle</Text>
+                    </Pressable>
+                  ) : <View />}
+                  <View style={styles.durationRow}>
+                    {([24, 72, 168] as PollDuration[]).map((duration) => (
+                      <Pressable
+                        key={duration}
+                        onPress={() => setPollDurationHours(duration)}
+                        style={[styles.durationChip, pollDurationHours === duration && styles.durationChipActive]}
+                      >
+                        <Text style={[styles.durationText, pollDurationHours === duration && styles.durationTextActive]}>
+                          {duration === 24 ? '1G' : duration === 72 ? '3G' : '7G'}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            ) : null}
+            {composerPanel === 'mentions' ? (
+              <View style={styles.richEditor}>
+                <View style={styles.richEditorHeader}>
+                  <Text style={styles.richEditorTitle}>Kullanıcı etiketle · {selectedMentionIds.length}/5</Text>
+                  <Pressable onPress={() => setComposerPanel('')} style={styles.miniClose}>
+                    <Ionicons color={colors.textMuted} name="close" size={17} />
+                  </Pressable>
+                </View>
+                {mentionCandidates.length ? mentionCandidates.map((driver) => {
+                  const selectedMention = selectedMentionIds.includes(driver.userId);
+                  return (
+                    <Pressable key={driver.userId} onPress={() => toggleMention(driver.userId)} style={styles.selectionRow}>
+                      <View style={styles.selectionCopy}>
+                        <Text style={styles.selectionTitle}>{driver.fullName || 'TrackSnap sürücüsü'}</Text>
+                        <Text style={styles.selectionMeta}>{driver.model || 'Araç bilgisi yok'}</Text>
+                      </View>
+                      <Ionicons color={selectedMention ? colors.lime : colors.textFaint} name={selectedMention ? 'checkmark-circle' : 'ellipse-outline'} size={21} />
+                    </Pressable>
+                  );
+                }) : <Text style={styles.richEmpty}>Etiketleyebileceğiniz arkadaş veya klan üyesi yok.</Text>}
+              </View>
+            ) : null}
+            {composerPanel === 'event' ? (
+              <View style={styles.richEditor}>
+                <View style={styles.richEditorHeader}>
+                  <Text style={styles.richEditorTitle}>Etkinlikten bahset</Text>
+                  <Pressable onPress={() => setComposerPanel('')} style={styles.miniClose}>
+                    <Ionicons color={colors.textMuted} name="close" size={17} />
+                  </Pressable>
+                </View>
+                {publicEvents.length ? publicEvents.map((event) => (
+                  <Pressable key={event.id} onPress={() => setSelectedEventId((current) => current === event.id ? '' : event.id)} style={styles.selectionRow}>
+                    <View style={styles.selectionCopy}>
+                      <Text style={styles.selectionTitle}>{event.name}</Text>
+                      <Text style={styles.selectionMeta}>{event.eventMode === 'convoy' ? 'Konvoy' : 'Buluşma'}</Text>
+                    </View>
+                    <Ionicons color={selectedEventId === event.id ? colors.lime : colors.textFaint} name={selectedEventId === event.id ? 'checkmark-circle' : 'ellipse-outline'} size={21} />
+                  </Pressable>
+                )) : <Text style={styles.richEmpty}>Bahsedilebilecek aktif ve herkese açık etkinlik yok.</Text>}
+              </View>
+            ) : null}
             <View style={styles.composerActions}>
               <View style={styles.futureActions}>
                 <Pressable
@@ -310,6 +490,30 @@ export default function ForumScreen() {
                     name="location-outline"
                     size={20}
                   />
+                </Pressable>
+                <Pressable
+                  accessibilityLabel="Anket ekle"
+                  onPress={() => {
+                    setPollEnabled(true);
+                    setComposerPanel('poll');
+                  }}
+                  style={({ pressed }) => [styles.mediaAction, pressed && styles.pressed]}
+                >
+                  <Ionicons color={pollEnabled ? colors.lime : colors.textFaint} name="stats-chart-outline" size={20} />
+                </Pressable>
+                <Pressable
+                  accessibilityLabel="Kullanıcı etiketle"
+                  onPress={() => setComposerPanel((current) => current === 'mentions' ? '' : 'mentions')}
+                  style={({ pressed }) => [styles.mediaAction, pressed && styles.pressed]}
+                >
+                  <Ionicons color={selectedMentionIds.length ? colors.lime : colors.textFaint} name="at-outline" size={21} />
+                </Pressable>
+                <Pressable
+                  accessibilityLabel="Etkinlikten bahset"
+                  onPress={() => setComposerPanel((current) => current === 'event' ? '' : 'event')}
+                  style={({ pressed }) => [styles.mediaAction, pressed && styles.pressed]}
+                >
+                  <Ionicons color={selectedEventId ? colors.lime : colors.textFaint} name="calendar-outline" size={20} />
                 </Pressable>
               </View>
               <Pressable
@@ -365,9 +569,12 @@ export default function ForumScreen() {
         <ThreadCard
           key={thread.id}
           likePending={pendingLikeId === thread.id}
+          pollPending={pendingPollThreadId === thread.id}
           onOpen={() => setSelectedThreadId(thread.id)}
           onOpenDriver={(driver) => void openDriverProfile(driver)}
+          onOpenEvent={(eventId) => router.push({ pathname: '/(tabs)/map', params: { pinId: eventId } })}
           onToggleLike={() => void likeThread(thread)}
+          onVotePoll={(optionId) => void votePoll(thread.id, optionId)}
           thread={thread}
         />
       ))}
@@ -387,15 +594,21 @@ export default function ForumScreen() {
 
 function ThreadCard({
   likePending,
+  pollPending,
   onOpen,
   onOpenDriver,
+  onOpenEvent,
   onToggleLike,
+  onVotePoll,
   thread,
 }: {
   likePending: boolean;
+  pollPending: boolean;
   onOpen: () => void;
   onOpenDriver: (driver: DriverSummary) => void;
+  onOpenEvent: (eventId: string) => void;
   onToggleLike: () => void;
+  onVotePoll: (optionId: string) => void;
   thread: ForumThread;
 }) {
   return (
@@ -440,6 +653,30 @@ function ThreadCard({
             </View>
           ) : null}
       </Pressable>
+      {thread.mentions?.length ? (
+        <ForumMentionRow
+          mentions={thread.mentions}
+          onOpenDriver={(mention) => onOpenDriver({
+            userId: mention.userId,
+            fullName: mention.fullName,
+            model: mention.model,
+          })}
+        />
+      ) : null}
+      {thread.eventReference ? (
+        <ForumEventCard
+          event={thread.eventReference}
+          onOpen={() => onOpenEvent(thread.eventReference!.eventId)}
+        />
+      ) : null}
+      {thread.poll ? (
+        <ForumPollCard
+          busy={pollPending}
+          onVote={onVotePoll}
+          poll={thread.poll}
+          selectedOptionId={thread.viewerPollOptionId}
+        />
+      ) : null}
       <View style={styles.threadActions}>
         <Pressable
           accessibilityLabel={thread.likedByViewer ? 'Beğeniyi kaldır' : 'Gönderiyi beğen'}
@@ -603,7 +840,63 @@ const styles = createThemedStyles(() => ({
     fontFamily: fonts.semibold,
     fontSize: 10,
   },
-  futureActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  richEditor: {
+    padding: 11,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.backgroundRaised,
+    gap: 8,
+  },
+  richEditorHeader: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  richEditorTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  richEditorTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 11 },
+  miniClose: { width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  pollInputRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  pollInput: {
+    flex: 1,
+    minHeight: 46,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: 11,
+  },
+  pollFooterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  addOptionButton: { minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  addOptionText: { color: colors.limeBright, fontFamily: fonts.bold, fontSize: 9 },
+  durationRow: { flexDirection: 'row', gap: 5 },
+  durationChip: {
+    minWidth: 38,
+    minHeight: 38,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  durationChipActive: { borderColor: colors.lime, backgroundColor: colors.limeMuted },
+  durationText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 9 },
+  durationTextActive: { color: colors.limeBright },
+  selectionRow: {
+    minHeight: 52,
+    paddingHorizontal: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  selectionCopy: { flex: 1 },
+  selectionTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 11 },
+  selectionMeta: { marginTop: 2, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9 },
+  richEmpty: { paddingVertical: 14, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 10, textAlign: 'center' },
+  futureActions: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 1 },
   mediaAction: {
     width: 42,
     height: 42,

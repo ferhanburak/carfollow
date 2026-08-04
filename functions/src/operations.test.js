@@ -35,6 +35,7 @@ test("user inbox accepts the approved social and convoy activity matrix", () => 
   assert.equal(isUserNotificationType("convoy-cancelled"), true);
   assert.equal(isUserNotificationType("convoy-started"), true);
   assert.equal(isUserNotificationType("forum-like"), true);
+  assert.equal(isUserNotificationType("forum-mention"), true);
   assert.equal(isUserNotificationType("forum-reply"), true);
   assert.equal(isUserNotificationType("moderation"), true);
   assert.equal(isUserNotificationType("direct-message"), false);

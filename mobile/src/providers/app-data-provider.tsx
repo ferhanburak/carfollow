@@ -61,6 +61,7 @@ const notificationTypes = new Set([
   'convoy-cancelled',
   'convoy-started',
   'forum-like',
+  'forum-mention',
   'forum-reply',
   'moderation',
 ]);

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,9 +15,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LocalizedPressable as Pressable, LocalizedText as Text, LocalizedTextInput as TextInput } from '@/components/localized-text';
 import {
+  ForumEventCard,
+  ForumMentionRow,
+  ForumPollCard,
+} from '@/components/forum-rich-content';
+import {
   addForumReply,
   pinForumSolution,
   toggleForumLike,
+  voteForumPoll,
   type ForumReply,
   type ForumThread,
 } from '@/hooks/use-forum-feed';
@@ -40,6 +47,7 @@ type Props = {
 };
 
 export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread }: Props) {
+  const router = useRouter();
   const appData = useAppData();
   const social = useSocialWorld();
   const [replyBody, setReplyBody] = useState('');
@@ -163,6 +171,33 @@ export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread
                   <Ionicons color={colors.lime} name="location-outline" size={16} />
                   <Text style={styles.locationText}>{thread.location.label}</Text>
                 </View>
+              ) : null}
+              {thread.mentions?.length ? (
+                <ForumMentionRow
+                  mentions={thread.mentions}
+                  onOpenDriver={(mention) => onOpenDriver({
+                    userId: mention.userId,
+                    fullName: mention.fullName,
+                    model: mention.model,
+                  })}
+                />
+              ) : null}
+              {thread.eventReference ? (
+                <ForumEventCard
+                  event={thread.eventReference}
+                  onOpen={() => {
+                    closeDetail();
+                    router.push({ pathname: '/(tabs)/map', params: { pinId: thread.eventReference!.eventId } });
+                  }}
+                />
+              ) : null}
+              {thread.poll ? (
+                <ForumPollCard
+                  busy={pendingKey === 'poll'}
+                  onVote={(optionId) => void runAction('poll', () => voteForumPoll(thread.id, optionId))}
+                  poll={thread.poll}
+                  selectedOptionId={thread.viewerPollOptionId}
+                />
               ) : null}
               <Text style={styles.timestamp}>{formatLongDate(thread.createdAt?.toDate?.())}</Text>
               <View style={styles.metrics}>

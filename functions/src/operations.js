@@ -20,6 +20,7 @@ const USER_NOTIFICATION_TYPES = Object.freeze([
   "convoy-cancelled",
   "convoy-started",
   "forum-like",
+  "forum-mention",
   "forum-reply",
   "moderation",
 ]);

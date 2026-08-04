@@ -491,6 +491,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /artifacts/{appId}/public/data/forumPollVotes/{documentId} {
+      // A driver can only read their own ballot; aggregate counts live on the thread.
+      allow read: if isKnownApp(appId) && isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+
     match /artifacts/{appId}/public/data/cruiseAttendees/{documentId} {
       allow read, write: if false;
     }

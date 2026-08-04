@@ -33,6 +33,44 @@ test("buildForumThreadDocument keeps only category-specific metadata", () => {
   assert.equal(thread.pinnedReplyId, null);
 });
 
+test("forum threads normalize polls, mentions and public event references", () => {
+  const thread = buildForumThreadDocument({
+    id: "thread-rich",
+    input: {
+      category: "roadlife",
+      body: "Hafta sonu bulusmasi icin hangi saat daha iyi?",
+      poll: { options: ["Aksam", "Gece"], durationHours: 72 },
+      mentions: [{ userId: "driver-2", fullName: "Ayhan", model: "MINI" }],
+      eventReference: {
+        eventId: "event-1",
+        name: "Ankara Gece Bulusmasi",
+        eventMode: "meetup",
+        scheduledStartAtMs: 456,
+      },
+    },
+    profile,
+    timestamp: 123,
+    nowMs: 1000,
+  });
+  assert.equal(thread.poll.options.length, 2);
+  assert.equal(thread.poll.expiresAtMs, 1000 + 72 * 60 * 60 * 1000);
+  assert.equal(thread.mentions[0].userId, "driver-2");
+  assert.equal(thread.eventReference.eventId, "event-1");
+});
+
+test("forum polls reject duplicate or unsupported options", () => {
+  assert.throws(() => buildForumThreadDocument({
+    id: "bad-poll",
+    input: {
+      category: "roadlife",
+      body: "Bu anket gecersiz olmali.",
+      poll: { options: ["Ayni", "ayni"], durationHours: 72 },
+    },
+    profile,
+    timestamp: 123,
+  }));
+});
+
 test("buildForumReplyDocument rejects empty replies", () => {
   assert.throws(() => buildForumReplyDocument({ id: "reply-1", threadId: "thread-1", body: " ", profile, timestamp: 123 }));
 });

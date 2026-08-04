@@ -51,7 +51,7 @@ function RootNavigator() {
   useEffect(() => {
     const openNotification = (response: Notifications.NotificationResponse) => {
       const data = readPushNavigationData(response);
-      if ((data.type === 'forum-like' || data.type === 'forum-reply') && data.targetId) {
+      if ((data.type === 'forum-like' || data.type === 'forum-reply' || data.type === 'forum-mention') && data.targetId) {
         router.push({ pathname: '/(tabs)/forum', params: { threadId: data.targetId } });
         return;
       }

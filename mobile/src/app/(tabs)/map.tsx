@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useMemo, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -62,6 +63,7 @@ const eventFilters: { value: EventFilter; label: string }[] = [
 ];
 
 export default function MapScreen() {
+  const params = useLocalSearchParams<{ pinId?: string }>();
   const { resolvedTheme } = useAppTheme();
   const { profile, user } = useAuth();
   const { mapWorld: world, openDriverProfile } = useDriverProfile();
@@ -76,6 +78,20 @@ export default function MapScreen() {
   const [minDriverScore, setMinDriverScore] = useState('70');
   const [formError, setFormError] = useState('');
   const [notice, setNotice] = useState('');
+  const consumedPinIdRef = useRef('');
+
+  useEffect(() => {
+    const pinId = String(params.pinId ?? '');
+    if (!pinId || consumedPinIdRef.current === pinId) return;
+    const pin = world.activePins.find((candidate) => candidate.id === pinId);
+    if (!pin) return;
+    consumedPinIdRef.current = pinId;
+    const timer = setTimeout(() => {
+      setFilter(pin.type === 'meet' ? (pin.eventMode === 'convoy' ? 'convoy' : 'meetup') : pin.type);
+      setSelected(pin);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [params.pinId, world.activePins]);
 
   const selectMapPoint = (event: MapPressEvent) => {
     if (!editorOpen) return;

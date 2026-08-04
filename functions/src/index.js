@@ -3294,6 +3294,14 @@ exports.createForumThread = secureCall("createForumThread", {
 }, async (request) => {
   const userId = requireAuth(request);
   const threadRef = publicCollection("forumThreads").doc();
+  const mentionUserIds = [...new Set((Array.isArray(request.data?.thread?.mentionUserIds)
+    ? request.data.thread.mentionUserIds
+    : [])
+    .map((value) => sanitizeOperationalText(value, 180))
+    .filter((value) => value && value !== userId && !value.includes("/")))]
+    .slice(0, 5);
+  const eventId = sanitizeOperationalText(request.data?.thread?.eventId, 180);
+  if (eventId.includes("/")) throw new HttpsError("invalid-argument", "Geçerli bir etkinlik seçin.");
   const storagePath = sanitizeOperationalText(request.data?.thread?.storagePath, 512);
   const imageUrl = sanitizeOperationalText(request.data?.thread?.imageUrl, 2048);
   if (Boolean(storagePath) !== Boolean(imageUrl)) {
@@ -3318,22 +3326,123 @@ exports.createForumThread = secureCall("createForumThread", {
     }
   }
   await db.runTransaction(async (transaction) => {
-    const profileSnapshot = await transaction.get(privateUserDocument(userId, "profile", "current"));
+    const mentionRefs = mentionUserIds.map((targetUserId) => publicDocument("publicProfiles", targetUserId));
+    const eventRef = eventId ? publicDocument("mapPins", eventId) : null;
+    const [profileSnapshot, ...relatedSnapshots] = await Promise.all([
+      transaction.get(privateUserDocument(userId, "profile", "current")),
+      ...mentionRefs.map((ref) => transaction.get(ref)),
+      ...(eventRef ? [transaction.get(eventRef)] : []),
+    ]);
     const profile = requireSnapshot(profileSnapshot, "not-found", "User profile not found.");
+    const mentionSnapshots = relatedSnapshots.slice(0, mentionRefs.length);
+    const mentions = mentionSnapshots
+      .filter((snapshot) => snapshot.exists)
+      .map((snapshot) => ({
+        userId: snapshot.id,
+        fullName: snapshot.data().fullName || snapshot.data().plateMasked || "TrackSnap sürücüsü",
+        model: snapshot.data().model || "",
+      }));
+    let eventReference = null;
+    if (eventRef) {
+      const eventSnapshot = relatedSnapshots[mentionRefs.length];
+      const event = requireSnapshot(eventSnapshot, "not-found", "Etkinlik bulunamadı.");
+      if (
+        event.type !== "meet" ||
+        event.visibility !== "public" ||
+        ["completed", "cancelled", "deleted"].includes(String(event.lifecycleStatus ?? ""))
+      ) {
+        throw new HttpsError("failed-precondition", "Yalnızca aktif ve herkese açık etkinliklerden bahsedilebilir.");
+      }
+      eventReference = {
+        eventId,
+        name: event.name,
+        eventMode: event.eventMode,
+        scheduledStartAtMs: event.scheduledStartAtMs,
+      };
+    }
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
     let thread;
     try {
       thread = buildForumThreadDocument({
         id: threadRef.id,
-        input: request.data?.thread,
+        input: {
+          ...request.data?.thread,
+          mentions,
+          eventReference,
+        },
         profile: { ...profile, userId },
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        timestamp,
+        nowMs: Date.now(),
       });
     } catch (error) {
       throw new HttpsError("invalid-argument", error.message);
     }
     transaction.set(threadRef, thread);
+    mentions.forEach((mention) => writeNotification(transaction, mention.userId, `forum-mention-${threadRef.id}`, {
+      type: "forum-mention",
+      title: "Bir gönderide etiketlendin",
+      body: `${sanitizeOperationalText(profile.fullName || profile.plate || "Bir sürücü", 80)} bir forum gönderisinde senden bahsetti.`,
+      actor: { ...profile, userId },
+      action: { type: "forum-thread", targetId: threadRef.id },
+    }, timestamp));
   });
   return { ok: true, threadId: threadRef.id };
+});
+
+exports.voteForumPoll = secureCall("voteForumPoll", {
+  ...LATENCY_SENSITIVE_OPTIONS,
+  rateLimit: { limit: 90, windowSeconds: 3600 },
+}, async (request) => {
+  const userId = requireAuth(request);
+  const threadId = sanitizeOperationalText(request.data?.threadId, 180);
+  const optionId = sanitizeOperationalText(request.data?.optionId, 40);
+  if (!threadId || threadId.includes("/") || !optionId || optionId.includes("/")) {
+    throw new HttpsError("invalid-argument", "Geçerli bir anket seçeneği gerekli.");
+  }
+  const threadRef = publicDocument("forumThreads", threadId);
+  const voteRef = publicDocument("forumPollVotes", `${threadId}_${userId}`);
+  await db.runTransaction(async (transaction) => {
+    const [threadSnapshot, voteSnapshot] = await Promise.all([
+      transaction.get(threadRef),
+      transaction.get(voteRef),
+    ]);
+    const thread = requireSnapshot(threadSnapshot, "not-found", "Forum konusu bulunamadı.");
+    if (thread.status !== "active" || !thread.poll || !Array.isArray(thread.poll.options)) {
+      throw new HttpsError("failed-precondition", "Bu gönderide aktif bir anket yok.");
+    }
+    if (Number(thread.poll.expiresAtMs ?? 0) <= Date.now()) {
+      throw new HttpsError("failed-precondition", "Bu anket sona erdi.");
+    }
+    if (!thread.poll.options.some((option) => option.id === optionId)) {
+      throw new HttpsError("invalid-argument", "Anket seçeneği bulunamadı.");
+    }
+    const previousOptionId = voteSnapshot.exists ? String(voteSnapshot.data().optionId ?? "") : "";
+    if (previousOptionId === optionId) return;
+    const options = thread.poll.options.map((option) => ({
+      ...option,
+      voteCount: Math.max(0, Number(option.voteCount ?? 0)
+        - (option.id === previousOptionId ? 1 : 0)
+        + (option.id === optionId ? 1 : 0)),
+    }));
+    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    transaction.set(voteRef, {
+      id: voteRef.id,
+      threadId,
+      userId,
+      optionId,
+      createdAt: voteSnapshot.exists ? voteSnapshot.data().createdAt : timestamp,
+      updatedAt: timestamp,
+    }, { merge: true });
+    transaction.update(threadRef, {
+      poll: {
+        ...thread.poll,
+        options,
+        totalVotes: Math.max(0, Number(thread.poll.totalVotes ?? 0) + (previousOptionId ? 0 : 1)),
+      },
+      updatedAt: timestamp,
+    });
+  });
+  return { ok: true, optionId };
 });
 
 exports.toggleForumLike = secureCall("toggleForumLike", {

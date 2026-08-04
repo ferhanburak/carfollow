@@ -4,6 +4,7 @@ import {
   onSnapshot,
   query,
   type Timestamp,
+  where,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import {
@@ -36,12 +37,45 @@ export type ForumReply = {
   status?: string;
 };
 
+export type ForumPollOption = {
+  id: string;
+  text: string;
+  voteCount: number;
+};
+
+export type ForumPoll = {
+  options: ForumPollOption[];
+  totalVotes: number;
+  durationHours: 24 | 72 | 168;
+  expiresAtMs: number;
+};
+
+export type ForumMention = {
+  userId: string;
+  fullName: string;
+  model?: string;
+};
+
+export type ForumEventReference = {
+  eventId: string;
+  name: string;
+  eventMode: 'meetup' | 'convoy';
+  scheduledStartAtMs?: number;
+};
+
 type ForumLike = {
   id: string;
   threadId: string;
   replyId?: string | null;
   targetType?: 'thread' | 'reply';
   userId: string;
+};
+
+type ForumPollVote = {
+  id: string;
+  threadId: string;
+  userId: string;
+  optionId: string;
 };
 
 export type ForumThread = {
@@ -55,6 +89,10 @@ export type ForumThread = {
     accuracy?: number;
     label?: string;
   } | null;
+  poll?: ForumPoll | null;
+  mentions?: ForumMention[];
+  eventReference?: ForumEventReference | null;
+  viewerPollOptionId?: string;
   authorUserId: string;
   authorName: string;
   authorPlate?: string;
@@ -72,7 +110,13 @@ export function useForumFeed() {
   const [rawThreads, setRawThreads] = useState<Omit<ForumThread, 'replies'>[]>([]);
   const [rawReplies, setRawReplies] = useState<ForumReply[]>([]);
   const [rawLikes, setRawLikes] = useState<ForumLike[]>([]);
-  const [loadingState, setLoadingState] = useState({ threads: true, replies: true, likes: true });
+  const [rawPollVotes, setRawPollVotes] = useState<ForumPollVote[]>([]);
+  const [loadingState, setLoadingState] = useState({
+    threads: true,
+    replies: true,
+    likes: true,
+    votes: Boolean(firebaseAuth.currentUser?.uid),
+  });
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -125,10 +169,28 @@ export function useForumFeed() {
       },
     );
 
+    const viewerId = firebaseAuth.currentUser?.uid;
+    const stopVotes = viewerId ? onSnapshot(
+      query(
+        collection(firestoreDb, publicCollectionPath('forumPollVotes')),
+        where('userId', '==', viewerId),
+        limit(100),
+      ),
+      (snapshot) => {
+        setRawPollVotes(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as ForumPollVote));
+        setLoadingState((current) => ({ ...current, votes: false }));
+      },
+      (snapshotError) => {
+        setError(snapshotError.message);
+        setLoadingState((current) => ({ ...current, votes: false }));
+      },
+    ) : () => {};
+
     return () => {
       stopThreads();
       stopReplies();
       stopLikes();
+      stopVotes();
     };
   }, []);
 
@@ -141,6 +203,9 @@ export function useForumFeed() {
       .filter((like) => like.userId === viewerId && (like.targetType === 'reply' || Boolean(like.replyId)))
       .map((like) => like.replyId)
       .filter(Boolean));
+    const viewerPollVotes = new Map(rawPollVotes
+      .filter((vote) => vote.userId === viewerId)
+      .map((vote) => [vote.threadId, vote.optionId]));
 
     return rawThreads.map((thread) => {
       const replies = rawReplies
@@ -154,14 +219,15 @@ export function useForumFeed() {
       return {
         ...thread,
         likedByViewer: viewerThreadLikes.has(thread.id),
+        viewerPollOptionId: viewerPollVotes.get(thread.id),
         replies,
       } as ForumThread;
     });
-  }, [rawLikes, rawReplies, rawThreads]);
+  }, [rawLikes, rawPollVotes, rawReplies, rawThreads]);
 
   return {
     threads,
-    loading: loadingState.threads || loadingState.replies || loadingState.likes,
+    loading: loadingState.threads || loadingState.replies || loadingState.likes || loadingState.votes,
     error,
   };
 }
@@ -190,19 +256,32 @@ export async function pinForumSolution(threadId: string, replyId: string) {
 export async function createForumThread(
   category: ForumThread['category'],
   body: string,
-  image?: {
+  extras: {
+    image?: {
     uri: string;
     fileName?: string | null;
     fileSize?: number;
     mimeType?: string | null;
-  } | null,
-  location?: ForumThread['location'],
+    } | null;
+    location?: ForumThread['location'];
+    poll?: { options: string[]; durationHours: 24 | 72 | 168 } | null;
+    mentionUserIds?: string[];
+    eventId?: string;
+  } = {},
 ) {
   let uploadedImage = { imageUrl: '', storagePath: '' };
   try {
-    uploadedImage = await uploadForumImage(image);
+    uploadedImage = await uploadForumImage(extras.image);
     const result = await httpsCallable(firebaseFunctions, 'createForumThread')({
-      thread: { category, body: body.trim(), location: location ?? null, ...uploadedImage },
+      thread: {
+        category,
+        body: body.trim(),
+        location: extras.location ?? null,
+        poll: extras.poll ?? null,
+        mentionUserIds: extras.mentionUserIds ?? [],
+        eventId: extras.eventId ?? '',
+        ...uploadedImage,
+      },
     });
     return result.data;
   } catch (error) {
@@ -211,6 +290,11 @@ export async function createForumThread(
     }
     throw error;
   }
+}
+
+export async function voteForumPoll(threadId: string, optionId: string) {
+  const result = await httpsCallable(firebaseFunctions, 'voteForumPoll')({ threadId, optionId });
+  return result.data;
 }
 
 async function uploadForumImage(image?: {
