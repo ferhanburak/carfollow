@@ -144,7 +144,8 @@ const realtimeDb = getDatabaseWithUrl(REALTIME_DATABASE_URL, firebaseAdminApp);
 const storageBucket = getStorage(firebaseAdminApp).bucket(STORAGE_BUCKET);
 const APP_ID = process.env.CRUISER_APP_ID || "cruiser-app-prod";
 const APP_CHECK_ENFORCED = process.env.ENFORCE_APP_CHECK === "true";
-const LATENCY_SENSITIVE_OPTIONS = Object.freeze({ minInstances: 1 });
+// Keep development traffic scale-to-zero; warm instances create a fixed idle cost per function.
+const LATENCY_SENSITIVE_OPTIONS = Object.freeze({ minInstances: 0 });
 
 onInit(async () => {
   const startedAt = Date.now();
