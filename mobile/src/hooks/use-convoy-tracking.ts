@@ -2,6 +2,10 @@ import * as Location from 'expo-location';
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
 import type { useMapWorld } from '@/hooks/use-map-world';
+import {
+  startBackgroundConvoyTracking,
+  stopBackgroundConvoyTracking,
+} from '@/lib/background-convoy';
 import type { MapPin } from '@/types/cruiser';
 
 const SYNC_INTERVAL_MS = 5_000;
@@ -82,6 +86,13 @@ export function useConvoyTracking(
       const permission = await Location.requestForegroundPermissionsAsync();
       if (!active || permission.status !== 'granted') return;
 
+      await startBackgroundConvoyTracking(trackingSignature.split('|'))
+        .catch(() => undefined);
+      if (!active) {
+        await stopBackgroundConvoyTracking().catch(() => undefined);
+        return;
+      }
+
       subscription = await Location.watchPositionAsync({
         accuracy: Location.Accuracy.BestForNavigation,
         distanceInterval: 3,
@@ -94,6 +105,7 @@ export function useConvoyTracking(
     return () => {
       active = false;
       subscription?.remove();
+      void stopBackgroundConvoyTracking();
     };
   }, [trackingSignature, userId]);
 }

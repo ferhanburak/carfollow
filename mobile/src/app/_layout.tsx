@@ -19,6 +19,7 @@ import { colors } from '@/theme/colors';
 import { readPushNavigationData } from '@/lib/push-notifications';
 
 import '@/lib/background-drive';
+import '@/lib/background-convoy';
 
 void SplashScreen.preventAutoHideAsync();
 

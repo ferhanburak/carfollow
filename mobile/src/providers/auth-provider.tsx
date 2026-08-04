@@ -23,6 +23,7 @@ import {
   firestoreDb,
 } from '@/lib/firebase';
 import { privateProfilePath } from '@/lib/firebase-paths';
+import { stopBackgroundConvoyTracking } from '@/lib/background-convoy';
 import { clearBackgroundDrive } from '@/lib/background-drive';
 import { unregisterDevicePushToken } from '@/lib/push-notifications';
 
@@ -235,6 +236,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   };
 
   const logout = async () => {
+    await stopBackgroundConvoyTracking().catch(() => undefined);
     await clearBackgroundDrive();
     await unregisterDevicePushToken().catch(() => undefined);
     await signOut(firebaseAuth);
