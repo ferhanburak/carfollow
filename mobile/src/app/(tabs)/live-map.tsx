@@ -5,6 +5,7 @@ import { Platform, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ContextualHelp } from '@/components/contextual-help';
 import { LocalizedPressable as Pressable, LocalizedText as Text, localizedAlert } from '@/components/localized-text';
 import { MapNodeDetailModal, MapNodeMarker } from '@/components/map-node-ui';
 import { AppHeader } from '@/components/screen-shell';
@@ -72,6 +73,7 @@ export default function LiveMapScreen() {
     <LinearGradient colors={[colors.background, colors.backgroundRaised]} style={styles.root}>
       <SafeAreaView edges={['top']} style={styles.safe}>
         <AppHeader />
+        <ContextualHelp topicId="live-map" />
 
         <View style={styles.mapFrame}>
           <MapView

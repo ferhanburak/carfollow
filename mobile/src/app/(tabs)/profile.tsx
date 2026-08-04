@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useState, type ReactNode } from 'react';
@@ -31,7 +31,7 @@ import { useAppTheme } from '@/providers/theme-provider';
 import { colors, createThemedStyles, fonts, type AppThemeMode } from '@/theme/colors';
 
 type Panel = 'settings' | 'service' | 'achievements' | null;
-type SettingsSection = 'appearance' | 'language' | 'privacy' | 'blocked' | 'vehicle' | 'account' | 'security';
+type SettingsSection = 'appearance' | 'language' | 'privacy' | 'blocked' | 'vehicle' | 'account' | 'security' | 'help';
 type Achievement = {
   key: string;
   title: string;
@@ -565,6 +565,7 @@ function SettingsPanel({
   userId: string;
   visible: boolean;
 }) {
+  const router = useRouter();
   const { language, setLanguage, t } = useAppLanguage();
   const { mode: themeMode, resolvedTheme, setMode: setThemeMode } = useAppTheme();
   const [fullName, setFullName] = useState(profile?.fullName ?? '');
@@ -736,6 +737,14 @@ function SettingsPanel({
       description: t('settings.securityDescription'),
       value: firebaseAuth.currentUser?.email || 'Hesap güvenliği',
     },
+    {
+      key: 'help',
+      code: '08',
+      icon: 'help-buoy-outline',
+      title: t('settings.help'),
+      description: t('settings.helpDescription'),
+      value: t('settings.helpValue'),
+    },
   ];
   const currentSection = sections.find((entry) => entry.key === activeSection);
   const closePanel = () => {
@@ -775,7 +784,14 @@ function SettingsPanel({
             {sections.map((item) => (
               <Pressable
                 key={item.key}
-                onPress={() => setActiveSection(item.key)}
+                onPress={() => {
+                  if (item.key === 'help') {
+                    closePanel();
+                    router.push('/help' as Href);
+                    return;
+                  }
+                  setActiveSection(item.key);
+                }}
                 style={({ pressed }) => [styles.settingsMenuItem, pressed && styles.pressed]}
               >
                 <View style={styles.settingsMenuCode}>

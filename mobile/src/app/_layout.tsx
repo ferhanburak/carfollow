@@ -110,6 +110,7 @@ function RootNavigator() {
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="help" />
           </Stack>
         </AppDataProvider>
       </AuthProvider>

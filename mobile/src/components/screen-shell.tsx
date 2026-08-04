@@ -11,7 +11,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { PropsWithChildren, ReactNode } from 'react';
 
+import { ContextualHelp } from '@/components/contextual-help';
 import { LocalizedPressable as Pressable, LocalizedText as Text } from '@/components/localized-text';
+import { getHelpTopicForPath } from '@/help/help-content';
 import { useAuth } from '@/providers/auth-provider';
 import { useAppData } from '@/providers/app-data-provider';
 import { useAppTheme } from '@/providers/theme-provider';
@@ -33,6 +35,8 @@ export function ScreenShell({
 }: ScreenShellProps) {
   const insets = useSafeAreaInsets();
   const { resolvedTheme } = useAppTheme();
+  const pathname = usePathname();
+  const helpTopic = getHelpTopicForPath(pathname);
 
   return (
     <LinearGradient
@@ -43,6 +47,7 @@ export function ScreenShell({
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <AppHeader />
+        {helpTopic ? <ContextualHelp autoOpen={helpTopic !== 'drive'} topicId={helpTopic} /> : null}
         <ScrollView
           {...scrollProps}
           contentContainerStyle={[
