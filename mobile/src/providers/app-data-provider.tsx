@@ -211,12 +211,40 @@ export function AppDataProvider({ children }: PropsWithChildren) {
     threads,
     unreadConversationCount,
     markNotificationRead: async (notificationId) => {
-      await callFirebase('markNotificationRead', { notificationId });
+      const previousReadAt = notifications.find((item) => item.id === notificationId)?.readAt ?? null;
+      const readAt = Date.now();
+      setNotifications((current) => current.map((item) => (
+        item.id === notificationId ? { ...item, readAt } : item
+      )));
+      try {
+        await callFirebase('markNotificationRead', { notificationId });
+      } catch (error) {
+        setNotifications((current) => current.map((item) => (
+          item.id === notificationId ? { ...item, readAt: previousReadAt } : item
+        )));
+        throw error;
+      }
     },
     markAllNotificationsRead: async () => {
-      await callFirebase('markAllNotificationsRead');
+      const previousReadTimes = new Map(notifications.map((item) => [item.id, item.readAt]));
+      const readAt = Date.now();
+      setNotifications((current) => current.map((item) => (
+        item.readAt ? item : { ...item, readAt }
+      )));
+      try {
+        await callFirebase('markAllNotificationsRead');
+      } catch (error) {
+        setNotifications((current) => current.map((item) => (
+          previousReadTimes.has(item.id)
+            ? { ...item, readAt: previousReadTimes.get(item.id) ?? null }
+            : item
+        )));
+        throw error;
+      }
     },
     openThread: async (targetUserId) => {
+      const existing = threads.find((thread) => thread.participantUserId === targetUserId);
+      if (existing) return existing.id;
       const response = await callFirebase<{ threadId: string }>(
         'ensureDirectMessageThread',
         { targetUserId },
@@ -224,7 +252,48 @@ export function AppDataProvider({ children }: PropsWithChildren) {
       return response.threadId;
     },
     sendMessage: async (targetUserId, body, share) => {
-      await callFirebase('sendDirectMessage', { targetUserId, body: body.trim(), share });
+      const trimmedBody = body.trim();
+      const existing = threads.find((thread) => thread.participantUserId === targetUserId);
+      const pendingId = `pending-${user?.uid ?? 'unknown'}-${Date.now()}`;
+      if (existing && user) {
+        const pendingMessage: DirectMessage = {
+          id: pendingId,
+          senderUserId: user.uid,
+          senderUid: user.uid,
+          body: trimmedBody,
+          createdAt: Date.now(),
+          share,
+        };
+        setThreadMap((current) => {
+          const latestThread = current[existing.id] ?? existing;
+          return {
+            ...current,
+            [existing.id]: {
+              ...latestThread,
+              messages: [...latestThread.messages, pendingMessage],
+              updatedAt: pendingMessage.createdAt,
+            },
+          };
+        });
+      }
+      try {
+        await callFirebase('sendDirectMessage', { targetUserId, body: trimmedBody, share });
+      } catch (error) {
+        if (existing) {
+          setThreadMap((current) => {
+            const thread = current[existing.id];
+            if (!thread) return current;
+            return {
+              ...current,
+              [existing.id]: {
+                ...thread,
+                messages: thread.messages.filter((message) => message.id !== pendingId),
+              },
+            };
+          });
+        }
+        throw error;
+      }
     },
     markThreadRead: async (threadId) => {
       if (!user) return;
@@ -233,7 +302,7 @@ export function AppDataProvider({ children }: PropsWithChildren) {
         serverTimestamp(),
       );
     },
-  }), [activeNotifications, threads, unreadConversationCount, user]);
+  }), [activeNotifications, notifications, threads, unreadConversationCount, user]);
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
 }

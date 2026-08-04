@@ -52,6 +52,8 @@ export function DriverProfileProvider({ children }: PropsWithChildren) {
   const [profileTarget, setProfileTarget] = useState<DriverSummary | null>(null);
   const [publicProfile, setPublicProfile] = useState<DriverSummary | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [friendshipOverride, setFriendshipOverride] = useState<ProfileFriendshipState | null>(null);
+  const [clanInviteOverride, setClanInviteOverride] = useState<boolean | null>(null);
   const [convoyTarget, setConvoyTarget] = useState<DriverSummary | null>(null);
   const profileRequestRef = useRef(0);
 
@@ -66,12 +68,12 @@ export function DriverProfileProvider({ children }: PropsWithChildren) {
   );
 
   const activeProfile = publicProfile ?? profileTarget;
-  const activeFriendshipState = resolveFriendshipState(activeProfile, social);
+  const activeFriendshipState = friendshipOverride ?? resolveFriendshipState(activeProfile, social);
   const activeIsClanMember = Boolean(
     activeProfile && social.members.some((member) => member.userId === activeProfile.userId),
   );
   const canInviteClan = ['owner', 'captain'].includes(social.membership?.role ?? '');
-  const clanInviteSent = Boolean(
+  const clanInviteSent = clanInviteOverride ?? Boolean(
     activeProfile && social.outgoingClanInvites.some((invite) =>
       invite.targetUserId === activeProfile.userId &&
       (invite.status ?? 'pending') === 'pending',
@@ -83,6 +85,8 @@ export function DriverProfileProvider({ children }: PropsWithChildren) {
     setProfileTarget(null);
     setPublicProfile(null);
     setProfileLoading(false);
+    setFriendshipOverride(null);
+    setClanInviteOverride(null);
   };
 
   const openDriverProfile = async (
@@ -101,6 +105,8 @@ export function DriverProfileProvider({ children }: PropsWithChildren) {
     setProfileTarget(driver);
     setPublicProfile(null);
     setProfileLoading(true);
+    setFriendshipOverride(null);
+    setClanInviteOverride(null);
     try {
       const result = await social.getPublicProfile(driver.userId, context);
       if (profileRequestRef.current === requestId) {
@@ -137,18 +143,39 @@ export function DriverProfileProvider({ children }: PropsWithChildren) {
         error={social.error}
         friendshipState={activeFriendshipState}
         loading={profileLoading}
-        onAcceptFriend={activeProfile ? () =>
-          social.respondFriend(activeProfile.userId, 'accepted') : undefined}
+        onAcceptFriend={activeProfile ? async () => {
+          setFriendshipOverride('accepted');
+          try {
+            await social.respondFriend(activeProfile.userId, 'accepted');
+          } catch (error) {
+            setFriendshipOverride(null);
+            throw error;
+          }
+        } : undefined}
         onBlock={activeProfile ? () => confirm(
           'Sürücüyü engelle',
           'Arkadaşlık kaldırılır ve bu kullanıcı sizinle etkileşim kuramaz.',
           () => social.blockDriver(activeProfile.userId),
         ) : undefined}
-        onCancelFriend={activeProfile ? () =>
-          social.cancelFriend(activeProfile.userId) : undefined}
+        onCancelFriend={activeProfile ? async () => {
+          setFriendshipOverride('none');
+          try {
+            await social.cancelFriend(activeProfile.userId);
+          } catch (error) {
+            setFriendshipOverride(null);
+            throw error;
+          }
+        } : undefined}
         onClose={closeDriverProfile}
-        onInviteClan={activeProfile ? () =>
-          social.inviteClan(activeProfile.userId) : undefined}
+        onInviteClan={activeProfile ? async () => {
+          setClanInviteOverride(true);
+          try {
+            await social.inviteClan(activeProfile.userId);
+          } catch (error) {
+            setClanInviteOverride(null);
+            throw error;
+          }
+        } : undefined}
         onInviteConvoy={activeProfile ? () => {
           const driver = activeProfile;
           closeDriverProfile();
@@ -162,8 +189,15 @@ export function DriverProfileProvider({ children }: PropsWithChildren) {
             params: { section: 'messages', threadId },
           });
         } : undefined}
-        onRejectFriend={activeProfile ? () =>
-          social.respondFriend(activeProfile.userId, 'declined') : undefined}
+        onRejectFriend={activeProfile ? async () => {
+          setFriendshipOverride('none');
+          try {
+            await social.respondFriend(activeProfile.userId, 'declined');
+          } catch (error) {
+            setFriendshipOverride(null);
+            throw error;
+          }
+        } : undefined}
         onRemoveFriend={activeProfile ? () => confirm(
           'Arkadaşlıktan çıkar',
           `${activeProfile.fullName || 'Bu sürücü'} arkadaş listenizden çıkarılsın mı?`,
@@ -171,8 +205,15 @@ export function DriverProfileProvider({ children }: PropsWithChildren) {
         ) : undefined}
         onReport={activeProfile ? (reason, details) =>
           social.reportDriver(activeProfile.userId, reason, details) : undefined}
-        onRequestFriend={activeProfile ? () =>
-          social.requestFriend(activeProfile.userId) : undefined}
+        onRequestFriend={activeProfile ? async () => {
+          setFriendshipOverride('outgoing');
+          try {
+            await social.requestFriend(activeProfile.userId);
+          } catch (error) {
+            setFriendshipOverride(null);
+            throw error;
+          }
+        } : undefined}
         onUnblock={activeProfile ? () =>
           social.unblockDriver(activeProfile.userId) : undefined}
         profile={activeProfile}

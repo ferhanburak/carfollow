@@ -4,7 +4,6 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { getStorage } = require("firebase-admin/storage");
 const logger = require("firebase-functions/logger");
 const { setGlobalOptions } = require("firebase-functions/v2");
-const { onInit } = require("firebase-functions/v2/core");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
@@ -146,27 +145,6 @@ const APP_ID = process.env.CRUISER_APP_ID || "cruiser-app-prod";
 const APP_CHECK_ENFORCED = process.env.ENFORCE_APP_CHECK === "true";
 // Keep development traffic scale-to-zero; warm instances create a fixed idle cost per function.
 const LATENCY_SENSITIVE_OPTIONS = Object.freeze({ minInstances: 0 });
-
-onInit(async () => {
-  const startedAt = Date.now();
-  const results = await Promise.allSettled([
-    db.doc(`artifacts/${APP_ID}/public/data/system/runtimeWarmup`).get(),
-    realtimeDb.ref(`artifacts/${APP_ID}/realtime/runtimeWarmup`).get(),
-  ]);
-  const rejected = results.filter((result) => result.status === "rejected");
-
-  if (rejected.length) {
-    logger.warn("runtime.warmup.partial", {
-      durationMs: Date.now() - startedAt,
-      failures: rejected.length,
-    });
-    return;
-  }
-
-  logger.info("runtime.warmup.complete", {
-    durationMs: Date.now() - startedAt,
-  });
-});
 
 function publicCollection(collectionName) {
   return db.collection(`artifacts/${APP_ID}/public/data/${collectionName}`);

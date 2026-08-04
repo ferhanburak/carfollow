@@ -30,6 +30,28 @@ type SocialState = {
   blocked: DriverSummary[];
 };
 
+const PUBLIC_PROFILE_CACHE_MS = 5 * 60 * 1000;
+const publicProfileCache = new Map<string, {
+  driver: DriverSummary | null;
+  expiresAt: number;
+}>();
+const publicProfileRequests = new Map<string, Promise<DriverSummary | null>>();
+
+function publicProfileCacheKey(
+  viewerUserId: string,
+  targetUserId: string,
+  context: { convoyId?: string },
+) {
+  return `${viewerUserId}:${targetUserId}:${context.convoyId ?? ''}`;
+}
+
+function invalidatePublicProfileCache(viewerUserId: string, targetUserId?: string) {
+  const prefix = targetUserId ? `${viewerUserId}:${targetUserId}:` : `${viewerUserId}:`;
+  publicProfileCache.forEach((_entry, key) => {
+    if (key.startsWith(prefix)) publicProfileCache.delete(key);
+  });
+}
+
 function counterpart(friendship: Friendship, currentUserId: string): DriverSummary | null {
   const targetId = friendship.participantIds?.find((id) => id !== currentUserId);
   if (!targetId) return null;
@@ -172,6 +194,33 @@ export function useSocialWorld() {
     }
   }
 
+  async function getPublicProfile(
+    targetUserId: string,
+    context: { convoyId?: string } = {},
+  ) {
+    const cacheKey = publicProfileCacheKey(user?.uid ?? '', targetUserId, context);
+    const cached = publicProfileCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return cached.driver;
+
+    const pending = publicProfileRequests.get(cacheKey);
+    if (pending) return pending;
+
+    const request = callFirebase<{ driver: DriverSummary | null }>(
+      'getPublicDriverProfile',
+      { targetUserId, context },
+    ).then((response) => {
+      publicProfileCache.set(cacheKey, {
+        driver: response.driver,
+        expiresAt: Date.now() + PUBLIC_PROFILE_CACHE_MS,
+      });
+      return response.driver;
+    });
+    publicProfileRequests.set(cacheKey, request);
+
+    return run(`profile-${targetUserId}`, () => request)
+      .finally(() => publicProfileRequests.delete(cacheKey));
+  }
+
   return {
     ...social,
     currentUserId: user?.uid ?? '',
@@ -193,36 +242,54 @@ export function useSocialWorld() {
         { plate },
       )).driver,
     ),
-    getPublicProfile: (targetUserId: string, context: { convoyId?: string } = {}) => run(
-      `profile-${targetUserId}`,
-      async () => (await callFirebase<{ driver: DriverSummary | null }>(
-        'getPublicDriverProfile',
-        { targetUserId, context },
-      )).driver,
-    ),
+    getPublicProfile,
     requestFriend: (targetUserId: string) => run(
       `friend-${targetUserId}`,
-      () => callFirebase('requestFriendship', { targetUserId }),
+      async () => {
+        const response = await callFirebase('requestFriendship', { targetUserId });
+        invalidatePublicProfileCache(user?.uid ?? '', targetUserId);
+        return response;
+      },
     ),
     respondFriend: (targetUserId: string, decision: 'accepted' | 'declined') => run(
       `friend-${targetUserId}`,
-      () => callFirebase('respondFriendship', { targetUserId, decision }),
+      async () => {
+        const response = await callFirebase('respondFriendship', { targetUserId, decision });
+        invalidatePublicProfileCache(user?.uid ?? '', targetUserId);
+        return response;
+      },
     ),
     cancelFriend: (targetUserId: string) => run(
       `friend-${targetUserId}`,
-      () => callFirebase('cancelFriendshipRequest', { targetUserId }),
+      async () => {
+        const response = await callFirebase('cancelFriendshipRequest', { targetUserId });
+        invalidatePublicProfileCache(user?.uid ?? '', targetUserId);
+        return response;
+      },
     ),
     removeFriend: (targetUserId: string) => run(
       `friend-${targetUserId}`,
-      () => callFirebase('removeFriendship', { targetUserId }),
+      async () => {
+        const response = await callFirebase('removeFriendship', { targetUserId });
+        invalidatePublicProfileCache(user?.uid ?? '', targetUserId);
+        return response;
+      },
     ),
     blockDriver: (targetUserId: string) => run(
       `block-${targetUserId}`,
-      () => callFirebase('blockDriver', { targetUserId }),
+      async () => {
+        const response = await callFirebase('blockDriver', { targetUserId });
+        invalidatePublicProfileCache(user?.uid ?? '', targetUserId);
+        return response;
+      },
     ),
     unblockDriver: (targetUserId: string) => run(
       `block-${targetUserId}`,
-      () => callFirebase('unblockDriver', { targetUserId }),
+      async () => {
+        const response = await callFirebase('unblockDriver', { targetUserId });
+        invalidatePublicProfileCache(user?.uid ?? '', targetUserId);
+        return response;
+      },
     ),
     reportDriver: (targetUserId: string, reason: string, details: string) => run(
       `report-${targetUserId}`,
@@ -237,6 +304,7 @@ export function useSocialWorld() {
       'create-clan',
       async () => {
         const response = await callFirebase('createClan', { name, tag, description });
+        invalidatePublicProfileCache(user?.uid ?? '');
         await refreshProfile();
         return response;
       },
@@ -253,6 +321,7 @@ export function useSocialWorld() {
       `clan-${clanId}`,
       async () => {
         const response = await callFirebase('respondClanInvite', { clanId, decision });
+        invalidatePublicProfileCache(user?.uid ?? '');
         await refreshProfile();
         return response;
       },
@@ -279,6 +348,7 @@ export function useSocialWorld() {
           clanId: currentClan?.id,
           targetUserId,
         });
+        invalidatePublicProfileCache(user?.uid ?? '');
         await refreshProfile();
         return response;
       },
@@ -293,6 +363,7 @@ export function useSocialWorld() {
     ),
     leaveClan: () => run('leave-clan', async () => {
       const response = await callFirebase('leaveClan', { clanId: currentClan?.id });
+      invalidatePublicProfileCache(user?.uid ?? '');
       await refreshProfile();
       return response;
     }),
