@@ -14,6 +14,7 @@
     },
     "android": {
       "package": "com.ferhanburak.cruiser",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#070807",
         "foregroundImage": "./assets/images/cruiser-road-mark.png",

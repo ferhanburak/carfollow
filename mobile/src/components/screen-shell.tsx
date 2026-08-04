@@ -3,7 +3,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { usePathname, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   View,
   type ScrollViewProps,
@@ -43,26 +45,34 @@ export function ScreenShell({
     >
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <AppHeader />
-        <ScrollView
-          {...scrollProps}
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: 120 + insets.bottom },
-            scrollProps?.contentContainerStyle,
-          ]}
-          showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
         >
-          {title ? (
-            <View style={styles.titleRow}>
-              <View style={styles.titleCopy}>
-                <Text style={styles.title}>{title}</Text>
-                {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          <ScrollView
+            {...scrollProps}
+            automaticallyAdjustKeyboardInsets
+            contentContainerStyle={[
+              styles.content,
+              { paddingBottom: 120 + insets.bottom },
+              scrollProps?.contentContainerStyle,
+            ]}
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
+            showsVerticalScrollIndicator={false}
+          >
+            {title ? (
+              <View style={styles.titleRow}>
+                <View style={styles.titleCopy}>
+                  <Text style={styles.title}>{title}</Text>
+                  {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+                </View>
+                {action}
               </View>
-              {action}
-            </View>
-          ) : null}
-          {children}
-        </ScrollView>
+            ) : null}
+            {children}
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -223,6 +233,7 @@ const styles = createThemedStyles(() => ({
   safeArea: {
     flex: 1,
   },
+  keyboardView: { flex: 1 },
   header: {
     height: 64,
     marginHorizontal: 14,

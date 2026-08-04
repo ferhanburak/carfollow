@@ -9,6 +9,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
@@ -411,10 +412,19 @@ export default function MapScreen() {
       ) : null}
 
       <Modal animationType="slide" transparent visible={Boolean(selected)} onRequestClose={() => setSelected(null)}>
-        <View style={styles.detailBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.detailBackdrop}
+        >
           <Pressable onPress={() => setSelected(null)} style={StyleSheet.absoluteFill} />
           <View style={styles.detailSheet}>
-            <ScrollView contentContainerStyle={styles.detailContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              automaticallyAdjustKeyboardInsets
+              contentContainerStyle={styles.detailContent}
+              keyboardDismissMode="interactive"
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
               {selected ? (
                 <SelectedNode
                   busy={world.busy}
@@ -523,11 +533,14 @@ export default function MapScreen() {
               ) : null}
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal animationType="slide" transparent visible={editorOpen} onRequestClose={closeEditor}>
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalBackdrop}
+        >
           <View style={styles.editor}>
             <View style={styles.editorHeader}>
               <View>
@@ -540,7 +553,9 @@ export default function MapScreen() {
             </View>
 
             <ScrollView
+              automaticallyAdjustKeyboardInsets
               contentContainerStyle={styles.editorContent}
+              keyboardDismissMode="interactive"
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
@@ -867,7 +882,7 @@ export default function MapScreen() {
             </Pressable>
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScreenShell>
   );

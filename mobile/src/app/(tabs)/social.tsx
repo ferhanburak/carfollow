@@ -4,7 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   View,
 } from 'react-native';
@@ -1076,7 +1078,10 @@ function ChatModal({
   const router = useRouter();
   return (
     <Modal animationType="slide" onRequestClose={onClose} visible={Boolean(thread)}>
-      <View style={styles.modalRoot}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalRoot}
+      >
         <View style={[styles.modalHeader, { paddingTop: Math.max(insets.top, 14) }]}>
           <Pressable onPress={onClose} style={styles.closeButton}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
@@ -1087,7 +1092,9 @@ function ChatModal({
           </View>
         </View>
         <ScrollView
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.messages}
+          keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -1139,7 +1146,7 @@ function ChatModal({
             <Ionicons name="send" size={19} color={colors.black} />
           </Pressable>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

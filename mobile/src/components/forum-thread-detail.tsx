@@ -138,7 +138,7 @@ export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread
     <Modal animationType="slide" onRequestClose={closeDetail} visible transparent={false}>
       <SafeAreaView edges={['top', 'bottom', 'left', 'right']} style={styles.safeArea}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
           <View style={styles.topBar}>
@@ -150,7 +150,9 @@ export function ForumThreadDetail({ currentUserId, onClose, onOpenDriver, thread
           </View>
 
           <ScrollView
+            automaticallyAdjustKeyboardInsets
             contentContainerStyle={styles.scrollContent}
+            keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >

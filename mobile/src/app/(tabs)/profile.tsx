@@ -8,7 +8,9 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -391,7 +393,10 @@ function ModalShell({
 }) {
   return (
     <Modal animationType="slide" onRequestClose={onClose} visible={visible}>
-      <View style={styles.modalRoot}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalRoot}
+      >
         <View style={styles.modalHeader}>
           <View style={styles.modalHeaderCopy}>
             {onBack ? (
@@ -408,10 +413,16 @@ function ModalShell({
             <Ionicons name="close" size={22} color={colors.text} />
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={styles.modalContent}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           {children}
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

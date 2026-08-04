@@ -2,7 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   View,
 } from 'react-native';
@@ -120,7 +122,10 @@ export function PublicDriverProfileModal({
       presentationStyle="fullScreen"
       visible={visible}
     >
-      <View style={styles.root}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.root}
+      >
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 14) }]}>
           <View style={styles.headerCopy}>
             <Text numberOfLines={1} style={styles.title}>
@@ -144,10 +149,13 @@ export function PublicDriverProfileModal({
           </View>
         ) : profile ? (
           <ScrollView
+            automaticallyAdjustKeyboardInsets
             contentContainerStyle={[
               styles.content,
               { paddingBottom: Math.max(insets.bottom + 18, 28) },
             ]}
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.hero}>
@@ -389,7 +397,7 @@ export function PublicDriverProfileModal({
             <ActivityIndicator color={colors.black} size="small" />
           </View>
         ) : null}
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
