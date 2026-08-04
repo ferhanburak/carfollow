@@ -13,6 +13,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   View,
 } from 'react-native';
 import MapView, {
@@ -96,6 +97,12 @@ export default function MapScreen() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [creationPhoto, setCreationPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [includeWashReview, setIncludeWashReview] = useState(false);
+  const [washFoam, setWashFoam] = useState(5);
+  const [washWater, setWashWater] = useState(5);
+  const [washAllowsBuckets, setWashAllowsBuckets] = useState(false);
+  const [washShadowDrying, setWashShadowDrying] = useState(false);
+  const [washReviewNote, setWashReviewNote] = useState('');
   const [minDriverScore, setMinDriverScore] = useState('70');
   const [capacity, setCapacity] = useState('12');
   const [eventVisibility, setEventVisibility] = useState<EventVisibility>('public');
@@ -134,6 +141,12 @@ export default function MapScreen() {
     setName('');
     setDescription('');
     setCreationPhoto(null);
+    setIncludeWashReview(false);
+    setWashFoam(5);
+    setWashWater(5);
+    setWashAllowsBuckets(false);
+    setWashShadowDrying(false);
+    setWashReviewNote('');
     setMinDriverScore('70');
     setCapacity('12');
     setEventVisibility('public');
@@ -147,6 +160,8 @@ export default function MapScreen() {
     setEditorOpen(false);
     setPoints([]);
     setCreationPhoto(null);
+    setIncludeWashReview(false);
+    setWashReviewNote('');
     setDatePickerMode(null);
     setFormError('');
   };
@@ -220,6 +235,13 @@ export default function MapScreen() {
           tags: editorType === 'spot' ? ['#TrackSnap'] : [],
           lat: first.latitude,
           lng: first.longitude,
+          ...(editorType === 'wash' && includeWashReview ? {
+            foam: washFoam,
+            water: washWater,
+            allowsBuckets: washAllowsBuckets,
+            shadowDrying: washShadowDrying,
+            note: washReviewNote.trim(),
+          } : {}),
         });
         let photoWarning = '';
         if (editorType === 'spot' && creationPhoto) {
@@ -698,6 +720,51 @@ export default function MapScreen() {
                     <Text style={styles.photoSelectText}>Fotoğraf Seç</Text>
                   </Pressable>
                 )}
+              </View>
+            ) : null}
+
+            {editorType === 'wash' ? (
+              <View style={styles.initialReviewField}>
+                <View style={styles.initialReviewHeader}>
+                  <View style={styles.initialReviewCopy}>
+                    <Text style={styles.optionalPhotoTitle}>İlk değerlendirme</Text>
+                    <Text style={styles.optionalPhotoHint}>İsteğe bağlı</Text>
+                  </View>
+                  <Switch
+                    accessibilityLabel="İlk değerlendirme ekle"
+                    onValueChange={setIncludeWashReview}
+                    thumbColor={includeWashReview ? colors.black : colors.textMuted}
+                    trackColor={{ false: colors.borderStrong, true: colors.lime }}
+                    value={includeWashReview}
+                  />
+                </View>
+                {includeWashReview ? (
+                  <View style={styles.initialReviewBody}>
+                    <ScorePicker label="Köpük kalitesi" onChange={setWashFoam} value={washFoam} />
+                    <ScorePicker label="Su kalitesi" onChange={setWashWater} value={washWater} />
+                    <View style={styles.flagRow}>
+                      <FlagButton
+                        active={washAllowsBuckets}
+                        label="Kova serbest"
+                        onPress={() => setWashAllowsBuckets((current) => !current)}
+                      />
+                      <FlagButton
+                        active={washShadowDrying}
+                        label="Gölge alan"
+                        onPress={() => setWashShadowDrying((current) => !current)}
+                      />
+                    </View>
+                    <TextInput
+                      maxLength={280}
+                      multiline
+                      onChangeText={setWashReviewNote}
+                      placeholder="Kısa değerlendirme notu (isteğe bağlı)"
+                      placeholderTextColor={colors.textFaint}
+                      style={styles.initialReviewNote}
+                      value={washReviewNote}
+                    />
+                  </View>
+                ) : null}
               </View>
             ) : null}
 
@@ -2166,6 +2233,35 @@ const styles = createThemedStyles(() => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  initialReviewField: {
+    padding: 13,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundRaised,
+    gap: 12,
+  },
+  initialReviewHeader: {
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  initialReviewCopy: { flex: 1 },
+  initialReviewBody: { gap: 12 },
+  initialReviewNote: {
+    minHeight: 82,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    color: colors.text,
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    textAlignVertical: 'top',
   },
   optionalPhotoCopy: { flex: 1 },
   optionalPhotoTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 11 },

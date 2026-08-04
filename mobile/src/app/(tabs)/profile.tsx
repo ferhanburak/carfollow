@@ -54,6 +54,7 @@ export default function ProfileScreen() {
   const garage = useGarage();
   const { entries: allTimeEntries } = useAllTimeLeaderboard();
   const [panel, setPanel] = useState<Panel>(null);
+  const [settingsInitialSection, setSettingsInitialSection] = useState<SettingsSection | null>(null);
   const [notice, setNotice] = useState('');
   const [monthlyRecapVisible, setMonthlyRecapVisible] = useState(false);
 
@@ -138,8 +139,16 @@ export default function ProfileScreen() {
             <Text style={styles.plate}>{profile?.plate || 'PLAKA YOK'}</Text>
             <Text style={styles.model}>{profile?.model || 'Araç bilgisi yok'}</Text>
           </View>
-          <Pressable onPress={() => setPanel('settings')} style={styles.settingsButton}>
-            <Ionicons name="settings-outline" size={21} color={colors.text} />
+          <Pressable
+            accessibilityLabel="Profili düzenle"
+            onPress={() => {
+              setSettingsInitialSection('vehicle');
+              setPanel('settings');
+            }}
+            style={({ pressed }) => [styles.settingsButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="create-outline" size={16} color={colors.limeBright} />
+            <Text style={styles.settingsButtonText}>Düzenle</Text>
           </Pressable>
         </View>
 
@@ -311,8 +320,10 @@ export default function ProfileScreen() {
 
       {panel === 'settings' || section === 'settings' ? <SettingsPanel
         blockedDrivers={social.blocked}
+        initialSection={panel === 'settings' ? settingsInitialSection : null}
         onClose={() => {
           setPanel(null);
+          setSettingsInitialSection(null);
           if (section === 'settings') router.replace('/(tabs)/profile');
         }}
         onLogout={() => void signOut()}
@@ -570,6 +581,7 @@ function ServicePanel({
 
 function SettingsPanel({
   blockedDrivers,
+  initialSection,
   onClose,
   onLogout,
   onUnblockDriver,
@@ -585,6 +597,7 @@ function SettingsPanel({
     plate?: string;
     userId: string;
   }[];
+  initialSection?: SettingsSection | null;
   onClose: () => void;
   onLogout: () => void;
   onUnblockDriver: (targetUserId: string) => Promise<void>;
@@ -604,7 +617,7 @@ function SettingsPanel({
   const [garage, setGarage] = useState(profile?.garage || 'Garaj');
   const [region, setRegion] = useState(profile?.region || 'Belirtilmedi');
   const [avatar, setAvatar] = useState(profile?.avatar ?? '');
-  const [activeSection, setActiveSection] = useState<SettingsSection | null>(null);
+  const [activeSection, setActiveSection] = useState<SettingsSection | null>(initialSection ?? null);
   const [showPlate, setShowPlate] = useState(profile?.privacy?.showPlateOnLiveMap === true);
   const [showRegion, setShowRegion] = useState(profile?.privacy?.showRegionInSearch === true);
   const [locationPrecision, setLocationPrecision] = useState(
@@ -1299,15 +1312,19 @@ const styles = createThemedStyles(() => ({
   plate: { marginTop: 3, color: colors.lime, fontFamily: fonts.bold, fontSize: 10, letterSpacing: 1.6 },
   model: { marginTop: 3, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 11 },
   settingsButton: {
-    width: 46,
+    minWidth: 84,
     height: 46,
+    paddingHorizontal: 12,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.backgroundRaised,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
   },
+  settingsButtonText: { color: colors.limeBright, fontFamily: fonts.bold, fontSize: 10 },
   profileHealth: {
     marginTop: 15,
     flexDirection: 'row',
