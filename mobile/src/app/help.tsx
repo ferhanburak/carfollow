@@ -12,6 +12,57 @@ import { useAppLanguage } from '@/providers/language-provider';
 import { useAppTheme } from '@/providers/theme-provider';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
 
+const FAQ_ITEMS = [
+  {
+    id: 'location',
+    question: { tr: 'TrackSnap neden konum izni ister?', en: 'Why does TrackSnap need location access?' },
+    answer: {
+      tr: 'Canlı harita, gerçek sürüş mesafesi, hız ve konvoy takibi için konum kullanılır. Paylaşım düzeyi gizlilik ayarlarından yönetilebilir.',
+      en: 'Location powers the live map, real drive distance, speed and convoy tracking. You can manage sharing precision in privacy settings.',
+    },
+  },
+  {
+    id: 'background-drive',
+    question: { tr: 'Ekranı kapattığımda sürüş kaydı devam eder mi?', en: 'Does drive tracking continue with the screen off?' },
+    answer: {
+      tr: 'Aktif sürüş sırasında Android bildirimindeki TrackSnap oturumu açık kaldığı sürece GPS kaydı arka planda devam eder.',
+      en: 'During an active drive, GPS tracking continues in the background while the TrackSnap session notification remains active.',
+    },
+  },
+  {
+    id: 'visibility',
+    question: { tr: 'Canlı konumumu kimler görebilir?', en: 'Who can see my live location?' },
+    answer: {
+      tr: 'Görünürlük ve konum hassasiyeti ayarlarını Profil > Ayarlar > Gizlilik bölümünden kontrol edebilirsin.',
+      en: 'Control visibility and location precision from Profile > Settings > Privacy.',
+    },
+  },
+  {
+    id: 'events',
+    question: { tr: 'Bir etkinliğe nasıl katılırım?', en: 'How do I join an event?' },
+    answer: {
+      tr: 'Etkinlikler ekranında noktayı açıp katılım isteği gönder. Özel etkinliklerde detaylar, ev sahibi isteğini onayladıktan sonra görünür.',
+      en: 'Open a pin on the Events screen and send a join request. Private details appear after the host approves your request.',
+    },
+  },
+  {
+    id: 'score',
+    question: { tr: 'Sürücü puanı nasıl oluşur?', en: 'How is the driver score calculated?' },
+    answer: {
+      tr: 'Tamamlanan sürüşler, konvoy uyumu ve topluluk geri bildirimleri sürücü profilindeki güven göstergelerini etkiler.',
+      en: 'Completed drives, convoy conduct and community feedback contribute to the trust indicators on a driver profile.',
+    },
+  },
+  {
+    id: 'report',
+    question: { tr: 'Uygunsuz içerik veya kullanıcıyı nasıl bildiririm?', en: 'How do I report inappropriate content or a user?' },
+    answer: {
+      tr: 'İlgili kullanıcı profilindeki veya içerik detayındaki Bildir seçeneğini kullan. Engellenen kullanıcıları profil ayarlarından yönetebilirsin.',
+      en: 'Use Report on the relevant profile or content detail. Manage blocked users from profile settings.',
+    },
+  },
+] as const;
+
 export default function HelpScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -19,6 +70,7 @@ export default function HelpScreen() {
   const { language } = useAppLanguage();
   const { topic } = useLocalSearchParams<{ topic?: HelpTopicId }>();
   const [expanded, setExpanded] = useState<HelpTopicId | null>(topic ?? null);
+  const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
 
   const resetTours = async () => {
     await resetHelpTours();
@@ -123,6 +175,38 @@ export default function HelpScreen() {
                       </View>
                     </View>
                   ) : null}
+                </View>
+              );
+            })}
+          </View>
+
+          <View style={styles.sectionHeading}>
+            <View>
+              <Text style={styles.sectionTitle}>{language === 'tr' ? 'Sık Sorulan Sorular' : 'Frequently Asked Questions'}</Text>
+              <Text style={styles.sectionSubtitle}>
+                {language === 'tr' ? 'En çok merak edilen kısa cevaplar.' : 'Quick answers to common questions.'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.faqList}>
+            {FAQ_ITEMS.map((item) => {
+              const isExpanded = expandedFaq === item.id;
+              return (
+                <View key={item.id} style={[styles.faqCard, isExpanded && styles.faqCardExpanded]}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setExpandedFaq(isExpanded ? null : item.id)}
+                    style={({ pressed }) => [styles.faqHeader, pressed && styles.pressed]}
+                  >
+                    <Text style={styles.faqQuestion}>{item.question[language]}</Text>
+                    <Ionicons
+                      color={isExpanded ? colors.lime : colors.textFaint}
+                      name={isExpanded ? 'remove' : 'add'}
+                      size={21}
+                    />
+                  </Pressable>
+                  {isExpanded ? <Text style={styles.faqAnswer}>{item.answer[language]}</Text> : null}
                 </View>
               );
             })}
@@ -338,6 +422,38 @@ const styles = createThemedStyles(() => ({
     fontFamily: fonts.regular,
     fontSize: 10,
     lineHeight: 16,
+  },
+  faqList: { gap: 8 },
+  faqCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
+  },
+  faqCardExpanded: { borderColor: colors.borderStrong },
+  faqHeader: {
+    minHeight: 60,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  faqQuestion: {
+    flex: 1,
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  faqAnswer: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    color: colors.textMuted,
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    lineHeight: 17,
   },
   resetButton: {
     minHeight: 72,

@@ -27,17 +27,23 @@ type MapNodeDetailModalProps = {
 
 export function MapNodeMarker({
   pin,
+  scale = 1,
   selected = false,
 }: {
   pin: MapPin;
+  scale?: number;
   selected?: boolean;
 }) {
   const palette = getMapNodePalette(pin);
+  const visualScale = scale * (selected ? 1.12 : 1);
   return (
     <View
       style={[
         styles.markerHalo,
-        { borderColor: palette.color },
+        {
+          borderColor: palette.color,
+          transform: [{ scale: visualScale }],
+        },
         selected && styles.markerHaloSelected,
       ]}
     >
@@ -477,7 +483,6 @@ const styles = createThemedStyles(() => ({
     shadowOffset: { width: 0, height: 4 },
   },
   markerHaloSelected: {
-    transform: [{ scale: 1.12 }],
     borderWidth: 2,
   },
   marker: {

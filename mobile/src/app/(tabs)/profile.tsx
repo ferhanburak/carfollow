@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 
 import { LocalizedPressable as Pressable, LocalizedText as Text, LocalizedTextInput as TextInput, localizedAlert } from '@/components/localized-text';
+import { MonthlyRecapModal, type MonthlyRecapData } from '@/components/monthly-recap-modal';
 import { ScreenShell, Surface } from '@/components/screen-shell';
 import { useAllTimeLeaderboard } from '@/hooks/use-all-time-leaderboard';
 import { useGarage, type VehiclePart } from '@/hooks/use-garage';
@@ -54,6 +55,7 @@ export default function ProfileScreen() {
   const { entries: allTimeEntries } = useAllTimeLeaderboard();
   const [panel, setPanel] = useState<Panel>(null);
   const [notice, setNotice] = useState('');
+  const [monthlyRecapVisible, setMonthlyRecapVisible] = useState(false);
 
   const stats = garage.driverStats ?? {};
   const achievements = Array.isArray(stats.achievements)
@@ -73,6 +75,20 @@ export default function ProfileScreen() {
     ? Math.round((harmonyVotes / (harmonyVotes + alertVotes)) * 100)
     : 100;
   const currentClan = social.currentClan?.name || profile?.clan || 'Klan yok';
+  const monthlyRecap: MonthlyRecapData = {
+    averageSpeedKmh: Number(stats.monthlyAverageSpeedKmh ?? 0),
+    communityKudos: Number(profile?.communityKudos ?? 0),
+    driverScore: Number(profile?.driverScore ?? 0),
+    driveSeconds: Number(stats.monthlyDriveSeconds ?? 0),
+    fullName: profile?.fullName || 'TrackSnap sürücüsü',
+    helpfulVotes: Number(profile?.communityHelpfulVotesReceived ?? 0),
+    likesReceived: Number(profile?.communityEventLikesReceived ?? 0)
+      + Number(profile?.communityPhotoLikesReceived ?? 0),
+    maxSpeedKmh: Number(stats.monthlyMaxSpeedKmh ?? 0),
+    model: profile?.model || 'Araç bilgisi yok',
+    monthlyKm: Number(stats.monthlyKm ?? profile?.monthlyKm ?? 0),
+    nightKm: Number(stats.monthlyNightKm ?? 0),
+  };
   const personalStats = [
     { key: 'monthly-km', label: 'Bireysel Aylık KM', value: `${formatNumber(stats.monthlyKm ?? profile?.monthlyKm)} KM` },
     { key: 'night-km', label: 'Aylık Gece KM', value: `${formatNumber(stats.monthlyNightKm)} KM` },
@@ -169,7 +185,14 @@ export default function ProfileScreen() {
       <Surface>
         <View style={styles.sectionHeader}>
           <Text style={styles.cardTitle}>Sürücü İstatistikleri</Text>
-          <Text style={styles.sectionTag}>CANLI</Text>
+          <Pressable
+            accessibilityLabel="Aylık Özeti Aç"
+            onPress={() => setMonthlyRecapVisible(true)}
+            style={({ pressed }) => [styles.recapButton, pressed && styles.pressed]}
+          >
+            <Ionicons color={colors.limeBright} name="sparkles" size={14} />
+            <Text style={styles.recapButtonText}>Aylık Özet</Text>
+          </Pressable>
         </View>
         <View style={styles.compactGrid}>
           {personalStats.map((item) => (
@@ -278,6 +301,12 @@ export default function ProfileScreen() {
         onClose={() => setPanel(null)}
         showNotice={showNotice}
         visible={panel === 'service'}
+      />
+
+      <MonthlyRecapModal
+        data={monthlyRecap}
+        onClose={() => setMonthlyRecapVisible(false)}
+        visible={monthlyRecapVisible}
       />
 
       {panel === 'settings' || section === 'settings' ? <SettingsPanel
@@ -1367,6 +1396,23 @@ const styles = createThemedStyles(() => ({
     fontFamily: fonts.bold,
     fontSize: 8,
     letterSpacing: 1.8,
+  },
+  recapButton: {
+    minHeight: 38,
+    paddingHorizontal: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.limeMuted,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  recapButtonText: {
+    color: colors.limeBright,
+    fontFamily: fonts.bold,
+    fontSize: 9,
   },
   garageLine: {
     minHeight: 42,

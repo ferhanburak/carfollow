@@ -1,8 +1,10 @@
 import * as Location from 'expo-location';
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 
 import type { useMapWorld } from '@/hooks/use-map-world';
 import {
+  completeConvoyRouteSummary,
+  recordConvoyRoutePoint,
   startBackgroundConvoyTracking,
   stopBackgroundConvoyTracking,
 } from '@/lib/background-convoy';
@@ -23,14 +25,13 @@ export function useConvoyTracking(
   const syncingRef = useRef(new Set<string>());
   const [clock, setClock] = useState(() => Date.now());
 
-  const eligibleConvoys = userId
+  const eligibleConvoys = useMemo(() => userId
     ? mapWorld.pins.filter((pin) => hasActiveMembership(pin, userId))
-    : [];
-  const trackingSignature = eligibleConvoys
+    : [], [mapWorld.pins, userId]);
+  const trackingSignature = JSON.stringify(eligibleConvoys
     .filter((pin) => shouldTrackConvoy(pin, userId ?? '', clock))
-    .map((pin) => pin.id)
-    .sort()
-    .join('|');
+    .map((pin) => ({ id: pin.id, title: pin.name }))
+    .sort((a, b) => a.id.localeCompare(b.id)));
 
   const refreshConvoys = useEffectEvent(() => mapWorld.refreshConvoys());
   const handleLocation = useEffectEvent((position: Location.LocationObject) => {
@@ -48,11 +49,13 @@ export function useConvoyTracking(
 
       syncingRef.current.add(convoy.id);
       lastSyncRef.current[convoy.id] = now;
+      void recordConvoyRoutePoint({ id: convoy.id, title: convoy.name }, position);
       void mapWorld.syncConvoyLocation(convoy.id, {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
         accuracy: Math.max(0, Number(position.coords.accuracy ?? 0)),
       }).then(async (result) => {
+        if (result.completed) await completeConvoyRouteSummary(convoy.id);
         const stateChanged = (
           result.lifecycleStatus !== convoy.lifecycleStatus
           || result.tripStatus !== convoy.viewerTripStatus
@@ -78,7 +81,8 @@ export function useConvoyTracking(
   }, [userId, eligibleConvoys.length]);
 
   useEffect(() => {
-    if (!userId || !trackingSignature) return undefined;
+    const trackedConvoys = JSON.parse(trackingSignature) as { id: string; title: string }[];
+    if (!userId || !trackedConvoys.length) return undefined;
     let active = true;
     let subscription: Location.LocationSubscription | null = null;
 
@@ -86,7 +90,7 @@ export function useConvoyTracking(
       const permission = await Location.requestForegroundPermissionsAsync();
       if (!active || permission.status !== 'granted') return;
 
-      await startBackgroundConvoyTracking(trackingSignature.split('|'))
+      await startBackgroundConvoyTracking(trackedConvoys)
         .catch(() => undefined);
       if (!active) {
         await stopBackgroundConvoyTracking().catch(() => undefined);

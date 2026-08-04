@@ -15,6 +15,7 @@ import {
 } from '@/lib/background-drive';
 import { createDriveMetrics, type DriveMetrics } from '@/lib/drive-telemetry';
 import { firebaseFunctions } from '@/lib/firebase';
+import { saveRouteSummary } from '@/lib/route-summary';
 import { useAuth } from '@/providers/auth-provider';
 
 type DriveStatus =
@@ -282,6 +283,20 @@ export function useDriveSession() {
       });
       const acceptedKm = Number(response.data.acceptedKm ?? metrics.sessionKm);
       const rejectedKm = Number(response.data.rejectedKm ?? 0);
+      const routePoints = snapshot?.routePoints ?? snapshotRef.current?.routePoints ?? [];
+      const startedAt = snapshot?.startedAt ?? snapshotRef.current?.startedAt ?? Date.now();
+      await saveRouteSummary({
+        averageSpeedKmh: metrics.averageSpeedKmh,
+        distanceKm: acceptedKm,
+        durationSeconds: metrics.movingSeconds || elapsedSince(startedAt),
+        endedAt: Date.now(),
+        id: `drive-${current.sessionId}`,
+        kind: 'drive',
+        maxSpeedKmh: metrics.maxSpeedKmh,
+        points: routePoints,
+        startedAt,
+        title: 'Sürüş Özeti',
+      });
       await clearBackgroundDrive();
       snapshotRef.current = null;
       startedAtRef.current = null;

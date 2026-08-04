@@ -5,7 +5,15 @@ module.exports = ({ config }) => {
 
   return {
     ...config,
-    name: isLocalAndroidBuild ? `${config.name} Local` : config.name,
+    plugins: Array.from(
+      new Set([
+        ...(config.plugins ?? []),
+        "@react-native-community/datetimepicker",
+        "expo-image",
+        "expo-sharing",
+      ]),
+    ),
+    name: config.name,
     scheme: isLocalAndroidBuild ? `${config.scheme}-local` : config.scheme,
     android: {
       ...config.android,

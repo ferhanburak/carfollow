@@ -1,4 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -48,7 +51,25 @@ const mapProvider =
 
 type EditorType = 'spot' | 'wash' | 'meetup' | 'convoy';
 type EventFilter = 'all' | EditorType;
+type EventVisibility = 'public' | 'friends' | 'clan';
+type PickerMode = 'date' | 'time';
 type Point = { latitude: number; longitude: number };
+
+const visibilityOptions: {
+  value: EventVisibility;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { value: 'public', label: 'Herkese Açık', icon: 'globe-outline' },
+  { value: 'friends', label: 'Arkadaşlar', icon: 'people-outline' },
+  { value: 'clan', label: 'Klana Özel', icon: 'shield-outline' },
+];
+
+function defaultEventDate() {
+  const next = new Date(Date.now() + 60 * 60 * 1000);
+  next.setSeconds(0, 0);
+  return next;
+}
 
 const nodeOptions: { value: EditorType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { value: 'meetup', label: 'Buluşma', icon: 'people' },
@@ -76,6 +97,10 @@ export default function MapScreen() {
   const [description, setDescription] = useState('');
   const [creationPhoto, setCreationPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [minDriverScore, setMinDriverScore] = useState('70');
+  const [capacity, setCapacity] = useState('12');
+  const [eventVisibility, setEventVisibility] = useState<EventVisibility>('public');
+  const [eventStartsAt, setEventStartsAt] = useState(defaultEventDate);
+  const [datePickerMode, setDatePickerMode] = useState<PickerMode | null>(null);
   const [formError, setFormError] = useState('');
   const [notice, setNotice] = useState('');
   const consumedPinIdRef = useRef('');
@@ -110,6 +135,10 @@ export default function MapScreen() {
     setDescription('');
     setCreationPhoto(null);
     setMinDriverScore('70');
+    setCapacity('12');
+    setEventVisibility('public');
+    setEventStartsAt(defaultEventDate());
+    setDatePickerMode(null);
     setFormError('');
     setEditorOpen(true);
   };
@@ -118,6 +147,23 @@ export default function MapScreen() {
     setEditorOpen(false);
     setPoints([]);
     setCreationPhoto(null);
+    setDatePickerMode(null);
+    setFormError('');
+  };
+
+  const handleEventDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    const mode = datePickerMode;
+    if (Platform.OS === 'android') setDatePickerMode(null);
+    if (event.type === 'dismissed' || !selectedDate || !mode) return;
+    setEventStartsAt((current) => {
+      const next = new Date(current);
+      if (mode === 'date') {
+        next.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      } else {
+        next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+      }
+      return next;
+    });
     setFormError('');
   };
 
@@ -129,6 +175,7 @@ export default function MapScreen() {
   const saveNode = async () => {
     const minimumPoints = editorType === 'convoy' ? 2 : 1;
     const trustScore = Number(minDriverScore);
+    const eventCapacity = Number(capacity);
     if (!name.trim() || points.length < minimumPoints) {
       setFormError(editorType === 'convoy'
         ? 'Adı doldurun ve haritadan en az iki rota noktası seçin.'
@@ -140,6 +187,27 @@ export default function MapScreen() {
       (!Number.isFinite(trustScore) || trustScore < 0 || trustScore > 100)
     ) {
       setFormError('Güven puanı 0 ile 100 arasında olmalıdır.');
+      return;
+    }
+    if (
+      (editorType === 'meetup' || editorType === 'convoy') &&
+      (!Number.isInteger(eventCapacity) || eventCapacity < 2 || eventCapacity > 50)
+    ) {
+      setFormError('Katılımcı sınırı 2 ile 50 arasında olmalıdır.');
+      return;
+    }
+    if (
+      (editorType === 'meetup' || editorType === 'convoy') &&
+      eventStartsAt.getTime() <= Date.now() + 5 * 60 * 1000
+    ) {
+      setFormError('Başlangıç zamanı en az 5 dakika ileride olmalıdır.');
+      return;
+    }
+    if (
+      (editorType === 'meetup' || editorType === 'convoy') &&
+      eventVisibility === 'clan' && !profile?.clanId
+    ) {
+      setFormError('Klana özel etkinlik oluşturmak için bir klana üye olmalısınız.');
       return;
     }
     const first = points[0];
@@ -169,7 +237,7 @@ export default function MapScreen() {
         setTimeout(() => setNotice(''), 3500);
         return;
       } else {
-        const startAt = Date.now() + 60 * 60 * 1000;
+        const startAt = eventStartsAt.getTime();
         await world.createConvoy({
           type: 'meet',
           eventMode: editorType,
@@ -185,8 +253,8 @@ export default function MapScreen() {
           lat: first.latitude,
           lng: first.longitude,
           routePath: points.map((point) => ({ lat: point.latitude, lng: point.longitude })),
-          capacity: 12,
-          visibility: 'public',
+          capacity: eventCapacity,
+          visibility: eventVisibility,
           accessPolicy: 'request',
           detailVisibility: 'trusted',
           minDriverScore: trustScore,
@@ -209,6 +277,12 @@ export default function MapScreen() {
   const popularPins = useMemo(() => [...world.activePins]
     .sort((left, right) => eventPopularity(right) - eventPopularity(left))
     .slice(0, 4), [world.activePins]);
+  const completedEvents = useMemo(() => world.pins
+    .filter((pin) => pin.type === 'meet'
+      && pin.lifecycleStatus === 'completed'
+      && (pin.viewerMembershipStatus === 'approved' || pin.viewerManagementRole === 'host'))
+    .sort((left, right) => Number(right.scheduledStartAtMs ?? 0) - Number(left.scheduledStartAtMs ?? 0)),
+  [world.pins]);
 
   return (
     <ScreenShell scrollProps={{ contentContainerStyle: styles.screenContent }}>
@@ -296,6 +370,23 @@ export default function MapScreen() {
           </View>
         ) : null}
       </View>
+
+      {completedEvents.length ? (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Geçmiş Etkinlikler</Text>
+              <Text style={styles.sectionSubtitle}>
+                Katıldığınız etkinliklerde sürücüleri değerlendirebilirsiniz
+              </Text>
+            </View>
+            <Ionicons name="checkmark-done" size={18} color={colors.lime} />
+          </View>
+          {completedEvents.map((pin) => (
+            <EventCard key={`completed-${pin.id}`} onPress={() => setSelected(pin)} pin={pin} />
+          ))}
+        </View>
+      ) : null}
 
       <Modal animationType="slide" transparent visible={Boolean(selected)} onRequestClose={() => setSelected(null)}>
         <View style={styles.detailBackdrop}>
@@ -476,6 +567,113 @@ export default function MapScreen() {
               style={[styles.input, styles.textArea]}
               value={description}
             />
+
+            {editorType === 'meetup' || editorType === 'convoy' ? (
+              <View style={styles.eventSettings}>
+                <Text style={styles.formSectionTitle}>Tarih ve katılım</Text>
+                <View style={styles.dateTimeRow}>
+                  <Pressable
+                    accessibilityLabel="Etkinlik tarihini seç"
+                    onPress={() => setDatePickerMode('date')}
+                    style={styles.dateTimeButton}
+                  >
+                    <Ionicons name="calendar-outline" size={17} color={colors.limeBright} />
+                    <View>
+                      <Text style={styles.fieldLabel}>Tarih</Text>
+                      <Text style={styles.dateTimeValue}>
+                        {eventStartsAt.toLocaleDateString(getRuntimeLocale(), {
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                        })}
+                      </Text>
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    accessibilityLabel="Etkinlik saatini seç"
+                    onPress={() => setDatePickerMode('time')}
+                    style={styles.dateTimeButton}
+                  >
+                    <Ionicons name="time-outline" size={17} color={colors.limeBright} />
+                    <View>
+                      <Text style={styles.fieldLabel}>Saat</Text>
+                      <Text style={styles.dateTimeValue}>
+                        {eventStartsAt.toLocaleTimeString(getRuntimeLocale(), {
+                          hour: '2-digit', minute: '2-digit',
+                        })}
+                      </Text>
+                    </View>
+                  </Pressable>
+                </View>
+                {datePickerMode ? (
+                  <View style={styles.datePickerWrap}>
+                    <DateTimePicker
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      is24Hour
+                      minimumDate={new Date()}
+                      mode={datePickerMode}
+                      onChange={handleEventDateChange}
+                      value={eventStartsAt}
+                    />
+                    {Platform.OS === 'ios' ? (
+                      <Pressable onPress={() => setDatePickerMode(null)} style={styles.pickerDoneButton}>
+                        <Text style={styles.pickerDoneText}>Tamam</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ) : null}
+                <View style={styles.capacityField}>
+                  <View style={styles.trustCopy}>
+                    <Text style={styles.trustLabel}>Katılımcı sınırı</Text>
+                    <Text style={styles.trustHint}>En az 2, en fazla 50 sürücü</Text>
+                  </View>
+                  <TextInput
+                    accessibilityLabel="Katılımcı sınırı"
+                    keyboardType="number-pad"
+                    maxLength={2}
+                    onChangeText={(value) => {
+                      setCapacity(value.replace(/\D/g, '').slice(0, 2));
+                      setFormError('');
+                    }}
+                    selectTextOnFocus
+                    style={styles.trustInput}
+                    value={capacity}
+                  />
+                </View>
+                <Text style={styles.formSectionTitle}>Kimler görebilir?</Text>
+                <View style={styles.visibilityRow}>
+                  {visibilityOptions.map((option) => {
+                    const disabled = option.value === 'clan' && !profile?.clanId;
+                    const active = eventVisibility === option.value;
+                    return (
+                      <Pressable
+                        disabled={disabled}
+                        key={option.value}
+                        onPress={() => {
+                          setEventVisibility(option.value);
+                          setFormError('');
+                        }}
+                        style={[
+                          styles.visibilityButton,
+                          active && styles.visibilityButtonActive,
+                          disabled && styles.actionDisabled,
+                        ]}
+                      >
+                        <Ionicons
+                          name={option.icon}
+                          size={16}
+                          color={active ? colors.black : colors.textMuted}
+                        />
+                        <Text style={[
+                          styles.visibilityText,
+                          active && styles.visibilityTextActive,
+                        ]}>
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
 
             {editorType === 'spot' ? (
               <View style={styles.optionalPhotoField}>
@@ -765,6 +963,11 @@ function SelectedNode({
   );
   const [editCapacity, setEditCapacity] = useState(String(pin.capacity ?? 12));
   const [editScore, setEditScore] = useState(String(pin.minDriverScore ?? 0));
+  const [editVisibility, setEditVisibility] = useState<EventVisibility>(pin.visibility ?? 'public');
+  const [editStartsAt, setEditStartsAt] = useState(() => new Date(
+    Number(pin.scheduledStartAtMs) || Date.now() + 60 * 60 * 1000,
+  ));
+  const [editPickerMode, setEditPickerMode] = useState<PickerMode | null>(null);
   const [editError, setEditError] = useState('');
   const isHost = pin.type === 'meet' && pin.viewerManagementRole === 'host';
   const isNodeOwner = pin.type !== 'meet' && pin.createdByUid === currentUserId;
@@ -782,6 +985,22 @@ function SelectedNode({
   const chooseReviewPhoto = async () => {
     const asset = await pickSingleImage();
     if (asset) setReviewPhoto(asset);
+  };
+
+  const handleEditDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    const mode = editPickerMode;
+    if (Platform.OS === 'android') setEditPickerMode(null);
+    if (event.type === 'dismissed' || !selectedDate || !mode) return;
+    setEditStartsAt((current) => {
+      const next = new Date(current);
+      if (mode === 'date') {
+        next.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      } else {
+        next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+      }
+      return next;
+    });
+    setEditError('');
   };
 
   return (
@@ -1081,6 +1300,81 @@ function SelectedNode({
               value={editScore}
             />
           </View> : null}
+          {pin.type === 'meet' ? (
+            <>
+              <View style={styles.dateTimeRow}>
+                <Pressable onPress={() => setEditPickerMode('date')} style={styles.dateTimeButton}>
+                  <Ionicons name="calendar-outline" size={17} color={colors.limeBright} />
+                  <View>
+                    <Text style={styles.fieldLabel}>Tarih</Text>
+                    <Text style={styles.dateTimeValue}>
+                      {editStartsAt.toLocaleDateString(getRuntimeLocale(), {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                      })}
+                    </Text>
+                  </View>
+                </Pressable>
+                <Pressable onPress={() => setEditPickerMode('time')} style={styles.dateTimeButton}>
+                  <Ionicons name="time-outline" size={17} color={colors.limeBright} />
+                  <View>
+                    <Text style={styles.fieldLabel}>Saat</Text>
+                    <Text style={styles.dateTimeValue}>
+                      {editStartsAt.toLocaleTimeString(getRuntimeLocale(), {
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </Text>
+                  </View>
+                </Pressable>
+              </View>
+              {editPickerMode ? (
+                <View style={styles.datePickerWrap}>
+                  <DateTimePicker
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    is24Hour
+                    minimumDate={new Date()}
+                    mode={editPickerMode}
+                    onChange={handleEditDateChange}
+                    value={editStartsAt}
+                  />
+                  {Platform.OS === 'ios' ? (
+                    <Pressable onPress={() => setEditPickerMode(null)} style={styles.pickerDoneButton}>
+                      <Text style={styles.pickerDoneText}>Tamam</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+              <View style={styles.visibilityRow}>
+                {visibilityOptions.map((option) => {
+                  const disabled = option.value === 'clan' && !pin.clanId;
+                  const active = editVisibility === option.value;
+                  return (
+                    <Pressable
+                      disabled={disabled}
+                      key={option.value}
+                      onPress={() => setEditVisibility(option.value)}
+                      style={[
+                        styles.visibilityButton,
+                        active && styles.visibilityButtonActive,
+                        disabled && styles.actionDisabled,
+                      ]}
+                    >
+                      <Ionicons
+                        name={option.icon}
+                        size={16}
+                        color={active ? colors.black : colors.textMuted}
+                      />
+                      <Text style={[
+                        styles.visibilityText,
+                        active && styles.visibilityTextActive,
+                      ]}>
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
           {editError ? <Text style={styles.editError}>{editError}</Text> : null}
           <Pressable
             disabled={Boolean(busy)}
@@ -1105,8 +1399,26 @@ function SelectedNode({
                 setEditError('Ad, açıklama, 2-50 kapasite ve 0-100 güven puanı geçerli olmalıdır.');
                 return;
               }
+              if (editStartsAt.getTime() <= Date.now() + 5 * 60 * 1000) {
+                setEditError('Başlangıç zamanı en az 5 dakika ileride olmalıdır.');
+                return;
+              }
+              if (editVisibility === 'clan' && !pin.clanId) {
+                setEditError('Klana özel etkinlik için etkinlik sahibinin bir klanı olmalıdır.');
+                return;
+              }
               setEditError('');
-              await onUpdate({ name: editName.trim(), route: editRoute.trim(), capacity, minDriverScore });
+              await onUpdate({
+                name: editName.trim(),
+                route: editRoute.trim(),
+                capacity,
+                minDriverScore,
+                visibility: editVisibility,
+                scheduledStartAtMs: editStartsAt.getTime(),
+                time: editStartsAt.toLocaleString(getRuntimeLocale(), {
+                  day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+                }),
+              });
               setEditOpen(false);
             }}
             style={styles.reviewSubmit}
@@ -1753,6 +2065,96 @@ const styles = createThemedStyles(() => ({
     fontSize: 13,
   },
   textArea: { minHeight: 72, paddingTop: 13, textAlignVertical: 'top' },
+  eventSettings: {
+    marginBottom: 10,
+    padding: 11,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    gap: 10,
+  },
+  formSectionTitle: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 11,
+  },
+  dateTimeRow: { flexDirection: 'row', gap: 8 },
+  dateTimeButton: {
+    flex: 1,
+    minHeight: 56,
+    paddingHorizontal: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.backgroundRaised,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  fieldLabel: {
+    color: colors.textFaint,
+    fontFamily: fonts.bold,
+    fontSize: 7,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  dateTimeValue: {
+    marginTop: 3,
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: 10,
+  },
+  datePickerWrap: {
+    padding: 7,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundRaised,
+  },
+  pickerDoneButton: {
+    alignSelf: 'flex-end',
+    minHeight: 40,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: colors.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerDoneText: { color: colors.black, fontFamily: fonts.bold, fontSize: 10 },
+  capacityField: {
+    minHeight: 58,
+    paddingLeft: 12,
+    paddingRight: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundRaised,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  visibilityRow: { flexDirection: 'row', gap: 6 },
+  visibilityButton: {
+    flex: 1,
+    minHeight: 50,
+    paddingHorizontal: 5,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.backgroundRaised,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+  },
+  visibilityButtonActive: { borderColor: colors.lime, backgroundColor: colors.lime },
+  visibilityText: {
+    color: colors.textMuted,
+    fontFamily: fonts.semibold,
+    fontSize: 8,
+    textAlign: 'center',
+  },
+  visibilityTextActive: { color: colors.black, fontFamily: fonts.bold },
   optionalPhotoField: {
     minHeight: 70,
     marginBottom: 10,

@@ -5,7 +5,6 @@ import { Platform, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ContextualHelp } from '@/components/contextual-help';
 import { LocalizedPressable as Pressable, LocalizedText as Text, localizedAlert } from '@/components/localized-text';
 import { MapNodeDetailModal, MapNodeMarker } from '@/components/map-node-ui';
 import { AppHeader } from '@/components/screen-shell';
@@ -15,6 +14,7 @@ import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { useAppTheme } from '@/providers/theme-provider';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { MapPin } from '@/types/cruiser';
+import { ContextualHelp } from '@/components/contextual-help';
 
 const DEFAULT_REGION = {
   latitude: 39.9334,
@@ -37,6 +37,14 @@ export default function LiveMapScreen() {
   const [follow, setFollow] = useState(true);
   const [selectedDriver, setSelectedDriver] = useState<LiveDriver | null>(null);
   const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
+  const [nodeMarkerScale, setNodeMarkerScale] = useState(1);
+  const [trackNodeMarkerChanges, setTrackNodeMarkerChanges] = useState(false);
+
+  useEffect(() => {
+    if (!trackNodeMarkerChanges) return undefined;
+    const timeout = setTimeout(() => setTrackNodeMarkerChanges(false), 300);
+    return () => clearTimeout(timeout);
+  }, [trackNodeMarkerChanges]);
 
   useEffect(() => {
     if (!follow || !location) return;
@@ -80,7 +88,18 @@ export default function LiveMapScreen() {
             initialRegion={DEFAULT_REGION}
             mapType="standard"
             onPanDrag={() => setFollow(false)}
+            onRegionChangeComplete={(region) => {
+              const nextScale = markerScaleForDelta(Math.max(
+                Number(region.latitudeDelta),
+                Number(region.longitudeDelta),
+              ));
+              if (nextScale !== nodeMarkerScale) {
+                setTrackNodeMarkerChanges(true);
+                setNodeMarkerScale(nextScale);
+              }
+            }}
             onPress={() => {
+              setTrackNodeMarkerChanges(true);
               setSelectedDriver(null);
               setSelectedPin(null);
             }}
@@ -129,13 +148,18 @@ export default function LiveMapScreen() {
                 key={`node-${pin.id}`}
                 onPress={(event) => {
                   event.stopPropagation();
+                  setTrackNodeMarkerChanges(true);
                   setSelectedDriver(null);
                   setSelectedPin(pin);
                 }}
-                tracksViewChanges={false}
+                tracksViewChanges={trackNodeMarkerChanges}
                 zIndex={selectedPin?.id === pin.id ? 10 : 2}
               >
-                <MapNodeMarker pin={pin} selected={selectedPin?.id === pin.id} />
+                <MapNodeMarker
+                  pin={pin}
+                  scale={nodeMarkerScale}
+                  selected={selectedPin?.id === pin.id}
+                />
               </Marker>
             ))}
             {selectedPin?.type === 'meet' &&
@@ -220,7 +244,10 @@ export default function LiveMapScreen() {
         <MapNodeDetailModal
           busy={Boolean(mapWorld.busy)}
           currentUserId={user?.uid}
-          onClose={() => setSelectedPin(null)}
+          onClose={() => {
+            setTrackNodeMarkerChanges(true);
+            setSelectedPin(null);
+          }}
           onCancelTrip={selectedPin?.type === 'meet' ? () => localizedAlert(
             'Konvoy sürüşünden ayrıl',
             'GPS konvoy takibiniz durdurulacak. Devam edilsin mi?',
@@ -313,6 +340,13 @@ function relationLabel(relation: LiveDriver['relation']) {
   if (relation === 'friend') return 'Arkadaşınız';
   if (relation === 'clan') return 'Klan üyesi';
   return 'Yakındaki sürücü';
+}
+
+function markerScaleForDelta(delta: number) {
+  if (delta <= 0.12) return 1;
+  if (delta <= 0.25) return 0.78;
+  if (delta <= 0.5) return 0.58;
+  return 0.44;
 }
 
 const styles = createThemedStyles(() => ({

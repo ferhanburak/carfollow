@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import {
+  AppState,
   Modal,
   ScrollView,
   View,
@@ -9,6 +10,7 @@ import {
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -20,6 +22,7 @@ import {
   PublicDriverProfileModal,
   type ProfileFriendshipState,
 } from '@/components/public-driver-profile-modal';
+import { RouteSummaryModal } from '@/components/route-summary-modal';
 import {
   LocalizedPressable as Pressable,
   LocalizedText as Text,
@@ -28,6 +31,12 @@ import {
 import { useMapWorld } from '@/hooks/use-map-world';
 import { useConvoyTracking } from '@/hooks/use-convoy-tracking';
 import { useSocialWorld } from '@/hooks/use-social-world';
+import {
+  clearPendingRouteSummary,
+  consumePendingRouteSummary,
+  subscribeToRouteSummaries,
+  type RouteSummary,
+} from '@/lib/route-summary';
 import { useAppData } from '@/providers/app-data-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
@@ -46,7 +55,7 @@ const DriverProfileContext = createContext<DriverProfileContextValue | null>(nul
 
 export function DriverProfileProvider({ children }: PropsWithChildren) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { profile, user } = useAuth();
   const appData = useAppData();
   const social = useSocialWorld();
   const mapWorld = useMapWorld();
@@ -57,7 +66,30 @@ export function DriverProfileProvider({ children }: PropsWithChildren) {
   const [friendshipOverride, setFriendshipOverride] = useState<ProfileFriendshipState | null>(null);
   const [clanInviteOverride, setClanInviteOverride] = useState<boolean | null>(null);
   const [convoyTarget, setConvoyTarget] = useState<DriverSummary | null>(null);
+  const [routeSummary, setRouteSummary] = useState<RouteSummary | null>(null);
   const profileRequestRef = useRef(0);
+
+  useEffect(() => {
+    let mounted = true;
+    const restore = () => {
+      void consumePendingRouteSummary().then((summary) => {
+        if (mounted && summary) setRouteSummary(summary);
+      });
+    };
+    restore();
+    const unsubscribe = subscribeToRouteSummaries((summary) => {
+      setRouteSummary(summary);
+      void clearPendingRouteSummary();
+    });
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') restore();
+    });
+    return () => {
+      mounted = false;
+      unsubscribe();
+      appStateSubscription.remove();
+    };
+  }, []);
 
   const hostableConvoys = useMemo(
     () => mapWorld.pins.filter((pin) =>
@@ -230,6 +262,15 @@ export function DriverProfileProvider({ children }: PropsWithChildren) {
           await mapWorld.refreshConvoys();
           setConvoyTarget(null);
         }}
+      />
+      <RouteSummaryModal
+        key={routeSummary?.id ?? 'route-summary-empty'}
+        onClose={() => {
+          setRouteSummary(null);
+          void clearPendingRouteSummary();
+        }}
+        protectEndpoints={profile?.privacy?.safeZoneEnabled !== false}
+        summary={routeSummary}
       />
     </DriverProfileContext.Provider>
   );
