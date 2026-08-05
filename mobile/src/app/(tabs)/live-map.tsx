@@ -14,7 +14,6 @@ import { useDriverProfile } from '@/providers/driver-profile-provider';
 import { useAppTheme } from '@/providers/theme-provider';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { MapPin } from '@/types/cruiser';
-import { ContextualHelp } from '@/components/contextual-help';
 
 const DEFAULT_REGION = {
   latitude: 39.9334,
@@ -81,7 +80,6 @@ export default function LiveMapScreen() {
     <LinearGradient colors={[colors.background, colors.backgroundRaised]} style={styles.root}>
       <SafeAreaView edges={['top']} style={styles.safe}>
         <AppHeader />
-        <ContextualHelp topicId="live-map" />
 
         <View style={styles.mapFrame}>
           <MapView
