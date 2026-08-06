@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LocalizedPressable as Pressable, LocalizedText as Text, LocalizedTextInput as TextInput } from '@/components/localized-text';
+import { firebaseAuth } from '@/lib/firebase';
 import { useAuth } from '@/providers/auth-provider';
 import { useAppLanguage } from '@/providers/language-provider';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
@@ -40,13 +42,36 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [registerForm, setRegisterForm] = useState(initialRegisterForm);
   const [localError, setLocalError] = useState('');
+  const [resetNotice, setResetNotice] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const changeTab = (nextTab: AuthTab) => {
     void Haptics.selectionAsync();
     clearError();
     setLocalError('');
+    setResetNotice('');
     setTab(nextTab);
+  };
+
+  const resetPassword = async () => {
+    const accountEmail = email.trim();
+    setResetNotice('');
+    if (!accountEmail) {
+      setLocalError(t('auth.resetEmailRequired'));
+      return;
+    }
+
+    setResettingPassword(true);
+    setLocalError('');
+    try {
+      await sendPasswordResetEmail(firebaseAuth, accountEmail);
+      setResetNotice(t('auth.resetSent'));
+    } catch {
+      setLocalError(t('auth.resetError'));
+    } finally {
+      setResettingPassword(false);
+    }
   };
 
   const submitLogin = async () => {
@@ -169,6 +194,25 @@ export default function LoginScreen() {
                     secureTextEntry
                     value={password}
                   />
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={resettingPassword}
+                    onPress={() => {
+                      void Haptics.selectionAsync();
+                      void resetPassword();
+                    }}
+                    style={({ pressed }) => [
+                      styles.forgotButton,
+                      pressed && styles.pressed,
+                      resettingPassword && styles.disabled,
+                    ]}
+                  >
+                    {resettingPassword ? (
+                      <ActivityIndicator color={colors.lime} size="small" />
+                    ) : (
+                      <Text style={styles.forgotText}>{t('auth.forgotPassword')}</Text>
+                    )}
+                  </Pressable>
                   <SubmitButton
                     icon="arrow-forward"
                     label={t('auth.enter')}
@@ -279,6 +323,12 @@ export default function LoginScreen() {
                 <View style={styles.errorBox}>
                   <Ionicons name="alert-circle" size={18} color={colors.rose} />
                   <Text style={styles.errorText}>{localError || error}</Text>
+                </View>
+              ) : null}
+              {resetNotice ? (
+                <View style={styles.successBox}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.lime} />
+                  <Text style={styles.successText}>{resetNotice}</Text>
                 </View>
               ) : null}
             </View>
@@ -541,6 +591,18 @@ const styles = createThemedStyles(() => ({
     fontFamily: fonts.semibold,
     fontSize: 15,
   },
+  forgotButton: {
+    minHeight: 48,
+    marginTop: -5,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  forgotText: {
+    color: colors.lime,
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+  },
   vehicleTypeRow: { flexDirection: 'row', gap: 8 },
   vehicleType: {
     flex: 1,
@@ -625,6 +687,25 @@ const styles = createThemedStyles(() => ({
   errorText: {
     flex: 1,
     color: '#fda4af',
+    fontFamily: fonts.semibold,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  successBox: {
+    margin: 10,
+    marginTop: 4,
+    padding: 13,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(163,230,53,0.35)',
+    backgroundColor: 'rgba(163,230,53,0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  successText: {
+    flex: 1,
+    color: colors.lime,
     fontFamily: fonts.semibold,
     fontSize: 12,
     lineHeight: 17,
