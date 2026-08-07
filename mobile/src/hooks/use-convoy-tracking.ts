@@ -4,8 +4,8 @@ import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import type { useMapWorld } from '@/hooks/use-map-world';
 import {
   completeConvoyRouteSummary,
+  prepareConvoyTracking,
   recordConvoyRoutePoint,
-  startBackgroundConvoyTracking,
   stopBackgroundConvoyTracking,
 } from '@/lib/background-convoy';
 import type { MapPin } from '@/types/cruiser';
@@ -90,8 +90,10 @@ export function useConvoyTracking(
       const permission = await Location.requestForegroundPermissionsAsync();
       if (!active || permission.status !== 'granted') return;
 
-      await startBackgroundConvoyTracking(trackedConvoys)
-        .catch(() => undefined);
+      // Android foreground location services must display a persistent notification.
+      // Convoys stay foreground-only so the notification panel is reserved for Drive Mode.
+      await stopBackgroundConvoyTracking().catch(() => undefined);
+      await prepareConvoyTracking(trackedConvoys).catch(() => undefined);
       if (!active) {
         await stopBackgroundConvoyTracking().catch(() => undefined);
         return;

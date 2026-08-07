@@ -2,12 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Platform } from 'react-native';
 
 import { firebaseAuth } from '@/lib/firebase';
 import { callFirebase } from '@/lib/firebase-callable';
-import { localizeCopy } from '@/i18n/copy-catalog';
-import { getPreferredLanguage } from '@/i18n/language-runtime';
 import {
   appendRoutePoint,
   calculateRouteDistanceKm,
@@ -136,8 +133,7 @@ if (!TaskManager.isTaskDefined(BACKGROUND_CONVOY_TASK)) {
   );
 }
 
-export async function startBackgroundConvoyTracking(convoys: TrackedConvoy[]) {
-  const language = await getPreferredLanguage();
+export async function prepareConvoyTracking(convoys: TrackedConvoy[]) {
   const uniqueConvoys = [...new Map(
     convoys.filter((item) => item.id).map((item) => [item.id, item]),
   ).values()];
@@ -161,30 +157,7 @@ export async function startBackgroundConvoyTracking(convoys: TrackedConvoy[]) {
   } satisfies BackgroundConvoyState));
   if (!uniqueIds.length) {
     await stopBackgroundConvoyTracking();
-    return;
   }
-
-  const running = await Location.hasStartedLocationUpdatesAsync(BACKGROUND_CONVOY_TASK);
-  if (running) return;
-  await Location.startLocationUpdatesAsync(BACKGROUND_CONVOY_TASK, {
-    accuracy: Location.Accuracy.BestForNavigation,
-    activityType: Location.ActivityType.AutomotiveNavigation,
-    distanceInterval: 3,
-    timeInterval: 5_000,
-    deferredUpdatesDistance: 0,
-    deferredUpdatesInterval: 5_000,
-    mayShowUserSettingsDialog: true,
-    pausesUpdatesAutomatically: false,
-    showsBackgroundLocationIndicator: true,
-    foregroundService: Platform.OS === 'android'
-      ? {
-        notificationTitle: localizeCopy('TrackSnap · Konvoy takibi aktif', language),
-        notificationBody: localizeCopy('Konvoy ilerlemesi ve varış durumu GPS ile güncelleniyor.', language),
-        notificationColor: '#a3e635',
-        killServiceOnDestroy: false,
-      }
-      : undefined,
-  });
 }
 
 export async function stopBackgroundConvoyTracking() {
