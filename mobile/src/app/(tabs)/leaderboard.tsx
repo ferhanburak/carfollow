@@ -23,35 +23,46 @@ import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary, LeaderboardEntry } from '@/types/cruiser';
 
 type Period = 'monthly' | 'weekly' | 'daily';
-type Metric = 'Km' | 'DriveSeconds' | 'MaxSpeedKmh';
+type Metric = 'Km' | 'DriveSeconds' | 'MaxSpeedKmh' | 'LongestDriveKm';
+type Scope = 'global' | 'friends';
 
 const periodOptions: { value: Period; label: string; title: string }[] = [
-  { value: 'monthly', label: 'A', title: 'Aylık' },
-  { value: 'weekly', label: 'H', title: 'Haftalık' },
-  { value: 'daily', label: 'G', title: 'Günlük' },
+  { value: 'daily', label: 'Günlük', title: 'Günlük' },
+  { value: 'weekly', label: 'Haftalık', title: 'Haftalık' },
+  { value: 'monthly', label: 'Aylık', title: 'Aylık' },
 ];
 
 const metricOptions: { value: Metric; label: string }[] = [
   { value: 'Km', label: 'KM' },
   { value: 'DriveSeconds', label: 'Sürüş Süresi' },
   { value: 'MaxSpeedKmh', label: 'Maksimum Hız' },
+  { value: 'LongestDriveKm', label: 'Tek Sürüş KM' },
 ];
 
 export default function LeaderboardScreen() {
   const { user } = useAuth();
-  const { openDriverProfile } = useDriverProfile();
+  const { openDriverProfile, social } = useDriverProfile();
   const { allTimeDrivers, clans, drivers, error, loading } = useLeaderboards();
   const [period, setPeriod] = useState<Period>('monthly');
   const [metric, setMetric] = useState<Metric>('Km');
+  const [scope, setScope] = useState<Scope>('global');
   const [allTimeMetric, setAllTimeMetric] = useState<AllTimeMetric>('lifetimeVerifiedKm');
   const [allTimeOpen, setAllTimeOpen] = useState(false);
   const [showAllDrivers, setShowAllDrivers] = useState(false);
   const [showAllClans, setShowAllClans] = useState(false);
 
   const field = `${period}${metric}` as keyof LeaderboardEntry;
+  const visibleDrivers = useMemo(() => {
+    if (scope === 'global') return drivers;
+    const visibleUserIds = new Set([
+      user?.uid,
+      ...social.friends.map((friend) => friend.userId),
+    ].filter((id): id is string => Boolean(id)));
+    return drivers.filter((entry) => visibleUserIds.has(entry.userId ?? entry.id));
+  }, [drivers, scope, social.friends, user?.uid]);
   const sortedDrivers = useMemo(
-    () => [...drivers].sort((left, right) => Number(right[field] ?? 0) - Number(left[field] ?? 0)),
-    [drivers, field],
+    () => [...visibleDrivers].sort((left, right) => Number(right[field] ?? 0) - Number(left[field] ?? 0)),
+    [field, visibleDrivers],
   );
   const sortedClans = useMemo(
     () => [...clans].sort((left, right) => Number(right[field] ?? 0) - Number(left[field] ?? 0)),
@@ -84,8 +95,10 @@ export default function LeaderboardScreen() {
         onOpenDriver={(driver) => void openDriverProfile(driver)}
         onToggle={() => setShowAllDrivers((current) => !current)}
         period={period}
+        scope={scope}
         setMetric={setMetric}
         setPeriod={setPeriod}
+        setScope={setScope}
         subtitle={showAllDrivers
           ? `${sortedDrivers.length} sürücü`
           : 'İlk 5 sürücü · tümünü görmek için dokunun'}
@@ -105,8 +118,10 @@ export default function LeaderboardScreen() {
         metric={metric}
         onToggle={() => setShowAllClans((current) => !current)}
         period={period}
+        scope="global"
         setMetric={setMetric}
         setPeriod={setPeriod}
+        setScope={setScope}
         subtitle={showAllClans
           ? `${sortedClans.length} klan`
           : 'İlk 5 klan · tümünü görmek için dokunun'}
@@ -294,8 +309,10 @@ function LeaderboardCard({
   onOpenDriver,
   onToggle,
   period,
+  scope,
   setMetric,
   setPeriod,
+  setScope,
   subtitle,
   title,
 }: {
@@ -306,11 +323,17 @@ function LeaderboardCard({
   onOpenDriver?: (driver: DriverSummary) => void;
   onToggle: () => void;
   period: Period;
+  scope: Scope;
   setMetric: (value: Metric) => void;
   setPeriod: (value: Period) => void;
+  setScope: (value: Scope) => void;
   subtitle: string;
   title: string;
 }) {
+  const podiumEntries = kind === 'driver' ? [entries[1], entries[0], entries[2]] : [];
+  const podiumRanks = [2, 1, 3] as const;
+  const listEntries = kind === 'driver' ? entries.slice(3) : entries;
+
   return (
     <Surface>
       <Pressable onPress={onToggle}>
@@ -319,6 +342,10 @@ function LeaderboardCard({
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>{subtitle}</Text>
           </View>
+        </View>
+
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>DÖNEM</Text>
           <View style={styles.periodSwitch}>
             {periodOptions.map((option) => (
               <Pressable
@@ -337,29 +364,99 @@ function LeaderboardCard({
           </View>
         </View>
 
-        <View style={styles.metricSwitch}>
-          {metricOptions.map((option) => (
-            <Pressable
-              key={option.value}
-              onPress={(event) => {
-                event.stopPropagation();
-                setMetric(option.value);
-              }}
-              style={[styles.metricButton, metric === option.value && styles.metricButtonActive]}
-            >
-              <Text style={[styles.metricText, metric === option.value && styles.metricTextActive]}>
-                {option.label}
-              </Text>
-            </Pressable>
-          ))}
+        {kind === 'driver' ? (
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>KAPSAM</Text>
+            <View style={styles.scopeSwitch}>
+              {([
+                { value: 'global' as const, label: 'Genel', icon: 'globe-outline' as const },
+                { value: 'friends' as const, label: 'Arkadaşlar', icon: 'people-outline' as const },
+              ]).map((option) => (
+                <Pressable
+                  key={option.value}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    setScope(option.value);
+                  }}
+                  style={[styles.scopeButton, scope === option.value && styles.scopeButtonActive]}
+                >
+                  <Ionicons
+                    name={option.icon}
+                    size={15}
+                    color={scope === option.value ? colors.black : colors.textMuted}
+                  />
+                  <Text style={[styles.scopeText, scope === option.value && styles.scopeTextActive]}>
+                    {option.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>SIRALAMA</Text>
+          <ScrollView
+            contentContainerStyle={styles.metricSwitch}
+            horizontal
+            onTouchStart={(event) => event.stopPropagation()}
+            showsHorizontalScrollIndicator={false}
+          >
+            {metricOptions.map((option) => (
+              <Pressable
+                key={option.value}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  setMetric(option.value);
+                }}
+                style={[styles.metricButton, metric === option.value && styles.metricButtonActive]}
+              >
+                <Text style={[styles.metricText, metric === option.value && styles.metricTextActive]}>
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
 
+        {kind === 'driver' && entries.length ? (
+          <View style={styles.regularPodium}>
+            {podiumEntries.map((entry, index) => {
+              const rank = podiumRanks[index];
+              if (!entry) return <View key={`empty-${rank}`} style={styles.podiumSlot} />;
+              return (
+                <Pressable
+                  key={entry.id}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    onOpenDriver?.(toDriverSummary(entry));
+                  }}
+                  style={[styles.podiumSlot, rank === 1 && styles.podiumSlotFirst]}
+                >
+                  <View style={[styles.podiumAvatar, podiumRankStyle(rank)]}>
+                    <Text style={styles.podiumInitial}>{getInitial(entry.fullName)}</Text>
+                    <View style={[styles.podiumMedal, podiumRankStyle(rank)]}>
+                      <Text style={styles.podiumRank}>#{rank}</Text>
+                    </View>
+                  </View>
+                  <Text numberOfLines={1} style={styles.podiumName}>{entry.fullName || 'TrackSnap sürücüsü'}</Text>
+                  <Text numberOfLines={1} style={styles.podiumModel}>{entry.model || 'Araç bilgisi yok'}</Text>
+                  <View style={[styles.podiumBlock, rank === 1 && styles.podiumBlockFirst]}>
+                    <Text style={styles.podiumValue}>{formatValue(Number(entry[field] ?? 0), metric)}</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+
         <View style={styles.rows}>
-          {entries.length ? entries.map((entry, index) => {
+          {entries.length ? listEntries.map((entry, index) => {
+            const rankIndex = kind === 'driver' ? index + 3 : index;
             const row = (
               <>
-                <View style={[styles.rank, rankStyle(index)]}>
-                  <Text style={[styles.rankText, index < 3 && styles.rankTextTop]}>#{index + 1}</Text>
+                <View style={[styles.rank, rankStyle(rankIndex)]}>
+                  <Text style={[styles.rankText, rankIndex < 3 && styles.rankTextTop]}>#{rankIndex + 1}</Text>
                 </View>
                 <View style={styles.identity}>
                   <Text numberOfLines={1} style={styles.name}>
@@ -518,16 +615,33 @@ const styles = createThemedStyles(() => ({
   },
   podiumBlockFirst: { minHeight: 78, borderColor: 'rgba(250,204,21,0.48)' },
   podiumValue: { color: colors.limeBright, fontFamily: fonts.extraBold, fontSize: 9, textAlign: 'center' },
+  filterGroup: { marginTop: 12, gap: 6 },
+  filterLabel: { color: colors.textFaint, fontFamily: fonts.bold, fontSize: 8, letterSpacing: 1.5 },
   periodSwitch: { padding: 3, borderRadius: 18, backgroundColor: colors.backgroundRaised, flexDirection: 'row' },
-  periodButton: { width: 39, height: 39, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  periodButton: { flex: 1, minHeight: 42, paddingHorizontal: 8, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   periodButtonActive: { backgroundColor: colors.lime },
-  periodText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 12 },
+  periodText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 10 },
   periodTextActive: { color: colors.black },
-  metricSwitch: { marginTop: 12, padding: 3, borderRadius: 18, backgroundColor: colors.backgroundRaised, flexDirection: 'row' },
-  metricButton: { flex: 1, minHeight: 44, paddingHorizontal: 5, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  scopeSwitch: { padding: 3, borderRadius: 18, backgroundColor: colors.backgroundRaised, flexDirection: 'row' },
+  scopeButton: {
+    flex: 1,
+    minHeight: 42,
+    paddingHorizontal: 10,
+    borderRadius: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  scopeButtonActive: { backgroundColor: colors.lime },
+  scopeText: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 10 },
+  scopeTextActive: { color: colors.black },
+  metricSwitch: { padding: 3, borderRadius: 18, backgroundColor: colors.backgroundRaised, flexDirection: 'row', gap: 4 },
+  metricButton: { minWidth: 104, minHeight: 42, paddingHorizontal: 12, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   metricButtonActive: { backgroundColor: colors.lime },
   metricText: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 10, textAlign: 'center' },
   metricTextActive: { color: colors.black, fontFamily: fonts.bold },
+  regularPodium: { marginTop: 20, flexDirection: 'row', alignItems: 'flex-end', gap: 7 },
   rows: { marginTop: 12, gap: 7 },
   row: {
     minHeight: 62,

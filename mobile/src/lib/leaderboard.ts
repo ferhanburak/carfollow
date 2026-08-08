@@ -102,12 +102,18 @@ export function normalizeLeaderboardEntries(
     dailyMaxSpeedKmh: entry.dailyPeriodKey === periods.day
       ? Number(entry.dailyMaxSpeedKmh ?? 0)
       : 0,
+    dailyLongestDriveKm: entry.dailyPeriodKey === periods.day
+      ? Number(entry.dailyLongestDriveKm ?? 0)
+      : 0,
     weeklyKm: entry.weeklyPeriodKey === periods.week ? Number(entry.weeklyKm ?? 0) : 0,
     weeklyDriveSeconds: entry.weeklyPeriodKey === periods.week
       ? Number(entry.weeklyDriveSeconds ?? 0)
       : 0,
     weeklyMaxSpeedKmh: entry.weeklyPeriodKey === periods.week
       ? Number(entry.weeklyMaxSpeedKmh ?? 0)
+      : 0,
+    weeklyLongestDriveKm: entry.weeklyPeriodKey === periods.week
+      ? Number(entry.weeklyLongestDriveKm ?? 0)
       : 0,
   }));
 }

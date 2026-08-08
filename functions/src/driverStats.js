@@ -5,7 +5,7 @@ const MAX_DRIVE_SPEED_KMH = 320;
 const MAX_GPS_SAMPLE_GAP_SECONDS = 30;
 const MAX_SESSION_SECONDS = 6 * 60 * 60;
 const MAX_SESSION_KM = 2000;
-const STATS_SCHEMA_VERSION = 4;
+const STATS_SCHEMA_VERSION = 5;
 const TIME_ZONE = "Europe/Istanbul";
 const SPEED_DISTRIBUTION_KEYS = Object.freeze([
   "under50",
@@ -187,6 +187,14 @@ function applyCompletedDriveToClan({
     isCurrentMemberPeriod ? Number(member.monthlyMaxSpeedKmh) || 0 : 0,
     Number(maxSpeedKmh) || 0,
   ));
+  const monthlyLongestDriveKm = roundKm(Math.max(
+    isCurrentClanPeriod ? Number(clan.monthlyLongestDriveKm) || 0 : 0,
+    Number(acceptedKm) || 0,
+  ));
+  const memberMonthlyLongestDriveKm = roundKm(Math.max(
+    isCurrentMemberPeriod ? Number(member.monthlyLongestDriveKm) || 0 : 0,
+    Number(acceptedKm) || 0,
+  ));
   const buildPeriodMetrics = (source, isCurrent) => ({
     km: roundKm((isCurrent ? source.km : 0) + acceptedKm),
     driveSeconds: (
@@ -196,26 +204,34 @@ function applyCompletedDriveToClan({
       isCurrent ? Number(source.maxSpeedKmh) || 0 : 0,
       Number(maxSpeedKmh) || 0,
     )),
+    longestDriveKm: roundKm(Math.max(
+      isCurrent ? Number(source.longestDriveKm) || 0 : 0,
+      Number(acceptedKm) || 0,
+    )),
   });
   const clanDaily = buildPeriodMetrics({
     km: clan.dailyKm,
     driveSeconds: clan.dailyDriveSeconds,
     maxSpeedKmh: clan.dailyMaxSpeedKmh,
+    longestDriveKm: clan.dailyLongestDriveKm,
   }, isCurrentClanDay);
   const memberDaily = buildPeriodMetrics({
     km: member.dailyKm,
     driveSeconds: member.dailyDriveSeconds,
     maxSpeedKmh: member.dailyMaxSpeedKmh,
+    longestDriveKm: member.dailyLongestDriveKm,
   }, isCurrentMemberDay);
   const clanWeekly = buildPeriodMetrics({
     km: clan.weeklyKm,
     driveSeconds: clan.weeklyDriveSeconds,
     maxSpeedKmh: clan.weeklyMaxSpeedKmh,
+    longestDriveKm: clan.weeklyLongestDriveKm,
   }, isCurrentClanWeek);
   const memberWeekly = buildPeriodMetrics({
     km: member.weeklyKm,
     driveSeconds: member.weeklyDriveSeconds,
     maxSpeedKmh: member.weeklyMaxSpeedKmh,
+    longestDriveKm: member.weeklyLongestDriveKm,
   }, isCurrentMemberWeek);
   const clanId = String(clan.id ?? member.clanId ?? "");
 
@@ -224,14 +240,17 @@ function applyCompletedDriveToClan({
       dailyKm: clanDaily.km,
       dailyDriveSeconds: clanDaily.driveSeconds,
       dailyMaxSpeedKmh: clanDaily.maxSpeedKmh,
+      dailyLongestDriveKm: clanDaily.longestDriveKm,
       dailyPeriodKey: safeDayPeriodKey,
       weeklyKm: clanWeekly.km,
       weeklyDriveSeconds: clanWeekly.driveSeconds,
       weeklyMaxSpeedKmh: clanWeekly.maxSpeedKmh,
+      weeklyLongestDriveKm: clanWeekly.longestDriveKm,
       weeklyPeriodKey: safeWeekPeriodKey,
       monthlyKm,
       monthlyDriveSeconds,
       monthlyMaxSpeedKmh,
+      monthlyLongestDriveKm,
       monthlyKmPeriod: safePeriodKey,
       // Legacy screens still read `km`; keep it as the current monthly total.
       km: monthlyKm,
@@ -240,14 +259,17 @@ function applyCompletedDriveToClan({
       dailyKm: memberDaily.km,
       dailyDriveSeconds: memberDaily.driveSeconds,
       dailyMaxSpeedKmh: memberDaily.maxSpeedKmh,
+      dailyLongestDriveKm: memberDaily.longestDriveKm,
       dailyPeriodKey: safeDayPeriodKey,
       weeklyKm: memberWeekly.km,
       weeklyDriveSeconds: memberWeekly.driveSeconds,
       weeklyMaxSpeedKmh: memberWeekly.maxSpeedKmh,
+      weeklyLongestDriveKm: memberWeekly.longestDriveKm,
       weeklyPeriodKey: safeWeekPeriodKey,
       monthlyKm: memberMonthlyKm,
       monthlyDriveSeconds: memberMonthlyDriveSeconds,
       monthlyMaxSpeedKmh: memberMonthlyMaxSpeedKmh,
+      monthlyLongestDriveKm: memberMonthlyLongestDriveKm,
       monthlyKmPeriod: safePeriodKey,
     },
     leaderboardEntry: {
@@ -260,14 +282,17 @@ function applyCompletedDriveToClan({
       dailyKm: clanDaily.km,
       dailyDriveSeconds: clanDaily.driveSeconds,
       dailyMaxSpeedKmh: clanDaily.maxSpeedKmh,
+      dailyLongestDriveKm: clanDaily.longestDriveKm,
       dailyPeriodKey: safeDayPeriodKey,
       weeklyKm: clanWeekly.km,
       weeklyDriveSeconds: clanWeekly.driveSeconds,
       weeklyMaxSpeedKmh: clanWeekly.maxSpeedKmh,
+      weeklyLongestDriveKm: clanWeekly.longestDriveKm,
       weeklyPeriodKey: safeWeekPeriodKey,
       monthlyKm,
       monthlyDriveSeconds,
       monthlyMaxSpeedKmh,
+      monthlyLongestDriveKm,
       schemaVersion: STATS_SCHEMA_VERSION,
     },
   };
@@ -467,22 +492,26 @@ function buildDriverStatsDocument({ existingStats = {}, profile = {}, passport =
       ? Math.max(0, Math.floor(Number(existingStats.dailyDriveSeconds) || 0))
       : 0,
     dailyMaxSpeedKmh: isCurrentDay ? roundSpeed(existingStats.dailyMaxSpeedKmh) : 0,
+    dailyLongestDriveKm: isCurrentDay ? roundKm(existingStats.dailyLongestDriveKm) : 0,
     weeklyPeriodKey,
     weeklyKm: isCurrentWeek ? roundKm(existingStats.weeklyKm) : 0,
     weeklyDriveSeconds: isCurrentWeek
       ? Math.max(0, Math.floor(Number(existingStats.weeklyDriveSeconds) || 0))
       : 0,
     weeklyMaxSpeedKmh: isCurrentWeek ? roundSpeed(existingStats.weeklyMaxSpeedKmh) : 0,
+    weeklyLongestDriveKm: isCurrentWeek ? roundKm(existingStats.weeklyLongestDriveKm) : 0,
     monthlyKm,
     monthlyNightKm,
     monthlyDriveSeconds,
     monthlyMaxSpeedKmh,
+    monthlyLongestDriveKm: isCurrentPeriod ? roundKm(existingStats.monthlyLongestDriveKm) : 0,
     monthlyAverageSpeedKmh,
     monthlyTimedKm,
     monthlySpeedDistributionSeconds,
     lifetimeVerifiedKm: roundKm(existingStats.lifetimeVerifiedKm),
     lifetimeDriveSeconds: Math.max(0, Math.floor(Number(existingStats.lifetimeDriveSeconds) || 0)),
     lifetimeMaxSpeedKmh: roundSpeed(existingStats.lifetimeMaxSpeedKmh),
+    lifetimeLongestDriveKm: roundKm(existingStats.lifetimeLongestDriveKm),
     lifetimeTimedKm: roundKm(existingStats.lifetimeTimedKm),
     lifetimeSpeedDistributionSeconds: normalizeSpeedDistribution(
       existingStats.lifetimeSpeedDistributionSeconds,
@@ -552,13 +581,16 @@ function applyCompletedDriveToStats({
     dailyKm,
     dailyDriveSeconds: baseline.dailyDriveSeconds + acceptedMovingSeconds,
     dailyMaxSpeedKmh: roundSpeed(Math.max(baseline.dailyMaxSpeedKmh, maxSpeedKmh)),
+    dailyLongestDriveKm: roundKm(Math.max(baseline.dailyLongestDriveKm, acceptedKm)),
     weeklyKm,
     weeklyDriveSeconds: baseline.weeklyDriveSeconds + acceptedMovingSeconds,
     weeklyMaxSpeedKmh: roundSpeed(Math.max(baseline.weeklyMaxSpeedKmh, maxSpeedKmh)),
+    weeklyLongestDriveKm: roundKm(Math.max(baseline.weeklyLongestDriveKm, acceptedKm)),
     monthlyKm,
     monthlyNightKm,
     monthlyDriveSeconds,
     monthlyMaxSpeedKmh: roundSpeed(Math.max(baseline.monthlyMaxSpeedKmh, maxSpeedKmh)),
+    monthlyLongestDriveKm: roundKm(Math.max(baseline.monthlyLongestDriveKm, acceptedKm)),
     monthlyAverageSpeedKmh: monthlyDriveSeconds > 0
       ? roundSpeed((monthlyTimedKm / monthlyDriveSeconds) * 3600)
       : 0,
@@ -567,6 +599,7 @@ function applyCompletedDriveToStats({
     lifetimeVerifiedKm: roundKm(baseline.lifetimeVerifiedKm + acceptedKm),
     lifetimeDriveSeconds,
     lifetimeMaxSpeedKmh: roundSpeed(Math.max(baseline.lifetimeMaxSpeedKmh, maxSpeedKmh)),
+    lifetimeLongestDriveKm: roundKm(Math.max(baseline.lifetimeLongestDriveKm, acceptedKm)),
     lifetimeTimedKm,
     lifetimeSpeedDistributionSeconds,
     completedSessions: baseline.completedSessions + 1,
@@ -591,18 +624,22 @@ function buildLeaderboardEntry({ userId, profile, stats }) {
     dailyKm: roundKm(stats.dailyKm),
     dailyDriveSeconds: Math.max(0, Math.floor(Number(stats.dailyDriveSeconds) || 0)),
     dailyMaxSpeedKmh: roundSpeed(stats.dailyMaxSpeedKmh),
+    dailyLongestDriveKm: roundKm(stats.dailyLongestDriveKm),
     weeklyPeriodKey: stats.weeklyPeriodKey,
     weeklyKm: roundKm(stats.weeklyKm),
     weeklyDriveSeconds: Math.max(0, Math.floor(Number(stats.weeklyDriveSeconds) || 0)),
     weeklyMaxSpeedKmh: roundSpeed(stats.weeklyMaxSpeedKmh),
+    weeklyLongestDriveKm: roundKm(stats.weeklyLongestDriveKm),
     monthlyKm: roundKm(stats.monthlyKm),
     monthlyNightKm: roundKm(stats.monthlyNightKm),
     monthlyDriveSeconds: Math.max(0, Math.floor(Number(stats.monthlyDriveSeconds) || 0)),
     monthlyMaxSpeedKmh: roundSpeed(stats.monthlyMaxSpeedKmh),
+    monthlyLongestDriveKm: roundKm(stats.monthlyLongestDriveKm),
     monthlyAverageSpeedKmh: roundSpeed(stats.monthlyAverageSpeedKmh),
     lifetimeVerifiedKm: roundKm(stats.lifetimeVerifiedKm),
     lifetimeDriveSeconds: Math.max(0, Math.floor(Number(stats.lifetimeDriveSeconds) || 0)),
     lifetimeMaxSpeedKmh: roundSpeed(stats.lifetimeMaxSpeedKmh),
+    lifetimeLongestDriveKm: roundKm(stats.lifetimeLongestDriveKm),
     completedSessions: Math.max(0, Number(stats.completedSessions ?? 0)),
     driverScore: Math.max(0, Number(profile.driverScore ?? 0)),
     achievementBadges: [...(stats.achievementBadges ?? [])],

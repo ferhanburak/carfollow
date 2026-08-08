@@ -358,6 +358,7 @@ test("builds a stable server-owned all-time leaderboard entry", () => {
       lifetimeVerifiedKm: 1240.26,
       lifetimeDriveSeconds: 9876.8,
       lifetimeMaxSpeedKmh: 142.48,
+      lifetimeLongestDriveKm: 184.24,
       completedSessions: 31,
     },
   });
@@ -373,8 +374,9 @@ test("builds a stable server-owned all-time leaderboard entry", () => {
     lifetimeVerifiedKm: 1240.3,
     lifetimeDriveSeconds: 9876,
     lifetimeMaxSpeedKmh: 142.5,
+    lifetimeLongestDriveKm: 184.2,
     completedSessions: 31,
     driverScore: 88,
-    schemaVersion: 4,
+    schemaVersion: 5,
   });
 });
