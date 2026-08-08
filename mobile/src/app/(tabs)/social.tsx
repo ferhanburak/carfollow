@@ -35,6 +35,7 @@ type Action = {
 };
 
 type FriendshipState = 'none' | 'incoming' | 'outgoing' | 'accepted';
+type SocialHubSection = 'friends' | 'clan';
 
 export default function SocialScreen() {
   const params = useLocalSearchParams<{ section?: string; threadId?: string }>();
@@ -48,6 +49,7 @@ export default function SocialScreen() {
   const [notice, setNotice] = useState('');
   const [activeThread, setActiveThread] = useState<DirectMessageThread | null>(null);
   const [message, setMessage] = useState('');
+  const [hubSection, setHubSection] = useState<SocialHubSection>('friends');
   const [clanCenterOpen, setClanCenterOpen] = useState(false);
   const [convoyTarget, setConvoyTarget] = useState<DriverSummary | null>(null);
 
@@ -296,6 +298,48 @@ export default function SocialScreen() {
         {social.error ? <Text style={styles.error}>{social.error}</Text> : null}
         {mapWorld.error ? <Text style={styles.error}>{mapWorld.error}</Text> : null}
 
+        <View style={styles.hubTabs}>
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected: hubSection === 'friends' }}
+            onPress={() => setHubSection('friends')}
+            style={({ pressed }) => [
+              styles.hubTab,
+              hubSection === 'friends' && styles.hubTabActive,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons
+              color={hubSection === 'friends' ? colors.black : colors.textMuted}
+              name="people"
+              size={19}
+            />
+            <Text style={[styles.hubTabText, hubSection === 'friends' && styles.hubTabTextActive]}>
+              Arkadaş Merkezi
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected: hubSection === 'clan' }}
+            onPress={() => setHubSection('clan')}
+            style={({ pressed }) => [
+              styles.hubTab,
+              hubSection === 'clan' && styles.hubTabActive,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons
+              color={hubSection === 'clan' ? colors.black : colors.textMuted}
+              name="shield"
+              size={19}
+            />
+            <Text style={[styles.hubTabText, hubSection === 'clan' && styles.hubTabTextActive]}>
+              Klan Merkezi
+            </Text>
+          </Pressable>
+        </View>
+
+        {hubSection === 'clan' ? (
         <Surface>
           <View style={styles.titleRow}>
             <Text style={styles.sectionTitle}>Klan Merkezi</Text>
@@ -319,7 +363,7 @@ export default function SocialScreen() {
             <ClanCreatePanel announce={announce} social={social} />
           )}
         </Surface>
-
+        ) : (
         <Surface>
           <View style={styles.titleRow}>
             <Text style={styles.sectionTitle}>Arkadaş Bul ve Bağlan</Text>
@@ -473,6 +517,7 @@ export default function SocialScreen() {
             ))}
           </DriverGroup>
         </Surface>
+        )}
       </ScreenShell>
 
       <ClanCenterModal
@@ -1152,6 +1197,38 @@ function ChatModal({
 }
 
 const styles = createThemedStyles(() => ({
+  hubTabs: {
+    minHeight: 58,
+    padding: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    gap: 5,
+  },
+  hubTab: {
+    flex: 1,
+    minHeight: 48,
+    paddingHorizontal: 8,
+    borderRadius: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  hubTabActive: {
+    backgroundColor: colors.lime,
+    shadowColor: colors.lime,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+  },
+  hubTabText: {
+    color: colors.textMuted,
+    fontFamily: fonts.bold,
+    fontSize: 11,
+  },
+  hubTabTextActive: { color: colors.black },
   pageHeading: {
     minHeight: 58,
     flexDirection: 'row',
