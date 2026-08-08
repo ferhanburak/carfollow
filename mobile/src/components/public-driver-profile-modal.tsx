@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -11,9 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LocalizedPressable as Pressable, LocalizedText as Text, LocalizedTextInput as TextInput } from '@/components/localized-text';
-import { useAllTimeLeaderboard } from '@/hooks/use-all-time-leaderboard';
 import { getRuntimeLocale } from '@/i18n/language-runtime';
-import { getAllTimeHonors } from '@/lib/leaderboard';
 import { colors, createThemedStyles, fonts } from '@/theme/colors';
 import type { DriverSummary } from '@/types/cruiser';
 
@@ -39,6 +37,7 @@ type PublicDriverProfileModalProps = {
   onReport?: (reason: string, details: string) => Promise<unknown>;
   onRequestFriend?: () => void | Promise<unknown>;
   onUnblock?: () => void | Promise<unknown>;
+  onViewProfile?: () => void;
   profile: DriverSummary | null;
   visible: boolean;
 };
@@ -72,6 +71,7 @@ export function PublicDriverProfileModal({
   onReport,
   onRequestFriend,
   onUnblock,
+  onViewProfile,
   profile,
   visible,
 }: PublicDriverProfileModalProps) {
@@ -81,19 +81,13 @@ export function PublicDriverProfileModal({
   const [reportDetails, setReportDetails] = useState('');
   const [localPending, setLocalPending] = useState('');
   const [reportSent, setReportSent] = useState(false);
-  const { entries: allTimeEntries } = useAllTimeLeaderboard();
-
   const harmonyVotes = Number(profile?.harmonyVotes ?? 0);
   const alertVotes = Number(profile?.alertVotes ?? 0);
   const totalVotes = harmonyVotes + alertVotes;
   const harmonyRatio = totalVotes ? clampPercent((harmonyVotes / totalVotes) * 100) : 100;
   const score = Number(profile?.driverScore ?? profile?.score ?? 0);
-  const reputation = useMemo(
-    () => resolveReputation(score, harmonyVotes, alertVotes),
-    [alertVotes, harmonyVotes, score],
-  );
+  const reputation = resolveReputation(score, harmonyVotes, alertVotes);
   const pending = busy || Boolean(localPending);
-  const allTimeHonors = getAllTimeHonors(allTimeEntries, profile?.userId);
 
   const closeModal = () => {
     setReportOpen(false);
@@ -158,46 +152,34 @@ export function PublicDriverProfileModal({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.hero}>
+            <Pressable
+              accessibilityLabel="Tam sürücü profilini aç"
+              onPress={onViewProfile}
+              style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
+            >
               <View style={styles.identityRow}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {(profile.fullName || profile.model || 'T').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
                 <View style={styles.identityCopy}>
-                  <Text style={styles.plate}>{profile.plate || profile.plateMasked || 'PLAKA GİZLİ'}</Text>
-                  <Text style={styles.model}>{profile.model || 'Araç bilgisi yok'}</Text>
-                  <Text style={styles.region}>{profile.region || 'Bölge paylaşılmıyor'}</Text>
+                  <Text numberOfLines={1} style={styles.identityName}>
+                    {profile.fullName || 'TrackSnap Sürücüsü'}
+                  </Text>
+                  <Text numberOfLines={1} style={styles.model}>{profile.model || 'Araç bilgisi yok'}</Text>
+                  <Text numberOfLines={1} style={styles.region}>
+                    {[profile.plate || profile.plateMasked, profile.region].filter(Boolean).join(' · ') || 'Profil bilgileri'}
+                  </Text>
                 </View>
                 <View style={styles.relationPill}>
                   <View style={[styles.statusDot, statusDotStyle(friendshipState)]} />
                   <Text style={styles.relationText}>{friendshipLabel(friendshipState)}</Text>
                 </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
               </View>
-
-              <View style={[styles.reputation, reputation.tone === 'alert' && styles.reputationAlert]}>
-                <Text style={styles.eyebrow}>İTİBAR</Text>
-                <View style={styles.reputationRow}>
-                  <Text style={styles.reputationTitle}>{reputation.label}</Text>
-                  <Text style={styles.reputationRelation}>{profile.relation || friendshipLabel(friendshipState)}</Text>
-                </View>
-                <Text style={styles.reputationCopy}>{reputation.description}</Text>
-              </View>
-            </View>
-
-            {allTimeHonors.length ? (
-              <View style={styles.honorsCard}>
-                <View style={styles.honorsHeader}>
-                  <Ionicons name="trophy" size={17} color="#facc15" />
-                  <Text style={styles.blockTitle}>Tüm Zamanlar Unvanları</Text>
-                </View>
-                <View style={styles.honorList}>
-                  {allTimeHonors.map((honor) => (
-                    <View key={honor.metric} style={[styles.honorBadge, publicHonorStyle(honor.rank)]}>
-                      <Text style={[styles.honorText, { color: honorTextColor(honor.rank) }]}>
-                        {honor.shortTitle}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
+              <Text style={styles.viewProfileHint}>Profili incelemek için dokun</Text>
+            </Pressable>
 
             <View style={styles.metrics}>
               <Metric label="Sürücü Skoru" value={`${score}/100`} />
@@ -208,26 +190,14 @@ export function PublicDriverProfileModal({
                 })} KM`}
               />
               <Metric label="Uyum Oranı" value={`%${harmonyRatio}`} />
-              <Metric label="Bölge" value={profile.region || '--'} />
-              <Metric label="Topluluk Katkısı" value={Number(profile.communityKudos ?? 0)} />
-              <Metric label="Faydalı Yorum" value={Number(profile.communityHelpfulVotesReceived ?? 0)} />
             </View>
 
-            <View style={styles.harmonyCard}>
-              <Text style={styles.blockTitle}>Konvoy Uyumu</Text>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    alertVotes > harmonyVotes && styles.progressAlert,
-                    { width: `${harmonyRatio}%` },
-                  ]}
-                />
+            <View style={[styles.reputation, reputation.tone === 'alert' && styles.reputationAlert]}>
+              <View style={styles.reputationRow}>
+                <Text style={styles.reputationTitle}>{reputation.label}</Text>
+                <Text style={styles.reputationRelation}>{profile.relation || friendshipLabel(friendshipState)}</Text>
               </View>
-              <View style={styles.voteRow}>
-                <Text style={styles.voteText}>Uyum oyu: {harmonyVotes}</Text>
-                <Text style={styles.voteText}>Uyarı oyu: {alertVotes}</Text>
-              </View>
+              <Text style={styles.reputationCopy}>{reputation.description}</Text>
             </View>
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -507,18 +477,6 @@ function statusDotStyle(state: ProfileFriendshipState) {
   return styles.statusNeutral;
 }
 
-function honorTextColor(rank: 1 | 2 | 3) {
-  if (rank === 1) return '#facc15';
-  if (rank === 2) return '#e5e7eb';
-  return '#fb923c';
-}
-
-function publicHonorStyle(rank: 1 | 2 | 3) {
-  if (rank === 1) return styles.honorGold;
-  if (rank === 2) return styles.honorSilver;
-  return styles.honorBronze;
-}
-
 const styles = createThemedStyles(() => ({
   root: { flex: 1, backgroundColor: colors.background },
   header: {
@@ -563,11 +521,29 @@ const styles = createThemedStyles(() => ({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  identityRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  identityRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  avatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.limeMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { color: colors.limeBright, fontFamily: fonts.extraBold, fontSize: 18 },
   identityCopy: { flex: 1, minWidth: 0 },
-  plate: { color: colors.limeBright, fontFamily: fonts.bold, fontSize: 12, letterSpacing: 1.5 },
-  model: { marginTop: 7, color: colors.text, fontFamily: fonts.bold, fontSize: 15 },
-  region: { marginTop: 4, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 10 },
+  identityName: { color: colors.text, fontFamily: fonts.extraBold, fontSize: 15 },
+  model: { marginTop: 3, color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 10 },
+  region: { marginTop: 3, color: colors.textFaint, fontFamily: fonts.regular, fontSize: 9 },
+  viewProfileHint: {
+    marginTop: 12,
+    color: colors.limeBright,
+    fontFamily: fonts.bold,
+    fontSize: 9,
+    textAlign: 'center',
+  },
   relationPill: {
     paddingHorizontal: 10,
     minHeight: 32,
@@ -591,7 +567,6 @@ const styles = createThemedStyles(() => ({
     textTransform: 'uppercase',
   },
   reputation: {
-    marginTop: 16,
     padding: 14,
     borderRadius: 18,
     borderWidth: 1,
@@ -602,9 +577,7 @@ const styles = createThemedStyles(() => ({
     borderColor: 'rgba(244,63,94,0.28)',
     backgroundColor: 'rgba(244,63,94,0.08)',
   },
-  eyebrow: { color: colors.textMuted, fontFamily: fonts.bold, fontSize: 8, letterSpacing: 1.7 },
   reputationRow: {
-    marginTop: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -614,24 +587,11 @@ const styles = createThemedStyles(() => ({
   reputationRelation: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 9 },
   reputationCopy: { marginTop: 7, color: colors.textMuted, fontFamily: fonts.regular, fontSize: 9 },
   metrics: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  honorsCard: {
-    padding: 15,
-    borderRadius: 21,
-    borderWidth: 1,
-    borderColor: 'rgba(250,204,21,0.22)',
-    backgroundColor: 'rgba(250,204,21,0.045)',
-  },
-  honorsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  honorList: { marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  honorBadge: { minHeight: 34, paddingHorizontal: 11, borderRadius: 13, borderWidth: 1, justifyContent: 'center' },
-  honorText: { fontFamily: fonts.bold, fontSize: 9 },
-  honorGold: { borderColor: 'rgba(250,204,21,0.45)', backgroundColor: 'rgba(250,204,21,0.10)' },
-  honorSilver: { borderColor: 'rgba(229,231,235,0.34)', backgroundColor: 'rgba(229,231,235,0.08)' },
-  honorBronze: { borderColor: 'rgba(249,115,22,0.40)', backgroundColor: 'rgba(249,115,22,0.10)' },
   metric: {
-    width: '48.5%',
-    minHeight: 77,
-    padding: 14,
+    flex: 1,
+    minWidth: 96,
+    minHeight: 68,
+    padding: 11,
     borderRadius: 19,
     borderWidth: 1,
     borderColor: colors.border,
@@ -646,25 +606,6 @@ const styles = createThemedStyles(() => ({
     textTransform: 'uppercase',
   },
   metricValue: { marginTop: 9, color: colors.limeBright, fontFamily: fonts.extraBold, fontSize: 13 },
-  harmonyCard: {
-    padding: 16,
-    borderRadius: 21,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.backgroundRaised,
-  },
-  blockTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: 12 },
-  progressTrack: {
-    marginTop: 13,
-    height: 10,
-    borderRadius: 5,
-    overflow: 'hidden',
-    backgroundColor: colors.surfaceAlt,
-  },
-  progressFill: { height: '100%', borderRadius: 5, backgroundColor: colors.lime },
-  progressAlert: { backgroundColor: colors.rose },
-  voteRow: { marginTop: 11, flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  voteText: { color: colors.textFaint, fontFamily: fonts.regular, fontSize: 8 },
   error: {
     padding: 12,
     borderRadius: 14,

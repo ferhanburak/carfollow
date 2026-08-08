@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import {
   AppState,
   Modal,
@@ -250,6 +250,14 @@ export function DriverProfileProvider({ children }: PropsWithChildren) {
         } : undefined}
         onUnblock={activeProfile ? () =>
           social.unblockDriver(activeProfile.userId) : undefined}
+        onViewProfile={activeProfile ? () => {
+          const targetUserId = activeProfile.userId;
+          closeDriverProfile();
+          router.push({
+            pathname: '/(tabs)/public-profile',
+            params: { userId: targetUserId },
+          } as unknown as Href);
+        } : undefined}
         profile={activeProfile}
         visible={Boolean(profileTarget)}
       />

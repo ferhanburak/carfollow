@@ -83,6 +83,10 @@ export default function TabLayout() {
         <Tabs.Screen name="leaderboard" options={{ title: t('tabs.leaderboard') }} />
         <Tabs.Screen name="drive" options={{ href: null, title: t('tabs.drive') }} />
         <Tabs.Screen name="profile" options={{ href: null, title: t('tabs.profile') }} />
+        <Tabs.Screen
+          name="public-profile"
+          options={{ href: null, tabBarStyle: { display: 'none' }, title: t('tabs.profile') }}
+        />
       </Tabs>
     </DriverProfileProvider>
   );
