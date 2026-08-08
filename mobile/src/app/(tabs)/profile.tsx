@@ -74,9 +74,6 @@ export default function ProfileScreen() {
   const allTimeHonors = getAllTimeHonors(allTimeEntries, user?.uid);
   const harmonyVotes = Number(profile?.harmonyVotes ?? stats.harmonyVotesSnapshot ?? 0);
   const alertVotes = Number(profile?.alertVotes ?? 0);
-  const harmonyRatio = harmonyVotes + alertVotes
-    ? Math.round((harmonyVotes / (harmonyVotes + alertVotes)) * 100)
-    : 100;
   const currentClan = social.currentClan?.name || profile?.clan || 'Klan yok';
   const monthlyRecap: MonthlyRecapData = {
     averageSpeedKmh: Number(stats.monthlyAverageSpeedKmh ?? 0),
@@ -92,21 +89,6 @@ export default function ProfileScreen() {
     monthlyKm: Number(stats.monthlyKm ?? profile?.monthlyKm ?? 0),
     nightKm: Number(stats.monthlyNightKm ?? 0),
   };
-  const personalStats = [
-    { key: 'monthly-km', label: 'Bireysel Aylık KM', value: `${formatNumber(stats.monthlyKm ?? profile?.monthlyKm)} KM` },
-    { key: 'night-km', label: 'Aylık Gece KM', value: `${formatNumber(stats.monthlyNightKm)} KM` },
-    { key: 'verified-km', label: 'Onaylı Toplam', value: `${formatNumber(stats.lifetimeVerifiedKm ?? profile?.totalKm)} KM` },
-    { key: 'drive-time', label: 'Aylık Sürüş', value: formatDuration(stats.monthlyDriveSeconds) },
-    { key: 'max-speed', label: 'Aylık Maksimum Hız', value: `${formatNumber(stats.monthlyMaxSpeedKmh)} KM/H` },
-    { key: 'average-speed', label: 'Ortalama Hız', value: `${formatNumber(stats.monthlyAverageSpeedKmh)} KM/H` },
-    { key: 'driver-score', label: 'Sürücü Skoru', value: `${profile?.driverScore || 0}/100` },
-    { key: 'community-kudos', label: 'Topluluk Katkısı', value: formatNumber(profile?.communityKudos) },
-    { key: 'community-likes', label: 'Alınan Beğeni', value: formatNumber(Number(profile?.communityEventLikesReceived ?? 0) + Number(profile?.communityPhotoLikesReceived ?? 0)) },
-    { key: 'helpful-votes', label: 'Faydalı Yorum', value: formatNumber(profile?.communityHelpfulVotesReceived) },
-    { key: 'service-logs', label: 'Servis Kaydı', value: `${garage.serviceLogs.length}` },
-    { key: 'fuel-logs', label: 'Yakıt Fişi', value: `${garage.fuelLogs.length}` },
-    { key: 'harmony', label: 'Uyum Oranı', value: `%${harmonyRatio}` },
-  ];
   const socialSummary = [
     { key: 'friends', label: 'Arkadaş', value: `${social.friends.length}` },
     { key: 'incoming', label: 'Gelen İstek', value: `${social.incoming.length}` },
@@ -194,26 +176,39 @@ export default function ProfileScreen() {
       {notice ? <Text style={styles.notice}>{notice}</Text> : null}
 
       <Surface>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.cardTitle}>Sürücü İstatistikleri</Text>
-          <Pressable
-            accessibilityLabel="Aylık Özeti Aç"
-            onPress={() => setMonthlyRecapVisible(true)}
-            style={({ pressed }) => [styles.recapButton, pressed && styles.pressed]}
-          >
-            <Ionicons color={colors.limeBright} name="sparkles" size={14} />
-            <Text style={styles.recapButtonText}>Aylık Özet</Text>
-          </Pressable>
-        </View>
-        <View style={styles.compactGrid}>
-          {personalStats.map((item) => (
-            <CompactMetric key={item.key} label={item.label} value={item.value} />
-          ))}
-        </View>
-        <View style={styles.garageLine}>
-          <Text style={styles.garageLabel}>Aktif Garaj</Text>
-          <Text numberOfLines={1} style={styles.garageValue}>{profile?.garage || '--'}</Text>
-        </View>
+        <Pressable
+          accessibilityLabel="Tüm sürüş istatistiklerini aç"
+          onPress={() => router.push('/stats' as Href)}
+          style={({ pressed }) => [styles.statsPreview, pressed && styles.pressed]}
+        >
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.cardTitle}>Sürüş İstatistikleri</Text>
+              <Text style={styles.cardSubtitle}>Tüm detayları görmek için dokun</Text>
+            </View>
+            <View style={styles.statsPreviewActions}>
+              <Pressable
+                accessibilityLabel="Aylık Özeti Aç"
+                hitSlop={8}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  setMonthlyRecapVisible(true);
+                }}
+                style={({ pressed }) => [styles.recapIconButton, pressed && styles.pressed]}
+              >
+                <Ionicons color={colors.limeBright} name="sparkles" size={17} />
+              </Pressable>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </View>
+          </View>
+          <View style={styles.compactGrid}>
+            <CompactMetric
+              label="Aylık KM"
+              value={`${formatNumber(stats.monthlyKm ?? profile?.monthlyKm)} KM`}
+            />
+            <CompactMetric label="Sürüş Süresi" value={formatDuration(stats.monthlyDriveSeconds)} />
+          </View>
+        </Pressable>
       </Surface>
 
       <Pressable onPress={() => setPanel('achievements')} style={({ pressed }) => [pressed && styles.pressed]}>
@@ -1425,34 +1420,23 @@ const styles = createThemedStyles(() => ({
     fontSize: 8,
     letterSpacing: 1.8,
   },
-  recapButton: {
-    minHeight: 38,
-    paddingHorizontal: 11,
+  statsPreview: {
+    borderRadius: 18,
+  },
+  statsPreviewActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  recapIconButton: {
+    width: 38,
+    height: 38,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.borderStrong,
     backgroundColor: colors.limeMuted,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-  },
-  recapButtonText: {
-    color: colors.limeBright,
-    fontFamily: fonts.bold,
-    fontSize: 9,
-  },
-  garageLine: {
-    minHeight: 42,
-    marginTop: 8,
-    paddingHorizontal: 11,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.backgroundRaised,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
   },
   garageLabel: {
     color: colors.textFaint,
@@ -1460,13 +1444,6 @@ const styles = createThemedStyles(() => ({
     fontSize: 8,
     letterSpacing: 1,
     textTransform: 'uppercase',
-  },
-  garageValue: {
-    flex: 1,
-    color: colors.text,
-    fontFamily: fonts.bold,
-    fontSize: 10,
-    textAlign: 'right',
   },
   clanSummary: {
     minHeight: 72,
