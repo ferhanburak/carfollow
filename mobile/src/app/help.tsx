@@ -33,8 +33,8 @@ const FAQ_ITEMS = [
     id: 'visibility',
     question: { tr: 'Canlı konumumu kimler görebilir?', en: 'Who can see my live location?' },
     answer: {
-      tr: 'Görünürlük ve konum hassasiyeti ayarlarını Profil > Ayarlar > Gizlilik bölümünden kontrol edebilirsin.',
-      en: 'Control visibility and location precision from Profile > Settings > Privacy.',
+      tr: 'Görünürlük ve konum hassasiyetini üst bardaki dişli düğmesinden Ayarlar > Gizlilik ve Konum bölümüne girerek kontrol edebilirsin.',
+      en: 'Use the gear button in the top bar, then open Settings > Privacy & Location to control visibility and location precision.',
     },
   },
   {
@@ -114,12 +114,12 @@ export default function HelpScreen() {
             <View style={styles.whatsNewCopy}>
               <Text style={styles.whatsNewLabel}>{language === 'tr' ? 'NELER YENİ?' : "WHAT'S NEW?"}</Text>
               <Text style={styles.whatsNewTitle}>
-                {language === 'tr' ? 'Daha zengin forum paylaşımları' : 'Richer forum posts'}
+                {language === 'tr' ? 'Daha sade ana navigasyon' : 'Simpler main navigation'}
               </Text>
               <Text style={styles.whatsNewText}>
                 {language === 'tr'
-                  ? 'Artık anket oluşturabilir, sürücü etiketleyebilir ve bir etkinliği paylaşımına bağlayabilirsin.'
-                  : 'You can now create polls, mention drivers and attach an event to a post.'}
+                  ? 'Alt barda beş ana alan bulunur. Profiline üstteki kullanıcı kartından, sürüş moduna araç düğmesinden ulaşabilirsin.'
+                  : 'The bottom bar now contains five main areas. Open your profile from the user card and Drive Mode from the car button in the top bar.'}
               </Text>
             </View>
           </View>

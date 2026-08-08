@@ -199,16 +199,16 @@ export const HELP_TOPICS: HelpTopic[] = [
     },
     steps: [
       {
-        tr: 'Profilde doğrulanmış sürüş istatistiklerini, topluluk katkısını ve rozetlerini incele.',
-        en: 'Review verified drive stats, community contribution and badges on your profile.',
+        tr: 'Üst bardaki ad ve araç kartına dokunarak profiline ulaş; sürüş istatistiklerini, topluluk katkısını ve rozetlerini incele.',
+        en: 'Tap your name and vehicle card in the top bar to open your profile, drive stats, community contribution and badges.',
       },
       {
         tr: 'Servis bölümünde parça ömürlerini gör; bakım, parça değişimi ve yakıt kayıtlarını ekle.',
         en: 'View part health in Service and add maintenance, replacement and fuel records.',
       },
       {
-        tr: 'Ayarlar bölümünden tema, dil, gizlilik, araç, hesap ve güvenlik seçeneklerini yönet.',
-        en: 'Manage theme, language, privacy, vehicle, account and security options in Settings.',
+        tr: 'Üst bardaki dişli düğmesinden tema, dil, gizlilik, araç, hesap ve güvenlik seçeneklerini yönet.',
+        en: 'Use the gear button in the top bar to manage theme, language, privacy, vehicle, account and security options.',
       },
     ],
     tip: {

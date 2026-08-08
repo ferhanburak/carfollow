@@ -78,11 +78,11 @@ export default function TabLayout() {
       >
         <Tabs.Screen name="live-map" options={{ title: t('tabs.liveMap') }} />
         <Tabs.Screen name="map" options={{ title: t('tabs.events') }} />
-        <Tabs.Screen name="drive" options={{ title: t('tabs.drive') }} />
         <Tabs.Screen name="forum" options={{ title: t('tabs.feed') }} />
         <Tabs.Screen name="social" options={{ title: t('tabs.social') }} />
         <Tabs.Screen name="leaderboard" options={{ title: t('tabs.leaderboard') }} />
-        <Tabs.Screen name="profile" options={{ title: t('tabs.profile') }} />
+        <Tabs.Screen name="drive" options={{ href: null, title: t('tabs.drive') }} />
+        <Tabs.Screen name="profile" options={{ href: null, title: t('tabs.profile') }} />
       </Tabs>
     </DriverProfileProvider>
   );
