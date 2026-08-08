@@ -40,6 +40,8 @@ export default function LoginScreen() {
   const [tab, setTab] = useState<AuthTab>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
+  const [registerPasswordVisible, setRegisterPasswordVisible] = useState(false);
   const [registerForm, setRegisterForm] = useState(initialRegisterForm);
   const [localError, setLocalError] = useState('');
   const [resetNotice, setResetNotice] = useState('');
@@ -187,12 +189,13 @@ export default function LoginScreen() {
                     placeholder="surucu@ornek.com"
                     value={email}
                   />
-                  <Field
+                  <PasswordField
                     label={t('auth.password')}
                     onChangeText={setPassword}
                     placeholder={t('auth.passwordPlaceholder')}
-                    secureTextEntry
+                    onToggleVisibility={() => setLoginPasswordVisible((current) => !current)}
                     value={password}
+                    visible={loginPasswordVisible}
                   />
                   <Pressable
                     accessibilityRole="button"
@@ -280,11 +283,12 @@ export default function LoginScreen() {
                     placeholder="12000"
                     value={registerForm.odometer}
                   />
-                  <Field
+                  <PasswordField
                     label={t('auth.password')}
                     onChangeText={(value) => setRegisterForm((current) => ({ ...current, password: value }))}
-                    secureTextEntry
+                    onToggleVisibility={() => setRegisterPasswordVisible((current) => !current)}
                     value={registerForm.password}
+                    visible={registerPasswordVisible}
                   />
                   <Pressable
                     accessibilityRole="checkbox"
@@ -375,6 +379,55 @@ function Field({
         selectionColor={colors.lime}
         style={styles.input}
       />
+    </View>
+  );
+}
+
+function PasswordField({
+  label,
+  onToggleVisibility,
+  visible,
+  ...inputProps
+}: React.ComponentProps<typeof TextInput> & {
+  label: string;
+  onToggleVisibility: () => void;
+  visible: boolean;
+}) {
+  const { t } = useAppLanguage();
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.passwordInputFrame}>
+        <TextInput
+          {...inputProps}
+          autoCapitalize="none"
+          autoComplete="password"
+          placeholderTextColor={colors.textFaint}
+          secureTextEntry={!visible}
+          selectionColor={colors.lime}
+          style={[styles.input, styles.passwordInput]}
+          textContentType="password"
+        />
+        <Pressable
+          accessibilityLabel={visible ? t('auth.hidePassword') : t('auth.showPassword')}
+          accessibilityRole="button"
+          onPress={() => {
+            void Haptics.selectionAsync();
+            onToggleVisibility();
+          }}
+          style={({ pressed }) => [
+            styles.passwordToggle,
+            pressed && styles.passwordTogglePressed,
+          ]}
+        >
+          <Ionicons
+            color={visible ? colors.lime : colors.textMuted}
+            name={visible ? 'eye-off-outline' : 'eye-outline'}
+            size={21}
+          />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -590,6 +643,26 @@ const styles = createThemedStyles(() => ({
     color: colors.text,
     fontFamily: fonts.semibold,
     fontSize: 15,
+  },
+  passwordInputFrame: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  passwordInput: {
+    paddingRight: 58,
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 4,
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  passwordTogglePressed: {
+    backgroundColor: colors.limeSoft,
+    transform: [{ scale: 0.94 }],
   },
   forgotButton: {
     minHeight: 48,
