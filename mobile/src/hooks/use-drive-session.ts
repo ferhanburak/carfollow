@@ -89,7 +89,7 @@ async function requestDrivePermissions() {
     throw new Error('Konum izni olmadan sürüş kaydı başlatılamaz.');
   }
 
-  if (Platform.OS === 'ios') {
+  if (Platform.OS === 'ios' || Platform.OS === 'android') {
     const backgroundPermission = await Location.requestBackgroundPermissionsAsync();
     if (!backgroundPermission.granted) {
       throw new Error('Ekran kapalıyken sürüş kaydı için konum iznini “Her Zaman” seçmelisin.');
@@ -170,10 +170,19 @@ export function useDriveSession() {
     if (!state.isDriving || !startedAtRef.current) return;
     const updateElapsed = () => {
       const elapsedSeconds = elapsedSince(startedAtRef.current);
+      const snapshot = snapshotRef.current;
+      const gpsIsStale = Boolean(snapshot && Date.now() - snapshot.updatedAt > 12_000);
       setState((current) => (
-        current.elapsedSeconds === elapsedSeconds
+        current.elapsedSeconds === elapsedSeconds && !gpsIsStale
           ? current
-          : { ...current, elapsedSeconds }
+          : {
+            ...current,
+            currentSpeedKmh: gpsIsStale ? 0 : current.currentSpeedKmh,
+            elapsedSeconds,
+            statusMessage: gpsIsStale
+              ? 'GPS sinyali bekleniyor; sürüş oturumu açık kalmaya devam ediyor.'
+              : current.statusMessage,
+          }
       ));
     };
     updateElapsed();
@@ -270,6 +279,7 @@ export function useDriveSession() {
           reportedKm: number;
           reportedMaxSpeedKmh: number;
           reportedMovingSeconds: number;
+          reportedSpeedDistributionSeconds: DriveMetrics['speedDistributionSeconds'];
           sessionId: string;
         },
         FinishDriveResult
@@ -279,6 +289,7 @@ export function useDriveSession() {
         reportedKm: metrics.sessionKm,
         reportedMaxSpeedKmh: metrics.maxSpeedKmh,
         reportedMovingSeconds: metrics.movingSeconds,
+        reportedSpeedDistributionSeconds: metrics.speedDistributionSeconds,
         sessionId: current.sessionId,
       });
       const acceptedKm = Number(response.data.acceptedKm ?? metrics.sessionKm);

@@ -5,8 +5,15 @@ const MAX_DRIVE_SPEED_KMH = 320;
 const MAX_GPS_SAMPLE_GAP_SECONDS = 30;
 const MAX_SESSION_SECONDS = 6 * 60 * 60;
 const MAX_SESSION_KM = 2000;
-const STATS_SCHEMA_VERSION = 3;
+const STATS_SCHEMA_VERSION = 4;
 const TIME_ZONE = "Europe/Istanbul";
+const SPEED_DISTRIBUTION_KEYS = Object.freeze([
+  "under50",
+  "from50To80",
+  "from80To110",
+  "from110To150",
+  "over150",
+]);
 const { resolveMaintenanceLimit } = require("./maintenanceLimits");
 
 const ACHIEVEMENT_DEFINITIONS = Object.freeze([
@@ -62,6 +69,31 @@ function roundSpeed(value) {
 
 function clampPercent(value) {
   return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+}
+
+function emptySpeedDistribution() {
+  return Object.fromEntries(SPEED_DISTRIBUTION_KEYS.map((key) => [key, 0]));
+}
+
+function normalizeSpeedDistribution(value = {}, maximumSeconds = Number.POSITIVE_INFINITY) {
+  const distribution = emptySpeedDistribution();
+  SPEED_DISTRIBUTION_KEYS.forEach((key) => {
+    distribution[key] = Math.max(0, Number(value?.[key]) || 0);
+  });
+  const totalSeconds = Object.values(distribution).reduce((sum, seconds) => sum + seconds, 0);
+  const safeMaximum = Math.max(0, Number(maximumSeconds) || 0);
+  const scale = totalSeconds > safeMaximum ? safeMaximum / totalSeconds : 1;
+  SPEED_DISTRIBUTION_KEYS.forEach((key) => {
+    distribution[key] = Number((distribution[key] * scale).toFixed(1));
+  });
+  return distribution;
+}
+
+function addSpeedDistributions(left = {}, right = {}) {
+  return Object.fromEntries(SPEED_DISTRIBUTION_KEYS.map((key) => [
+    key,
+    Number(((Number(left?.[key]) || 0) + (Number(right?.[key]) || 0)).toFixed(1)),
+  ]));
 }
 
 function addUtcMonths(date, months) {
@@ -325,6 +357,7 @@ function calculateAcceptedDriveSummary({
   reportedKm,
   reportedMaxSpeedKmh,
   reportedMovingSeconds,
+  reportedSpeedDistributionSeconds,
   startedAt,
 }) {
   const distance = calculateAcceptedDriveKm({ reportedKm, startedAt, finishedAt });
@@ -352,6 +385,10 @@ function calculateAcceptedDriveSummary({
   const averageSpeedKmh = movingSeconds > 0
     ? roundSpeed(Math.min(MAX_DRIVE_SPEED_KMH, (distance.acceptedKm / movingSeconds) * 3600))
     : 0;
+  const speedDistributionSeconds = normalizeSpeedDistribution(
+    reportedSpeedDistributionSeconds,
+    movingSeconds,
+  );
 
   return {
     ...distance,
@@ -361,6 +398,7 @@ function calculateAcceptedDriveSummary({
     movingSeconds,
     qualifiedSpeedSampleCount: safeQualifiedSampleCount,
     rejectedMovingSeconds: Math.max(0, safeReportedMovingSeconds - movingSeconds),
+    speedDistributionSeconds,
   };
 }
 
@@ -403,6 +441,9 @@ function buildDriverStatsDocument({ existingStats = {}, profile = {}, passport =
   const monthlyAverageSpeedKmh = monthlyDriveSeconds > 0
     ? roundSpeed((monthlyTimedKm / monthlyDriveSeconds) * 3600)
     : 0;
+  const monthlySpeedDistributionSeconds = isCurrentPeriod
+    ? normalizeSpeedDistribution(existingStats.monthlySpeedDistributionSeconds)
+    : emptySpeedDistribution();
   const metrics = {
     monthlyNightKm,
     odometer: roundKm(vehicle.odometer ?? profile.odometer),
@@ -438,10 +479,14 @@ function buildDriverStatsDocument({ existingStats = {}, profile = {}, passport =
     monthlyMaxSpeedKmh,
     monthlyAverageSpeedKmh,
     monthlyTimedKm,
+    monthlySpeedDistributionSeconds,
     lifetimeVerifiedKm: roundKm(existingStats.lifetimeVerifiedKm),
     lifetimeDriveSeconds: Math.max(0, Math.floor(Number(existingStats.lifetimeDriveSeconds) || 0)),
     lifetimeMaxSpeedKmh: roundSpeed(existingStats.lifetimeMaxSpeedKmh),
     lifetimeTimedKm: roundKm(existingStats.lifetimeTimedKm),
+    lifetimeSpeedDistributionSeconds: normalizeSpeedDistribution(
+      existingStats.lifetimeSpeedDistributionSeconds,
+    ),
     completedSessions: Math.max(0, Number(existingStats.completedSessions ?? 0)),
     activeSessionId: existingStats.activeSessionId ?? null,
     odometerSnapshot: metrics.odometer,
@@ -462,6 +507,7 @@ function applyCompletedDriveToStats({
   acceptedKm,
   movingSeconds = 0,
   maxSpeedKmh = 0,
+  speedDistributionSeconds = {},
   isNight,
   now = new Date(),
 }) {
@@ -476,6 +522,18 @@ function applyCompletedDriveToStats({
   const lifetimeDriveSeconds = baseline.lifetimeDriveSeconds + acceptedMovingSeconds;
   const monthlyTimedKm = roundKm(baseline.monthlyTimedKm + timedKm);
   const lifetimeTimedKm = roundKm(baseline.lifetimeTimedKm + timedKm);
+  const acceptedSpeedDistribution = normalizeSpeedDistribution(
+    speedDistributionSeconds,
+    acceptedMovingSeconds,
+  );
+  const monthlySpeedDistributionSeconds = addSpeedDistributions(
+    baseline.monthlySpeedDistributionSeconds,
+    acceptedSpeedDistribution,
+  );
+  const lifetimeSpeedDistributionSeconds = addSpeedDistributions(
+    baseline.lifetimeSpeedDistributionSeconds,
+    acceptedSpeedDistribution,
+  );
   const odometer = roundKm(vehicle.odometer ?? profile.odometer);
   const achievements = buildAchievementProgress({
     monthlyNightKm,
@@ -505,10 +563,12 @@ function applyCompletedDriveToStats({
       ? roundSpeed((monthlyTimedKm / monthlyDriveSeconds) * 3600)
       : 0,
     monthlyTimedKm,
+    monthlySpeedDistributionSeconds,
     lifetimeVerifiedKm: roundKm(baseline.lifetimeVerifiedKm + acceptedKm),
     lifetimeDriveSeconds,
     lifetimeMaxSpeedKmh: roundSpeed(Math.max(baseline.lifetimeMaxSpeedKmh, maxSpeedKmh)),
     lifetimeTimedKm,
+    lifetimeSpeedDistributionSeconds,
     completedSessions: baseline.completedSessions + 1,
     activeSessionId: null,
     odometerSnapshot: odometer,

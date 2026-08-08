@@ -23,6 +23,7 @@ export const BACKGROUND_DRIVE_TASK = 'tracksnap-background-drive';
 const DRIVE_SESSION_STORAGE_KEY = '@tracksnap/active-drive-v1';
 const DRIVE_NOTIFICATION_ID = 'tracksnap-active-drive';
 const NOTIFICATION_UPDATE_INTERVAL_MS = 5_000;
+const INITIAL_FIX_TIMEOUT_MS = 8_000;
 
 export type BackgroundDriveSnapshot = {
   accuracy: number | null;
@@ -216,6 +217,9 @@ export async function isBackgroundDriveRunning() {
 export async function startBackgroundDrive(sessionId: string, userId: string) {
   const language = await getPreferredLanguage();
   const snapshot = createSnapshot(sessionId, userId);
+  if (await isBackgroundDriveRunning()) {
+    await Location.stopLocationUpdatesAsync(BACKGROUND_DRIVE_TASK);
+  }
   await persistSnapshot(snapshot);
   if (Platform.OS === 'android') {
     await Notifications.dismissNotificationAsync(DRIVE_NOTIFICATION_ID).catch(() => undefined);
@@ -224,6 +228,14 @@ export async function startBackgroundDrive(sessionId: string, userId: string) {
   }
 
   try {
+    const initialFix = await Promise.race([
+      Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        mayShowUserSettingsDialog: true,
+      }).catch(() => null),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), INITIAL_FIX_TIMEOUT_MS)),
+    ]);
+    if (initialFix) await consumeLocations([initialFix]);
     await Location.startLocationUpdatesAsync(BACKGROUND_DRIVE_TASK, {
       accuracy: Location.Accuracy.BestForNavigation,
       activityType: Location.ActivityType.AutomotiveNavigation,
@@ -244,8 +256,9 @@ export async function startBackgroundDrive(sessionId: string, userId: string) {
         }
         : undefined,
     });
-    await updateDriveNotification(snapshot);
-    return snapshot;
+    const readySnapshot = await readBackgroundDriveSnapshot() ?? snapshot;
+    await updateDriveNotification(readySnapshot);
+    return readySnapshot;
   } catch (error) {
     await clearBackgroundDrive();
     throw error;

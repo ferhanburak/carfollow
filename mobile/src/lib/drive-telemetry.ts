@@ -8,7 +8,7 @@ export const MAX_GPS_SAMPLE_GAP_MS = 30_000;
 export const MAX_SPEED_RECORD_ACCURACY_METERS = 35;
 export const MAX_SPEED_SAMPLE_GAP_SECONDS = 15;
 export const MIN_MOVING_SPEED_KMH = 3;
-export const DISPLAY_SPEED_HOLD_MS = 3_000;
+export const DISPLAY_SPEED_HOLD_MS = 4_000;
 
 export type GpsPoint = {
   lat: number;
@@ -51,6 +51,15 @@ export type DriveMetrics = {
   movingSeconds: number;
   qualifiedSpeedSampleCount: number;
   sessionKm: number;
+  speedDistributionSeconds: SpeedDistributionSeconds;
+};
+
+export type SpeedDistributionSeconds = {
+  under50: number;
+  from50To80: number;
+  from80To110: number;
+  from110To150: number;
+  over150: number;
 };
 
 export type DisplayedSpeed = {
@@ -93,7 +102,37 @@ export function createDriveMetrics(): DriveMetrics {
     movingSeconds: 0,
     qualifiedSpeedSampleCount: 0,
     sessionKm: 0,
+    speedDistributionSeconds: createSpeedDistribution(),
   };
+}
+
+export function createSpeedDistribution(): SpeedDistributionSeconds {
+  return {
+    under50: 0,
+    from50To80: 0,
+    from80To110: 0,
+    from110To150: 0,
+    over150: 0,
+  };
+}
+
+function addSpeedDistributionSample(
+  distribution: SpeedDistributionSeconds | undefined,
+  speedKmh: number,
+  elapsedSeconds: number,
+): SpeedDistributionSeconds {
+  const next = { ...createSpeedDistribution(), ...(distribution ?? {}) };
+  const bucket = speedKmh < 50
+    ? 'under50'
+    : speedKmh < 80
+      ? 'from50To80'
+      : speedKmh < 110
+        ? 'from80To110'
+        : speedKmh < 150
+          ? 'from110To150'
+          : 'over150';
+  next[bucket] = Number((next[bucket] + elapsedSeconds).toFixed(1));
+  return next;
 }
 
 export function stabilizeDisplayedSpeed(
@@ -106,7 +145,10 @@ export function stabilizeDisplayedSpeed(
   const previousMovingAt = Number(previousState?.lastMovingAt) || 0;
 
   if (reading.gpsStatus === 'live' && rawSpeedKmh >= MIN_MOVING_SPEED_KMH) {
-    return { lastMovingAt: timestamp, speedKmh: rawSpeedKmh };
+    const speedKmh = previousSpeedKmh >= MIN_MOVING_SPEED_KMH
+      ? (previousSpeedKmh * 0.45) + (rawSpeedKmh * 0.55)
+      : rawSpeedKmh;
+    return { lastMovingAt: timestamp, speedKmh: Number(speedKmh.toFixed(1)) };
   }
 
   const isTransientLiveDrop = (
@@ -181,6 +223,13 @@ export function updateDriveMetrics(
   )
     ? Math.min(Number(currentMetrics.lastQualifiedSpeedKmh), speedKmh)
     : 0;
+  const speedDistributionSeconds = qualified
+    ? addSpeedDistributionSample(
+      currentMetrics.speedDistributionSeconds,
+      speedKmh,
+      elapsedSeconds,
+    )
+    : { ...createSpeedDistribution(), ...(currentMetrics.speedDistributionSeconds ?? {}) };
 
   return {
     acceptedSampleCount: currentMetrics.acceptedSampleCount + 1,
@@ -192,6 +241,7 @@ export function updateDriveMetrics(
     movingSeconds,
     qualifiedSpeedSampleCount: currentMetrics.qualifiedSpeedSampleCount + (qualified ? 1 : 0),
     sessionKm,
+    speedDistributionSeconds,
   };
 }
 
@@ -334,17 +384,26 @@ export function processGpsPosition(
   }
 
   const jitterThresholdMeters = Math.max(
-    8,
-    Math.min(30, Math.max(previousPoint.accuracy, point.accuracy) * 1.5),
+    4,
+    Math.min(15, Math.max(previousPoint.accuracy, point.accuracy) * 0.75),
   );
   const derivedSpeedKmh = (distanceMeters / elapsedSeconds) * 3.6;
   const deviceReportsStationary = deviceSpeedKmh != null
     && deviceSpeedKmh < MIN_MOVING_SPEED_KMH;
-  const candidateSpeedKmh = deviceSpeedKmh ?? derivedSpeedKmh;
+  const derivedMovement = (
+    distanceMeters >= jitterThresholdMeters
+    && derivedSpeedKmh >= MIN_MOVING_SPEED_KMH
+  );
+  const deviceMovement = deviceSpeedKmh != null && deviceSpeedKmh >= MIN_MOVING_SPEED_KMH;
+  const candidateSpeedKmh = deviceMovement
+    ? deviceSpeedKmh
+    : derivedMovement
+      ? derivedSpeedKmh
+      : 0;
   const isMovement = (
-    !deviceReportsStationary
-    && distanceMeters >= jitterThresholdMeters
+    distanceMeters >= jitterThresholdMeters
     && candidateSpeedKmh >= MIN_MOVING_SPEED_KMH
+    && (!deviceReportsStationary || derivedMovement)
   );
   const nextPoint = (
     isMovement

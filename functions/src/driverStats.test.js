@@ -154,6 +154,13 @@ test("accepts moving time and maximum speed only within server and sample limits
     reportedKm: 2,
     reportedMaxSpeedKmh: 118,
     reportedMovingSeconds: 80,
+    reportedSpeedDistributionSeconds: {
+      under50: 60,
+      from50To80: 30,
+      from80To110: 15,
+      from110To150: 7.5,
+      over150: 7.5,
+    },
     startedAt: new Date("2026-07-13T10:00:00.000Z"),
     finishedAt: new Date("2026-07-13T10:02:00.000Z"),
   });
@@ -168,6 +175,13 @@ test("accepts moving time and maximum speed only within server and sample limits
     movingSeconds: 80,
     qualifiedSpeedSampleCount: 4,
     rejectedMovingSeconds: 0,
+    speedDistributionSeconds: {
+      under50: 40,
+      from50To80: 20,
+      from80To110: 10,
+      from110To150: 5,
+      over150: 5,
+    },
   });
 });
 
@@ -245,6 +259,13 @@ test("adds accepted night distance to monthly and lifetime totals", () => {
     acceptedKm: 5.2,
     movingSeconds: 240,
     maxSpeedKmh: 126,
+    speedDistributionSeconds: {
+      under50: 60,
+      from50To80: 80,
+      from80To110: 70,
+      from110To150: 30,
+      over150: 0,
+    },
     isNight: true,
     now: new Date("2026-07-13T21:00:00.000Z"),
   });
@@ -257,6 +278,14 @@ test("adds accepted night distance to monthly and lifetime totals", () => {
   assert.equal(stats.monthlyMaxSpeedKmh, 126);
   assert.equal(stats.lifetimeMaxSpeedKmh, 126);
   assert.equal(stats.monthlyAverageSpeedKmh, 78);
+  assert.deepEqual(stats.monthlySpeedDistributionSeconds, {
+    under50: 60,
+    from50To80: 80,
+    from80To110: 70,
+    from110To150: 30,
+    over150: 0,
+  });
+  assert.deepEqual(stats.lifetimeSpeedDistributionSeconds, stats.monthlySpeedDistributionSeconds);
   assert.equal(stats.completedSessions, 4);
 });
 
@@ -346,6 +375,6 @@ test("builds a stable server-owned all-time leaderboard entry", () => {
     lifetimeMaxSpeedKmh: 142.5,
     completedSessions: 31,
     driverScore: 88,
-    schemaVersion: 3,
+    schemaVersion: 4,
   });
 });

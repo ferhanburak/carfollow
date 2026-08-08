@@ -2496,6 +2496,7 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
     reportedKm,
     reportedMaxSpeedKmh,
     reportedMovingSeconds,
+    reportedSpeedDistributionSeconds,
     sessionId,
   } = request.data ?? {};
   assertDriveSessionId(sessionId);
@@ -2510,6 +2511,20 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
   })) {
     if (value != null && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
       throw new HttpsError("invalid-argument", `${field} must be a positive number or zero.`);
+    }
+  }
+  if (reportedSpeedDistributionSeconds != null) {
+    if (
+      typeof reportedSpeedDistributionSeconds !== "object"
+      || Array.isArray(reportedSpeedDistributionSeconds)
+      || Object.values(reportedSpeedDistributionSeconds).some(
+        (value) => !Number.isFinite(Number(value)) || Number(value) < 0,
+      )
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "reportedSpeedDistributionSeconds must contain positive numbers or zero.",
+      );
     }
   }
   let response;
@@ -2556,6 +2571,7 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
         rejectedMovingSeconds: Number(session.rejectedMovingSeconds ?? 0),
         maxSpeedKmh: Number(session.maxSpeedKmh ?? 0),
         averageSpeedKmh: Number(session.averageSpeedKmh ?? 0),
+        speedDistributionSeconds: session.speedDistributionSeconds ?? {},
         odometer: Number(session.endOdometer ?? vehicle.odometer ?? 0),
         stats: existingStats,
         leaderboardEntry: buildLeaderboardEntry({ userId, profile, stats: existingStats }),
@@ -2574,6 +2590,7 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
       reportedKm: Number(reportedKm),
       reportedMaxSpeedKmh,
       reportedMovingSeconds,
+      reportedSpeedDistributionSeconds,
       startedAt: session.startedAt,
       finishedAt,
     });
@@ -2590,6 +2607,7 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
       // Rankings use the server-owned start/end window, not client-reported movement time.
       movingSeconds: distance.elapsedSeconds,
       maxSpeedKmh: distance.maxSpeedKmh,
+      speedDistributionSeconds: distance.speedDistributionSeconds,
       isNight: isNightTime(session.startedAt),
       now: finishedAt,
     });
@@ -2669,6 +2687,7 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
       rejectedMovingSeconds: distance.rejectedMovingSeconds,
       maxSpeedKmh: distance.maxSpeedKmh,
       averageSpeedKmh: distance.averageSpeedKmh,
+      speedDistributionSeconds: distance.speedDistributionSeconds,
       acceptedSampleCount: distance.acceptedSampleCount,
       qualifiedSpeedSampleCount: distance.qualifiedSpeedSampleCount,
       endOdometer: nextOdometer,
@@ -2711,6 +2730,7 @@ exports.finishDriveSession = secureCall("finishDriveSession", { rateLimit: { lim
       rejectedMovingSeconds: distance.rejectedMovingSeconds,
       maxSpeedKmh: distance.maxSpeedKmh,
       averageSpeedKmh: distance.averageSpeedKmh,
+      speedDistributionSeconds: distance.speedDistributionSeconds,
       odometer: nextOdometer,
       stats,
       leaderboardEntry,
