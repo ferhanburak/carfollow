@@ -661,7 +661,7 @@ const styles = createThemedStyles(() => ({
     justifyContent: 'center',
   },
   passwordTogglePressed: {
-    backgroundColor: colors.limeSoft,
+    backgroundColor: colors.limeMuted,
     transform: [{ scale: 0.94 }],
   },
   forgotButton: {
